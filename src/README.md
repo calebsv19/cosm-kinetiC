@@ -1,0 +1,17 @@
+# `src/`
+
+Holds the implementation for every runtime subsystem. Each `.c` file exposes its API through a matching header inside `include/`.
+
+## Files
+- `main.c` – thin bootstrap: loads JSON config and hands control to the scene controller.
+- `timing.c` – small helper that clamps frame delta time via `FrameTimer`.
+
+## Subdirectories
+- `app/` – configuration defaults plus the scene editor/menu, presets, scene state, and controller that glue inputs, solvers, and rendering together.
+- `command/` – shared command bus implementations used to relay actions from input to higher layers.
+- `config/` – loaders that read `config/app.json` and populate `AppConfig`.
+- `input/` – SDL event pump, stroke buffer utilities, and related headers that supply high-level `InputCommands`.
+- `physics/` – numerical solvers for fluids, particles, rigid/soft bodies, smoke fields, and shared math helpers.
+- `render/` – SDL renderer that converts the fluid density grid into pixels.
+
+When adding a new system, place the implementation here, the header in `include/`, and update the nearest README so future contributors can discover the module quickly.

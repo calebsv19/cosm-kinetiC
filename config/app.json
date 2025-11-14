@@ -1,0 +1,24 @@
+{
+  "window": {
+    "width": 800,
+    "height": 800
+  },
+  "grid": {
+    "width": 200,
+    "height": 200
+  },
+  "timing": {
+    "min_dt": 0.006060606,
+    "max_dt": 0.033333333,
+    "substeps": 2
+  },
+  "commands": {
+    "max_per_frame": 256
+  },
+  "fluid": {
+    "diffusion": 0.0001,
+    "viscosity": 0.00001,
+    "density_decay": 0.05,
+    "buoyancy": 1.5
+  }
+}
