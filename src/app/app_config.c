@@ -20,5 +20,12 @@ AppConfig app_config_default(void) {
     cfg.density_decay     = 0.05f;    // per second
     cfg.fluid_buoyancy_force = 1.5f;
 
+    cfg.stroke_sample_rate = 240.0;
+    cfg.stroke_spacing = 3.0f;
+
+    cfg.emitter_density_multiplier = 1.0f;
+    cfg.emitter_velocity_multiplier = 1.0f;
+    cfg.emitter_sink_multiplier = 1.0f;
+
     return cfg;
 }

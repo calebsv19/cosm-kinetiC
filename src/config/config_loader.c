@@ -184,12 +184,43 @@ static void apply_fluid_settings(const char *json, AppConfig *cfg) {
     }
 }
 
+static void apply_input_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "input", &block)) return;
+
+    double val;
+    if (json_block_number(&block, "stroke_sample_rate", &val) && val > 0.0) {
+        cfg->stroke_sample_rate = val;
+    }
+    if (json_block_number(&block, "stroke_spacing", &val) && val > 0.0) {
+        cfg->stroke_spacing = (float)val;
+    }
+}
+
+static void apply_emitter_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "emitters", &block)) return;
+
+    double val;
+    if (json_block_number(&block, "density_multiplier", &val)) {
+        cfg->emitter_density_multiplier = (float)val;
+    }
+    if (json_block_number(&block, "velocity_multiplier", &val)) {
+        cfg->emitter_velocity_multiplier = (float)val;
+    }
+    if (json_block_number(&block, "sink_multiplier", &val)) {
+        cfg->emitter_sink_multiplier = (float)val;
+    }
+}
+
 static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_window_settings(json, cfg);
     apply_grid_settings(json, cfg);
     apply_timing_settings(json, cfg);
     apply_command_settings(json, cfg);
     apply_fluid_settings(json, cfg);
+    apply_input_settings(json, cfg);
+    apply_emitter_settings(json, cfg);
 }
 
 bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts) {

@@ -6,26 +6,9 @@
 
 static BrushMode s_brush_mode = BRUSH_MODE_DENSITY;
 
-static void dispatch_pointer(const InputHandlers *handlers,
-                             void (*fn)(const InputPointerState *, void *),
-                             const InputPointerState *state) {
-    if (handlers && fn) {
-        fn(state, handlers->user_data);
-    }
-}
-
-static void dispatch_key(const InputHandlers *handlers,
-                         void (*fn)(SDL_Keycode, SDL_Keymod, void *),
-                         SDL_Keycode key,
-                         SDL_Keymod mod) {
-    if (handlers && fn) {
-        fn(key, mod, handlers->user_data);
-    }
-}
-
 bool input_poll_events(InputCommands *out,
                        CommandBus *bus,
-                       const InputHandlers *handlers) {
+                       InputContextManager *context_mgr) {
     if (!out) return false;
 
     memset(out, 0, sizeof(*out));
@@ -33,6 +16,9 @@ bool input_poll_events(InputCommands *out,
 
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
+        InputContext *ctx = context_mgr
+                                ? input_context_manager_current(context_mgr)
+                                : NULL;
         switch (e.type) {
         case SDL_QUIT:
             out->quit = true;
@@ -74,14 +60,16 @@ bool input_poll_events(InputCommands *out,
             default:
                 break;
             }
-            dispatch_key(handlers, handlers ? handlers->on_key_down : NULL,
-                         e.key.keysym.sym, mod);
+            if (ctx && ctx->on_key_down) {
+                ctx->on_key_down(ctx->user_data, e.key.keysym.sym, mod);
+            }
             break;
         }
         case SDL_KEYUP: {
             SDL_Keymod mod = SDL_GetModState();
-            dispatch_key(handlers, handlers ? handlers->on_key_up : NULL,
-                         e.key.keysym.sym, mod);
+            if (ctx && ctx->on_key_up) {
+                ctx->on_key_up(ctx->user_data, e.key.keysym.sym, mod);
+            }
             break;
         }
         case SDL_MOUSEBUTTONDOWN:
@@ -96,10 +84,12 @@ bool input_poll_events(InputCommands *out,
                     .y = e.button.y,
                     .down = down
                 };
-                if (down) {
-                    dispatch_pointer(handlers, handlers ? handlers->on_pointer_down : NULL, &state);
-                } else {
-                    dispatch_pointer(handlers, handlers ? handlers->on_pointer_up : NULL, &state);
+                if (ctx) {
+                    if (down && ctx->on_pointer_down) {
+                        ctx->on_pointer_down(ctx->user_data, &state);
+                    } else if (!down && ctx->on_pointer_up) {
+                        ctx->on_pointer_up(ctx->user_data, &state);
+                    }
                 }
             }
             break;
@@ -115,7 +105,15 @@ bool input_poll_events(InputCommands *out,
                 .y = e.motion.y,
                 .down = (e.motion.state & SDL_BUTTON_LMASK) != 0
             };
-            dispatch_pointer(handlers, handlers ? handlers->on_pointer_move : NULL, &state);
+            if (ctx && ctx->on_pointer_move) {
+                ctx->on_pointer_move(ctx->user_data, &state);
+            }
+            break;
+        }
+        case SDL_TEXTINPUT: {
+            if (ctx && ctx->on_text_input) {
+                ctx->on_text_input(ctx->user_data, e.text.text);
+            }
             break;
         }
         default:

@@ -50,6 +50,21 @@ static const float BRUSH_DENSITY = 20.0f;
 static const float BRUSH_VEL_SCALE = 35.0f;
 static const float BRUSH_VELOCITY_DENSITY = 4.0f;
 
+static float emitter_strength_scale(const SceneState *scene,
+                                    FluidEmitterType type) {
+    if (!scene || !scene->config) return 1.0f;
+    switch (type) {
+    case EMITTER_DENSITY_SOURCE:
+        return scene->config->emitter_density_multiplier;
+    case EMITTER_VELOCITY_JET:
+        return scene->config->emitter_velocity_multiplier;
+    case EMITTER_SINK:
+        return scene->config->emitter_sink_multiplier;
+    default:
+        return 1.0f;
+    }
+}
+
 void scene_apply_input(SceneState *scene, const InputCommands *cmds) {
     if (!scene || !cmds) return;
     (void)cmds;
@@ -130,7 +145,8 @@ void scene_apply_emitters(SceneState *scene, double dt) {
                 float falloff = 1.0f - (dist / (float)radius);
                 if (falloff <= 0.0f) continue;
 
-                float scaled = em->strength * falloff * (float)dt;
+                float scale = emitter_strength_scale(scene, em->type);
+                float scaled = em->strength * scale * falloff * (float)dt;
 
                 switch (em->type) {
                 case EMITTER_DENSITY_SOURCE:

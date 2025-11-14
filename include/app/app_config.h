@@ -20,6 +20,13 @@ typedef struct AppConfig {
     float  velocity_damping;   // multiplicative damping on velocity per step
     float  density_decay;      // fractional fade of density per second
     float  fluid_buoyancy_force; // upward force applied per density unit
+
+    double stroke_sample_rate; // samples per second collected from cursor
+    float  stroke_spacing;     // pixel spacing between stroke samples
+
+    float  emitter_density_multiplier;
+    float  emitter_velocity_multiplier;
+    float  emitter_sink_multiplier;
 } AppConfig;
 
 AppConfig app_config_default(void);

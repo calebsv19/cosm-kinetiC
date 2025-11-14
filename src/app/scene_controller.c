@@ -28,10 +28,12 @@ typedef struct StrokeSampler {
     float        current_x;
     float        current_y;
     double       accumulator;
+    double       sample_interval;
+    float        sample_spacing;
 } StrokeSampler;
 
-static const double SAMPLE_INTERVAL = 1.0 / 240.0;
-static const float  SAMPLE_SPACING  = 3.0f;
+static const double DEFAULT_SAMPLE_RATE = 240.0;
+static const float  DEFAULT_SAMPLE_SPACING = 3.0f;
 static const size_t MAX_SAMPLES_PER_FRAME = 512;
 
 static bool handle_scene_command(const Command *cmd, void *user_data) {
@@ -54,7 +56,9 @@ static void build_snapshot_path(char *buffer, size_t buffer_size,
     snprintf(buffer, buffer_size, "%s/frame_%04d.ps2d", base_dir, index);
 }
 
-static void stroke_sampler_init(StrokeSampler *sampler, size_t capacity) {
+static void stroke_sampler_init(StrokeSampler *sampler,
+                                size_t capacity,
+                                const AppConfig *cfg) {
     if (!sampler) return;
     stroke_buffer_init(&sampler->buffer, capacity);
     sampler->brush_mode = BRUSH_MODE_DENSITY;
@@ -62,6 +66,13 @@ static void stroke_sampler_init(StrokeSampler *sampler, size_t capacity) {
     sampler->last_emit_x = sampler->last_emit_y = 0.0f;
     sampler->current_x = sampler->current_y = 0.0f;
     sampler->accumulator = 0.0;
+    double rate = (cfg && cfg->stroke_sample_rate > 0.0)
+                      ? cfg->stroke_sample_rate
+                      : DEFAULT_SAMPLE_RATE;
+    sampler->sample_interval = 1.0 / rate;
+    sampler->sample_spacing = (cfg && cfg->stroke_spacing > 0.0f)
+                                  ? cfg->stroke_spacing
+                                  : DEFAULT_SAMPLE_SPACING;
 }
 
 static void stroke_sampler_shutdown(StrokeSampler *sampler) {
@@ -84,7 +95,7 @@ static void stroke_sampler_capture(StrokeSampler *sampler,
 
     if (!cmds->mouse_down) {
         sampler->pointer_down = false;
-        sampler->accumulator = fmin(sampler->accumulator, SAMPLE_INTERVAL);
+        sampler->accumulator = fmin(sampler->accumulator, sampler->sample_interval);
         return;
     }
 
@@ -102,13 +113,16 @@ static void stroke_sampler_capture(StrokeSampler *sampler,
         stroke_buffer_push(&sampler->buffer, &sample);
     }
 
-    while (sampler->accumulator >= SAMPLE_INTERVAL) {
-        sampler->accumulator -= SAMPLE_INTERVAL;
+    while (sampler->accumulator >= sampler->sample_interval) {
+        sampler->accumulator -= sampler->sample_interval;
 
         float dx = sampler->current_x - sampler->last_emit_x;
         float dy = sampler->current_y - sampler->last_emit_y;
         float dist = sqrtf(dx * dx + dy * dy);
-        int steps = (int)ceilf(dist / SAMPLE_SPACING);
+        float spacing = (sampler->sample_spacing > 0.0f)
+                            ? sampler->sample_spacing
+                            : DEFAULT_SAMPLE_SPACING;
+        int steps = (spacing > 0.0f) ? (int)ceilf(dist / spacing) : 1;
         if (steps < 1) steps = 1;
         float step_x = (steps > 0) ? dx / (float)steps : 0.0f;
         float step_y = (steps > 0) ? dy / (float)steps : 0.0f;
@@ -173,15 +187,16 @@ int scene_controller_run(const AppConfig *initial_cfg,
     command_bus_init(&bus, 64);
 
     StrokeSampler sampler;
-    stroke_sampler_init(&sampler, 4096);
+    stroke_sampler_init(&sampler, 4096, &cfg);
+
+    InputContextManager ctx_mgr;
+    input_context_manager_init(&ctx_mgr);
 
     bool running = true;
     int snapshot_index = 0;
-
-    InputHandlers handlers = {0};
     while (running) {
         InputCommands cmds;
-        running = input_poll_events(&cmds, &bus, &handlers);
+        running = input_poll_events(&cmds, &bus, &ctx_mgr);
 
         double dt = timing_begin_frame(&timer, &cfg);
         scene.dt = dt;
@@ -221,7 +236,16 @@ int scene_controller_run(const AppConfig *initial_cfg,
             }
         }
 
-        renderer_sdl_draw(&scene);
+        RendererHudInfo hud = {
+            .preset_name = (scene.preset && scene.preset->name) ? scene.preset->name : "Preset",
+            .preset_is_custom = scene.preset ? scene.preset->is_custom : false,
+            .grid_w = scene.config ? scene.config->grid_w : cfg.grid_w,
+            .grid_h = scene.config ? scene.config->grid_h : cfg.grid_h,
+            .emitter_count = scene.preset ? scene.preset->emitter_count : 0,
+            .stroke_samples = stroke_buffer_count(&sampler.buffer),
+            .paused = scene.paused
+        };
+        renderer_sdl_draw(&scene, &hud);
     }
 
     scene_destroy(&scene);

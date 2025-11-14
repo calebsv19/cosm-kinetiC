@@ -22,17 +22,8 @@ typedef struct InputCommands {
     bool      brush_mode_changed;
 } InputCommands;
 
-typedef struct InputHandlers {
-    void (*on_pointer_down)(const InputPointerState *state, void *user);
-    void (*on_pointer_up)(const InputPointerState *state, void *user);
-    void (*on_pointer_move)(const InputPointerState *state, void *user);
-    void (*on_key_down)(SDL_Keycode key, SDL_Keymod mod, void *user);
-    void (*on_key_up)(SDL_Keycode key, SDL_Keymod mod, void *user);
-    void *user_data;
-} InputHandlers;
-
 bool input_poll_events(InputCommands *out,
                        CommandBus *bus,
-                       const InputHandlers *handlers);
+                       InputContextManager *context_mgr);
 
 #endif // INPUT_H

@@ -16,11 +16,14 @@ typedef struct InputContext {
     void (*on_pointer_move)(void *user, const InputPointerState *state);
     void (*on_key_down)(void *user, SDL_Keycode key, SDL_Keymod mod);
     void (*on_key_up)(void *user, SDL_Keycode key, SDL_Keymod mod);
+    void (*on_text_input)(void *user, const char *text);
     void *user_data;
 } InputContext;
 
+#define INPUT_CONTEXT_STACK_CAPACITY 8
+
 typedef struct InputContextManager {
-    InputContext stack[8];
+    InputContext stack[INPUT_CONTEXT_STACK_CAPACITY];
     int          top;
 } InputContextManager;
 

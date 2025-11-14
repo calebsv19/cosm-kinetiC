@@ -1,6 +1,7 @@
 #ifndef SCENE_PRESETS_H
 #define SCENE_PRESETS_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 typedef enum FluidEmitterType {
@@ -24,6 +25,7 @@ typedef struct FluidEmitter {
 typedef struct FluidScenePreset {
     const char *name;
     size_t emitter_count;
+    bool   is_custom;
     FluidEmitter emitters[MAX_FLUID_EMITTERS];
 } FluidScenePreset;
 
