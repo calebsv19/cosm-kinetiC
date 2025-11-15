@@ -110,6 +110,17 @@ bool input_poll_events(InputCommands *out,
             }
             break;
         }
+        case SDL_MOUSEWHEEL: {
+            if (ctx && ctx->on_wheel) {
+                InputWheelState wheel = {
+                    .x = e.wheel.x,
+                    .y = (e.wheel.direction == SDL_MOUSEWHEEL_FLIPPED) ? -e.wheel.y : e.wheel.y,
+                    .flipped = (e.wheel.direction == SDL_MOUSEWHEEL_FLIPPED)
+                };
+                ctx->on_wheel(ctx->user_data, &wheel);
+            }
+            break;
+        }
         case SDL_TEXTINPUT: {
             if (ctx && ctx->on_text_input) {
                 ctx->on_text_input(ctx->user_data, e.text.text);

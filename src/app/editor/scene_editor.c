@@ -15,6 +15,12 @@
 #define DOUBLE_CLICK_MS 350
 
 
+typedef enum EditorSelectionKind {
+    SELECTION_NONE = 0,
+    SELECTION_EMITTER,
+    SELECTION_OBJECT
+} EditorSelectionKind;
+
 typedef struct SceneEditorState {
     SDL_Window   *window;
     SDL_Renderer *renderer;
@@ -45,6 +51,12 @@ typedef struct SceneEditorState {
     bool dragging;
     float drag_offset_x;
     float drag_offset_y;
+    int   selected_object;
+    int   hover_object;
+    bool  dragging_object;
+    float object_drag_offset_x;
+    float object_drag_offset_y;
+    EditorSelectionKind selection_kind;
 
     EditorButton btn_save;
     EditorButton btn_cancel;
@@ -52,6 +64,8 @@ typedef struct SceneEditorState {
     EditorButton btn_add_jet;
     EditorButton btn_add_sink;
     EditorButton btn_delete;
+    EditorButton btn_add_circle;
+    EditorButton btn_add_box;
 
     NumericField radius_field;
     NumericField strength_field;
@@ -152,6 +166,8 @@ static NumericField *current_field(SceneEditorState *state) {
     return state ? state->active_field : NULL;
 }
 
+static void clamp_object(PresetObject *obj);
+
 static void begin_field_edit(SceneEditorState *state, NumericField *field) {
     if (!state || !field) return;
     if (state->active_field && state->active_field != field) {
@@ -238,7 +254,18 @@ static bool field_handle_key(SceneEditorState *state, SDL_Keycode key) {
 }
 
 static void nudge_selected(SceneEditorState *state, float dx, float dy) {
-    if (!state || state->selected_emitter < 0 ||
+    if (!state) return;
+    if (state->selection_kind == SELECTION_OBJECT &&
+        state->selected_object >= 0 &&
+        state->selected_object < (int)state->working.object_count) {
+        PresetObject *obj = &state->working.objects[state->selected_object];
+        obj->position_x = clamp01(obj->position_x + dx);
+        obj->position_y = clamp01(obj->position_y + dy);
+        clamp_object(obj);
+        set_dirty(state);
+        return;
+    }
+    if (state->selected_emitter < 0 ||
         state->selected_emitter >= (int)state->working.emitter_count) {
         return;
     }
@@ -285,6 +312,8 @@ static void add_emitter(SceneEditorState *state, FluidEmitterType type) {
     state->selected_emitter = (int)state->working.emitter_count;
     state->working.emitter_count++;
     normalize_direction(&state->working.emitters[state->selected_emitter]);
+    state->selection_kind = SELECTION_EMITTER;
+    state->selected_object = -1;
     set_dirty(state);
 }
 
@@ -306,6 +335,69 @@ static void remove_selected(SceneEditorState *state) {
     }
     cancel_field_edit(state);
     set_dirty(state);
+    if (state->working.emitter_count > 0) {
+        state->selection_kind = SELECTION_EMITTER;
+    } else if (state->working.object_count > 0) {
+        state->selection_kind = SELECTION_OBJECT;
+        if (state->selected_object < 0) {
+            state->selected_object = 0;
+        }
+    } else {
+        state->selection_kind = SELECTION_NONE;
+    }
+}
+
+static void clamp_object(PresetObject *obj) {
+    if (!obj) return;
+    if (obj->position_x < 0.0f) obj->position_x = 0.0f;
+    if (obj->position_x > 1.0f) obj->position_x = 1.0f;
+    if (obj->position_y < 0.0f) obj->position_y = 0.0f;
+    if (obj->position_y > 1.0f) obj->position_y = 1.0f;
+    if (obj->size_x < 0.02f) obj->size_x = 0.02f;
+    if (obj->size_y < 0.02f) obj->size_y = 0.02f;
+}
+
+static void add_object(SceneEditorState *state, PresetObjectType type) {
+    if (!state) return;
+    if (state->working.object_count >= MAX_PRESET_OBJECTS) return;
+    PresetObject obj = {
+        .type = type,
+        .position_x = 0.5f,
+        .position_y = 0.5f,
+        .size_x = 0.1f,
+        .size_y = (type == PRESET_OBJECT_BOX) ? 0.08f : 0.1f,
+        .angle = 0.0f,
+        .is_static = true
+    };
+    clamp_object(&obj);
+    state->working.objects[state->working.object_count++] = obj;
+    state->selected_object = (int)state->working.object_count - 1;
+    state->selected_emitter = -1;
+    state->selection_kind = SELECTION_OBJECT;
+    set_dirty(state);
+}
+
+static void remove_selected_object(SceneEditorState *state) {
+    if (!state || state->selected_object < 0) return;
+    int index = state->selected_object;
+    if (index >= (int)state->working.object_count) return;
+    for (int i = index; i < (int)state->working.object_count - 1; ++i) {
+        state->working.objects[i] = state->working.objects[i + 1];
+    }
+    if (state->working.object_count > 0) {
+        state->working.object_count--;
+    }
+    if (state->working.object_count == 0) {
+        state->selected_object = -1;
+        state->selection_kind = SELECTION_NONE;
+        if (state->working.emitter_count > 0) {
+            state->selection_kind = SELECTION_EMITTER;
+            if (state->selected_emitter < 0) state->selected_emitter = 0;
+        }
+    } else if (state->selected_object >= (int)state->working.object_count) {
+        state->selected_object = (int)state->working.object_count - 1;
+    }
+    set_dirty(state);
 }
 
 static void draw_editor(SceneEditorState *state) {
@@ -325,6 +417,14 @@ static void draw_editor(SceneEditorState *state) {
                                   title,
                                   state->renaming_name,
                                   &state->name_input);
+
+    scene_editor_canvas_draw_objects(renderer,
+                                     state->canvas_x,
+                                     state->canvas_y,
+                                     state->canvas_size,
+                                     &state->working,
+                                     state->selected_object,
+                                     state->hover_object);
 
     scene_editor_canvas_draw_emitters(renderer,
                                       state->canvas_x,
@@ -359,20 +459,22 @@ static void draw_editor(SceneEditorState *state) {
     scene_editor_draw_button(renderer, &state->btn_add_source, state->font_small);
     scene_editor_draw_button(renderer, &state->btn_add_jet, state->font_small);
     scene_editor_draw_button(renderer, &state->btn_add_sink, state->font_small);
+    scene_editor_draw_button(renderer, &state->btn_add_circle, state->font_small);
+    scene_editor_draw_button(renderer, &state->btn_add_box, state->font_small);
     scene_editor_draw_button(renderer, &state->btn_delete, state->font_small);
 
     scene_editor_draw_button(renderer, &state->btn_save, state->font_small);
     scene_editor_draw_button(renderer, &state->btn_cancel, state->font_small);
 
     draw_text(renderer, state->font_small,
-              "Shortcuts: Tab cycle, arrows nudge, +/- radius, Delete removes",
+              "Shortcuts: Tab emitters, arrows nudge, +/- radius/size, Delete removes",
               state->panel_rect.x + 12,
-              state->panel_rect.y + state->panel_rect.h - 150,
+              state->panel_rect.y + state->panel_rect.h - 170,
               COLOR_TEXT_DIM);
     draw_text(renderer, state->font_small,
-              "Save applies changes. Esc cancels.",
+              "Drag objects/emitters on canvas. Save applies changes. Esc cancels.",
               state->panel_rect.x + 12,
-              state->panel_rect.y + state->panel_rect.h - 120,
+              state->panel_rect.y + state->panel_rect.h - 140,
               COLOR_TEXT_DIM);
 }
 
@@ -422,6 +524,8 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
         &state->btn_add_source,
         &state->btn_add_jet,
         &state->btn_add_sink,
+        &state->btn_add_circle,
+        &state->btn_add_box,
         &state->btn_delete
     };
     for (size_t i = 0; i < sizeof(buttons) / sizeof(buttons[0]); ++i) {
@@ -438,8 +542,16 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
                 add_emitter(state, EMITTER_VELOCITY_JET);
             } else if (btn == &state->btn_add_sink) {
                 add_emitter(state, EMITTER_SINK);
+            } else if (btn == &state->btn_add_circle) {
+                add_object(state, PRESET_OBJECT_CIRCLE);
+            } else if (btn == &state->btn_add_box) {
+                add_object(state, PRESET_OBJECT_BOX);
             } else if (btn == &state->btn_delete) {
-                remove_selected(state);
+                if (state->selection_kind == SELECTION_OBJECT) {
+                    remove_selected_object(state);
+                } else {
+                    remove_selected(state);
+                }
             }
             return;
         }
@@ -455,6 +567,31 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
 
     if (!point_in_rect(&state->panel_rect, x, y)) {
         EditorDragMode mode = DRAG_NONE;
+        int obj_hit = scene_editor_canvas_hit_object(&state->working,
+                                                     state->canvas_x,
+                                                     state->canvas_y,
+                                                     state->canvas_size,
+                                                     x,
+                                                     y);
+        if (obj_hit >= 0) {
+            state->selected_object = obj_hit;
+            state->selected_emitter = -1;
+            state->selection_kind = SELECTION_OBJECT;
+            state->dragging_object = true;
+            PresetObject *obj = &state->working.objects[obj_hit];
+            float nx, ny;
+            scene_editor_canvas_to_normalized(state->canvas_x,
+                                              state->canvas_y,
+                                              state->canvas_size,
+                                              x,
+                                              y,
+                                              &nx,
+                                              &ny);
+            state->object_drag_offset_x = nx - obj->position_x;
+            state->object_drag_offset_y = ny - obj->position_y;
+            return;
+        }
+
         int hit = scene_editor_canvas_hit_test(&state->working,
                                                state->canvas_x,
                                                state->canvas_y,
@@ -466,9 +603,12 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
         if (hit < 0) {
             state->dragging = false;
             state->drag_mode = DRAG_NONE;
+            state->selection_kind = SELECTION_NONE;
             return;
         }
+        state->selection_kind = SELECTION_EMITTER;
         state->selected_emitter = hit;
+        state->selected_object = -1;
         state->drag_mode = mode;
         state->dragging = true;
         state->drag_offset_x = 0.0f;
@@ -495,11 +635,31 @@ static void editor_pointer_up(void *user, const InputPointerState *ptr) {
     if (!state) return;
     state->dragging = false;
     state->drag_mode = DRAG_NONE;
+    state->dragging_object = false;
 }
 
 static void editor_pointer_move(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !ptr) return;
+    if (state->dragging_object && state->selected_object >= 0 &&
+        state->selected_object < (int)state->working.object_count) {
+        PresetObject *obj = &state->working.objects[state->selected_object];
+        float nx, ny;
+        scene_editor_canvas_to_normalized(state->canvas_x,
+                                          state->canvas_y,
+                                          state->canvas_size,
+                                          ptr->x,
+                                          ptr->y,
+                                          &nx,
+                                          &ny);
+        nx -= state->object_drag_offset_x;
+        ny -= state->object_drag_offset_y;
+        obj->position_x = clamp01(nx);
+        obj->position_y = clamp01(ny);
+        clamp_object(obj);
+        set_dirty(state);
+        return;
+    }
     if (state->dragging && state->selected_emitter >= 0 &&
         state->selected_emitter < (int)state->working.emitter_count) {
         FluidEmitter *em = &state->working.emitters[state->selected_emitter];
@@ -537,14 +697,20 @@ static void editor_pointer_move(void *user, const InputPointerState *ptr) {
         }
     } else {
         EditorDragMode mode = DRAG_NONE;
-        state->hover_emitter = scene_editor_canvas_hit_test(&state->working,
-                                                            state->canvas_x,
-                                                            state->canvas_y,
-                                                            state->canvas_size,
-                                                            ptr->x,
-                                                            ptr->y,
-                                                            &mode);
+            state->hover_emitter = scene_editor_canvas_hit_test(&state->working,
+                                                                state->canvas_x,
+                                                                state->canvas_y,
+                                                                state->canvas_size,
+                                                                ptr->x,
+                                                                ptr->y,
+                                                                &mode);
     }
+    state->hover_object = scene_editor_canvas_hit_object(&state->working,
+                                                         state->canvas_x,
+                                                         state->canvas_y,
+                                                         state->canvas_size,
+                                                         ptr->x,
+                                                         ptr->y);
 }
 
 static void editor_text_input(void *user, const char *text) {
@@ -581,22 +747,37 @@ static void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         break;
     case SDLK_TAB: {
         if (state->working.emitter_count == 0) break;
+        if (state->selected_emitter < 0) state->selected_emitter = 0;
         int dir = (mod & KMOD_SHIFT) ? -1 : 1;
         int next = state->selected_emitter + dir;
         if (next < 0) next = (int)state->working.emitter_count - 1;
         if (next >= (int)state->working.emitter_count) next = 0;
         state->selected_emitter = next;
+        state->selection_kind = SELECTION_EMITTER;
+        state->selected_object = -1;
         break;
     }
     case SDLK_DELETE:
     case SDLK_BACKSPACE:
-        remove_selected(state);
+        if (state->selection_kind == SELECTION_OBJECT) {
+            remove_selected_object(state);
+        } else {
+            remove_selected(state);
+        }
         break;
     case SDLK_PLUS:
     case SDLK_EQUALS:
     case SDLK_KP_PLUS:
-        if (state->selected_emitter >= 0 &&
-            state->selected_emitter < (int)state->working.emitter_count) {
+        if (state->selection_kind == SELECTION_OBJECT &&
+            state->selected_object >= 0 &&
+            state->selected_object < (int)state->working.object_count) {
+            PresetObject *obj = &state->working.objects[state->selected_object];
+            obj->size_x *= 1.1f;
+            obj->size_y *= 1.1f;
+            clamp_object(obj);
+            set_dirty(state);
+        } else if (state->selected_emitter >= 0 &&
+                   state->selected_emitter < (int)state->working.emitter_count) {
             adjust_emitter_radius(&state->working.emitters[state->selected_emitter], 1.1f);
             set_dirty(state);
         }
@@ -604,8 +785,16 @@ static void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     case SDLK_MINUS:
     case SDLK_UNDERSCORE:
     case SDLK_KP_MINUS:
-        if (state->selected_emitter >= 0 &&
-            state->selected_emitter < (int)state->working.emitter_count) {
+        if (state->selection_kind == SELECTION_OBJECT &&
+            state->selected_object >= 0 &&
+            state->selected_object < (int)state->working.object_count) {
+            PresetObject *obj = &state->working.objects[state->selected_object];
+            obj->size_x *= 0.9f;
+            obj->size_y *= 0.9f;
+            clamp_object(obj);
+            set_dirty(state);
+        } else if (state->selected_emitter >= 0 &&
+                   state->selected_emitter < (int)state->working.emitter_count) {
             adjust_emitter_radius(&state->working.emitters[state->selected_emitter], 0.9f);
             set_dirty(state);
         }
@@ -664,6 +853,14 @@ bool scene_editor_run(SDL_Window *window,
         .dragging = false,
         .drag_offset_x = 0.0f,
         .drag_offset_y = 0.0f,
+        .selected_object = (preset->emitter_count == 0 && preset->object_count > 0) ? 0 : -1,
+        .hover_object = -1,
+        .dragging_object = false,
+        .object_drag_offset_x = 0.0f,
+        .object_drag_offset_y = 0.0f,
+        .selection_kind = (preset->emitter_count > 0)
+                              ? SELECTION_EMITTER
+                              : ((preset->object_count > 0) ? SELECTION_OBJECT : SELECTION_NONE),
         .active_field = NULL,
         .running = true,
         .applied = false,
@@ -743,8 +940,18 @@ bool scene_editor_run(SDL_Window *window,
     };
     state.btn_delete = (EditorButton){
         .rect = {state.panel_rect.x + 28 + button_w, state.panel_rect.y + 256, button_w, 36},
-        .label = "Delete",
+        .label = "Delete Selection",
         .enabled = state.working.emitter_count > 0
+    };
+    state.btn_add_circle = (EditorButton){
+        .rect = {state.panel_rect.x + 16, state.panel_rect.y + 308, button_w, 36},
+        .label = "Add Circle Obj",
+        .enabled = true
+    };
+    state.btn_add_box = (EditorButton){
+        .rect = {state.panel_rect.x + 28 + button_w, state.panel_rect.y + 308, button_w, 36},
+        .label = "Add Box Obj",
+        .enabled = true
     };
 
     state.btn_save = (EditorButton){
@@ -795,7 +1002,10 @@ bool scene_editor_run(SDL_Window *window,
         state.btn_add_source.enabled = state.working.emitter_count < MAX_FLUID_EMITTERS;
         state.btn_add_jet.enabled = state.working.emitter_count < MAX_FLUID_EMITTERS;
         state.btn_add_sink.enabled = state.working.emitter_count < MAX_FLUID_EMITTERS;
-        state.btn_delete.enabled = state.working.emitter_count > 0;
+        state.btn_add_circle.enabled = state.working.object_count < MAX_PRESET_OBJECTS;
+        state.btn_add_box.enabled = state.working.object_count < MAX_PRESET_OBJECTS;
+        state.btn_delete.enabled = (state.working.emitter_count > 0) ||
+                                   (state.working.object_count > 0);
 
         draw_editor(&state);
         SDL_RenderPresent(renderer);

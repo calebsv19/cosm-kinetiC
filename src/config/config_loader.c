@@ -213,6 +213,19 @@ static void apply_emitter_settings(const char *json, AppConfig *cfg) {
     }
 }
 
+static void apply_export_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "exports", &block)) return;
+
+    double val;
+    if (json_block_number(&block, "save_volume_frames", &val)) {
+        cfg->save_volume_frames = (val != 0.0);
+    }
+    if (json_block_number(&block, "save_render_frames", &val)) {
+        cfg->save_render_frames = (val != 0.0);
+    }
+}
+
 static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_window_settings(json, cfg);
     apply_grid_settings(json, cfg);
@@ -221,6 +234,7 @@ static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_fluid_settings(json, cfg);
     apply_input_settings(json, cfg);
     apply_emitter_settings(json, cfg);
+    apply_export_settings(json, cfg);
 }
 
 bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts) {

@@ -51,6 +51,10 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 run: $(TARGET)
 	./$(TARGET)
 
+VIDEO_FPS ?= 30
+video:
+	ffmpeg -y -framerate $(VIDEO_FPS) -i export/render_frames/frame_%06d.bmp -pix_fmt yuv420p export/render_vid/output.mp4
+
 # Remove build outputs
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)

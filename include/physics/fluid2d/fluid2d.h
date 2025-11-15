@@ -3,6 +3,7 @@
 
 #include "app/app_config.h"
 #include "physics/math/math2d.h"
+#include "objects/object_manager.h"
 
 typedef struct Fluid2D {
     int w;
@@ -24,5 +25,8 @@ void fluid2d_add_density(Fluid2D *f, int x, int y, float amount);
 void fluid2d_add_velocity(Fluid2D *f, int x, int y, float vx, float vy);
 
 void fluid2d_step(Fluid2D *f, double dt, const AppConfig *cfg);
+void fluid2d_apply_object_mask(Fluid2D *f,
+                               const ObjectManager *objects,
+                               const AppConfig *cfg);
 
 #endif // FLUID2D_H

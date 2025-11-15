@@ -39,6 +39,12 @@ int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
                                  int px,
                                  int py,
                                  EditorDragMode *mode);
+int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
+                                   int canvas_x,
+                                   int canvas_y,
+                                   int canvas_size,
+                                   int px,
+                                   int py);
 
 void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
                                    int canvas_x,
@@ -58,5 +64,12 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
                                        int selected_emitter,
                                        int hover_emitter,
                                        TTF_Font *font_small);
+void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
+                                      int canvas_x,
+                                      int canvas_y,
+                                      int canvas_size,
+                                      const FluidScenePreset *preset,
+                                      int selected_object,
+                                      int hover_object);
 
 #endif // SCENE_EDITOR_CANVAS_H

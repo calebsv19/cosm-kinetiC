@@ -2,6 +2,7 @@
 #define APP_CONFIG_H
 
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef struct AppConfig {
     int window_w;
@@ -27,6 +28,9 @@ typedef struct AppConfig {
     float  emitter_density_multiplier;
     float  emitter_velocity_multiplier;
     float  emitter_sink_multiplier;
+
+    bool   save_volume_frames;
+    bool   save_render_frames;
 } AppConfig;
 
 AppConfig app_config_default(void);

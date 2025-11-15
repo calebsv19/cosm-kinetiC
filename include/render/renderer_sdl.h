@@ -17,7 +17,19 @@ typedef struct RendererHudInfo {
 
 bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH);
 void renderer_sdl_shutdown(void);
-void renderer_sdl_draw(const SceneState *scene,
-                       const RendererHudInfo *hud);
+
+bool renderer_sdl_render_scene(const SceneState *scene);
+void renderer_sdl_present_with_hud(const RendererHudInfo *hud);
+bool renderer_sdl_capture_pixels(uint8_t **out_rgba, int *out_pitch);
+void renderer_sdl_free_capture(uint8_t *pixels);
+int renderer_sdl_output_width(void);
+int renderer_sdl_output_height(void);
+
+static inline void renderer_sdl_draw(const SceneState *scene,
+                                     const RendererHudInfo *hud) {
+    if (renderer_sdl_render_scene(scene)) {
+        renderer_sdl_present_with_hud(hud);
+    }
+}
 
 #endif // RENDERER_SDL_H

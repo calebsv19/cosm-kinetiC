@@ -10,10 +10,17 @@ typedef struct InputPointerState {
     bool down;
 } InputPointerState;
 
+typedef struct InputWheelState {
+    int x;
+    int y;
+    bool flipped;
+} InputWheelState;
+
 typedef struct InputContext {
     void (*on_pointer_down)(void *user, const InputPointerState *state);
     void (*on_pointer_up)(void *user, const InputPointerState *state);
     void (*on_pointer_move)(void *user, const InputPointerState *state);
+    void (*on_wheel)(void *user, const InputWheelState *wheel);
     void (*on_key_down)(void *user, SDL_Keycode key, SDL_Keymod mod);
     void (*on_key_up)(void *user, SDL_Keycode key, SDL_Keymod mod);
     void (*on_text_input)(void *user, const char *text);

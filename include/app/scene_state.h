@@ -9,6 +9,7 @@
 #include "input/input.h"
 #include "input/stroke_buffer.h"
 #include "app/scene_presets.h"
+#include "objects/object_manager.h"
 
 typedef struct SceneState {
     double time;
@@ -19,6 +20,7 @@ typedef struct SceneState {
     const FluidScenePreset *preset;
 
     const AppConfig *config; // non-owning pointer
+    ObjectManager objects;
 } SceneState;
 
 SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset);

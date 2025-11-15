@@ -4,6 +4,12 @@
 #include <SDL2/SDL_ttf.h>
 #include <math.h>
 #include <stdio.h>
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+#include <stdlib.h>
+
+#define OBJECT_BORDER_THICKNESS 2
 
 static SDL_Window   *g_window   = NULL;
 static SDL_Renderer *g_renderer = NULL;
@@ -236,15 +242,15 @@ void renderer_sdl_shutdown(void) {
     }
 }
 
-void renderer_sdl_draw(const SceneState *scene,
-                       const RendererHudInfo *hud) {
-    if (!scene || !scene->smoke || !g_renderer || !g_texture) return;
+static void renderer_draw_object_borders(const SceneState *scene);
 
+static bool renderer_upload_scene(const SceneState *scene) {
+    if (!scene || !scene->smoke || !g_renderer || !g_texture) return false;
     int tex_pitch = 0;
     void *pixels = NULL;
     if (SDL_LockTexture(g_texture, NULL, &pixels, &tex_pitch) != 0) {
         fprintf(stderr, "SDL_LockTexture failed: %s\n", SDL_GetError());
-        return;
+        return false;
     }
 
     // tex_pitch is in bytes per row
@@ -270,13 +276,128 @@ void renderer_sdl_draw(const SceneState *scene,
 
     SDL_UnlockTexture(g_texture);
 
+    return true;
+}
+
+bool renderer_sdl_render_scene(const SceneState *scene) {
+    if (!renderer_upload_scene(scene)) return false;
+
     SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
     SDL_RenderClear(g_renderer);
 
     SDL_Rect dst_rect = {0, 0, g_window_w, g_window_h};
     SDL_RenderCopy(g_renderer, g_texture, NULL, &dst_rect);
+    renderer_draw_object_borders(scene);
+    return true;
+}
 
+void renderer_sdl_present_with_hud(const RendererHudInfo *hud) {
     renderer_draw_hud(hud);
-
     SDL_RenderPresent(g_renderer);
+}
+
+bool renderer_sdl_capture_pixels(uint8_t **out_rgba, int *out_pitch) {
+    if (!out_rgba || !g_renderer) return false;
+    int pitch = g_window_w * 4;
+    uint8_t *buffer = (uint8_t *)malloc((size_t)pitch * (size_t)g_window_h);
+    if (!buffer) return false;
+    if (SDL_RenderReadPixels(g_renderer,
+                             NULL,
+                             SDL_PIXELFORMAT_ABGR8888,
+                             buffer,
+                             pitch) != 0) {
+        fprintf(stderr, "[renderer] SDL_RenderReadPixels failed: %s\n", SDL_GetError());
+        free(buffer);
+        return false;
+    }
+    *out_rgba = buffer;
+    if (out_pitch) *out_pitch = pitch;
+    return true;
+}
+
+void renderer_sdl_free_capture(uint8_t *pixels) {
+    free(pixels);
+}
+
+int renderer_sdl_output_width(void) {
+    return g_window_w;
+}
+
+int renderer_sdl_output_height(void) {
+    return g_window_h;
+}
+static void renderer_draw_object_borders(const SceneState *scene) {
+#if OBJECT_BORDER_THICKNESS <= 0
+    (void)scene;
+    return;
+#else
+    if (!scene || !scene->config || !g_renderer) return;
+    const ObjectManager *objects = &scene->objects;
+    if (!objects || objects->count == 0) return;
+
+    float scale_x = (scene->config->window_w > 0)
+                        ? (float)g_window_w / (float)scene->config->window_w
+                        : 1.0f;
+    float scale_y = (scene->config->window_h > 0)
+                        ? (float)g_window_h / (float)scene->config->window_h
+                        : 1.0f;
+
+    SDL_Color circle_color = {255, 80, 80, 255};
+    SDL_Color box_color    = {170, 120, 80, 255};
+    SDL_SetRenderDrawBlendMode(g_renderer, SDL_BLENDMODE_BLEND);
+
+    const int segments = 48;
+    for (int i = 0; i < objects->count; ++i) {
+        const SceneObject *obj = &objects->objects[i];
+        int cx = (int)lroundf(obj->body.position.x * scale_x);
+        int cy = (int)lroundf(obj->body.position.y * scale_y);
+        if (obj->type == SCENE_OBJECT_CIRCLE) {
+            int radius = (int)lroundf(obj->body.radius * scale_x);
+            if (radius < 2) radius = 2;
+            SDL_SetRenderDrawColor(g_renderer,
+                                   circle_color.r,
+                                   circle_color.g,
+                                   circle_color.b,
+                                   circle_color.a);
+            for (int t = 0; t < OBJECT_BORDER_THICKNESS; ++t) {
+                int r = radius - t;
+                if (r <= 0) break;
+                float prev_x = (float)(cx + r);
+                float prev_y = (float)cy;
+                for (int seg = 1; seg <= segments; ++seg) {
+                    float theta = (float)seg / (float)segments * 2.0f * (float)M_PI;
+                    float cur_x = (float)cx + cosf(theta) * (float)r;
+                    float cur_y = (float)cy + sinf(theta) * (float)r;
+                    SDL_RenderDrawLine(g_renderer,
+                                       (int)prev_x,
+                                       (int)prev_y,
+                                       (int)cur_x,
+                                       (int)cur_y);
+                    prev_x = cur_x;
+                    prev_y = cur_y;
+                }
+            }
+        } else {
+            int half_w = (int)lroundf(obj->body.half_extents.x * scale_x);
+            int half_h = (int)lroundf(obj->body.half_extents.y * scale_y);
+            if (half_w < 2) half_w = 2;
+            if (half_h < 2) half_h = 2;
+            SDL_SetRenderDrawColor(g_renderer,
+                                   box_color.r,
+                                   box_color.g,
+                                   box_color.b,
+                                   box_color.a);
+            for (int t = 0; t < OBJECT_BORDER_THICKNESS; ++t) {
+                SDL_Rect rect = {
+                    cx - half_w + t,
+                    cy - half_h + t,
+                    (half_w - t) * 2,
+                    (half_h - t) * 2
+                };
+                if (rect.w <= 0 || rect.h <= 0) break;
+                SDL_RenderDrawRect(g_renderer, &rect);
+            }
+        }
+    }
+#endif
 }

@@ -121,18 +121,14 @@ static void draw_line(SDL_Renderer *renderer, int x0, int y0, int x1, int y1, SD
 }
 
 void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
-                                       int canvas_x,
-                                       int canvas_y,
-                                       int canvas_size,
-                                       const FluidScenePreset *preset,
-                                       int selected_emitter,
-                                       int hover_emitter,
-                                       TTF_Font *font_small) {
+                                      int canvas_x,
+                                      int canvas_y,
+                                      int canvas_size,
+                                      const FluidScenePreset *preset,
+                                      int selected_emitter,
+                                      int hover_emitter,
+                                      TTF_Font *font_small) {
     if (!renderer || !preset) return;
-
-    SDL_Rect canvas_rect = {canvas_x, canvas_y, canvas_size, canvas_size};
-    SDL_SetRenderDrawColor(renderer, COLOR_CANVAS.r, COLOR_CANVAS.g, COLOR_CANVAS.b, 255);
-    SDL_RenderFillRect(renderer, &canvas_rect);
 
     for (size_t i = 0; i < preset->emitter_count; ++i) {
         const FluidEmitter *em = &preset->emitters[i];
@@ -164,6 +160,85 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
             snprintf(tooltip_pos, sizeof(tooltip_pos), "Radius: %.2f", em->radius);
             (void)tooltip_pos;
             // Canvas-specific tooltip drawing can be added later if needed.
+        }
+    }
+}
+
+static void draw_box(SDL_Renderer *renderer, int cx, int cy, int half_w, int half_h, SDL_Color color) {
+    SDL_Rect rect = {cx - half_w, cy - half_h, half_w * 2, half_h * 2};
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderFillRect(renderer, &rect);
+}
+
+int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
+                                   int canvas_x,
+                                   int canvas_y,
+                                   int canvas_size,
+                                   int px,
+                                   int py) {
+    if (!preset) return -1;
+    for (size_t i = 0; i < preset->object_count; ++i) {
+        const PresetObject *obj = &preset->objects[i];
+        int cx, cy;
+        scene_editor_canvas_project(canvas_x, canvas_y, canvas_size,
+                                    obj->position_x, obj->position_y,
+                                    &cx, &cy);
+        if (obj->type == PRESET_OBJECT_CIRCLE) {
+            int radius = (int)(obj->size_x * (float)canvas_size);
+            if (radius < 6) radius = 6;
+            float dx = (float)px - (float)cx;
+            float dy = (float)py - (float)cy;
+            if (dx * dx + dy * dy <= (float)(radius * radius)) {
+                return (int)i;
+            }
+        } else {
+            int half_w = (int)(obj->size_x * (float)canvas_size);
+            int half_h = (int)(obj->size_y * (float)canvas_size);
+            if (half_w < 6) half_w = 6;
+            if (half_h < 6) half_h = 6;
+            SDL_Rect rect = {cx - half_w, cy - half_h, half_w * 2, half_h * 2};
+            if (px >= rect.x && px <= rect.x + rect.w &&
+                py >= rect.y && py <= rect.y + rect.h) {
+                return (int)i;
+            }
+        }
+    }
+    return -1;
+}
+
+void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
+                                      int canvas_x,
+                                      int canvas_y,
+                                      int canvas_size,
+                                      const FluidScenePreset *preset,
+                                      int selected_object,
+                                      int hover_object) {
+    if (!renderer || !preset) return;
+
+    for (size_t i = 0; i < preset->object_count; ++i) {
+        const PresetObject *obj = &preset->objects[i];
+        int cx, cy;
+        scene_editor_canvas_project(canvas_x, canvas_y, canvas_size,
+                                    obj->position_x, obj->position_y,
+                                    &cx, &cy);
+        SDL_Color base = (obj->type == PRESET_OBJECT_BOX)
+                             ? (SDL_Color){170, 120, 80, 255}
+                             : (SDL_Color){255, 80, 80, 255};
+        if ((int)i == selected_object) {
+            base = lighten_color(base, SCENE_EDITOR_SELECT_HIGHLIGHT_FACTOR);
+        } else if ((int)i == hover_object) {
+            base = lighten_color(base, 0.2f);
+        }
+        if (obj->type == PRESET_OBJECT_CIRCLE) {
+            int radius = (int)(obj->size_x * (float)canvas_size);
+            if (radius < 6) radius = 6;
+            draw_circle(renderer, cx, cy, radius, base);
+        } else {
+            int half_w = (int)(obj->size_x * (float)canvas_size);
+            int half_h = (int)(obj->size_y * (float)canvas_size);
+            if (half_w < 6) half_w = 6;
+            if (half_h < 6) half_h = 6;
+            draw_box(renderer, cx, cy, half_w, half_h, base);
         }
     }
 }

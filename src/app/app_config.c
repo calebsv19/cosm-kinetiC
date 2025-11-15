@@ -27,5 +27,8 @@ AppConfig app_config_default(void) {
     cfg.emitter_velocity_multiplier = 1.0f;
     cfg.emitter_sink_multiplier = 1.0f;
 
+    cfg.save_volume_frames = false;
+    cfg.save_render_frames = false;
+
     return cfg;
 }

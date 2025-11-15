@@ -1,4 +1,5 @@
 #include "physics/fluid2d/fluid2d.h"
+#include "objects/object_manager.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -234,6 +235,66 @@ void fluid2d_add_velocity(Fluid2D *f, int x, int y, float vx, float vy) {
     size_t id = idx(f, x, y);
     f->velX[id] += vx;
     f->velY[id] += vy;
+}
+
+static int cell_from_world(float pos, int grid, float world_max) {
+    float normalized = pos / world_max;
+    if (normalized < 0.0f) normalized = 0.0f;
+    if (normalized > 1.0f) normalized = 1.0f;
+    return (int)(normalized * (float)(grid - 1));
+}
+
+void fluid2d_apply_object_mask(Fluid2D *f,
+                               const ObjectManager *objects,
+                               const AppConfig *cfg) {
+    if (!f || !objects || !cfg) return;
+    if (!objects->objects || objects->count == 0) return;
+
+    for (int i = 0; i < objects->count; ++i) {
+        const SceneObject *obj = &objects->objects[i];
+        if (!obj) continue;
+        if (obj->type == SCENE_OBJECT_CIRCLE) {
+            int cx = cell_from_world(obj->body.position.x, f->w, (float)cfg->window_w);
+            int cy = cell_from_world(obj->body.position.y, f->h, (float)cfg->window_h);
+            int radius = (int)(obj->body.radius / (float)cfg->window_w * (float)f->w);
+            if (radius < 1) radius = 1;
+            for (int y = cy - radius; y <= cy + radius; ++y) {
+                if (y <= 0 || y >= f->h - 1) continue;
+                for (int x = cx - radius; x <= cx + radius; ++x) {
+                    if (x <= 0 || x >= f->w - 1) continue;
+                    float dx = (float)(x - cx);
+                    float dy = (float)(y - cy);
+                    if (dx * dx + dy * dy <= (float)(radius * radius)) {
+                        size_t id = idx(f, x, y);
+                        f->density[id] = 0.0f;
+                        f->velX[id] = 0.0f;
+                        f->velY[id] = 0.0f;
+                    }
+                }
+            }
+        } else if (obj->type == SCENE_OBJECT_BOX) {
+            int min_x = cell_from_world(obj->body.position.x - obj->body.half_extents.x,
+                                        f->w, (float)cfg->window_w);
+            int max_x = cell_from_world(obj->body.position.x + obj->body.half_extents.x,
+                                        f->w, (float)cfg->window_w);
+            int min_y = cell_from_world(obj->body.position.y - obj->body.half_extents.y,
+                                        f->h, (float)cfg->window_h);
+            int max_y = cell_from_world(obj->body.position.y + obj->body.half_extents.y,
+                                        f->h, (float)cfg->window_h);
+            if (min_x < 1) min_x = 1;
+            if (max_x > f->w - 2) max_x = f->w - 2;
+            if (min_y < 1) min_y = 1;
+            if (max_y > f->h - 2) max_y = f->h - 2;
+            for (int y = min_y; y <= max_y; ++y) {
+                for (int x = min_x; x <= max_x; ++x) {
+                    size_t id = idx(f, x, y);
+                    f->density[id] = 0.0f;
+                    f->velX[id] = 0.0f;
+                    f->velY[id] = 0.0f;
+                }
+            }
+        }
+    }
 }
 
 void fluid2d_step(Fluid2D *f, double dt, const AppConfig *cfg) {

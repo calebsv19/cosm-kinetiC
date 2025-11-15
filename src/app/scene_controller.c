@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
 
 #include "command/command_bus.h"
 #include "app/scene_state.h"
@@ -12,6 +13,8 @@
 #include "input/stroke_buffer.h"
 #include "physics/fluid2d/fluid2d.h"
 #include "render/renderer_sdl.h"
+#include "export/volume_frames.h"
+#include "export/render_frames.h"
 #include "timing.h"
 
 typedef struct CommandDispatchContext {
@@ -194,6 +197,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
 
     bool running = true;
     int snapshot_index = 0;
+    uint64_t frame_index = 0;
     while (running) {
         InputCommands cmds;
         running = input_poll_events(&cmds, &bus, &ctx_mgr);
@@ -222,6 +226,8 @@ int scene_controller_run(const AppConfig *initial_cfg,
             for (int i = 0; i < substeps; ++i) {
                 scene_apply_emitters(&scene, sub_dt);
                 fluid2d_step(scene.smoke, sub_dt, &cfg);
+                fluid2d_apply_object_mask(scene.smoke, &scene.objects, &cfg);
+                object_manager_step(&scene.objects, sub_dt, &cfg);
                 scene.time += sub_dt;
             }
         }
@@ -245,7 +251,27 @@ int scene_controller_run(const AppConfig *initial_cfg,
             .stroke_samples = stroke_buffer_count(&sampler.buffer),
             .paused = scene.paused
         };
-        renderer_sdl_draw(&scene, &hud);
+        if (cfg.save_volume_frames) {
+            volume_frames_write(&scene, frame_index);
+        }
+
+        if (renderer_sdl_render_scene(&scene)) {
+            if (cfg.save_render_frames) {
+                uint8_t *pixels = NULL;
+                int pitch = 0;
+                if (renderer_sdl_capture_pixels(&pixels, &pitch)) {
+                    render_frames_write_bmp(pixels,
+                                            renderer_sdl_output_width(),
+                                            renderer_sdl_output_height(),
+                                            pitch,
+                                            frame_index);
+                    renderer_sdl_free_capture(pixels);
+                }
+            }
+            renderer_sdl_present_with_hud(&hud);
+        }
+
+        frame_index++;
     }
 
     scene_destroy(&scene);

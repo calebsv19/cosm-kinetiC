@@ -22,11 +22,30 @@ typedef struct FluidEmitter {
 
 #define MAX_FLUID_EMITTERS 8
 
+typedef enum PresetObjectType {
+    PRESET_OBJECT_CIRCLE = 0,
+    PRESET_OBJECT_BOX
+} PresetObjectType;
+
+typedef struct PresetObject {
+    PresetObjectType type;
+    float position_x;
+    float position_y;
+    float size_x;
+    float size_y;
+    float angle;
+    bool  is_static;
+} PresetObject;
+
+#define MAX_PRESET_OBJECTS 16
+
 typedef struct FluidScenePreset {
     const char *name;
     size_t emitter_count;
     bool   is_custom;
     FluidEmitter emitters[MAX_FLUID_EMITTERS];
+    size_t object_count;
+    PresetObject objects[MAX_PRESET_OBJECTS];
 } FluidScenePreset;
 
 const FluidScenePreset *scene_presets_get_all(size_t *count);

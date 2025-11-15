@@ -37,6 +37,34 @@ SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
         fprintf(stderr, "Failed to create Fluid2D\n");
     }
 
+    object_manager_init(&s.objects, 8);
+    if (preset) {
+        for (size_t i = 0; i < preset->object_count && i < MAX_PRESET_OBJECTS; ++i) {
+            const PresetObject *po = &preset->objects[i];
+            Vec2 position = vec2(po->position_x * (float)cfg->window_w,
+                                 po->position_y * (float)cfg->window_h);
+            if (po->type == PRESET_OBJECT_CIRCLE) {
+                float radius = po->size_x * (float)cfg->window_w;
+                SceneObject *obj = object_manager_add_circle(&s.objects,
+                                                             position,
+                                                             radius,
+                                                             po->is_static);
+                if (obj) {
+                    obj->body.angle = po->angle;
+                }
+            } else {
+                Vec2 half_extents = vec2(po->size_x * (float)cfg->window_w,
+                                         po->size_y * (float)cfg->window_h);
+                SceneObject *obj = object_manager_add_box(&s.objects,
+                                                          position,
+                                                          half_extents,
+                                                          po->is_static);
+                if (obj) {
+                    obj->body.angle = po->angle;
+                }
+            }
+        }
+    }
     return s;
 }
 
@@ -44,6 +72,7 @@ void scene_destroy(SceneState *scene) {
     if (!scene) return;
     fluid2d_destroy(scene->smoke);
     scene->smoke = NULL;
+    object_manager_shutdown(&scene->objects);
 }
 
 static const float BRUSH_DENSITY = 20.0f;

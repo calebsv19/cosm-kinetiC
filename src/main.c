@@ -26,6 +26,16 @@ int main(int argc, char **argv) {
     CustomPresetLibrary library;
     preset_library_init(&library);
     preset_library_load(preset_path, &library);
+    if (preset_library_count(&library) == 0) {
+        const FluidScenePreset *default_custom = scene_presets_get_default();
+        CustomPresetSlot *slot = preset_library_add_slot(&library, "Custom Preset 1", default_custom);
+        if (slot && default_custom) {
+            slot->preset = *default_custom;
+            slot->preset.name = slot->name;
+            slot->preset.is_custom = true;
+            slot->occupied = true;
+        }
+    }
 
     const FluidScenePreset *default_preset = scene_presets_get_default();
     FluidScenePreset preset_state = *default_preset;
@@ -41,6 +51,7 @@ int main(int argc, char **argv) {
     }
 
     preset_library_save(preset_path, &library);
+    preset_library_shutdown(&library);
 
     return 0;
 }
