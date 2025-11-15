@@ -1,24 +1,35 @@
 {
   "window": {
-    "width": 800,
-    "height": 800
+    "width": 772,
+    "height": 772
   },
   "grid": {
-    "width": 200,
-    "height": 200
+    "width": 256,
+    "height": 256
   },
   "timing": {
     "min_dt": 0.006060606,
     "max_dt": 0.033333333,
-    "substeps": 2
+    "substeps": 3
   },
   "commands": {
     "max_per_frame": 256
   },
   "fluid": {
-    "diffusion": 0.0001,
-    "viscosity": 0.00001,
-    "density_decay": 0.05,
-    "buoyancy": 1.5
+    "diffusion": 0.000100,
+    "viscosity": 0.000010,
+    "density_decay": 0.050000,
+    "buoyancy": 1.500000,
+    "solver_iterations": 24
+  },
+  "render": {
+    "blur_enabled": true
+  },
+  "headless": {
+    "enabled": false,
+    "frame_count": 1000,
+    "custom_slot_index": 0,
+    "quality_index": -1,
+    "skip_present": true
   }
 }

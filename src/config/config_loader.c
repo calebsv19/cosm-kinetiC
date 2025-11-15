@@ -149,6 +149,10 @@ static void apply_timing_settings(const char *json, AppConfig *cfg) {
     if (json_block_number(&block, "min_dt", &val))    cfg->min_dt = val;
     if (json_block_number(&block, "max_dt", &val))    cfg->max_dt = val;
     if (json_block_number(&block, "substeps", &val))  cfg->physics_substeps = (int)val;
+    if (json_block_number(&block, "fixed_dt", &val))  cfg->physics_fixed_dt = val;
+    if (json_block_number(&block, "max_steps_per_frame", &val)) {
+        cfg->max_physics_steps_per_frame = (int)val;
+    }
 }
 
 static void apply_command_settings(const char *json, AppConfig *cfg) {
@@ -182,6 +186,10 @@ static void apply_fluid_settings(const char *json, AppConfig *cfg) {
         json_block_number(&block, "buoyancy_force", &val)) {
         cfg->fluid_buoyancy_force = (float)val;
     }
+    if (json_block_number(&block, "solver_iterations", &val) ||
+        json_block_number(&block, "iterations", &val)) {
+        cfg->fluid_solver_iterations = (int)val;
+    }
 }
 
 static void apply_input_settings(const char *json, AppConfig *cfg) {
@@ -213,6 +221,65 @@ static void apply_emitter_settings(const char *json, AppConfig *cfg) {
     }
 }
 
+static void apply_render_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "render", &block)) return;
+
+    double val;
+    if (json_block_number(&block, "blur_enabled", &val)) {
+        cfg->enable_render_blur = (val != 0.0);
+    }
+}
+
+static void apply_headless_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "headless", &block)) return;
+
+    double val;
+    if (json_block_number(&block, "enabled", &val)) {
+        cfg->headless_enabled = (val != 0.0);
+    }
+    if (json_block_number(&block, "frame_count", &val)) {
+        cfg->headless_frame_count = (int)val;
+    }
+    if (json_block_number(&block, "custom_slot_index", &val)) {
+        cfg->headless_custom_slot = (int)val;
+    }
+    if (json_block_number(&block, "quality_index", &val)) {
+        cfg->headless_quality_index = (int)val;
+    }
+    if (json_block_number(&block, "skip_present", &val)) {
+        cfg->headless_skip_present = (val != 0.0);
+    }
+
+    char *copy = copy_block_text(&block);
+    if (copy) {
+        char pattern[64];
+        snprintf(pattern, sizeof(pattern), "\"output_dir\"");
+        char *key_pos = strstr(copy, pattern);
+        if (key_pos) {
+            char *colon = strchr(key_pos + strlen(pattern), ':');
+            if (colon) {
+                colon++;
+                while (*colon && isspace((unsigned char)*colon)) colon++;
+                if (*colon == '"') {
+                    colon++;
+                    char *end = strchr(colon, '"');
+                    if (end) {
+                        size_t len = (size_t)(end - colon);
+                        if (len >= sizeof(cfg->headless_output_dir)) {
+                            len = sizeof(cfg->headless_output_dir) - 1;
+                        }
+                        memcpy(cfg->headless_output_dir, colon, len);
+                        cfg->headless_output_dir[len] = '\0';
+                    }
+                }
+            }
+        }
+        free(copy);
+    }
+}
+
 static void apply_export_settings(const char *json, AppConfig *cfg) {
     JsonBlock block;
     if (!json_find_object(json, "exports", &block)) return;
@@ -234,6 +301,8 @@ static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_fluid_settings(json, cfg);
     apply_input_settings(json, cfg);
     apply_emitter_settings(json, cfg);
+    apply_render_settings(json, cfg);
+    apply_headless_settings(json, cfg);
     apply_export_settings(json, cfg);
 }
 
@@ -264,5 +333,50 @@ bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts) {
     apply_json_overrides(json, cfg);
     fprintf(stderr, "[config] Loaded %s (%zu bytes).\n", opts->path, json_size);
     free(json);
+    return true;
+}
+
+bool config_loader_save(const AppConfig *cfg, const char *path) {
+    if (!cfg || !path) return false;
+    FILE *f = fopen(path, "w");
+    if (!f) return false;
+
+    fprintf(f, "{\n");
+    fprintf(f, "  \"window\": {\n");
+    fprintf(f, "    \"width\": %d,\n", cfg->window_w);
+    fprintf(f, "    \"height\": %d\n", cfg->window_h);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"grid\": {\n");
+    fprintf(f, "    \"width\": %d,\n", cfg->grid_w);
+    fprintf(f, "    \"height\": %d\n", cfg->grid_h);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"timing\": {\n");
+    fprintf(f, "    \"min_dt\": %.9f,\n", cfg->min_dt);
+    fprintf(f, "    \"max_dt\": %.9f,\n", cfg->max_dt);
+    fprintf(f, "    \"substeps\": %d\n", cfg->physics_substeps);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"commands\": {\n");
+    fprintf(f, "    \"max_per_frame\": %d\n", cfg->command_batch_limit);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"fluid\": {\n");
+    fprintf(f, "    \"diffusion\": %.6f,\n", cfg->density_diffusion);
+    fprintf(f, "    \"viscosity\": %.6f,\n", cfg->velocity_damping);
+    fprintf(f, "    \"density_decay\": %.6f,\n", cfg->density_decay);
+    fprintf(f, "    \"buoyancy\": %.6f,\n", cfg->fluid_buoyancy_force);
+    fprintf(f, "    \"solver_iterations\": %d\n", cfg->fluid_solver_iterations);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"render\": {\n");
+    fprintf(f, "    \"blur_enabled\": %s\n", cfg->enable_render_blur ? "true" : "false");
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"headless\": {\n");
+    fprintf(f, "    \"enabled\": %s,\n", cfg->headless_enabled ? "true" : "false");
+    fprintf(f, "    \"frame_count\": %d,\n", cfg->headless_frame_count);
+    fprintf(f, "    \"custom_slot_index\": %d,\n", cfg->headless_custom_slot);
+    fprintf(f, "    \"quality_index\": %d,\n", cfg->headless_quality_index);
+    fprintf(f, "    \"skip_present\": %s\n", cfg->headless_skip_present ? "true" : "false");
+    fprintf(f, "  }\n");
+    fprintf(f, "}\n");
+
+    fclose(f);
     return true;
 }

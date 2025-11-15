@@ -6,7 +6,9 @@
 #include "app/preset_io.h"
 #include "app/scene_menu.h"
 #include "app/scene_presets.h"
+#include "app/quality_profiles.h"
 #include "config/config_loader.h"
+#include "render/TimerHUD/src/api/time_scope.h"
 
 int main(int argc, char **argv) {
     (void)argc;
@@ -22,6 +24,9 @@ int main(int argc, char **argv) {
     if (!config_loader_load(&cfg, &opts)) {
         fprintf(stderr, "Failed to load config, continuing with defaults.\n");
     }
+    const char *config_path = opts.path ? opts.path : "config/app.json";
+
+    ts_init();
 
     CustomPresetLibrary library;
     preset_library_init(&library);
@@ -41,17 +46,55 @@ int main(int argc, char **argv) {
     FluidScenePreset preset_state = *default_preset;
 
     SceneMenuSelection selection = {
-        .custom_slot_index = library.active_slot
+        .custom_slot_index = library.active_slot,
+        .quality_index = cfg.quality_index,
+        .headless_frame_count = cfg.headless_frame_count
     };
+
+    if (cfg.headless_enabled) {
+
+        if (cfg.headless_quality_index >= 0) {
+            quality_profile_apply(&cfg, cfg.headless_quality_index);
+        }
+
+        int slot_index = cfg.headless_custom_slot;
+        if (slot_index < 0 || slot_index >= preset_library_count(&library)) {
+            slot_index = 0;
+        }
+        CustomPresetSlot *slot = preset_library_get_slot(&library, slot_index);
+        FluidScenePreset *preset_to_run = slot ? &slot->preset : &preset_state;
+        HeadlessOptions headless_opts = {
+            .enabled = true,
+            .frame_limit = cfg.headless_frame_count,
+            .skip_present = cfg.headless_skip_present,
+            .ignore_input = false,
+            .preserve_sdl_state = false
+        };
+        const char *output_dir = cfg.headless_output_dir[0]
+                                     ? cfg.headless_output_dir
+                                     : "data/snapshots";
+        scene_controller_run(&cfg, preset_to_run, output_dir, &headless_opts);
+
+        preset_library_save(preset_path, &library);
+        config_loader_save(&cfg, config_path);
+        preset_library_shutdown(&library);
+        ts_shutdown();
+        return 0;
+    }
 
     while (scene_menu_run(&cfg, &preset_state, &selection, &library)) {
         CustomPresetSlot *slot = preset_library_get_slot(&library, selection.custom_slot_index);
         FluidScenePreset *preset_to_run = slot ? &slot->preset : &preset_state;
-        scene_controller_run(&cfg, preset_to_run, "data/snapshots");
+        scene_controller_run(&cfg, preset_to_run, "data/snapshots", NULL);
+        cfg.quality_index = selection.quality_index;
+        cfg.headless_frame_count = selection.headless_frame_count;
     }
 
     preset_library_save(preset_path, &library);
+    config_loader_save(&cfg, config_path);
     preset_library_shutdown(&library);
+
+    ts_shutdown();
 
     return 0;
 }

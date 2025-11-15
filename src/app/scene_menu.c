@@ -4,8 +4,11 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "app/editor/scene_editor.h"
+#include "app/quality_profiles.h"
+#include "app/scene_controller.h"
 #include "input/input.h"
 #include "ui/text_input.h"
 #include "ui/scrollbar.h"
@@ -45,6 +48,9 @@ typedef struct SceneMenuInteraction {
     MenuButton quit_button;
     MenuButton grid_dec_button;
     MenuButton grid_inc_button;
+    MenuButton quality_prev_button;
+    MenuButton quality_next_button;
+    MenuButton headless_toggle_button;
     SDL_Rect volume_toggle_rect;
     SDL_Rect render_toggle_rect;
     bool *running;
@@ -60,16 +66,113 @@ typedef struct SceneMenuInteraction {
     bool scrollbar_dragging;
     int hover_slot;
     bool hover_add_entry;
+    int quality_index;
+    bool headless_pending;
+    bool headless_running;
+    char status_text[128];
+    bool status_visible;
+    bool status_wait_ack;
+    bool headless_run_requested;
+    TextInputField headless_frames_input;
+    bool editing_headless_frames;
+    SDL_Rect headless_frames_rect;
+    Uint32 last_headless_click_ticks;
 } SceneMenuInteraction;
 
 static void begin_rename(SceneMenuInteraction *ctx, int slot_index);
 static void finish_rename(SceneMenuInteraction *ctx, bool apply);
+static void clamp_grid_size(AppConfig *cfg);
+static void set_status(SceneMenuInteraction *ctx, const char *text, bool wait_ack);
+static void clear_status(SceneMenuInteraction *ctx);
+static void begin_headless_frames_edit(SceneMenuInteraction *ctx);
+static void finish_headless_frames_edit(SceneMenuInteraction *ctx, bool apply);
 
 static SDL_Color COLOR_BG       = {18, 18, 22, 255};
 static SDL_Color COLOR_PANEL    = {32, 36, 40, 255};
 static SDL_Color COLOR_TEXT     = {245, 247, 250, 255};
 static SDL_Color COLOR_TEXT_DIM = {210, 216, 226, 255};
 static SDL_Color COLOR_ACCENT   = {90, 170, 255, 255};
+static SDL_Color COLOR_BUTTON_BG = {45, 50, 58, 255};
+static SDL_Color COLOR_BUTTON_BG_ACTIVE = {60, 120, 200, 255};
+
+static int quality_count(void) {
+    return quality_profile_count();
+}
+
+static void apply_quality_profile_index(SceneMenuInteraction *ctx, int index) {
+    if (!ctx || !ctx->cfg) return;
+    quality_profile_apply(ctx->cfg, index);
+    clamp_grid_size(ctx->cfg);
+    ctx->quality_index = (index >= 0 && index < quality_count()) ? index : -1;
+    if (ctx->selection) {
+        ctx->selection->quality_index = ctx->quality_index;
+    }
+}
+
+static void set_custom_quality(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return;
+    ctx->quality_index = -1;
+    ctx->cfg->quality_index = -1;
+    if (ctx->selection) {
+        ctx->selection->quality_index = -1;
+    }
+}
+
+static void cycle_quality(SceneMenuInteraction *ctx, int delta) {
+    if (!ctx) return;
+    int count = quality_count();
+    if (count <= 0) return;
+    int current = ctx->quality_index;
+    if (current < 0) current = 0;
+    current = (current + delta + count) % count;
+    apply_quality_profile_index(ctx, current);
+}
+
+static const char *current_quality_name(const SceneMenuInteraction *ctx) {
+    if (!ctx) return "Custom";
+    return quality_profile_name(ctx->quality_index);
+}
+
+static void run_headless_batch(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return;
+    AppConfig cfg_copy = *ctx->cfg;
+    if (ctx->quality_index >= 0) {
+        quality_profile_apply(&cfg_copy, ctx->quality_index);
+    }
+    HeadlessOptions opts = {
+        .enabled = true,
+        .frame_limit = cfg_copy.headless_frame_count,
+        .skip_present = cfg_copy.headless_skip_present,
+        .ignore_input = false,
+        .preserve_sdl_state = true
+    };
+    const char *output_dir = cfg_copy.headless_output_dir[0]
+                                 ? cfg_copy.headless_output_dir
+                                 : "data/snapshots";
+    CustomPresetSlot *slot = preset_library_get_slot(ctx->library,
+                                                     ctx->selection->custom_slot_index);
+    FluidScenePreset preset_copy = slot ? slot->preset : ctx->preview_preset;
+    int result = scene_controller_run(&cfg_copy, &preset_copy, output_dir, &opts);
+    if (result == 2) {
+        set_status(ctx, "Headless run canceled.", true);
+    } else {
+        set_status(ctx, "Headless run complete.", true);
+    }
+}
+
+static void set_status(SceneMenuInteraction *ctx, const char *text, bool wait_ack) {
+    if (!ctx || !text) return;
+    snprintf(ctx->status_text, sizeof(ctx->status_text), "%s", text);
+    ctx->status_visible = true;
+    ctx->status_wait_ack = wait_ack;
+}
+
+static void clear_status(SceneMenuInteraction *ctx) {
+    if (!ctx) return;
+    ctx->status_text[0] = '\0';
+    ctx->status_visible = false;
+    ctx->status_wait_ack = false;
+}
 
 static bool point_in_rect(int x, int y, const SDL_Rect *rect) {
     return x >= rect->x && x < rect->x + rect->w &&
@@ -141,7 +244,7 @@ static void draw_button(SDL_Renderer *renderer,
                         const char *label,
                         TTF_Font *font,
                         bool selected) {
-    SDL_Color color = selected ? COLOR_ACCENT : COLOR_PANEL;
+    SDL_Color color = selected ? COLOR_BUTTON_BG_ACTIVE : COLOR_BUTTON_BG;
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
     SDL_RenderFillRect(renderer, rect);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
@@ -459,9 +562,38 @@ static void clamp_grid_size(AppConfig *cfg) {
     if (cfg->grid_h > 512) cfg->grid_h = 512;
 }
 
+static void begin_headless_frames_edit(SceneMenuInteraction *ctx) {
+    if (!ctx) return;
+    char buffer[32];
+    int frames = ctx->cfg ? ctx->cfg->headless_frame_count : 0;
+    if (frames < 0) frames = 0;
+    snprintf(buffer, sizeof(buffer), "%d", frames);
+    text_input_begin(&ctx->headless_frames_input, buffer, sizeof(buffer) - 1);
+    ctx->editing_headless_frames = true;
+}
+
+static void finish_headless_frames_edit(SceneMenuInteraction *ctx, bool apply) {
+    if (!ctx || !ctx->editing_headless_frames) return;
+    if (apply) {
+        const char *value = text_input_value(&ctx->headless_frames_input);
+        if (value && value[0]) {
+            char *end = NULL;
+            long frames = strtol(value, &end, 10);
+            if (end != value) {
+                if (frames < 0) frames = 0;
+                if (ctx->cfg) ctx->cfg->headless_frame_count = (int)frames;
+                if (ctx->selection) ctx->selection->headless_frame_count = (int)frames;
+            }
+        }
+    }
+    text_input_end(&ctx->headless_frames_input);
+    ctx->editing_headless_frames = false;
+}
+
 static void menu_pointer_up(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
+    if (ctx->headless_running) return;
 
     if (ctx->scrollbar_dragging) {
         ctx->scrollbar_dragging = false;
@@ -484,12 +616,41 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
         }
     }
 
+    if (point_in_rect(x, y, &ctx->headless_toggle_button.rect)) {
+        ctx->cfg->headless_enabled = !ctx->cfg->headless_enabled;
+        return;
+    }
+
+    if (point_in_rect(x, y, &ctx->headless_frames_rect)) {
+        Uint32 now = SDL_GetTicks();
+        bool double_click = (now - ctx->last_headless_click_ticks) <= DOUBLE_CLICK_MS;
+        ctx->last_headless_click_ticks = now;
+        if (double_click) {
+            begin_headless_frames_edit(ctx);
+        }
+        return;
+    } else if (ctx->editing_headless_frames) {
+        finish_headless_frames_edit(ctx, true);
+    }
+
     if (point_in_rect(x, y, &ctx->start_button.rect)) {
+        if (ctx->rename_input.active) {
+            finish_rename(ctx, true);
+        }
+        if (ctx->editing_headless_frames) {
+            finish_headless_frames_edit(ctx, true);
+        }
+        if (ctx->cfg->headless_enabled) {
+            ctx->headless_pending = true;
+            set_status(ctx, "Headless run queued...", false);
+            return;
+        }
         if (ctx->preset_output && ctx->active_preset) {
             CustomPresetSlot *start_slot = preset_library_get_slot(
                 ctx->library, ctx->selection->custom_slot_index);
             if (start_slot) start_slot->occupied = true;
             *ctx->preset_output = *ctx->active_preset;
+            ctx->selection->headless_frame_count = ctx->cfg ? ctx->cfg->headless_frame_count : ctx->selection->headless_frame_count;
             *ctx->start_requested = true;
             *ctx->running = false;
         }
@@ -497,6 +658,9 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
     }
 
     if (point_in_rect(x, y, &ctx->edit_button.rect)) {
+        if (ctx->rename_input.active) {
+            finish_rename(ctx, true);
+        }
         CustomPresetSlot *slot = preset_library_get_slot(
             ctx->library, ctx->selection->custom_slot_index);
         if (!slot) return;
@@ -528,12 +692,23 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
     if (point_in_rect(x, y, &ctx->grid_dec_button.rect)) {
         ctx->cfg->grid_w = ctx->cfg->grid_h =
             (ctx->cfg->grid_w > 32) ? ctx->cfg->grid_w - 32 : 32;
+        set_custom_quality(ctx);
         return;
     }
 
     if (point_in_rect(x, y, &ctx->grid_inc_button.rect)) {
         ctx->cfg->grid_w = ctx->cfg->grid_h =
             (ctx->cfg->grid_w < 512) ? ctx->cfg->grid_w + 32 : 512;
+        set_custom_quality(ctx);
+        return;
+    }
+
+    if (point_in_rect(x, y, &ctx->quality_prev_button.rect)) {
+        cycle_quality(ctx, -1);
+        return;
+    }
+    if (point_in_rect(x, y, &ctx->quality_next_button.rect)) {
+        cycle_quality(ctx, 1);
         return;
     }
 
@@ -545,6 +720,12 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
     if (point_in_rect(x, y, &ctx->render_toggle_rect)) {
         ctx->cfg->save_render_frames = !ctx->cfg->save_render_frames;
         return;
+    }
+
+    SDL_Rect frames_rect = ctx->headless_frames_rect;
+    bool in_frames_rect = point_in_rect(x, y, &frames_rect);
+    if (!in_frames_rect && ctx->editing_headless_frames) {
+        finish_headless_frames_edit(ctx, true);
     }
 
     bool is_add = false;
@@ -586,6 +767,10 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
 static void menu_pointer_down(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
+    if (ctx->headless_running) return;
+    if (ctx->status_wait_ack && ctx->status_visible) {
+        clear_status(ctx);
+    }
     if (scrollbar_handle_pointer_down(&ctx->scrollbar, state->x, state->y)) {
         ctx->scrollbar_dragging = true;
     }
@@ -594,6 +779,7 @@ static void menu_pointer_down(void *user, const InputPointerState *state) {
 static void menu_pointer_move(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
+    if (ctx->headless_running) return;
     if (ctx->scrollbar_dragging) {
         scrollbar_handle_pointer_move(&ctx->scrollbar, state->x, state->y);
         return;
@@ -620,6 +806,14 @@ static void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     (void)mod;
     if (!ctx) return;
+    if (ctx->headless_running) {
+        if (key == SDLK_ESCAPE) {
+            ctx->headless_run_requested = false;
+            ctx->headless_running = false;
+            set_status(ctx, "Headless run canceled.", true);
+        }
+        return;
+    }
 
     if (ctx->rename_input.active) {
         if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
@@ -629,14 +823,32 @@ static void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         } else {
             text_input_handle_key(&ctx->rename_input, key);
         }
+        return;
+    }
+
+    if (ctx->editing_headless_frames) {
+        if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+            finish_headless_frames_edit(ctx, true);
+        } else if (key == SDLK_ESCAPE) {
+            finish_headless_frames_edit(ctx, false);
+        } else {
+            text_input_handle_key(&ctx->headless_frames_input, key);
+        }
+        return;
     }
 }
 
 static void menu_text_input(void *user, const char *text) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !text) return;
+    if (ctx->headless_running) return;
     if (ctx->rename_input.active) {
         text_input_handle_text(&ctx->rename_input, text);
+        return;
+    }
+    if (ctx->editing_headless_frames) {
+        text_input_handle_text(&ctx->headless_frames_input, text);
+        return;
     }
 }
 
@@ -716,6 +928,12 @@ bool scene_menu_run(AppConfig *cfg,
         }
     }
 
+    if (current_selection.headless_frame_count > 0) {
+        cfg->headless_frame_count = current_selection.headless_frame_count;
+    } else {
+        current_selection.headless_frame_count = cfg->headless_frame_count;
+    }
+
     bool run = true;
     bool start_requested = false;
 
@@ -737,6 +955,9 @@ bool scene_menu_run(AppConfig *cfg,
         .quit_button = {.rect = {20, MENU_HEIGHT - 70, 120, 40}, .label = "Quit"},
         .grid_dec_button = {.rect = {MENU_WIDTH - 260, 180, 40, 40}, .label = "-"},
         .grid_inc_button = {.rect = {MENU_WIDTH - 100, 180, 40, 40}, .label = "+"},
+        .quality_prev_button = {.rect = {0, 0, 0, 0}, .label = "<"},
+        .quality_next_button = {.rect = {0, 0, 0, 0}, .label = ">"},
+        .headless_toggle_button = {.rect = {MENU_WIDTH - 220, MENU_HEIGHT - 130, 180, 40}, .label = "Headless"},
         .running = &run,
         .start_requested = &start_requested,
         .context_mgr = NULL,
@@ -745,7 +966,15 @@ bool scene_menu_run(AppConfig *cfg,
         .last_clicked_slot = -1,
         .scrollbar_dragging = false,
         .hover_slot = -1,
-        .hover_add_entry = false
+        .hover_add_entry = false,
+        .headless_pending = false,
+        .headless_running = false,
+        .status_visible = false,
+        .status_wait_ack = false,
+        .headless_run_requested = false,
+        .editing_headless_frames = false,
+        .last_headless_click_ticks = 0,
+        .headless_frames_rect = {0, 0, 0, 0}
     };
 
     ctx.list_rect = preset_list_rect();
@@ -755,6 +984,14 @@ bool scene_menu_run(AppConfig *cfg,
     InputContextManager context_mgr;
     input_context_manager_init(&context_mgr);
     ctx.context_mgr = &context_mgr;
+
+    ctx.quality_index = current_selection.quality_index;
+    if (ctx.quality_index >= 0) {
+        apply_quality_profile_index(&ctx, ctx.quality_index);
+    } else {
+        ctx.quality_index = -1;
+        if (ctx.cfg) ctx.cfg->quality_index = -1;
+    }
 
     select_custom(&ctx, current_selection.custom_slot_index);
     *selection = current_selection;
@@ -776,6 +1013,9 @@ bool scene_menu_run(AppConfig *cfg,
         double dt = (double)(now_ticks - prev_ticks) / 1000.0;
         prev_ticks = now_ticks;
         text_input_update(&ctx.rename_input, dt);
+        if (ctx.editing_headless_frames) {
+            text_input_update(&ctx.headless_frames_input, dt);
+        }
 
         InputCommands cmds;
         input_poll_events(&cmds, NULL, &context_mgr);
@@ -785,6 +1025,20 @@ bool scene_menu_run(AppConfig *cfg,
         }
         clamp_grid_size(cfg);
         update_scrollbar(&ctx);
+
+        if (ctx.headless_pending && !ctx.headless_running) {
+            ctx.headless_pending = false;
+            ctx.headless_run_requested = true;
+            ctx.headless_running = true;
+            char msg[128];
+            if (ctx.cfg->headless_frame_count <= 0) {
+                snprintf(msg, sizeof(msg), "Headless running...");
+            } else {
+                snprintf(msg, sizeof(msg), "Headless running %d frames...",
+                         ctx.cfg->headless_frame_count);
+            }
+            set_status(&ctx, msg, false);
+        }
 
         SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, COLOR_BG.a);
         SDL_RenderClear(renderer);
@@ -800,22 +1054,23 @@ bool scene_menu_run(AppConfig *cfg,
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "%dx%d cells", cfg->grid_w, cfg->grid_h);
         draw_text(renderer, font_body, buffer, config_panel.x + 12, config_panel.y + 42, COLOR_TEXT);
-        draw_text(renderer, font_body, "Active Preset", config_panel.x + 12, config_panel.y + 86, COLOR_TEXT_DIM);
-        const char *preset_name = (ctx.active_preset && ctx.active_preset->name && ctx.active_preset->name[0])
-                                      ? ctx.active_preset->name
-                                      : "Preset";
-        char preset_label[128];
-        snprintf(preset_label,
-                 sizeof(preset_label),
-                 "%s (%s)",
-                 preset_name,
-                 (ctx.active_preset && ctx.active_preset->is_custom) ? "custom" : "built-in");
-        draw_text(renderer, font_body, preset_label, config_panel.x + 12, config_panel.y + 116, COLOR_TEXT);
-
         ctx.grid_dec_button.rect = (SDL_Rect){config_panel.x + 240, config_panel.y + 40, 40, 40};
         ctx.grid_inc_button.rect = (SDL_Rect){config_panel.x + 290, config_panel.y + 40, 40, 40};
         draw_button(renderer, &ctx.grid_dec_button.rect, ctx.grid_dec_button.label, font_body, false);
         draw_button(renderer, &ctx.grid_inc_button.rect, ctx.grid_inc_button.label, font_body, false);
+
+        draw_text(renderer, font_body, "Quality", config_panel.x + 12, config_panel.y + 86, COLOR_TEXT_DIM);
+        ctx.quality_prev_button.rect = (SDL_Rect){config_panel.x + 12, config_panel.y + 110, 36, 36};
+        ctx.quality_next_button.rect = (SDL_Rect){config_panel.x + config_panel.w - 48, config_panel.y + 110, 36, 36};
+        draw_button(renderer, &ctx.quality_prev_button.rect, ctx.quality_prev_button.label, font_body, false);
+        draw_button(renderer, &ctx.quality_next_button.rect, ctx.quality_next_button.label, font_body, false);
+        const char *quality_name = current_quality_name(&ctx);
+        draw_text(renderer,
+                  font_body,
+                  quality_name,
+                  ctx.quality_prev_button.rect.x + ctx.quality_prev_button.rect.w + 8,
+                  ctx.quality_prev_button.rect.y + 8,
+                  COLOR_TEXT);
 
         ctx.volume_toggle_rect = (SDL_Rect){config_panel.x + 12,
                                             config_panel.y + 160,
@@ -833,11 +1088,60 @@ bool scene_menu_run(AppConfig *cfg,
         draw_toggle(renderer, toggle_font, &ctx.render_toggle_rect,
                     "Save Render Frames", ctx.cfg->save_render_frames);
 
+        SDL_Rect headless_rect = ctx.headless_toggle_button.rect;
+        headless_rect.y = ctx.start_button.rect.y - 50;
+        headless_rect.x = ctx.start_button.rect.x;
+        headless_rect.w = ctx.start_button.rect.w;
+        ctx.headless_toggle_button.rect = headless_rect;
+
+        draw_button(renderer, &ctx.headless_toggle_button.rect, ctx.headless_toggle_button.label, font_body,
+                    cfg->headless_enabled);
+        SDL_Rect frames_rect = {ctx.headless_toggle_button.rect.x,
+                                ctx.headless_toggle_button.rect.y - 35,
+                                ctx.headless_toggle_button.rect.w,
+                                28};
+        ctx.headless_frames_rect = frames_rect;
+        SDL_SetRenderDrawColor(renderer, COLOR_PANEL.r, COLOR_PANEL.g, COLOR_PANEL.b, 255);
+        SDL_RenderFillRect(renderer, &frames_rect);
+        SDL_SetRenderDrawColor(renderer, COLOR_ACCENT.r, COLOR_ACCENT.g, COLOR_ACCENT.b, 180);
+        SDL_RenderDrawRect(renderer, &frames_rect);
+
+        if (ctx.editing_headless_frames) {
+            draw_text_input(renderer, font_body, &frames_rect, &ctx.headless_frames_input);
+        } else {
+            char frames_label[64];
+            snprintf(frames_label, sizeof(frames_label), "Frames: %d", ctx.cfg->headless_frame_count);
+            draw_text(renderer, font_body, frames_label, frames_rect.x + 8, frames_rect.y + 6, COLOR_TEXT);
+        }
         draw_button(renderer, &ctx.start_button.rect, ctx.start_button.label, font_body, false);
         draw_button(renderer, &ctx.edit_button.rect, ctx.edit_button.label, font_body, false);
         draw_button(renderer, &ctx.quit_button.rect, ctx.quit_button.label, font_body, false);
 
+        if (ctx.status_visible && font_body && ctx.status_text[0]) {
+            int text_w = 0;
+            int text_h = 0;
+            TTF_SizeUTF8(font_body, ctx.status_text, &text_w, &text_h);
+            int status_x = ctx.headless_frames_rect.x;
+            int max_x = MENU_WIDTH - text_w - 20;
+            if (status_x > max_x) status_x = max_x;
+            if (status_x < 20) status_x = 20;
+            int status_y = ctx.headless_frames_rect.y - text_h - 10;
+            if (status_y < 20) status_y = 20;
+            draw_text(renderer,
+                      font_body,
+                      ctx.status_text,
+                      status_x,
+                      status_y,
+                      ctx.status_wait_ack ? COLOR_ACCENT : COLOR_TEXT_DIM);
+        }
+
         SDL_RenderPresent(renderer);
+
+        if (ctx.headless_run_requested) {
+            ctx.headless_run_requested = false;
+            run_headless_batch(&ctx);
+            ctx.headless_running = false;
+        }
     }
 
     input_context_manager_pop(&context_mgr);
@@ -857,6 +1161,7 @@ bool scene_menu_run(AppConfig *cfg,
     if (!start_requested && ctx.active_preset) {
         *preset_state = *ctx.active_preset;
     }
+    current_selection.headless_frame_count = ctx.cfg ? ctx.cfg->headless_frame_count : current_selection.headless_frame_count;
     *selection = current_selection;
 
     return start_requested;

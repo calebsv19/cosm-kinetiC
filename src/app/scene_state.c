@@ -24,6 +24,95 @@ static void window_to_grid(const SceneState *scene, int win_x, int win_y,
     *out_gy = gy;
 }
 
+static void static_mask_mark_cell(SceneState *scene, int gx, int gy) {
+    if (!scene || !scene->static_mask || !scene->config) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    if (gx < 1 || gx >= w - 1 || gy < 1 || gy >= h - 1) return;
+    scene->static_mask[(size_t)gy * (size_t)w + (size_t)gx] = 1;
+}
+
+static void static_mask_apply_circle(SceneState *scene,
+                                     const PresetObject *po) {
+    if (!scene || !scene->static_mask || !scene->config || !po) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    if (w <= 1 || h <= 1) return;
+
+    int cx = (int)lroundf(po->position_x * (float)(w - 1));
+    int cy = (int)lroundf(po->position_y * (float)(h - 1));
+    int radius = (int)ceilf(po->size_x * (float)w);
+    if (radius < 1) radius = 1;
+
+    for (int y = cy - radius; y <= cy + radius; ++y) {
+        for (int x = cx - radius; x <= cx + radius; ++x) {
+            float dx = (float)(x - cx);
+            float dy = (float)(y - cy);
+            if (dx * dx + dy * dy <= (float)(radius * radius)) {
+                static_mask_mark_cell(scene, x, y);
+            }
+        }
+    }
+}
+
+static void static_mask_apply_box(SceneState *scene,
+                                  const PresetObject *po) {
+    if (!scene || !scene->static_mask || !scene->config || !po) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    if (w <= 1 || h <= 1) return;
+
+    float center_x = po->position_x * (float)(scene->config->window_w);
+    float center_y = po->position_y * (float)(scene->config->window_h);
+    float half_w_world = po->size_x * (float)scene->config->window_w;
+    float half_h_world = po->size_y * (float)scene->config->window_h;
+    float half_diag = sqrtf(half_w_world * half_w_world +
+                            half_h_world * half_h_world);
+
+    int min_x = (int)floorf(((center_x - half_diag) /
+                             (float)scene->config->window_w) * (float)(w - 1));
+    int max_x = (int)ceilf(((center_x + half_diag) /
+                            (float)scene->config->window_w) * (float)(w - 1));
+    int min_y = (int)floorf(((center_y - half_diag) /
+                             (float)scene->config->window_h) * (float)(h - 1));
+    int max_y = (int)ceilf(((center_y + half_diag) /
+                            (float)scene->config->window_h) * (float)(h - 1));
+
+    if (min_x < 1) min_x = 1;
+    if (max_x > w - 2) max_x = w - 2;
+    if (min_y < 1) min_y = 1;
+    if (max_y > h - 2) max_y = h - 2;
+
+    float cos_a = cosf(po->angle);
+    float sin_a = sinf(po->angle);
+    for (int y = min_y; y <= max_y; ++y) {
+        float norm_y = (float)y / (float)(h - 1);
+        float world_y = norm_y * (float)scene->config->window_h;
+        for (int x = min_x; x <= max_x; ++x) {
+            float norm_x = (float)x / (float)(w - 1);
+            float world_x = norm_x * (float)scene->config->window_w;
+            float rel_x = world_x - center_x;
+            float rel_y = world_y - center_y;
+            float local_x =  rel_x * cos_a + rel_y * sin_a;
+            float local_y = -rel_x * sin_a + rel_y * cos_a;
+            if (fabsf(local_x) <= half_w_world &&
+                fabsf(local_y) <= half_h_world) {
+                static_mask_mark_cell(scene, x, y);
+            }
+        }
+    }
+}
+
+static void static_mask_apply_preset(SceneState *scene,
+                                     const PresetObject *po) {
+    if (!scene || !po || !po->is_static) return;
+    if (po->type == PRESET_OBJECT_CIRCLE) {
+        static_mask_apply_circle(scene, po);
+    } else {
+        static_mask_apply_box(scene, po);
+    }
+}
+
 SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
     SceneState s;
     s.time   = 0.0;
@@ -36,6 +125,11 @@ SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
     if (!s.smoke) {
         fprintf(stderr, "Failed to create Fluid2D\n");
     }
+
+    size_t mask_count = (size_t)cfg->grid_w * (size_t)cfg->grid_h;
+    s.static_mask = (mask_count > 0)
+                        ? (uint8_t *)calloc(mask_count, sizeof(uint8_t))
+                        : NULL;
 
     object_manager_init(&s.objects, 8);
     if (preset) {
@@ -63,6 +157,7 @@ SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
                     obj->body.angle = po->angle;
                 }
             }
+            static_mask_apply_preset(&s, po);
         }
     }
     return s;
@@ -72,6 +167,8 @@ void scene_destroy(SceneState *scene) {
     if (!scene) return;
     fluid2d_destroy(scene->smoke);
     scene->smoke = NULL;
+    free(scene->static_mask);
+    scene->static_mask = NULL;
     object_manager_shutdown(&scene->objects);
 }
 
@@ -247,3 +344,4 @@ bool scene_export_snapshot(const SceneState *scene, const char *path) {
     fclose(f);
     return true;
 }
+#include <stdint.h>

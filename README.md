@@ -1,9 +1,9 @@
 # Physics Sim
 
-Small SDL-based sandbox for experimenting with paired fluid, particle, and rigid-body systems. The current executable runs a smoke-style density field that you can stir with the mouse, pause, clear, and export snapshots from.
+Small SDL-based sandbox for experimenting with paired fluid, particle, and rigid-body systems. The current executable runs a smoke-style density field that you can stir with the mouse, pause, clear, export snapshots from, or drive in headless batches when you want high-quality offline frames.
 
 ## Directory guide
-- `src/` – runtime implementation files grouped by subsystem (app state/controllers, command bus, physics solvers, renderer, input, timing, config loader).
+- `src/` – runtime implementation files grouped by subsystem (app state/controllers, command bus, physics solvers, renderer, input, timing, config loader). Headless/quality helpers live under `src/app/quality_profiles.c` and hook into the menu.
 - `include/` – public headers that mirror the structure of `src/` so other modules can include interfaces without touching implementation details.
 - `config/` – JSON files that define runtime settings. Edit `app.json` to tweak window/grid/timing/fluid constants and the per-frame command budget without recompiling.
 - `config/custom_preset.txt` – auto-saved preset emitted when you edit emitters in the menu; the app reloads it on startup so your tweaks persist.
@@ -11,19 +11,19 @@ Small SDL-based sandbox for experimenting with paired fluid, particle, and rigid
 - `makefile` – single target that builds the `physics_sim` binary in the root.
 
 ## Execution flow
-`src/main.c` loads `config/app.json`, launches the SDL scene menu so you can pick a preset and grid resolution, and then hands control to `scene_controller_run()`. The controller:
-1. Sets up SDL/timing/renderer instances based on `AppConfig`.
-2. Pumps `input_poll_events()` at the UI rate but accumulates cursor samples via a high-frequency stroke sampler so mouse input stays smooth regardless of simulation cost.
+`src/main.c` loads `config/app.json`, launches the SDL scene menu so you can pick a preset, quality profile, and (optionally) headless batch settings, and then hands control to `scene_controller_run()`. The controller:
+1. Sets up SDL/timing/renderer instances based on `AppConfig` or the selected quality profile.
+2. Pumps `input_poll_events()` at the UI rate but accumulates cursor samples via a high-frequency stroke sampler so mouse input stays smooth regardless of simulation cost (TimerHUD annotations show each phase).
 3. Applies buffered brush samples plus any preset emitters to the scene, drains up to `commands.max_per_frame` entries from the command bus (pause, clear, snapshot), and then steps the fluid solver.
-4. Handles snapshot exports through the export hook and presents the updated density field via `renderer_sdl.c`.
+4. Applies cached static-object masks, handles snapshot exports/volume dumps, and presents the updated density field via `renderer_sdl.c` (or skips the window entirely in headless mode).
 
 ### Default controls
 - Mouse drag deposits buffered brush samples: `1` selects the high-density brush, `2` switches to the pure velocity brush.
 - `P` toggles pause, `C` clears the field, `E` exports a snapshot, `Esc` exits the sim and returns to the scene menu.
 
-### Scene editor
-- Launch the app to enter the SDL scene menu. Four custom preset slots are displayed on the left; double-click a slot name to rename it, single-click to select it, and hit **Edit Preset** to open the editor canvas. Grid resolution controls live on the right alongside the active preset info.
-- In the editor view, drag emitters to reposition them, drag the arrow handle on jets/sinks to rotate the flow direction, and press `+`/`-` (or the numpad equivalents) to grow/shrink the emitter radius/strength. Density sources render as orange, jets cyan, and sinks magenta for readability. Double-click the preset title above the canvas to rename it.
-- Press `Enter` to apply edits or `Esc` to cancel and return to the menu. The simulation uses the latest edited slot when you click **Start Simulation**, and your edits persist when you return to the menu thanks to `config/custom_preset.txt`.
+### Scene editor & menu
+- Launch the app to enter the SDL scene menu. Custom preset slots are displayed on the left; double-click a slot name to rename it, single-click to select it, and hit **Edit Preset** to open the editor canvas. Grid and quality controls live on the right, plus headless toggles/inline frame-count editing when you want to run offline batches.
+- In the editor view, drag emitters to reposition them, drag the arrow handle on jets/sinks to rotate the flow direction, and press `+`/`-` (or the numpad equivalents) to grow/shrink the emitter radius/strength. Density sources render as orange, jets cyan, sinks magenta, and preset objects are editable/rotatable. Double-click the preset title above the canvas to rename it.
+- Press `Enter` to apply edits or `Esc` to cancel and return to the menu. The simulation uses the latest edited slot when you click **Start**, and your edits persist via `config/custom_preset.txt`. Enabling headless mode queues a run, keeps the menu window up, and shows live status until it finishes (or you cancel with `Esc`).
 
 Adding new systems (particles, rigid bodies, tools, exporters, etc.) should follow this same layout: pair a header in `include/` with implementation under `src/` and describe the module in the directory-level README.

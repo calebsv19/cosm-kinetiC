@@ -22,7 +22,8 @@ CFLAGS := $(CSTD) -Wall -Wextra -Wpedantic -g \
           -I$(INC_DIR)/command                \
           -I$(INC_DIR)/input                  \
           -I$(INC_DIR)/render                 \
-          -I$(INC_DIR)/physics
+          -I$(INC_DIR)/physics                \
+          -I$(SRC_DIR)
 
 LDFLAGS := $(SDL_LIBS) -lSDL2_ttf -lm
 

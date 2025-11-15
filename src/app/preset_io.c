@@ -81,6 +81,7 @@ static bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
     if (!new_slots) return false;
     for (int i = 0; i < lib->slot_count; ++i) {
         new_slots[i] = lib->slots[i];
+        new_slots[i].preset.name = new_slots[i].name;
     }
     for (int i = lib->slot_count; i < new_capacity; ++i) {
         preset_slot_reset(&new_slots[i], i);
@@ -289,6 +290,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         }
 
         lib->slots[i] = slot;
+        lib->slots[i].preset.name = lib->slots[i].name;
         lib->slot_count++;
     }
 

@@ -1,9 +1,10 @@
 #ifndef FLUID2D_H
 #define FLUID2D_H
 
+#include <stdint.h>
 #include "app/app_config.h"
 #include "physics/math/math2d.h"
-#include "objects/object_manager.h"
+#include "physics/objects/object_manager.h"
 
 typedef struct Fluid2D {
     int w;
@@ -28,5 +29,6 @@ void fluid2d_step(Fluid2D *f, double dt, const AppConfig *cfg);
 void fluid2d_apply_object_mask(Fluid2D *f,
                                const ObjectManager *objects,
                                const AppConfig *cfg);
+void fluid2d_apply_static_mask(Fluid2D *f, const uint8_t *mask);
 
 #endif // FLUID2D_H

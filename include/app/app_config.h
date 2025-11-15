@@ -13,9 +13,12 @@ typedef struct AppConfig {
 
     double min_dt;
     double max_dt;
+    double physics_fixed_dt;
+    int    max_physics_steps_per_frame;
 
     int    physics_substeps;
     int    command_batch_limit; // commands processed per frame (0 = unlimited)
+    int    fluid_solver_iterations;
 
     float  density_diffusion;  // how strongly density diffuses each step
     float  velocity_damping;   // multiplicative damping on velocity per step
@@ -31,6 +34,16 @@ typedef struct AppConfig {
 
     bool   save_volume_frames;
     bool   save_render_frames;
+    bool   enable_render_blur;
+
+    int    quality_index;
+
+    bool   headless_enabled;
+    int    headless_frame_count;
+    int    headless_custom_slot;
+    int    headless_quality_index;
+    bool   headless_skip_present;
+    char   headless_output_dir[256];
 } AppConfig;
 
 AppConfig app_config_default(void);

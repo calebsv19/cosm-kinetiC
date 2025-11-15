@@ -14,6 +14,8 @@ typedef struct SceneMenuResult {
 
 typedef struct SceneMenuSelection {
     int  custom_slot_index;
+    int  quality_index;
+    int  headless_frame_count;
 } SceneMenuSelection;
 
 // Runs the SDL scene editor menu. Returns true if the user pressed Start.

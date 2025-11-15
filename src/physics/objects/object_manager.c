@@ -1,4 +1,4 @@
-#include "objects/object_manager.h"
+#include "physics/objects/object_manager.h"
 
 #include <stdlib.h>
 #include <string.h>

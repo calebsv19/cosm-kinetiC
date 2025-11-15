@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "command/command_bus.h"
 #include "app/scene_state.h"
@@ -16,6 +17,7 @@
 #include "export/volume_frames.h"
 #include "export/render_frames.h"
 #include "timing.h"
+#include "render/TimerHUD/src/api/time_scope.h"
 
 typedef struct CommandDispatchContext {
     SceneState *scene;
@@ -160,16 +162,21 @@ static void stroke_sampler_apply(StrokeSampler *sampler,
 
 int scene_controller_run(const AppConfig *initial_cfg,
                         const FluidScenePreset *preset,
-                        const char *snapshot_dir) {
+                        const char *snapshot_dir,
+                        const HeadlessOptions *headless) {
     if (!initial_cfg) {
         fprintf(stderr, "[scene] Missing configuration.\n");
         return 1;
     }
 
+    bool preserve_sdl = (headless && headless->preserve_sdl_state);
+    bool sdl_initialized = false;
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
     }
+    sdl_initialized = true;
 
     AppConfig cfg = *initial_cfg;
 
@@ -196,40 +203,81 @@ int scene_controller_run(const AppConfig *initial_cfg,
     input_context_manager_init(&ctx_mgr);
 
     bool running = true;
+    bool aborted = false;
     int snapshot_index = 0;
     uint64_t frame_index = 0;
-    while (running) {
-        InputCommands cmds;
-        running = input_poll_events(&cmds, &bus, &ctx_mgr);
+    (void)snapshot_dir;
 
+    bool headless_mode = headless && headless->enabled;
+    int interactive_frame_limit = (!headless_mode && cfg.headless_frame_count > 0)
+                                      ? cfg.headless_frame_count
+                                      : 0;
+    while (running) {
+        ts_frame_start();
+        ts_start_timer("frame");
+
+        InputCommands cmds;
+        bool ignore_input = headless_mode && headless->ignore_input;
+        ts_start_timer("input");
+        bool polled = input_poll_events(&cmds, &bus, &ctx_mgr);
+        ts_stop_timer("input");
+        if (ignore_input) {
+            bool quit_requested = cmds.quit;
+            memset(&cmds, 0, sizeof(cmds));
+            cmds.quit = quit_requested;
+            running = true;
+        } else {
+            running = polled;
+        }
+
+        if (headless_mode && cmds.quit) {
+            running = false;
+            aborted = true;
+        }
         double dt = timing_begin_frame(&timer, &cfg);
-        scene.dt = dt;
+
 
         scene_apply_input(&scene, &cmds);
         stroke_sampler_capture(&sampler, &cmds, dt);
+
 
         CommandDispatchContext dispatch_ctx = {
             .scene = &scene,
             .snapshot_requested = false,
         };
 
+
         stroke_sampler_apply(&sampler, &scene, MAX_SAMPLES_PER_FRAME);
+
 
         size_t max_commands = (cfg.command_batch_limit > 0)
                                   ? (size_t)cfg.command_batch_limit
                                   : 0; // 0 => unlimited
+
         command_bus_dispatch(&bus, max_commands, handle_scene_command, &dispatch_ctx);
 
         if (!scene.paused) {
-            int substeps = cfg.physics_substeps;
-            double sub_dt = dt / (double)(substeps > 0 ? substeps : 1);
+            scene.dt = dt;
+            ts_start_timer("physics");
+            int substeps = cfg.physics_substeps > 0 ? cfg.physics_substeps : 1;
+            double sub_dt = dt / (double)substeps;
             for (int i = 0; i < substeps; ++i) {
+                ts_start_timer("emitters");
                 scene_apply_emitters(&scene, sub_dt);
+                ts_stop_timer("emitters");
+
+                ts_start_timer("fluid_step");
                 fluid2d_step(scene.smoke, sub_dt, &cfg);
+                ts_stop_timer("fluid_step");
+
+                fluid2d_apply_static_mask(scene.smoke, scene.static_mask);
                 fluid2d_apply_object_mask(scene.smoke, &scene.objects, &cfg);
+
+
                 object_manager_step(&scene.objects, sub_dt, &cfg);
                 scene.time += sub_dt;
             }
+            ts_stop_timer("physics");
         }
 
         if (dispatch_ctx.snapshot_requested) {
@@ -251,10 +299,14 @@ int scene_controller_run(const AppConfig *initial_cfg,
             .stroke_samples = stroke_buffer_count(&sampler.buffer),
             .paused = scene.paused
         };
+
+	ts_start_timer("frame_send");
         if (cfg.save_volume_frames) {
             volume_frames_write(&scene, frame_index);
         }
+ 	ts_stop_timer("frame_send");
 
+        ts_start_timer("render");
         if (renderer_sdl_render_scene(&scene)) {
             if (cfg.save_render_frames) {
                 uint8_t *pixels = NULL;
@@ -268,16 +320,31 @@ int scene_controller_run(const AppConfig *initial_cfg,
                     renderer_sdl_free_capture(pixels);
                 }
             }
-            renderer_sdl_present_with_hud(&hud);
+            if (!headless_mode || !headless->skip_present) {
+                renderer_sdl_present_with_hud(&hud);
+            }
         }
+        ts_stop_timer("render");
 
         frame_index++;
+        if (headless_mode && headless->frame_limit > 0 &&
+            frame_index >= (uint64_t)headless->frame_limit) {
+            running = false;
+        }
+        if (!headless_mode && interactive_frame_limit > 0 &&
+            frame_index >= (uint64_t)interactive_frame_limit) {
+            running = false;
+        }
+        ts_stop_timer("frame");
+        ts_frame_end();
     }
 
     scene_destroy(&scene);
     stroke_sampler_shutdown(&sampler);
     command_bus_shutdown(&bus);
     renderer_sdl_shutdown();
-    SDL_Quit();
-    return 0;
+    if (!preserve_sdl && sdl_initialized) {
+        SDL_Quit();
+    }
+    return aborted ? 2 : 0;
 }

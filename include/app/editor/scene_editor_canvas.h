@@ -9,6 +9,9 @@
 #include "ui/text_input.h"
 
 #define SCENE_EDITOR_SELECT_HIGHLIGHT_FACTOR 0.35f
+#define SCENE_EDITOR_OBJECT_HANDLE_MARGIN 0.05f
+#define SCENE_EDITOR_OBJECT_HANDLE_MIN 0.02f
+#define SCENE_EDITOR_OBJECT_HANDLE_MAX 0.6f
 
 typedef enum EditorDragMode {
     DRAG_NONE = 0,
@@ -32,6 +35,11 @@ void scene_editor_canvas_to_normalized(int canvas_x,
                                        float *out_x,
                                        float *out_y);
 
+void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
+                                         int canvas_x,
+                                         int canvas_y,
+                                         int canvas_size);
+
 int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
                                  int canvas_x,
                                  int canvas_y,
@@ -45,6 +53,19 @@ int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
                                    int canvas_size,
                                    int px,
                                    int py);
+int scene_editor_canvas_hit_object_handle(const FluidScenePreset *preset,
+                                          int canvas_x,
+                                          int canvas_y,
+                                          int canvas_size,
+                                          int px,
+                                          int py);
+bool scene_editor_canvas_object_handle_point(const FluidScenePreset *preset,
+                                             int canvas_x,
+                                             int canvas_y,
+                                             int canvas_size,
+                                             int object_index,
+                                             int *out_x,
+                                             int *out_y);
 
 void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
                                    int canvas_x,

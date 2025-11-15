@@ -8,8 +8,23 @@
 #define M_PI 3.14159265358979323846
 #endif
 #include <stdlib.h>
+#include <string.h>
+#include "render/TimerHUD/src/api/time_scope.h"
 
 #define OBJECT_BORDER_THICKNESS 2
+
+// Toggle smoothing of the fluid texture before it is upscaled to the window.
+// Set to 0 to disable the blur pass when visualizing the grid.
+#define RENDERER_ENABLE_SMOOTHING 1
+
+// Toggle bilinear filtering when SDL scales the fluid texture to the window.
+// Disabling this reverts to nearest-neighbor pixel doubling.
+#define RENDERER_ENABLE_LINEAR_FILTER 1
+
+#if RENDERER_ENABLE_SMOOTHING
+static const float RENDERER_SMOOTH_KERNEL_1D[3] = {1.0f, 2.0f, 1.0f};
+static const float RENDERER_SMOOTH_KERNEL_1D_SUM = 4.0f;
+#endif
 
 static SDL_Window   *g_window   = NULL;
 static SDL_Renderer *g_renderer = NULL;
@@ -23,6 +38,23 @@ static int g_window_w = 0;
 static int g_window_h = 0;
 static int g_grid_w   = 0;
 static int g_grid_h   = 0;
+
+static float *g_density_tmp = NULL;
+static float *g_density_blur = NULL;
+static size_t g_density_capacity = 0;
+
+static bool ensure_density_buffers(size_t cell_count) {
+    if (cell_count == 0) return false;
+    if (cell_count <= g_density_capacity) return true;
+    float *tmp = (float *)realloc(g_density_tmp, cell_count * sizeof(float));
+    if (!tmp) return false;
+    g_density_tmp = tmp;
+    float *blur = (float *)realloc(g_density_blur, cell_count * sizeof(float));
+    if (!blur) return false;
+    g_density_blur = blur;
+    g_density_capacity = cell_count;
+    return true;
+}
 
 static TTF_Font *load_hud_font(void) {
     const char *paths[] = {
@@ -159,6 +191,12 @@ bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH) {
     g_grid_w   = gridW;
     g_grid_h   = gridH;
 
+#if RENDERER_ENABLE_LINEAR_FILTER
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+#else
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
+#endif
+
     if (TTF_Init() != 0) {
         fprintf(stderr, "TTF_Init failed: %s\n", TTF_GetError());
         return false;
@@ -228,6 +266,11 @@ void renderer_sdl_shutdown(void) {
         SDL_DestroyTexture(g_texture);
         g_texture = NULL;
     }
+    free(g_density_tmp);
+    g_density_tmp = NULL;
+    free(g_density_blur);
+    g_density_blur = NULL;
+    g_density_capacity = 0;
     if (g_renderer) {
         SDL_DestroyRenderer(g_renderer);
         g_renderer = NULL;
@@ -244,6 +287,50 @@ void renderer_sdl_shutdown(void) {
 
 static void renderer_draw_object_borders(const SceneState *scene);
 
+static float renderer_safe_scale(int target, int source) {
+    if (source <= 0) return 1.0f;
+    if (target <= 0) return 1.0f;
+    return (float)target / (float)source;
+}
+
+static void renderer_draw_rotated_box_outline(const SceneObject *obj,
+                                              float scale_x,
+                                              float scale_y,
+                                              SDL_Color color) {
+    if (!obj || !g_renderer) return;
+    float cos_a = cosf(obj->body.angle);
+    float sin_a = sinf(obj->body.angle);
+    SDL_SetRenderDrawColor(g_renderer,
+                           color.r,
+                           color.g,
+                           color.b,
+                           color.a);
+
+    for (int t = 0; t < OBJECT_BORDER_THICKNESS; ++t) {
+        float shrink_x = (scale_x > 0.0f) ? (float)t / scale_x : 0.0f;
+        float shrink_y = (scale_y > 0.0f) ? (float)t / scale_y : 0.0f;
+        float hx = obj->body.half_extents.x - shrink_x;
+        float hy = obj->body.half_extents.y - shrink_y;
+        if (hx <= 0.0f || hy <= 0.0f) break;
+
+        SDL_Point pts[5];
+        const float corner_x[4] = {-hx,  hx,  hx, -hx};
+        const float corner_y[4] = {-hy, -hy,  hy,  hy};
+        for (int i = 0; i < 4; ++i) {
+            float lx = corner_x[i];
+            float ly = corner_y[i];
+            float rx = lx * cos_a - ly * sin_a;
+            float ry = lx * sin_a + ly * cos_a;
+            float world_x = obj->body.position.x + rx;
+            float world_y = obj->body.position.y + ry;
+            pts[i].x = (int)lroundf(world_x * scale_x);
+            pts[i].y = (int)lroundf(world_y * scale_y);
+        }
+        pts[4] = pts[0];
+        SDL_RenderDrawLines(g_renderer, pts, 5);
+    }
+}
+
 static bool renderer_upload_scene(const SceneState *scene) {
     if (!scene || !scene->smoke || !g_renderer || !g_texture) return false;
     int tex_pitch = 0;
@@ -256,16 +343,62 @@ static bool renderer_upload_scene(const SceneState *scene) {
     // tex_pitch is in bytes per row
     int w = scene->smoke->w;
     int h = scene->smoke->h;
+    size_t cell_count = (size_t)w * (size_t)h;
+    if (!ensure_density_buffers(cell_count)) {
+        SDL_UnlockTexture(g_texture);
+        return false;
+    }
+
+    for (size_t i = 0; i < cell_count; ++i) {
+        float norm = scene->smoke->density[i] * DENSITY_VISUAL_SCALE;
+        if (norm < 0.0f) norm = 0.0f;
+        if (norm > 1.0f) norm = 1.0f;
+        g_density_tmp[i] = norm;
+    }
+
+    bool blur_enabled = (scene->config && scene->config->enable_render_blur);
+#if RENDERER_ENABLE_SMOOTHING
+    if (blur_enabled) {
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                float accum = 0.0f;
+                for (int k = -1; k <= 1; ++k) {
+                    int sx = x + k;
+                    if (sx < 0) sx = 0;
+                    if (sx >= w) sx = w - 1;
+                    accum += g_density_tmp[(size_t)y * (size_t)w + (size_t)sx] *
+                             RENDERER_SMOOTH_KERNEL_1D[k + 1];
+                }
+                g_density_blur[(size_t)y * (size_t)w + (size_t)x] =
+                    accum / RENDERER_SMOOTH_KERNEL_1D_SUM;
+            }
+        }
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                float accum = 0.0f;
+                for (int k = -1; k <= 1; ++k) {
+                    int sy = y + k;
+                    if (sy < 0) sy = 0;
+                    if (sy >= h) sy = h - 1;
+                    accum += g_density_blur[(size_t)sy * (size_t)w + (size_t)x] *
+                             RENDERER_SMOOTH_KERNEL_1D[k + 1];
+                }
+                g_density_tmp[(size_t)y * (size_t)w + (size_t)x] =
+                    accum / RENDERER_SMOOTH_KERNEL_1D_SUM;
+            }
+        }
+    }
+#else
+    (void)blur_enabled;
+#endif
 
     for (int y = 0; y < h; ++y) {
         Uint32 *dst = (Uint32 *)((Uint8 *)pixels + y * tex_pitch);
         for (int x = 0; x < w; ++x) {
             size_t i = (size_t)y * (size_t)w + (size_t)x;
-            float d = scene->smoke->density[i];
-            float norm = d * DENSITY_VISUAL_SCALE;
+            float norm = g_density_tmp[i];
             if (norm < 0.0f) norm = 0.0f;
             if (norm > 1.0f) norm = 1.0f;
-
             Uint8 c = (Uint8)(norm * 255.0f);
             Uint32 pixel = g_format
                 ? SDL_MapRGBA(g_format, c, c, c, 255)
@@ -293,6 +426,7 @@ bool renderer_sdl_render_scene(const SceneState *scene) {
 
 void renderer_sdl_present_with_hud(const RendererHudInfo *hud) {
     renderer_draw_hud(hud);
+    ts_render(g_renderer);
     SDL_RenderPresent(g_renderer);
 }
 
@@ -335,12 +469,8 @@ static void renderer_draw_object_borders(const SceneState *scene) {
     const ObjectManager *objects = &scene->objects;
     if (!objects || objects->count == 0) return;
 
-    float scale_x = (scene->config->window_w > 0)
-                        ? (float)g_window_w / (float)scene->config->window_w
-                        : 1.0f;
-    float scale_y = (scene->config->window_h > 0)
-                        ? (float)g_window_h / (float)scene->config->window_h
-                        : 1.0f;
+    float scale_x = renderer_safe_scale(g_window_w, scene->config->window_w);
+    float scale_y = renderer_safe_scale(g_window_h, scene->config->window_h);
 
     SDL_Color circle_color = {255, 80, 80, 255};
     SDL_Color box_color    = {170, 120, 80, 255};
@@ -352,7 +482,9 @@ static void renderer_draw_object_borders(const SceneState *scene) {
         int cx = (int)lroundf(obj->body.position.x * scale_x);
         int cy = (int)lroundf(obj->body.position.y * scale_y);
         if (obj->type == SCENE_OBJECT_CIRCLE) {
-            int radius = (int)lroundf(obj->body.radius * scale_x);
+            float radius_scale = (scale_x + scale_y) * 0.5f;
+            if (radius_scale <= 0.0f) radius_scale = scale_x > 0.0f ? scale_x : 1.0f;
+            int radius = (int)lroundf(obj->body.radius * radius_scale);
             if (radius < 2) radius = 2;
             SDL_SetRenderDrawColor(g_renderer,
                                    circle_color.r,
@@ -378,25 +510,7 @@ static void renderer_draw_object_borders(const SceneState *scene) {
                 }
             }
         } else {
-            int half_w = (int)lroundf(obj->body.half_extents.x * scale_x);
-            int half_h = (int)lroundf(obj->body.half_extents.y * scale_y);
-            if (half_w < 2) half_w = 2;
-            if (half_h < 2) half_h = 2;
-            SDL_SetRenderDrawColor(g_renderer,
-                                   box_color.r,
-                                   box_color.g,
-                                   box_color.b,
-                                   box_color.a);
-            for (int t = 0; t < OBJECT_BORDER_THICKNESS; ++t) {
-                SDL_Rect rect = {
-                    cx - half_w + t,
-                    cy - half_h + t,
-                    (half_w - t) * 2,
-                    (half_h - t) * 2
-                };
-                if (rect.w <= 0 || rect.h <= 0) break;
-                SDL_RenderDrawRect(g_renderer, &rect);
-            }
+            renderer_draw_rotated_box_outline(obj, scale_x, scale_y, box_color);
         }
     }
 #endif

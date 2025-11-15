@@ -2,6 +2,7 @@
 #define SCENE_STATE_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "app/app_config.h"
 #include "command/command_bus.h"
@@ -9,7 +10,7 @@
 #include "input/input.h"
 #include "input/stroke_buffer.h"
 #include "app/scene_presets.h"
-#include "objects/object_manager.h"
+#include "physics/objects/object_manager.h"
 
 typedef struct SceneState {
     double time;
@@ -21,6 +22,7 @@ typedef struct SceneState {
 
     const AppConfig *config; // non-owning pointer
     ObjectManager objects;
+    uint8_t *static_mask;
 } SceneState;
 
 SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset);

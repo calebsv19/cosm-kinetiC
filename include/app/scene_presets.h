@@ -20,7 +20,7 @@ typedef struct FluidEmitter {
     float dir_y;
 } FluidEmitter;
 
-#define MAX_FLUID_EMITTERS 8
+#define MAX_FLUID_EMITTERS 32
 
 typedef enum PresetObjectType {
     PRESET_OBJECT_CIRCLE = 0,
@@ -37,7 +37,7 @@ typedef struct PresetObject {
     bool  is_static;
 } PresetObject;
 
-#define MAX_PRESET_OBJECTS 16
+#define MAX_PRESET_OBJECTS 64
 
 typedef struct FluidScenePreset {
     const char *name;

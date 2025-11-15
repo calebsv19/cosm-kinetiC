@@ -13,7 +13,7 @@
 #include "app/editor/scene_editor_widgets.h"
 
 #define DOUBLE_CLICK_MS 350
-
+#define OBJECT_DELETE_MARGIN 0.15f
 
 typedef enum EditorSelectionKind {
     SELECTION_NONE = 0,
@@ -56,6 +56,8 @@ typedef struct SceneEditorState {
     bool  dragging_object;
     float object_drag_offset_x;
     float object_drag_offset_y;
+    bool  dragging_object_handle;
+    float object_handle_ratio;
     EditorSelectionKind selection_kind;
 
     EditorButton btn_save;
@@ -128,6 +130,16 @@ static float clamp01(float v) {
     if (v < 0.0f) return 0.0f;
     if (v > 1.0f) return 1.0f;
     return v;
+}
+
+static void canvas_to_normalized_unclamped(const SceneEditorState *state,
+                                           int sx,
+                                           int sy,
+                                           float *out_x,
+                                           float *out_y) {
+    if (!state || !out_x || !out_y || state->canvas_size <= 0) return;
+    *out_x = (float)(sx - state->canvas_x) / (float)state->canvas_size;
+    *out_y = (float)(sy - state->canvas_y) / (float)state->canvas_size;
 }
 static void draw_text(SDL_Renderer *renderer,
                       TTF_Font *font,
@@ -357,6 +369,11 @@ static void clamp_object(PresetObject *obj) {
     if (obj->size_y < 0.02f) obj->size_y = 0.02f;
 }
 
+static bool object_is_outside(float x, float y) {
+    return (x < -OBJECT_DELETE_MARGIN) || (x > 1.0f + OBJECT_DELETE_MARGIN) ||
+           (y < -OBJECT_DELETE_MARGIN) || (y > 1.0f + OBJECT_DELETE_MARGIN);
+}
+
 static void add_object(SceneEditorState *state, PresetObjectType type) {
     if (!state) return;
     if (state->working.object_count >= MAX_PRESET_OBJECTS) return;
@@ -397,6 +414,8 @@ static void remove_selected_object(SceneEditorState *state) {
     } else if (state->selected_object >= (int)state->working.object_count) {
         state->selected_object = (int)state->working.object_count - 1;
     }
+    state->dragging_object = false;
+    state->dragging_object_handle = false;
     set_dirty(state);
 }
 
@@ -404,6 +423,11 @@ static void draw_editor(SceneEditorState *state) {
     SDL_Renderer *renderer = state->renderer;
     SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
     SDL_RenderClear(renderer);
+
+    scene_editor_canvas_draw_background(renderer,
+                                        state->canvas_x,
+                                        state->canvas_y,
+                                        state->canvas_size);
 
     const char *title = state->name_edit_ptr
                             ? state->name_edit_ptr
@@ -417,6 +441,14 @@ static void draw_editor(SceneEditorState *state) {
                                   title,
                                   state->renaming_name,
                                   &state->name_input);
+
+    SDL_Rect canvas_rect = {
+        .x = state->canvas_x,
+        .y = state->canvas_y,
+        .w = state->canvas_size,
+        .h = state->canvas_size
+    };
+    SDL_RenderSetClipRect(renderer, &canvas_rect);
 
     scene_editor_canvas_draw_objects(renderer,
                                      state->canvas_x,
@@ -434,6 +466,8 @@ static void draw_editor(SceneEditorState *state) {
                                       state->selected_emitter,
                                       state->hover_emitter,
                                       state->font_small);
+
+    SDL_RenderSetClipRect(renderer, NULL);
 
     SDL_SetRenderDrawColor(renderer, COLOR_PANEL.r, COLOR_PANEL.g, COLOR_PANEL.b, 255);
     SDL_RenderFillRect(renderer, &state->panel_rect);
@@ -566,6 +600,29 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
     }
 
     if (!point_in_rect(&state->panel_rect, x, y)) {
+        int handle_hit = scene_editor_canvas_hit_object_handle(&state->working,
+                                                               state->canvas_x,
+                                                               state->canvas_y,
+                                                               state->canvas_size,
+                                                               x,
+                                                               y);
+        if (handle_hit >= 0) {
+            state->selected_object = handle_hit;
+            state->selected_emitter = -1;
+            state->selection_kind = SELECTION_OBJECT;
+            state->dragging_object_handle = true;
+            PresetObject *obj = &state->working.objects[handle_hit];
+            if (obj->type == PRESET_OBJECT_CIRCLE) {
+                state->object_handle_ratio = 1.0f;
+            } else {
+                state->object_handle_ratio = (obj->size_x > 0.0001f)
+                                                 ? (obj->size_y / obj->size_x)
+                                                 : 1.0f;
+                if (state->object_handle_ratio <= 0.0f) state->object_handle_ratio = 1.0f;
+            }
+            return;
+        }
+
         EditorDragMode mode = DRAG_NONE;
         int obj_hit = scene_editor_canvas_hit_object(&state->working,
                                                      state->canvas_x,
@@ -578,6 +635,7 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
             state->selected_emitter = -1;
             state->selection_kind = SELECTION_OBJECT;
             state->dragging_object = true;
+            state->dragging_object_handle = false;
             PresetObject *obj = &state->working.objects[obj_hit];
             float nx, ny;
             scene_editor_canvas_to_normalized(state->canvas_x,
@@ -611,6 +669,7 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
         state->selected_object = -1;
         state->drag_mode = mode;
         state->dragging = true;
+        state->dragging_object_handle = false;
         state->drag_offset_x = 0.0f;
         state->drag_offset_y = 0.0f;
         if (mode == DRAG_POSITION) {
@@ -636,24 +695,56 @@ static void editor_pointer_up(void *user, const InputPointerState *ptr) {
     state->dragging = false;
     state->drag_mode = DRAG_NONE;
     state->dragging_object = false;
+    state->dragging_object_handle = false;
 }
 
 static void editor_pointer_move(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !ptr) return;
+    if (state->dragging_object_handle &&
+        state->selected_object >= 0 &&
+        state->selected_object < (int)state->working.object_count) {
+        PresetObject *obj = &state->working.objects[state->selected_object];
+        float norm_x = 0.0f, norm_y = 0.0f;
+        canvas_to_normalized_unclamped(state, ptr->x, ptr->y, &norm_x, &norm_y);
+        float dx = norm_x - obj->position_x;
+        float dy = norm_y - obj->position_y;
+        float len = sqrtf(dx * dx + dy * dy);
+        float adjusted = len - SCENE_EDITOR_OBJECT_HANDLE_MARGIN;
+        if (adjusted < SCENE_EDITOR_OBJECT_HANDLE_MIN) {
+            adjusted = SCENE_EDITOR_OBJECT_HANDLE_MIN;
+        }
+        if (adjusted > SCENE_EDITOR_OBJECT_HANDLE_MAX) {
+            adjusted = SCENE_EDITOR_OBJECT_HANDLE_MAX;
+        }
+        obj->angle = atan2f(dy, dx);
+        if (obj->type == PRESET_OBJECT_BOX) {
+            float ratio = state->object_handle_ratio;
+            if (ratio <= 0.01f) ratio = 1.0f;
+            obj->size_x = adjusted;
+            float scaled_y = adjusted * ratio;
+            if (scaled_y < SCENE_EDITOR_OBJECT_HANDLE_MIN) scaled_y = SCENE_EDITOR_OBJECT_HANDLE_MIN;
+            if (scaled_y > SCENE_EDITOR_OBJECT_HANDLE_MAX) scaled_y = SCENE_EDITOR_OBJECT_HANDLE_MAX;
+            obj->size_y = scaled_y;
+        } else {
+            obj->size_x = adjusted;
+            obj->size_y = adjusted;
+        }
+        clamp_object(obj);
+        set_dirty(state);
+        return;
+    }
     if (state->dragging_object && state->selected_object >= 0 &&
         state->selected_object < (int)state->working.object_count) {
         PresetObject *obj = &state->working.objects[state->selected_object];
-        float nx, ny;
-        scene_editor_canvas_to_normalized(state->canvas_x,
-                                          state->canvas_y,
-                                          state->canvas_size,
-                                          ptr->x,
-                                          ptr->y,
-                                          &nx,
-                                          &ny);
+        float nx = 0.0f, ny = 0.0f;
+        canvas_to_normalized_unclamped(state, ptr->x, ptr->y, &nx, &ny);
         nx -= state->object_drag_offset_x;
         ny -= state->object_drag_offset_y;
+        if (object_is_outside(nx, ny)) {
+            remove_selected_object(state);
+            return;
+        }
         obj->position_x = clamp01(nx);
         obj->position_y = clamp01(ny);
         clamp_object(obj);
@@ -711,6 +802,17 @@ static void editor_pointer_move(void *user, const InputPointerState *ptr) {
                                                          state->canvas_size,
                                                          ptr->x,
                                                          ptr->y);
+    if (state->hover_object < 0) {
+        int handle_hover = scene_editor_canvas_hit_object_handle(&state->working,
+                                                                 state->canvas_x,
+                                                                 state->canvas_y,
+                                                                 state->canvas_size,
+                                                                 ptr->x,
+                                                                 ptr->y);
+        if (handle_hover >= 0) {
+            state->hover_object = handle_hover;
+        }
+    }
 }
 
 static void editor_text_input(void *user, const char *text) {
@@ -858,6 +960,8 @@ bool scene_editor_run(SDL_Window *window,
         .dragging_object = false,
         .object_drag_offset_x = 0.0f,
         .object_drag_offset_y = 0.0f,
+        .dragging_object_handle = false,
+        .object_handle_ratio = 1.0f,
         .selection_kind = (preset->emitter_count > 0)
                               ? SELECTION_EMITTER
                               : ((preset->object_count > 0) ? SELECTION_OBJECT : SELECTION_NONE),

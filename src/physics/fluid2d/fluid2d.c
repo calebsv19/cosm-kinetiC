@@ -1,10 +1,11 @@
 #include "physics/fluid2d/fluid2d.h"
-#include "objects/object_manager.h"
+#include "physics/objects/object_manager.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define FLUID_SOLVER_ITERATIONS 20
+#define FLUID_SOLVER_ITERATIONS_DEFAULT 20
 
 static inline size_t idx(const Fluid2D *f, int x, int y) {
     return (size_t)y * (size_t)f->w + (size_t)x;
@@ -46,10 +47,12 @@ static void lin_solve(const Fluid2D *f,
                       float *x,
                       const float *x0,
                       float a,
-                      float c) {
+                      float c,
+                      int iterations) {
     int w = f->w;
     int h = f->h;
-    for (int k = 0; k < FLUID_SOLVER_ITERATIONS; ++k) {
+    if (iterations < 1) iterations = 1;
+    for (int k = 0; k < iterations; ++k) {
         for (int j = 1; j < h - 1; ++j) {
             for (int i = 1; i < w - 1; ++i) {
                 size_t id = idx(f, i, j);
@@ -68,9 +71,10 @@ static void diffuse(const Fluid2D *f,
                     float *x,
                     const float *x0,
                     float diff,
-                    float dt) {
+                    float dt,
+                    int iterations) {
     float a = diff * (float)(f->w - 2) * (float)(f->h - 2) * dt;
-    lin_solve(f, b, x, x0, a, 1.0f + 4.0f * a);
+    lin_solve(f, b, x, x0, a, 1.0f + 4.0f * a, iterations);
 }
 
 static void advect(const Fluid2D *f,
@@ -114,7 +118,8 @@ static void project(const Fluid2D *f,
                     float *velX,
                     float *velY,
                     float *p,
-                    float *div) {
+                    float *div,
+                    int iterations) {
     int w = f->w;
     int h = f->h;
     float inv_w = 1.0f / (float)w;
@@ -133,7 +138,7 @@ static void project(const Fluid2D *f,
 
     set_bnd(f, 0, div);
     set_bnd(f, 0, p);
-    lin_solve(f, 0, p, div, 1.0f, 4.0f);
+    lin_solve(f, 0, p, div, 1.0f, 4.0f, iterations);
 
     for (int j = 1; j < h - 1; ++j) {
         for (int i = 1; i < w - 1; ++i) {
@@ -163,6 +168,14 @@ static void apply_buoyancy(Fluid2D *f, const AppConfig *cfg, float dt) {
         float buoy = (f->density[i] - avg_density) * force;
         f->velY[i] -= buoy * dt;
     }
+}
+
+static int solver_iterations_from_config(const AppConfig *cfg) {
+    int iterations = (cfg && cfg->fluid_solver_iterations > 0)
+                         ? cfg->fluid_solver_iterations
+                         : FLUID_SOLVER_ITERATIONS_DEFAULT;
+    if (iterations < 1) iterations = 1;
+    return iterations;
 }
 
 Fluid2D *fluid2d_create(int w, int h) {
@@ -244,6 +257,14 @@ static int cell_from_world(float pos, int grid, float world_max) {
     return (int)(normalized * (float)(grid - 1));
 }
 
+static float cell_to_world(int cell, int grid, float world_max) {
+    if (grid <= 1) return 0.0f;
+    float t = (float)cell / (float)(grid - 1);
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    return t * world_max;
+}
+
 void fluid2d_apply_object_mask(Fluid2D *f,
                                const ObjectManager *objects,
                                const AppConfig *cfg) {
@@ -252,7 +273,7 @@ void fluid2d_apply_object_mask(Fluid2D *f,
 
     for (int i = 0; i < objects->count; ++i) {
         const SceneObject *obj = &objects->objects[i];
-        if (!obj) continue;
+        if (!obj || obj->body.is_static) continue;
         if (obj->type == SCENE_OBJECT_CIRCLE) {
             int cx = cell_from_world(obj->body.position.x, f->w, (float)cfg->window_w);
             int cy = cell_from_world(obj->body.position.y, f->h, (float)cfg->window_h);
@@ -273,26 +294,52 @@ void fluid2d_apply_object_mask(Fluid2D *f,
                 }
             }
         } else if (obj->type == SCENE_OBJECT_BOX) {
-            int min_x = cell_from_world(obj->body.position.x - obj->body.half_extents.x,
+            float half_diag = sqrtf(obj->body.half_extents.x * obj->body.half_extents.x +
+                                    obj->body.half_extents.y * obj->body.half_extents.y);
+            int min_x = cell_from_world(obj->body.position.x - half_diag,
                                         f->w, (float)cfg->window_w);
-            int max_x = cell_from_world(obj->body.position.x + obj->body.half_extents.x,
+            int max_x = cell_from_world(obj->body.position.x + half_diag,
                                         f->w, (float)cfg->window_w);
-            int min_y = cell_from_world(obj->body.position.y - obj->body.half_extents.y,
+            int min_y = cell_from_world(obj->body.position.y - half_diag,
                                         f->h, (float)cfg->window_h);
-            int max_y = cell_from_world(obj->body.position.y + obj->body.half_extents.y,
+            int max_y = cell_from_world(obj->body.position.y + half_diag,
                                         f->h, (float)cfg->window_h);
             if (min_x < 1) min_x = 1;
             if (max_x > f->w - 2) max_x = f->w - 2;
             if (min_y < 1) min_y = 1;
             if (max_y > f->h - 2) max_y = f->h - 2;
+
+            float cos_a = cosf(obj->body.angle);
+            float sin_a = sinf(obj->body.angle);
             for (int y = min_y; y <= max_y; ++y) {
+                float world_y = cell_to_world(y, f->h, (float)cfg->window_h);
                 for (int x = min_x; x <= max_x; ++x) {
-                    size_t id = idx(f, x, y);
-                    f->density[id] = 0.0f;
-                    f->velX[id] = 0.0f;
-                    f->velY[id] = 0.0f;
+                    float world_x = cell_to_world(x, f->w, (float)cfg->window_w);
+                    float rel_x = world_x - obj->body.position.x;
+                    float rel_y = world_y - obj->body.position.y;
+                    float local_x =  rel_x * cos_a + rel_y * sin_a;
+                    float local_y = -rel_x * sin_a + rel_y * cos_a;
+                    if (fabsf(local_x) <= obj->body.half_extents.x &&
+                        fabsf(local_y) <= obj->body.half_extents.y) {
+                        size_t id = idx(f, x, y);
+                        f->density[id] = 0.0f;
+                        f->velX[id] = 0.0f;
+                        f->velY[id] = 0.0f;
+                    }
                 }
             }
+        }
+    }
+}
+
+void fluid2d_apply_static_mask(Fluid2D *f, const uint8_t *mask) {
+    if (!f || !mask) return;
+    size_t count = (size_t)f->w * (size_t)f->h;
+    for (size_t i = 0; i < count; ++i) {
+        if (mask[i]) {
+            f->density[i] = 0.0f;
+            f->velX[i] = 0.0f;
+            f->velY[i] = 0.0f;
         }
     }
 }
@@ -302,27 +349,28 @@ void fluid2d_step(Fluid2D *f, double dt, const AppConfig *cfg) {
     float diff = cfg->density_diffusion;
     float visc = cfg->velocity_damping;
     float fdt  = (float)dt;
+    int iterations = solver_iterations_from_config(cfg);
 
     swap_buffers(&f->velX_prev, &f->velX);
-    diffuse(f, 1, f->velX, f->velX_prev, visc, fdt);
+    diffuse(f, 1, f->velX, f->velX_prev, visc, fdt, iterations);
 
     swap_buffers(&f->velY_prev, &f->velY);
-    diffuse(f, 2, f->velY, f->velY_prev, visc, fdt);
+    diffuse(f, 2, f->velY, f->velY_prev, visc, fdt, iterations);
 
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations);
 
     swap_buffers(&f->velX_prev, &f->velX);
     swap_buffers(&f->velY_prev, &f->velY);
     advect(f, 1, f->velX, f->velX_prev, f->velX_prev, f->velY_prev, fdt);
     advect(f, 2, f->velY, f->velY_prev, f->velX_prev, f->velY_prev, fdt);
 
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations);
 
     apply_buoyancy(f, cfg, fdt);
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations);
 
     swap_buffers(&f->density_prev, &f->density);
-    diffuse(f, 0, f->density, f->density_prev, diff, fdt);
+    diffuse(f, 0, f->density, f->density_prev, diff, fdt, iterations);
 
     swap_buffers(&f->density_prev, &f->density);
     advect(f, 0, f->density, f->density_prev, f->velX, f->velY, fdt);

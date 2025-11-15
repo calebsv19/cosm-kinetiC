@@ -14,5 +14,6 @@ typedef struct ConfigLoadOptions {
 // For now, the loader simply seeds the AppConfig with defaults and logs whether
 // the requested file was found. The JSON parser hook will live here later.
 bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts);
+bool config_loader_save(const AppConfig *cfg, const char *path);
 
 #endif // CONFIG_LOADER_H
