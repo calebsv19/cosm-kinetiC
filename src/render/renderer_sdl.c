@@ -104,6 +104,12 @@ static bool ensure_pressure_buffers(size_t cell_count) {
     return true;
 }
 
+static inline float clamp01(float v) {
+    if (v < 0.0f) return 0.0f;
+    if (v > 1.0f) return 1.0f;
+    return v;
+}
+
 static inline void blend_pixel(Uint32 *dst,
                                Uint8 r,
                                Uint8 g,
@@ -208,7 +214,7 @@ static void renderer_draw_hud(const RendererHudInfo *hud) {
     snprintf(status_line, sizeof(status_line), "Status: %s", hud->paused ? "Paused" : "Running");
     const char *hint_line = "Esc exit | P pause | C clear | E snapshot | V vorticity | B pressure";
 
-    const int MAX_HUD_LINES = 10;
+    enum { MAX_HUD_LINES = 10 };
     const char *lines[MAX_HUD_LINES];
     size_t line_count = 0;
     lines[line_count++] = preset_line;
@@ -224,10 +230,16 @@ static void renderer_draw_hud(const RendererHudInfo *hud) {
     lines[line_count++] = status_line;
     lines[line_count++] = hint_line;
 
-    SDL_Surface *surfaces[MAX_HUD_LINES] = {0};
-    SDL_Texture *textures[MAX_HUD_LINES] = {0};
-    int widths[MAX_HUD_LINES] = {0};
-    int heights[MAX_HUD_LINES] = {0};
+    SDL_Surface *surfaces[MAX_HUD_LINES];
+    SDL_Texture *textures[MAX_HUD_LINES];
+    int widths[MAX_HUD_LINES];
+    int heights[MAX_HUD_LINES];
+    for (int i = 0; i < MAX_HUD_LINES; ++i) {
+        surfaces[i] = NULL;
+        textures[i] = NULL;
+        widths[i] = 0;
+        heights[i] = 0;
+    }
     int count = 0;
     int max_w = 0;
     int total_h = 0;
@@ -688,9 +700,9 @@ static void renderer_apply_vorticity_overlay(const SceneState *scene,
                 g *= (1.0f - 0.75f * magnitude);
             }
 
-            if (r < 0.0f) r = 0.0f; if (r > 1.0f) r = 1.0f;
-            if (g < 0.0f) g = 0.0f; if (g > 1.0f) g = 1.0f;
-            if (b < 0.0f) b = 0.0f; if (b > 1.0f) b = 1.0f;
+            r = clamp01(r);
+            g = clamp01(g);
+            b = clamp01(b);
 
             Uint8 overlay_r = (Uint8)lroundf(r * 255.0f);
             Uint8 overlay_g = (Uint8)lroundf(g * 255.0f);
