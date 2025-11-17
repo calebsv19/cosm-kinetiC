@@ -1,4 +1,5 @@
 #include "time_utils.h"
+#define _GNU_SOURCE
 #include <time.h>
 
 uint64_t get_time_ns(void) {

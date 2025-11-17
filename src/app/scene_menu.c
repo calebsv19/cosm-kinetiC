@@ -1,5 +1,6 @@
 #include "app/scene_menu.h"
 
+#include "font_paths.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
@@ -1097,24 +1098,26 @@ bool scene_menu_run(AppConfig *cfg,
         return false;
     }
 
-    TTF_Font *font_title = TTF_OpenFont("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 32);
-    if (!font_title) {
-        font_title = TTF_OpenFont("/Library/Fonts/Arial Bold.ttf", 32);
-    }
-    if (!font_title) {
-        fprintf(stderr, "Failed to open title font: %s\n", TTF_GetError());
-    }
-    TTF_Font *font_body = TTF_OpenFont("/System/Library/Fonts/Supplemental/Arial.ttf", 22);
-    if (!font_body) {
-        font_body = TTF_OpenFont("/Library/Fonts/Arial.ttf", 22);
-    }
-    if (!font_body) {
-        fprintf(stderr, "Failed to open body font: %s\n", TTF_GetError());
-    }
-    TTF_Font *font_small = TTF_OpenFont("/System/Library/Fonts/Supplemental/Arial.ttf", 18);
-    if (!font_small) {
-        font_small = TTF_OpenFont("/Library/Fonts/Arial.ttf", 18);
-    }
+	TTF_Font *font_title = TTF_OpenFont(FONT_TITLE_PATH_1, 32);
+	if (!font_title) {
+	    font_title = TTF_OpenFont(FONT_TITLE_PATH_2, 32);
+	}
+	if (!font_title) {
+	    fprintf(stderr, "Failed to open title font: %s\n", TTF_GetError());
+	}
+	
+	TTF_Font *font_body = TTF_OpenFont(FONT_BODY_PATH_1, 22);
+	if (!font_body) {
+	    font_body = TTF_OpenFont(FONT_BODY_PATH_2, 22);
+	}
+	if (!font_body) {
+	    fprintf(stderr, "Failed to open body font: %s\n", TTF_GetError());
+	}
+	
+	TTF_Font *font_small = TTF_OpenFont(FONT_BODY_PATH_1, 18);
+	if (!font_small) {
+	    font_small = TTF_OpenFont(FONT_BODY_PATH_2, 18);
+	}
 
     size_t preset_count = 0;
     const FluidScenePreset *presets = scene_presets_get_all(&preset_count);

@@ -1,5 +1,6 @@
 #include "render/renderer_sdl.h"
 
+#include "font_paths.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <math.h>
@@ -126,16 +127,23 @@ static inline void blend_pixel(Uint32 *dst,
 
 static TTF_Font *load_hud_font(void) {
     const char *paths[] = {
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "/Library/Fonts/Arial.ttf"
+        FONT_BODY_PATH_1,
+        FONT_BODY_PATH_2,
+        FONT_TITLE_PATH_1,  // extra fallbacks if body fonts fail
+        FONT_TITLE_PATH_2
     };
+
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
         TTF_Font *font = TTF_OpenFont(paths[i], 14);
-        if (font) return font;
+        if (font) {
+            return font;
+        }
     }
+
     fprintf(stderr, "[renderer] Failed to load HUD font: %s\n", TTF_GetError());
     return NULL;
 }
+
 
 static void render_hud_text_line(const char *text,
                                  SDL_Texture **texture,

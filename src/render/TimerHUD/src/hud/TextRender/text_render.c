@@ -1,4 +1,6 @@
 #include "text_render.h"
+
+#include "font_paths.h"
 #include <SDL2/SDL_ttf.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,12 +12,14 @@
 
 static TTF_Font* g_ts_font = NULL;
 
+
 static const char* FONT_PATHS[] = {
-    "/System/Library/Fonts/Supplemental/Arial.ttf",
-    "/Library/Fonts/Arial.ttf",
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-    "/usr/share/fonts/truetype/freefont/FreeSans.ttf"
+    FONT_BODY_PATH_1,
+    FONT_BODY_PATH_2,
+    FONT_TITLE_PATH_1,  // fallback to bold if needed
+    FONT_TITLE_PATH_2
 };
+
 
 static bool ensure_font_loaded(void) {
     if (g_ts_font) return true;
