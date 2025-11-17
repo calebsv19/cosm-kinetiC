@@ -4,6 +4,13 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+typedef enum SimulationMode {
+    SIM_MODE_BOX = 0,
+    SIM_MODE_WIND_TUNNEL
+} SimulationMode;
+
+#define SIMULATION_MODE_COUNT 2
+
 typedef struct AppConfig {
     int window_w;
     int window_h;
@@ -44,6 +51,11 @@ typedef struct AppConfig {
     int    headless_quality_index;
     bool   headless_skip_present;
     char   headless_output_dir[256];
+
+    SimulationMode sim_mode;
+    float  tunnel_inflow_speed;
+    float  tunnel_inflow_density;
+    float  tunnel_viscosity_scale;
 } AppConfig;
 
 AppConfig app_config_default(void);

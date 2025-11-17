@@ -22,6 +22,25 @@ typedef struct FluidEmitter {
 
 #define MAX_FLUID_EMITTERS 32
 
+typedef enum BoundaryFlowMode {
+    BOUNDARY_FLOW_DISABLED = 0,
+    BOUNDARY_FLOW_EMIT,
+    BOUNDARY_FLOW_RECEIVE
+} BoundaryFlowMode;
+
+typedef enum BoundaryFlowEdge {
+    BOUNDARY_EDGE_TOP = 0,
+    BOUNDARY_EDGE_RIGHT,
+    BOUNDARY_EDGE_BOTTOM,
+    BOUNDARY_EDGE_LEFT,
+    BOUNDARY_EDGE_COUNT
+} BoundaryFlowEdge;
+
+typedef struct BoundaryFlow {
+    BoundaryFlowMode mode;
+    float strength;
+} BoundaryFlow;
+
 typedef enum PresetObjectType {
     PRESET_OBJECT_CIRCLE = 0,
     PRESET_OBJECT_BOX
@@ -39,6 +58,11 @@ typedef struct PresetObject {
 
 #define MAX_PRESET_OBJECTS 64
 
+typedef enum FluidSceneDomainType {
+    SCENE_DOMAIN_BOX = 0,
+    SCENE_DOMAIN_WIND_TUNNEL
+} FluidSceneDomainType;
+
 typedef struct FluidScenePreset {
     const char *name;
     size_t emitter_count;
@@ -46,9 +70,15 @@ typedef struct FluidScenePreset {
     FluidEmitter emitters[MAX_FLUID_EMITTERS];
     size_t object_count;
     PresetObject objects[MAX_PRESET_OBJECTS];
+    BoundaryFlow boundary_flows[BOUNDARY_EDGE_COUNT];
+    FluidSceneDomainType domain;
+    float domain_width;
+    float domain_height;
 } FluidScenePreset;
 
 const FluidScenePreset *scene_presets_get_all(size_t *count);
 const FluidScenePreset *scene_presets_get_default(void);
+const FluidScenePreset *scene_presets_get_default_for_domain(FluidSceneDomainType domain);
+FluidSceneDomainType scene_preset_domain(const FluidScenePreset *preset);
 
 #endif // SCENE_PRESETS_H

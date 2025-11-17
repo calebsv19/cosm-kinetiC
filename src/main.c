@@ -48,8 +48,15 @@ int main(int argc, char **argv) {
     SceneMenuSelection selection = {
         .custom_slot_index = library.active_slot,
         .quality_index = cfg.quality_index,
-        .headless_frame_count = cfg.headless_frame_count
+        .headless_frame_count = cfg.headless_frame_count,
+        .sim_mode = cfg.sim_mode
     };
+    for (int i = 0; i < SIMULATION_MODE_COUNT; ++i) {
+        selection.last_mode_slot[i] = -1;
+    }
+    if (cfg.sim_mode >= 0 && cfg.sim_mode < SIMULATION_MODE_COUNT) {
+        selection.last_mode_slot[cfg.sim_mode] = selection.custom_slot_index;
+    }
 
     if (cfg.headless_enabled) {
 
@@ -88,6 +95,7 @@ int main(int argc, char **argv) {
         scene_controller_run(&cfg, preset_to_run, "data/snapshots", NULL);
         cfg.quality_index = selection.quality_index;
         cfg.headless_frame_count = selection.headless_frame_count;
+        cfg.sim_mode = selection.sim_mode;
     }
 
     preset_library_save(preset_path, &library);

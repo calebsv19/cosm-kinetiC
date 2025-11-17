@@ -5,6 +5,8 @@
 #include <string.h>
 #include <math.h>
 
+#include "physics/fluid2d/fluid2d_boundary.h"
+
 // simple mapping from window coords to grid coords
 static void window_to_grid(const SceneState *scene, int win_x, int win_y,
                            int *out_gx, int *out_gy) {
@@ -113,13 +115,50 @@ static void static_mask_apply_preset(SceneState *scene,
     }
 }
 
+void scene_apply_boundary_flows(SceneState *scene, double dt) {
+    if (!scene || !scene->preset || !scene->smoke) return;
+    if (scene->config && scene->config->sim_mode == SIM_MODE_WIND_TUNNEL) {
+        static const int WIND_RAMP_STEPS = 200;
+        float ramp = 1.0f;
+        if (scene->wind_ramp_steps < WIND_RAMP_STEPS) {
+            ramp = (float)scene->wind_ramp_steps / (float)WIND_RAMP_STEPS;
+            if (ramp > 1.0f) ramp = 1.0f;
+        }
+        fluid2d_boundary_apply_wind(scene->config, scene->preset, scene->smoke, dt, ramp);
+        if (scene->wind_ramp_steps < WIND_RAMP_STEPS) {
+            scene->wind_ramp_steps++;
+        }
+    } else {
+        fluid2d_boundary_apply(scene->preset->boundary_flows, scene->smoke, dt);
+    }
+}
+
+void scene_enforce_boundary_flows(SceneState *scene) {
+    if (!scene || !scene->preset || !scene->smoke) return;
+    if (scene->config && scene->config->sim_mode == SIM_MODE_WIND_TUNNEL) {
+        fluid2d_boundary_enforce_wind(scene->config, scene->preset, scene->smoke);
+    } else {
+        fluid2d_boundary_enforce(scene->preset->boundary_flows, scene->smoke);
+    }
+}
+
+void scene_enforce_obstacles(SceneState *scene) {
+    if (!scene || !scene->smoke) return;
+    if (scene->static_mask) {
+        fluid2d_apply_static_mask(scene->smoke, scene->static_mask);
+    }
+    fluid2d_apply_object_mask(scene->smoke, &scene->objects, scene->config);
+}
+
 SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
     SceneState s;
     s.time   = 0.0;
     s.dt     = 0.0;
     s.paused = false;
+    s.emitters_enabled = true;
     s.config = cfg;
     s.preset = preset;
+    s.wind_ramp_steps = 0;
 
     s.smoke = fluid2d_create(cfg->grid_w, cfg->grid_h);
     if (!s.smoke) {
@@ -242,6 +281,7 @@ bool scene_apply_brush_sample(SceneState *scene, const StrokeSample *sample) {
 
 void scene_apply_emitters(SceneState *scene, double dt) {
     if (!scene || !scene->preset || !scene->smoke) return;
+    if (!scene->emitters_enabled) return;
     const FluidScenePreset *preset = scene->preset;
     int w = scene->smoke->w;
     int h = scene->smoke->h;
@@ -297,6 +337,11 @@ void scene_apply_emitters(SceneState *scene, double dt) {
             }
         }
     }
+}
+
+void scene_set_emitters_enabled(SceneState *scene, bool enabled) {
+    if (!scene) return;
+    scene->emitters_enabled = enabled;
 }
 
 // --- snapshot format ---

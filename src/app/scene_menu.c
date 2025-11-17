@@ -51,6 +51,7 @@ typedef struct SceneMenuInteraction {
     MenuButton quality_prev_button;
     MenuButton quality_next_button;
     MenuButton headless_toggle_button;
+    MenuButton mode_toggle_button;
     SDL_Rect volume_toggle_rect;
     SDL_Rect render_toggle_rect;
     bool *running;
@@ -77,6 +78,7 @@ typedef struct SceneMenuInteraction {
     bool editing_headless_frames;
     SDL_Rect headless_frames_rect;
     Uint32 last_headless_click_ticks;
+    SimulationMode active_mode;
 } SceneMenuInteraction;
 
 static void begin_rename(SceneMenuInteraction *ctx, int slot_index);
@@ -189,9 +191,98 @@ static SDL_Rect preset_list_rect(void) {
     return rect;
 }
 
+static SimulationMode normalize_sim_mode(SimulationMode mode) {
+    if (mode < SIM_MODE_BOX || mode >= SIMULATION_MODE_COUNT) {
+        return SIM_MODE_BOX;
+    }
+    return mode;
+}
+
+static FluidSceneDomainType domain_for_mode(SimulationMode mode) {
+    return (mode == SIM_MODE_WIND_TUNNEL)
+               ? SCENE_DOMAIN_WIND_TUNNEL
+               : SCENE_DOMAIN_BOX;
+}
+
+static FluidSceneDomainType current_domain(const SceneMenuInteraction *ctx) {
+    if (!ctx) return SCENE_DOMAIN_BOX;
+    return domain_for_mode(normalize_sim_mode(ctx->active_mode));
+}
+
+static const char *mode_label(SimulationMode mode) {
+    return (mode == SIM_MODE_WIND_TUNNEL) ? "Wind Tunnel" : "Grid";
+}
+
+static int visible_slot_count(const SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->library) return 0;
+    FluidSceneDomainType domain = current_domain(ctx);
+    int total = preset_library_count(ctx->library);
+    int visible = 0;
+    for (int i = 0; i < total; ++i) {
+        const CustomPresetSlot *slot = preset_library_get_slot_const(ctx->library, i);
+        if (slot && slot->preset.domain == domain) {
+            ++visible;
+        }
+    }
+    return visible;
+}
+
+static int slot_index_from_visible_row(const SceneMenuInteraction *ctx, int row_index) {
+    if (!ctx || !ctx->library || row_index < 0) return -1;
+    FluidSceneDomainType domain = current_domain(ctx);
+    int total = preset_library_count(ctx->library);
+    int visible = 0;
+    for (int i = 0; i < total; ++i) {
+        const CustomPresetSlot *slot = preset_library_get_slot_const(ctx->library, i);
+        if (!slot) continue;
+        if (slot->preset.domain != domain) continue;
+        if (visible == row_index) {
+            return i;
+        }
+        ++visible;
+    }
+    return -1;
+}
+
+static bool slot_matches_current_mode(const SceneMenuInteraction *ctx, int slot_index) {
+    if (!ctx || !ctx->library) return false;
+    const CustomPresetSlot *slot = preset_library_get_slot_const(ctx->library, slot_index);
+    if (!slot) return false;
+    return slot->preset.domain == current_domain(ctx);
+}
+
+static int find_first_slot_for_mode(const SceneMenuInteraction *ctx, FluidSceneDomainType domain) {
+    if (!ctx || !ctx->library) return -1;
+    int total = preset_library_count(ctx->library);
+    for (int i = 0; i < total; ++i) {
+        const CustomPresetSlot *slot = preset_library_get_slot_const(ctx->library, i);
+        if (slot && slot->preset.domain == domain) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+static int visible_row_from_slot(const SceneMenuInteraction *ctx, int slot_index) {
+    if (!ctx || !ctx->library) return -1;
+    if (slot_index < 0 || slot_index >= preset_library_count(ctx->library)) return -1;
+    FluidSceneDomainType domain = current_domain(ctx);
+    int visible = 0;
+    for (int i = 0; i < preset_library_count(ctx->library); ++i) {
+        const CustomPresetSlot *slot = preset_library_get_slot_const(ctx->library, i);
+        if (!slot) continue;
+        if (slot->preset.domain != domain) continue;
+        if (i == slot_index) {
+            return visible;
+        }
+        ++visible;
+    }
+    return -1;
+}
+
 static float preset_total_height(const SceneMenuInteraction *ctx) {
     if (!ctx) return (float)PRESET_ROW_HEIGHT;
-    int count = preset_library_count(ctx->library);
+    int count = visible_slot_count(ctx);
     if (count < 0) count = 0;
     return (float)count * (float)PRESET_ROW_HEIGHT +
            ADD_ENTRY_GAP +
@@ -307,7 +398,7 @@ static int preset_index_from_point(SceneMenuInteraction *ctx,
 
     float local_y = (float)(y - ctx->list_rect.y) + scrollbar_offset(&ctx->scrollbar);
     if (local_y < 0.0f) local_y = 0.0f;
-    int count = preset_library_count(ctx->library);
+    int count = visible_slot_count(ctx);
     float add_start = (float)count * (float)PRESET_ROW_HEIGHT + (float)ADD_ENTRY_GAP;
     float add_end = add_start + (float)PRESET_ROW_HEIGHT;
     if (local_y >= add_start) {
@@ -384,16 +475,18 @@ static void draw_preset_list(SceneMenuInteraction *ctx) {
     };
     SDL_RenderSetClipRect(renderer, &clip);
 
-    int count = preset_library_count(ctx->library);
+    int count = visible_slot_count(ctx);
     int total_rows = count + 1;
 
     for (int row = 0; row < total_rows; ++row) {
         bool is_add_entry = (row == count);
         SDL_Rect row_rect;
         if (!preset_row_rect(ctx, row, is_add_entry, &row_rect)) continue;
+        int slot_index = is_add_entry ? -1 : slot_index_from_visible_row(ctx, row);
         bool selected = (!is_add_entry &&
-                         row == ctx->selection->custom_slot_index);
-        bool hovered = (!is_add_entry && row == ctx->hover_slot) ||
+                         slot_index >= 0 &&
+                         ctx->selection->custom_slot_index == slot_index);
+        bool hovered = (!is_add_entry && slot_index >= 0 && ctx->hover_slot == slot_index) ||
                        (is_add_entry && ctx->hover_add_entry);
 
         if (!is_add_entry) {
@@ -413,11 +506,11 @@ static void draw_preset_list(SceneMenuInteraction *ctx) {
                 .h = row_rect.h - 20
             };
 
-            if (ctx->rename_input.active && ctx->renaming_slot == row) {
+            if (ctx->rename_input.active && slot_index >= 0 && ctx->renaming_slot == slot_index) {
                 draw_text_input(renderer, ctx->font, &label_rect, &ctx->rename_input);
             } else {
                 const CustomPresetSlot *slot =
-                    preset_library_get_slot_const(ctx->library, row);
+                    preset_library_get_slot_const(ctx->library, slot_index);
                 const char *label = (slot && slot->name[0] != '\0')
                                         ? slot->name
                                         : "Untitled Preset";
@@ -436,9 +529,11 @@ static void draw_preset_list(SceneMenuInteraction *ctx) {
                       del_color);
         } else {
             SDL_Color text_color = hovered ? COLOR_TEXT : COLOR_TEXT_DIM;
+            char label[64];
+            snprintf(label, sizeof(label), "+ Add %s preset", mode_label(ctx->active_mode));
             draw_text(renderer,
                       ctx->font_small,
-                      "+ Click to add preset",
+                      label,
                       row_rect.x + 12,
                       row_rect.y + (row_rect.h / 2) - 8,
                       text_color);
@@ -457,17 +552,72 @@ static void select_custom(SceneMenuInteraction *ctx, int slot_index) {
         ctx->active_preset = ctx->preset_output;
         return;
     }
-    if (slot_index < 0) slot_index = 0;
-    if (slot_index >= count) slot_index = count - 1;
+    if (slot_index < 0 || slot_index >= count || !slot_matches_current_mode(ctx, slot_index)) {
+        slot_index = find_first_slot_for_mode(ctx, current_domain(ctx));
+    }
+    if (slot_index < 0 || slot_index >= count) {
+        ctx->selection->custom_slot_index = -1;
+        ctx->selection->last_mode_slot[ctx->active_mode] = -1;
+        ctx->active_preset = ctx->preset_output;
+        return;
+    }
 
     CustomPresetSlot *slot = preset_library_get_slot(ctx->library, slot_index);
     if (!slot) {
+        ctx->selection->custom_slot_index = -1;
+        ctx->selection->last_mode_slot[ctx->active_mode] = -1;
         ctx->active_preset = ctx->preset_output;
         return;
     }
     ctx->selection->custom_slot_index = slot_index;
     ctx->library->active_slot = slot_index;
+    ctx->selection->last_mode_slot[ctx->active_mode] = slot_index;
     ctx->active_preset = &slot->preset;
+}
+
+static void ensure_slot_for_mode(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->library) return;
+    if (visible_slot_count(ctx) > 0) return;
+    char default_name[CUSTOM_PRESET_NAME_MAX];
+    int slot_count = preset_library_count(ctx->library);
+    snprintf(default_name, sizeof(default_name), "%s Preset %d",
+             (ctx->active_mode == SIM_MODE_WIND_TUNNEL) ? "Tunnel" : "Grid",
+             slot_count + 1);
+    FluidSceneDomainType domain = current_domain(ctx);
+    const FluidScenePreset *base = scene_presets_get_default_for_domain(domain);
+    CustomPresetSlot *slot = preset_library_add_slot(ctx->library,
+                                                     default_name,
+                                                     base);
+    if (!slot) return;
+    slot->preset.name = slot->name;
+    slot->preset.is_custom = true;
+    slot->preset.domain = domain;
+    int new_index = preset_library_count(ctx->library) - 1;
+    select_custom(ctx, new_index);
+}
+
+static void switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode) {
+    if (!ctx) return;
+    SimulationMode normalized = normalize_sim_mode(new_mode);
+    if (ctx->active_mode == normalized) return;
+    if (ctx->rename_input.active) {
+        finish_rename(ctx, false);
+    }
+    ctx->active_mode = normalized;
+    if (ctx->cfg) ctx->cfg->sim_mode = normalized;
+    if (ctx->selection) ctx->selection->sim_mode = normalized;
+    ensure_slot_for_mode(ctx);
+    int preferred = -1;
+    if (ctx->selection &&
+        normalized >= 0 && normalized < SIMULATION_MODE_COUNT) {
+        preferred = ctx->selection->last_mode_slot[normalized];
+    }
+    select_custom(ctx, preferred);
+    scrollbar_set_offset(&ctx->scrollbar, 0.0f);
+    update_scrollbar(ctx);
+    ctx->hover_slot = -1;
+    ctx->hover_add_entry = false;
+    ctx->last_clicked_slot = -1;
 }
 
 static void scroll_to_row(SceneMenuInteraction *ctx, int row_index) {
@@ -484,22 +634,69 @@ static void scroll_to_row(SceneMenuInteraction *ctx, int row_index) {
     }
 }
 
+static void scroll_to_slot(SceneMenuInteraction *ctx, int slot_index) {
+    if (!ctx) return;
+    int row = visible_row_from_slot(ctx, slot_index);
+    if (row >= 0) {
+        scroll_to_row(ctx, row);
+    }
+}
+
 static void add_new_preset(SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->library) return;
-    int new_index = preset_library_count(ctx->library);
     char default_name[CUSTOM_PRESET_NAME_MAX];
-    snprintf(default_name, sizeof(default_name), "Custom Preset %d", new_index + 1);
+    int slot_count = preset_library_count(ctx->library);
+    snprintf(default_name, sizeof(default_name), "Custom Preset %d", slot_count + 1);
+    FluidSceneDomainType domain = current_domain(ctx);
+    const FluidScenePreset *base = scene_presets_get_default_for_domain(domain);
     CustomPresetSlot *slot = preset_library_add_slot(ctx->library,
                                                      default_name,
-                                                     NULL);
+                                                     base);
     if (!slot) return;
     slot->preset.name = slot->name;
     slot->preset.is_custom = true;
-    slot->preset.emitter_count = 0;
+    slot->preset.domain = domain;
     slot->occupied = true;
+    int new_index = preset_library_count(ctx->library) - 1;
     select_custom(ctx, new_index);
-    scroll_to_row(ctx, new_index);
+    scroll_to_slot(ctx, new_index);
     begin_rename(ctx, new_index);
+}
+
+static void adjust_slot_indices_after_delete(SceneMenuInteraction *ctx, int removed_index) {
+    if (!ctx) return;
+    if (ctx->selection) {
+        for (int mode = 0; mode < SIMULATION_MODE_COUNT; ++mode) {
+            int stored = ctx->selection->last_mode_slot[mode];
+            if (stored == removed_index) {
+                ctx->selection->last_mode_slot[mode] = -1;
+            } else if (stored > removed_index) {
+                ctx->selection->last_mode_slot[mode] = stored - 1;
+            }
+        }
+        if (ctx->selection->custom_slot_index == removed_index) {
+            ctx->selection->custom_slot_index = -1;
+        } else if (ctx->selection->custom_slot_index > removed_index) {
+            ctx->selection->custom_slot_index--;
+        }
+    }
+    if (ctx->library) {
+        if (ctx->library->active_slot == removed_index) {
+            ctx->library->active_slot = -1;
+        } else if (ctx->library->active_slot > removed_index) {
+            ctx->library->active_slot--;
+        }
+    }
+    if (ctx->hover_slot == removed_index) {
+        ctx->hover_slot = -1;
+    } else if (ctx->hover_slot > removed_index) {
+        ctx->hover_slot--;
+    }
+    if (ctx->last_clicked_slot == removed_index) {
+        ctx->last_clicked_slot = -1;
+    } else if (ctx->last_clicked_slot > removed_index) {
+        ctx->last_clicked_slot--;
+    }
 }
 
 static void delete_preset(SceneMenuInteraction *ctx, int slot_index) {
@@ -510,6 +707,7 @@ static void delete_preset(SceneMenuInteraction *ctx, int slot_index) {
     if (!preset_library_remove_slot(ctx->library, slot_index)) {
         return;
     }
+    adjust_slot_indices_after_delete(ctx, slot_index);
     int count = preset_library_count(ctx->library);
     if (count == 0) {
         ctx->selection->custom_slot_index = -1;
@@ -722,6 +920,14 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
         return;
     }
 
+    if (point_in_rect(x, y, &ctx->mode_toggle_button.rect)) {
+        SimulationMode new_mode = (ctx->active_mode == SIM_MODE_BOX)
+                                      ? SIM_MODE_WIND_TUNNEL
+                                      : SIM_MODE_BOX;
+        switch_mode(ctx, new_mode);
+        return;
+    }
+
     SDL_Rect frames_rect = ctx->headless_frames_rect;
     bool in_frames_rect = point_in_rect(x, y, &frames_rect);
     if (!in_frames_rect && ctx->editing_headless_frames) {
@@ -737,8 +943,8 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
         return;
     }
 
-    int count = preset_library_count(ctx->library);
-    if (row >= count) return;
+    int slot_index = slot_index_from_visible_row(ctx, row);
+    if (slot_index < 0) return;
 
     SDL_Rect row_rect;
     if (!preset_row_rect(ctx, row, false, &row_rect)) {
@@ -748,19 +954,19 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
 
     SDL_Rect delete_rect = preset_delete_button_rect(&row_rect);
     if (point_in_rect(x, y, &delete_rect)) {
-        delete_preset(ctx, row);
+        delete_preset(ctx, slot_index);
         return;
     }
 
-    bool double_click = (ctx->last_clicked_slot == row) &&
+    bool double_click = (ctx->last_clicked_slot == slot_index) &&
                         (now - ctx->last_click_ticks <= DOUBLE_CLICK_MS);
-    ctx->last_clicked_slot = row;
+    ctx->last_clicked_slot = slot_index;
     ctx->last_click_ticks = now;
 
-    select_custom(ctx, row);
-    scroll_to_row(ctx, row);
+    select_custom(ctx, slot_index);
+    scroll_to_slot(ctx, slot_index);
     if (double_click) {
-        begin_rename(ctx, row);
+        begin_rename(ctx, slot_index);
     }
 }
 
@@ -786,13 +992,13 @@ static void menu_pointer_move(void *user, const InputPointerState *state) {
     }
     bool is_add = false;
     int row = preset_index_from_point(ctx, state->x, state->y, &is_add);
-    int count = preset_library_count(ctx->library);
-    if (row >= 0 && row < count) {
-        ctx->hover_slot = row;
+    int visible_count = visible_slot_count(ctx);
+    if (!is_add && row >= 0 && row < visible_count) {
+        ctx->hover_slot = slot_index_from_visible_row(ctx, row);
         ctx->hover_add_entry = false;
     } else {
         ctx->hover_slot = -1;
-        ctx->hover_add_entry = (is_add && row == count);
+        ctx->hover_add_entry = (is_add && row == visible_count);
     }
 }
 
@@ -927,6 +1133,18 @@ bool scene_menu_run(AppConfig *cfg,
             current_selection.custom_slot_index = active;
         }
     }
+    for (int mode = 0; mode < SIMULATION_MODE_COUNT; ++mode) {
+        int stored = current_selection.last_mode_slot[mode];
+        if (stored < 0 || stored >= slot_count) {
+            current_selection.last_mode_slot[mode] = -1;
+        }
+    }
+    SimulationMode selection_mode = normalize_sim_mode(cfg->sim_mode);
+    current_selection.sim_mode = selection_mode;
+    if (selection_mode >= 0 && selection_mode < SIMULATION_MODE_COUNT &&
+        current_selection.last_mode_slot[selection_mode] < 0) {
+        current_selection.last_mode_slot[selection_mode] = current_selection.custom_slot_index;
+    }
 
     if (current_selection.headless_frame_count > 0) {
         cfg->headless_frame_count = current_selection.headless_frame_count;
@@ -958,6 +1176,7 @@ bool scene_menu_run(AppConfig *cfg,
         .quality_prev_button = {.rect = {0, 0, 0, 0}, .label = "<"},
         .quality_next_button = {.rect = {0, 0, 0, 0}, .label = ">"},
         .headless_toggle_button = {.rect = {MENU_WIDTH - 220, MENU_HEIGHT - 130, 180, 40}, .label = "Headless"},
+        .mode_toggle_button = {.rect = {MENU_WIDTH - 220, 60, 180, 36}, .label = "Mode"},
         .running = &run,
         .start_requested = &start_requested,
         .context_mgr = NULL,
@@ -974,7 +1193,8 @@ bool scene_menu_run(AppConfig *cfg,
         .headless_run_requested = false,
         .editing_headless_frames = false,
         .last_headless_click_ticks = 0,
-        .headless_frames_rect = {0, 0, 0, 0}
+        .headless_frames_rect = {0, 0, 0, 0},
+        .active_mode = selection_mode
     };
 
     ctx.list_rect = preset_list_rect();
@@ -993,6 +1213,7 @@ bool scene_menu_run(AppConfig *cfg,
         if (ctx.cfg) ctx.cfg->quality_index = -1;
     }
 
+    ensure_slot_for_mode(&ctx);
     select_custom(&ctx, current_selection.custom_slot_index);
     *selection = current_selection;
 
@@ -1048,6 +1269,17 @@ bool scene_menu_run(AppConfig *cfg,
         }
         draw_preset_list(&ctx);
 
+        TTF_Font *toggle_font = ctx.font_small ? ctx.font_small : ctx.font;
+        if (!toggle_font) toggle_font = font_body;
+        ctx.mode_toggle_button.rect.y = 70;
+        char mode_text[48];
+        snprintf(mode_text, sizeof(mode_text), "Mode: %s", mode_label(ctx.active_mode));
+        draw_toggle(renderer,
+                    toggle_font,
+                    &ctx.mode_toggle_button.rect,
+                    mode_text,
+                    ctx.active_mode == SIM_MODE_WIND_TUNNEL);
+
         SDL_Rect config_panel = {420, 120, 360, 320};
         draw_panel(renderer, &config_panel);
         draw_text(renderer, font_body, "Grid Resolution", config_panel.x + 12, config_panel.y + 12, COLOR_TEXT_DIM);
@@ -1081,8 +1313,6 @@ bool scene_menu_run(AppConfig *cfg,
                                             config_panel.w - 24,
                                             36};
 
-        TTF_Font *toggle_font = ctx.font_small ? ctx.font_small : ctx.font;
-        if (!toggle_font) toggle_font = font_body;
         draw_toggle(renderer, toggle_font, &ctx.volume_toggle_rect,
                     "Save Volume Frames", ctx.cfg->save_volume_frames);
         draw_toggle(renderer, toggle_font, &ctx.render_toggle_rect,

@@ -9,7 +9,9 @@ typedef enum CommandType {
     COMMAND_NONE = 0,
     COMMAND_TOGGLE_PAUSE,
     COMMAND_CLEAR_SMOKE,
-    COMMAND_EXPORT_SNAPSHOT
+    COMMAND_EXPORT_SNAPSHOT,
+    COMMAND_TOGGLE_VORTICITY,
+    COMMAND_TOGGLE_PRESSURE
 } CommandType;
 
 typedef struct CommandPayload {

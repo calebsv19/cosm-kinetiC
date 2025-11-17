@@ -7,10 +7,16 @@
     "width": 256,
     "height": 256
   },
+  "simulation": {
+    "mode": 1,
+    "tunnel_inflow_speed": 40.000000,
+    "tunnel_inflow_density": 15.000000,
+    "tunnel_viscosity_scale": 0.500000
+  },
   "timing": {
     "min_dt": 0.006060606,
     "max_dt": 0.033333333,
-    "substeps": 3
+    "substeps": 1
   },
   "commands": {
     "max_per_frame": 256
@@ -20,14 +26,14 @@
     "viscosity": 0.000010,
     "density_decay": 0.050000,
     "buoyancy": 1.500000,
-    "solver_iterations": 24
+    "solver_iterations": 12
   },
   "render": {
     "blur_enabled": true
   },
   "headless": {
     "enabled": false,
-    "frame_count": 1000,
+    "frame_count": 12000,
     "custom_slot_index": 0,
     "quality_index": -1,
     "skip_present": true

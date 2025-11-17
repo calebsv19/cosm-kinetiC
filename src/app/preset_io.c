@@ -6,6 +6,17 @@
 #include <string.h>
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
+static const int PRESET_FILE_VERSION = 2;
+
+static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
+    switch (domain) {
+    case SCENE_DOMAIN_BOX:
+    case SCENE_DOMAIN_WIND_TUNNEL:
+        return domain;
+    default:
+        return SCENE_DOMAIN_BOX;
+    }
+}
 
 static float clampf(float v, float min_v, float max_v) {
     if (v < min_v) return min_v;
@@ -57,6 +68,47 @@ static void sanitize_preset_object(PresetObject *obj) {
     }
 }
 
+static void boundary_flows_reset(BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
+    if (!flows) return;
+    for (int i = 0; i < BOUNDARY_EDGE_COUNT; ++i) {
+        flows[i].mode = BOUNDARY_FLOW_DISABLED;
+        flows[i].strength = 0.0f;
+    }
+}
+
+static void boundary_flow_sanitize(BoundaryFlow *flow) {
+    if (!flow) return;
+    if (flow->mode < BOUNDARY_FLOW_DISABLED || flow->mode > BOUNDARY_FLOW_RECEIVE) {
+        flow->mode = BOUNDARY_FLOW_DISABLED;
+    }
+    if (!isfinite(flow->strength) || flow->strength < 0.0f) {
+        flow->strength = 0.0f;
+    }
+}
+
+static void boundary_flows_assign(BoundaryFlow dst[BOUNDARY_EDGE_COUNT],
+                                  const BoundaryFlow src[BOUNDARY_EDGE_COUNT]) {
+    if (!dst) return;
+    if (!src) {
+        boundary_flows_reset(dst);
+        return;
+    }
+    for (int i = 0; i < BOUNDARY_EDGE_COUNT; ++i) {
+        dst[i] = src[i];
+        boundary_flow_sanitize(&dst[i]);
+    }
+}
+
+static float sanitize_dimension_value(float value) {
+    if (!isfinite(value) || value <= 0.0f) {
+        return 1.0f;
+    }
+    if (value > 64.0f) {
+        return 64.0f;
+    }
+    return value;
+}
+
 static void preset_slot_reset(CustomPresetSlot *slot, int index) {
     if (!slot) return;
     slot->occupied = false;
@@ -64,6 +116,10 @@ static void preset_slot_reset(CustomPresetSlot *slot, int index) {
     memset(&slot->preset, 0, sizeof(slot->preset));
     slot->preset.name = slot->name;
     slot->preset.is_custom = true;
+    boundary_flows_reset(slot->preset.boundary_flows);
+    slot->preset.domain = SCENE_DOMAIN_BOX;
+    slot->preset.domain_width = 1.0f;
+    slot->preset.domain_height = 1.0f;
 }
 
 static bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
@@ -141,6 +197,9 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
     }
     if (preset_copy) {
         slot->preset = *preset_copy;
+        slot->preset.domain = sanitize_domain(preset_copy->domain);
+        slot->preset.domain_width = sanitize_dimension_value(preset_copy->domain_width);
+        slot->preset.domain_height = sanitize_dimension_value(preset_copy->domain_height);
         if (slot->preset.emitter_count > MAX_FLUID_EMITTERS) {
             slot->preset.emitter_count = MAX_FLUID_EMITTERS;
         }
@@ -153,9 +212,15 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
         for (size_t o = 0; o < slot->preset.object_count; ++o) {
             sanitize_preset_object(&slot->preset.objects[o]);
         }
+        boundary_flows_assign(slot->preset.boundary_flows,
+                              preset_copy->boundary_flows);
     } else {
         memset(&slot->preset, 0, sizeof(slot->preset));
         slot->preset.is_custom = true;
+        boundary_flows_reset(slot->preset.boundary_flows);
+        slot->preset.domain = SCENE_DOMAIN_BOX;
+        slot->preset.domain_width = 1.0f;
+        slot->preset.domain_height = 1.0f;
     }
     slot->preset.name = slot->name;
     slot->occupied = true;
@@ -198,11 +263,26 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
     FILE *f = fopen(path, "r");
     if (!f) return false;
 
-    int active_slot = 0;
-    int stored_slots = 0;
-    if (fscanf(f, "%d %d\n", &active_slot, &stored_slots) != 2) {
+    int header_vals[3] = {0};
+    int read_count = fscanf(f, "%d %d %d\n",
+                            &header_vals[0],
+                            &header_vals[1],
+                            &header_vals[2]);
+    if (read_count != 3 && read_count != 2) {
         fclose(f);
         return false;
+    }
+    int file_version = 0;
+    int active_slot = 0;
+    int stored_slots = 0;
+    if (read_count == 3) {
+        file_version = header_vals[0];
+        active_slot = header_vals[1];
+        stored_slots = header_vals[2];
+    } else {
+        file_version = 0;
+        active_slot = header_vals[0];
+        stored_slots = header_vals[1];
     }
 
     if (stored_slots < 0) stored_slots = 0;
@@ -213,8 +293,26 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
 
     for (int i = 0; i < stored_slots; ++i) {
         int occupied = 0;
-        if (fscanf(f, "%d\n", &occupied) != 1) {
-            break;
+        int domain_raw = SCENE_DOMAIN_BOX;
+        if (file_version >= 1) {
+            if (fscanf(f, "%d %d\n", &occupied, &domain_raw) < 1) {
+                break;
+            }
+        } else {
+            if (fscanf(f, "%d\n", &occupied) != 1) {
+                break;
+            }
+        }
+        FluidSceneDomainType domain = (file_version >= 1)
+                                          ? sanitize_domain((FluidSceneDomainType)domain_raw)
+                                          : SCENE_DOMAIN_BOX;
+        float domain_width = 1.0f;
+        float domain_height = 1.0f;
+        if (file_version >= 2) {
+            if (fscanf(f, "%f %f\n", &domain_width, &domain_height) != 2) {
+                domain_width = 1.0f;
+                domain_height = 1.0f;
+            }
         }
         char name_buf[CUSTOM_PRESET_NAME_MAX] = {0};
         if (!read_line(f, name_buf, sizeof(name_buf))) {
@@ -234,6 +332,9 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         slot.preset.name = slot.name;
         slot.preset.is_custom = true;
         slot.preset.emitter_count = 0;
+        slot.preset.domain = domain;
+        slot.preset.domain_width = sanitize_dimension_value(domain_width);
+        slot.preset.domain_height = sanitize_dimension_value(domain_height);
 
         emitter_count = (emitter_count < 0) ? 0 :
                         (emitter_count > (int)MAX_FLUID_EMITTERS ? (int)MAX_FLUID_EMITTERS : emitter_count);
@@ -257,9 +358,38 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
             slot.preset.emitter_count++;
         }
 
+        boundary_flows_reset(slot.preset.boundary_flows);
+        long after_emitters_pos = ftell(f);
+        char marker[6] = {0};
+        if (fscanf(f, "%5s", marker) == 1 && strcmp(marker, "FLOW") == 0) {
+            int flow_count = 0;
+            if (fscanf(f, "%d\n", &flow_count) != 1) {
+                flow_count = 0;
+            }
+            flow_count = (flow_count < 0) ? 0 :
+                         (flow_count > BOUNDARY_EDGE_COUNT ? BOUNDARY_EDGE_COUNT : flow_count);
+            for (int b = 0; b < flow_count; ++b) {
+                int edge = 0;
+                int mode = 0;
+                float strength = 0.0f;
+                if (fscanf(f, "%d %d %f\n", &edge, &mode, &strength) != 3) {
+                    break;
+                }
+                if (edge < 0 || edge >= BOUNDARY_EDGE_COUNT) {
+                    continue;
+                }
+                slot.preset.boundary_flows[edge].mode = (BoundaryFlowMode)mode;
+                slot.preset.boundary_flows[edge].strength = strength;
+                boundary_flow_sanitize(&slot.preset.boundary_flows[edge]);
+            }
+            after_emitters_pos = ftell(f);
+        } else {
+            fseek(f, after_emitters_pos, SEEK_SET);
+        }
+
         long marker_pos = ftell(f);
-        char marker[4] = {0};
-        if (fscanf(f, "%3s", marker) == 1 && strcmp(marker, "OBJ") == 0) {
+        char obj_marker[4] = {0};
+        if (fscanf(f, "%3s", obj_marker) == 1 && strcmp(obj_marker, "OBJ") == 0) {
             int object_count = 0;
             if (fscanf(f, "%d\n", &object_count) != 1) {
                 object_count = 0;
@@ -291,6 +421,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
 
         lib->slots[i] = slot;
         lib->slots[i].preset.name = lib->slots[i].name;
+        lib->slots[i].preset.domain = domain;
         lib->slot_count++;
     }
 
@@ -309,10 +440,13 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
 
     int count = lib->slot_count;
     if (count < 0) count = 0;
-    fprintf(f, "%d %d\n", lib->active_slot, count);
+    fprintf(f, "%d %d %d\n", PRESET_FILE_VERSION, lib->active_slot, count);
     for (int i = 0; i < count; ++i) {
         const CustomPresetSlot *slot = &lib->slots[i];
-        fprintf(f, "%d\n", slot->occupied ? 1 : 0);
+        fprintf(f, "%d %d\n", slot->occupied ? 1 : 0, sanitize_domain(slot->preset.domain));
+        float domain_w = sanitize_dimension_value(slot->preset.domain_width);
+        float domain_h = sanitize_dimension_value(slot->preset.domain_height);
+        fprintf(f, "%.6f %.6f\n", domain_w, domain_h);
         const char *name = (slot->name[0] != '\0') ? slot->name : DEFAULT_SLOT_LABEL;
         fprintf(f, "%s\n", name);
         fprintf(f, "%zu\n", slot->preset.emitter_count);
@@ -326,6 +460,14 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
                     em->strength,
                     em->dir_x,
                     em->dir_y);
+        }
+        fprintf(f, "FLOW %d\n", BOUNDARY_EDGE_COUNT);
+        for (int edge = 0; edge < BOUNDARY_EDGE_COUNT; ++edge) {
+            const BoundaryFlow *flow = &slot->preset.boundary_flows[edge];
+            fprintf(f, "%d %d %.6f\n",
+                    edge,
+                    flow->mode,
+                    flow->strength);
         }
         fprintf(f, "OBJ %zu\n", slot->preset.object_count);
         for (size_t o = 0; o < slot->preset.object_count; ++o) {

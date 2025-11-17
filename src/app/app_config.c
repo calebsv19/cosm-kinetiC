@@ -20,7 +20,7 @@ AppConfig app_config_default(void) {
     cfg.fluid_solver_iterations = 20;
 
     cfg.density_diffusion = 0.0001f;
-    cfg.velocity_damping  = 0.00001f; // interpreted as viscosity
+    cfg.velocity_damping  = 0.000006f; // interpreted as viscosity
     cfg.density_decay     = 0.05f;    // per second
     cfg.fluid_buoyancy_force = 1.5f;
 
@@ -43,6 +43,11 @@ AppConfig app_config_default(void) {
     cfg.headless_quality_index = -1;
     cfg.headless_skip_present = true;
     snprintf(cfg.headless_output_dir, sizeof(cfg.headless_output_dir), "data/snapshots");
+
+    cfg.sim_mode = SIM_MODE_BOX;
+    cfg.tunnel_inflow_speed = 40.0f;
+    cfg.tunnel_inflow_density = 15.0f;
+    cfg.tunnel_viscosity_scale = 0.5f;
 
     return cfg;
 }

@@ -89,27 +89,33 @@ bool render_frames_write_bmp(const uint8_t *rgba_pixels,
     }
 
     for (int y = 0; y < height; ++y) {
-        const uint8_t *src = rgba_pixels + y * pitch;
-        for (int x = 0; x < width; ++x) {
-            const uint8_t *px = src + x * 4;
-            uint8_t a = px[0];
-            uint8_t b = px[1];
-            uint8_t g = px[2];
-            uint8_t r = px[3];
-            uint8_t intensity = (uint8_t)(((int)r + (int)g + (int)b) / 3);
-            uint8_t *dst = row + x * 4;
-            dst[0] = intensity;
-            dst[1] = intensity;
-            dst[2] = intensity;
-            dst[3] = a;
-        }
-        if (fwrite(row, 1, width * 4, f) != (size_t)(width * 4)) {
-            fprintf(stderr, "[export] Failed to write BMP row to %s\n", path);
-            free(row);
-            fclose(f);
-            return false;
-        }
+  	  const uint8_t *src = rgba_pixels + y * pitch;
+  	  for (int x = 0; x < width; ++x) {
+  	      const uint8_t *px = src + x * 4;
+	
+	        // Assume source is RGBA
+	        uint8_t r = px[0];
+	        uint8_t g = px[1];
+	        uint8_t b = px[2];
+	        uint8_t a = px[3];
+	
+	        uint8_t *dst = row + x * 4;
+	
+	        // BMP 32-bit expects BGRA
+	        dst[0] = b;
+	        dst[1] = g;
+	        dst[2] = r;
+	        dst[3] = a;
+	    }
+	
+	    if (fwrite(row, 1, width * 4, f) != (size_t)(width * 4)) {
+	        fprintf(stderr, "[export] Failed to write BMP row to %s\n", path);
+	        free(row);
+	        fclose(f);
+	        return false;
+	    }
     }
+
 
     free(row);
 

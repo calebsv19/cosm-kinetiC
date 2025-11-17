@@ -21,19 +21,49 @@ static void swap_buffers(float **a, float **b) {
     *b = tmp;
 }
 
-static void set_bnd(const Fluid2D *f, int b, float *x) {
+static bool boundary_open(const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
+                          BoundaryFlowEdge edge) {
+    if (!flows) return false;
+    return flows[edge].mode != BOUNDARY_FLOW_DISABLED;
+}
+
+static void set_bnd(const Fluid2D *f,
+                    int b,
+                    float *x,
+                    const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
     int w = f->w;
     int h = f->h;
     if (w < 2 || h < 2) return;
 
+    bool top_open = boundary_open(flows, BOUNDARY_EDGE_TOP);
+    bool bottom_open = boundary_open(flows, BOUNDARY_EDGE_BOTTOM);
+    bool left_open = boundary_open(flows, BOUNDARY_EDGE_LEFT);
+    bool right_open = boundary_open(flows, BOUNDARY_EDGE_RIGHT);
+
     for (int i = 1; i < w - 1; ++i) {
-        x[idx(f, i, 0)]       = (b == 2) ? -x[idx(f, i, 1)]       : x[idx(f, i, 1)];
-        x[idx(f, i, h - 1)]   = (b == 2) ? -x[idx(f, i, h - 2)]   : x[idx(f, i, h - 2)];
+        if (top_open) {
+            x[idx(f, i, 0)] = x[idx(f, i, 1)];
+        } else {
+            x[idx(f, i, 0)] = (b == 2) ? -x[idx(f, i, 1)] : x[idx(f, i, 1)];
+        }
+        if (bottom_open) {
+            x[idx(f, i, h - 1)] = x[idx(f, i, h - 2)];
+        } else {
+            x[idx(f, i, h - 1)] = (b == 2) ? -x[idx(f, i, h - 2)] : x[idx(f, i, h - 2)];
+        }
     }
 
     for (int j = 1; j < h - 1; ++j) {
-        x[idx(f, 0, j)]       = (b == 1) ? -x[idx(f, 1, j)]       : x[idx(f, 1, j)];
-        x[idx(f, w - 1, j)]   = (b == 1) ? -x[idx(f, w - 2, j)]   : x[idx(f, w - 2, j)];
+        if (left_open) {
+            x[idx(f, 0, j)] = x[idx(f, 1, j)];
+        } else {
+            x[idx(f, 0, j)] = (b == 1) ? -x[idx(f, 1, j)] : x[idx(f, 1, j)];
+        }
+        if (right_open) {
+            x[idx(f, w - 1, j)] = x[idx(f, w - 2, j)];
+        } else {
+            x[idx(f, w - 1, j)] = (b == 1) ? -x[idx(f, w - 2, j)] : x[idx(f, w - 2, j)];
+        }
     }
 
     x[idx(f, 0,      0     )] = 0.5f * (x[idx(f, 1,      0     )] + x[idx(f, 0,      1     )]);
@@ -48,7 +78,8 @@ static void lin_solve(const Fluid2D *f,
                       const float *x0,
                       float a,
                       float c,
-                      int iterations) {
+                      int iterations,
+                      const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
     int w = f->w;
     int h = f->h;
     if (iterations < 1) iterations = 1;
@@ -62,7 +93,7 @@ static void lin_solve(const Fluid2D *f,
                                        x[idx(f, i, j + 1)])) / c;
             }
         }
-        set_bnd(f, b, x);
+        set_bnd(f, b, x, flows);
     }
 }
 
@@ -72,9 +103,10 @@ static void diffuse(const Fluid2D *f,
                     const float *x0,
                     float diff,
                     float dt,
-                    int iterations) {
+                    int iterations,
+                    const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
     float a = diff * (float)(f->w - 2) * (float)(f->h - 2) * dt;
-    lin_solve(f, b, x, x0, a, 1.0f + 4.0f * a, iterations);
+    lin_solve(f, b, x, x0, a, 1.0f + 4.0f * a, iterations, flows);
 }
 
 static void advect(const Fluid2D *f,
@@ -83,7 +115,8 @@ static void advect(const Fluid2D *f,
                    const float *d0,
                    const float *velX,
                    const float *velY,
-                   float dt) {
+                   float dt,
+                   const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
     int w = f->w;
     int h = f->h;
 
@@ -111,7 +144,7 @@ static void advect(const Fluid2D *f,
                 s1 * (t0 * d0[idx(f, i1, j0)] + t1 * d0[idx(f, i1, j1)]);
         }
     }
-    set_bnd(f, b, d);
+    set_bnd(f, b, d, flows);
 }
 
 static void project(const Fluid2D *f,
@@ -119,7 +152,8 @@ static void project(const Fluid2D *f,
                     float *velY,
                     float *p,
                     float *div,
-                    int iterations) {
+                    int iterations,
+                    const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
     int w = f->w;
     int h = f->h;
     float inv_w = 1.0f / (float)w;
@@ -136,20 +170,21 @@ static void project(const Fluid2D *f,
         }
     }
 
-    set_bnd(f, 0, div);
-    set_bnd(f, 0, p);
-    lin_solve(f, 0, p, div, 1.0f, 4.0f, iterations);
+    set_bnd(f, 0, div, flows);
+    set_bnd(f, 0, p, flows);
+    lin_solve(f, 0, p, div, 1.0f, 4.0f, iterations, flows);
 
     for (int j = 1; j < h - 1; ++j) {
         for (int i = 1; i < w - 1; ++i) {
             size_t id = idx(f, i, j);
+            f->pressure[id] = p[id];
             velX[id] -= 0.5f * (p[idx(f, i + 1, j)] - p[idx(f, i - 1, j)]) * (float)w;
             velY[id] -= 0.5f * (p[idx(f, i, j + 1)] - p[idx(f, i, j - 1)]) * (float)h;
         }
     }
 
-    set_bnd(f, 1, velX);
-    set_bnd(f, 2, velY);
+    set_bnd(f, 1, velX, flows);
+    set_bnd(f, 2, velY, flows);
 }
 
 static void apply_buoyancy(Fluid2D *f, const AppConfig *cfg, float dt) {
@@ -194,10 +229,12 @@ Fluid2D *fluid2d_create(int w, int h) {
     f->velY         = (float *)calloc(count, sizeof(float));
     f->velX_prev    = (float *)calloc(count, sizeof(float));
     f->velY_prev    = (float *)calloc(count, sizeof(float));
+    f->pressure     = (float *)calloc(count, sizeof(float));
 
     if (!f->density || !f->density_prev ||
         !f->velX || !f->velY ||
-        !f->velX_prev || !f->velY_prev) {
+        !f->velX_prev || !f->velY_prev ||
+        !f->pressure) {
         fluid2d_destroy(f);
         return NULL;
     }
@@ -213,6 +250,7 @@ void fluid2d_destroy(Fluid2D *f) {
     free(f->velY);
     free(f->velX_prev);
     free(f->velY_prev);
+    free(f->pressure);
     free(f);
 }
 
@@ -225,6 +263,7 @@ void fluid2d_clear(Fluid2D *f) {
     memset(f->velY,         0, count * sizeof(float));
     memset(f->velX_prev,    0, count * sizeof(float));
     memset(f->velY_prev,    0, count * sizeof(float));
+    memset(f->pressure,     0, count * sizeof(float));
 }
 
 void fluid2d_add_density(Fluid2D *f, int x, int y, float amount) {
@@ -265,6 +304,11 @@ static float cell_to_world(int cell, int grid, float world_max) {
     return t * world_max;
 }
 
+static float world_velocity_to_grid(float v, int grid, float world_max) {
+    if (grid <= 1 || world_max <= 0.0f) return 0.0f;
+    return v * (float)(grid - 1) / world_max;
+}
+
 void fluid2d_apply_object_mask(Fluid2D *f,
                                const ObjectManager *objects,
                                const AppConfig *cfg) {
@@ -274,6 +318,12 @@ void fluid2d_apply_object_mask(Fluid2D *f,
     for (int i = 0; i < objects->count; ++i) {
         const SceneObject *obj = &objects->objects[i];
         if (!obj || obj->body.is_static) continue;
+        float vel_grid_x = world_velocity_to_grid(obj->body.velocity.x,
+                                                  f->w,
+                                                  (float)cfg->window_w);
+        float vel_grid_y = world_velocity_to_grid(obj->body.velocity.y,
+                                                  f->h,
+                                                  (float)cfg->window_h);
         if (obj->type == SCENE_OBJECT_CIRCLE) {
             int cx = cell_from_world(obj->body.position.x, f->w, (float)cfg->window_w);
             int cy = cell_from_world(obj->body.position.y, f->h, (float)cfg->window_h);
@@ -288,8 +338,8 @@ void fluid2d_apply_object_mask(Fluid2D *f,
                     if (dx * dx + dy * dy <= (float)(radius * radius)) {
                         size_t id = idx(f, x, y);
                         f->density[id] = 0.0f;
-                        f->velX[id] = 0.0f;
-                        f->velY[id] = 0.0f;
+                        f->velX[id] = vel_grid_x;
+                        f->velY[id] = vel_grid_y;
                     }
                 }
             }
@@ -323,8 +373,8 @@ void fluid2d_apply_object_mask(Fluid2D *f,
                         fabsf(local_y) <= obj->body.half_extents.y) {
                         size_t id = idx(f, x, y);
                         f->density[id] = 0.0f;
-                        f->velX[id] = 0.0f;
-                        f->velY[id] = 0.0f;
+                        f->velX[id] = vel_grid_x;
+                        f->velY[id] = vel_grid_y;
                     }
                 }
             }
@@ -344,7 +394,10 @@ void fluid2d_apply_static_mask(Fluid2D *f, const uint8_t *mask) {
     }
 }
 
-void fluid2d_step(Fluid2D *f, double dt, const AppConfig *cfg) {
+void fluid2d_step(Fluid2D *f,
+                  double dt,
+                  const AppConfig *cfg,
+                  const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
     if (!f || !cfg) return;
     float diff = cfg->density_diffusion;
     float visc = cfg->velocity_damping;
@@ -352,28 +405,28 @@ void fluid2d_step(Fluid2D *f, double dt, const AppConfig *cfg) {
     int iterations = solver_iterations_from_config(cfg);
 
     swap_buffers(&f->velX_prev, &f->velX);
-    diffuse(f, 1, f->velX, f->velX_prev, visc, fdt, iterations);
+    diffuse(f, 1, f->velX, f->velX_prev, visc, fdt, iterations, flows);
 
     swap_buffers(&f->velY_prev, &f->velY);
-    diffuse(f, 2, f->velY, f->velY_prev, visc, fdt, iterations);
+    diffuse(f, 2, f->velY, f->velY_prev, visc, fdt, iterations, flows);
 
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
 
     swap_buffers(&f->velX_prev, &f->velX);
     swap_buffers(&f->velY_prev, &f->velY);
-    advect(f, 1, f->velX, f->velX_prev, f->velX_prev, f->velY_prev, fdt);
-    advect(f, 2, f->velY, f->velY_prev, f->velX_prev, f->velY_prev, fdt);
+    advect(f, 1, f->velX, f->velX_prev, f->velX_prev, f->velY_prev, fdt, flows);
+    advect(f, 2, f->velY, f->velY_prev, f->velX_prev, f->velY_prev, fdt, flows);
 
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
 
     apply_buoyancy(f, cfg, fdt);
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
 
     swap_buffers(&f->density_prev, &f->density);
-    diffuse(f, 0, f->density, f->density_prev, diff, fdt, iterations);
+    diffuse(f, 0, f->density, f->density_prev, diff, fdt, iterations, flows);
 
     swap_buffers(&f->density_prev, &f->density);
-    advect(f, 0, f->density, f->density_prev, f->velX, f->velY, fdt);
+    advect(f, 0, f->density, f->density_prev, f->velX, f->velY, fdt, flows);
 
     size_t count = (size_t)f->w * (size_t)f->h;
     float decay = (float)(cfg->density_decay * dt);
@@ -382,4 +435,41 @@ void fluid2d_step(Fluid2D *f, double dt, const AppConfig *cfg) {
     for (size_t i = 0; i < count; ++i) {
         f->density[i] = math_maxf(0.0f, f->density[i] * keep);
     }
+}
+
+static float sample_field(const float *field,
+                          int w,
+                          int h,
+                          float x,
+                          float y) {
+    if (!field || w <= 1 || h <= 1) return 0.0f;
+    x = clamp_cell(x, 0.5f, (float)w - 1.5f);
+    y = clamp_cell(y, 0.5f, (float)h - 1.5f);
+    int i0 = (int)x;
+    int i1 = i0 + 1;
+    int j0 = (int)y;
+    int j1 = j0 + 1;
+    float sx = x - (float)i0;
+    float sy = y - (float)j0;
+    float s0 = 1.0f - sx;
+    float t0 = 1.0f - sy;
+    float v00 = field[(size_t)j0 * (size_t)w + (size_t)i0];
+    float v10 = field[(size_t)j0 * (size_t)w + (size_t)i1];
+    float v01 = field[(size_t)j1 * (size_t)w + (size_t)i0];
+    float v11 = field[(size_t)j1 * (size_t)w + (size_t)i1];
+    return s0 * (t0 * v00 + sy * v01) + sx * (t0 * v10 + sy * v11);
+}
+
+float fluid2d_sample_density(const Fluid2D *f, float x, float y) {
+    if (!f) return 0.0f;
+    return sample_field(f->density, f->w, f->h, x, y);
+}
+
+float fluid2d_sample_velocity(const Fluid2D *f, float x, float y, Vec2 *out_vel) {
+    if (!f || !out_vel) return 0.0f;
+    float vx = sample_field(f->velX, f->w, f->h, x, y);
+    float vy = sample_field(f->velY, f->w, f->h, x, y);
+    out_vel->x = vx;
+    out_vel->y = vy;
+    return sqrtf(vx * vx + vy * vy);
 }

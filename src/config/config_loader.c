@@ -293,9 +293,33 @@ static void apply_export_settings(const char *json, AppConfig *cfg) {
     }
 }
 
+static void apply_simulation_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "simulation", &block)) return;
+
+    double val;
+    if (json_block_number(&block, "mode", &val)) {
+        int mode = (int)val;
+        if (mode < SIM_MODE_BOX || mode >= SIMULATION_MODE_COUNT) {
+            mode = SIM_MODE_BOX;
+        }
+        cfg->sim_mode = (SimulationMode)mode;
+    }
+    if (json_block_number(&block, "tunnel_inflow_speed", &val)) {
+        cfg->tunnel_inflow_speed = (float)val;
+    }
+    if (json_block_number(&block, "tunnel_inflow_density", &val)) {
+        cfg->tunnel_inflow_density = (float)val;
+    }
+    if (json_block_number(&block, "tunnel_viscosity_scale", &val)) {
+        cfg->tunnel_viscosity_scale = (float)val;
+    }
+}
+
 static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_window_settings(json, cfg);
     apply_grid_settings(json, cfg);
+    apply_simulation_settings(json, cfg);
     apply_timing_settings(json, cfg);
     apply_command_settings(json, cfg);
     apply_fluid_settings(json, cfg);
@@ -349,6 +373,12 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "  \"grid\": {\n");
     fprintf(f, "    \"width\": %d,\n", cfg->grid_w);
     fprintf(f, "    \"height\": %d\n", cfg->grid_h);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"simulation\": {\n");
+    fprintf(f, "    \"mode\": %d,\n", cfg->sim_mode);
+    fprintf(f, "    \"tunnel_inflow_speed\": %.6f,\n", cfg->tunnel_inflow_speed);
+    fprintf(f, "    \"tunnel_inflow_density\": %.6f,\n", cfg->tunnel_inflow_density);
+    fprintf(f, "    \"tunnel_viscosity_scale\": %.6f\n", cfg->tunnel_viscosity_scale);
     fprintf(f, "  },\n");
     fprintf(f, "  \"timing\": {\n");
     fprintf(f, "    \"min_dt\": %.9f,\n", cfg->min_dt);

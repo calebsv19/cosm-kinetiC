@@ -4,10 +4,16 @@ static const FluidScenePreset g_presets[] = {
     {
         .name = "Calm Box",
         .emitter_count = 0,
+        .domain = SCENE_DOMAIN_BOX,
+        .domain_width = 1.0f,
+        .domain_height = 1.0f,
     },
     {
         .name = "Central Hotspot",
         .emitter_count = 1,
+        .domain = SCENE_DOMAIN_BOX,
+        .domain_width = 1.0f,
+        .domain_height = 1.0f,
         .emitters = {
             {
                 .type = EMITTER_DENSITY_SOURCE,
@@ -23,6 +29,9 @@ static const FluidScenePreset g_presets[] = {
     {
         .name = "Corner Jet",
         .emitter_count = 1,
+        .domain = SCENE_DOMAIN_BOX,
+        .domain_width = 1.0f,
+        .domain_height = 1.0f,
         .emitters = {
             {
                 .type = EMITTER_VELOCITY_JET,
@@ -38,6 +47,9 @@ static const FluidScenePreset g_presets[] = {
     {
         .name = "Dual Jets + Exhaust",
         .emitter_count = 3,
+        .domain = SCENE_DOMAIN_BOX,
+        .domain_width = 1.0f,
+        .domain_height = 1.0f,
         .emitters = {
             {
                 .type = EMITTER_VELOCITY_JET,
@@ -68,6 +80,31 @@ static const FluidScenePreset g_presets[] = {
             },
         },
     },
+    {
+        .name = "Tunnel – Cylinder",
+        .emitter_count = 0,
+        .domain = SCENE_DOMAIN_WIND_TUNNEL,
+        .domain_width = 4.0f,
+        .domain_height = 1.0f,
+        .boundary_flows = {
+            [BOUNDARY_EDGE_LEFT] =  { .mode = BOUNDARY_FLOW_EMIT,    .strength = 40.0f },
+            [BOUNDARY_EDGE_RIGHT] = { .mode = BOUNDARY_FLOW_RECEIVE, .strength = 40.0f },
+            [BOUNDARY_EDGE_TOP] =   { .mode = BOUNDARY_FLOW_RECEIVE, .strength = 10.0f },
+            [BOUNDARY_EDGE_BOTTOM] ={ .mode = BOUNDARY_FLOW_DISABLED, .strength = 0.0f },
+        },
+        .object_count = 1,
+        .objects = {
+            {
+                .type = PRESET_OBJECT_CIRCLE,
+                .position_x = 0.35f,
+                .position_y = 0.5f,
+                .size_x = 0.08f,
+                .size_y = 0.08f,
+                .angle = 0.0f,
+                .is_static = true,
+            },
+        },
+    },
 };
 
 const FluidScenePreset *scene_presets_get_all(size_t *count) {
@@ -78,5 +115,20 @@ const FluidScenePreset *scene_presets_get_all(size_t *count) {
 }
 
 const FluidScenePreset *scene_presets_get_default(void) {
-    return &g_presets[0];
+    return scene_presets_get_default_for_domain(SCENE_DOMAIN_BOX);
+}
+
+const FluidScenePreset *scene_presets_get_default_for_domain(FluidSceneDomainType domain) {
+    size_t preset_count = sizeof(g_presets) / sizeof(g_presets[0]);
+    for (size_t i = 0; i < preset_count; ++i) {
+        if (g_presets[i].domain == domain) {
+            return &g_presets[i];
+        }
+    }
+    return (preset_count > 0) ? &g_presets[0] : NULL;
+}
+
+FluidSceneDomainType scene_preset_domain(const FluidScenePreset *preset) {
+    if (!preset) return SCENE_DOMAIN_BOX;
+    return preset->domain;
 }

@@ -10,6 +10,8 @@
 #include "command/command_bus.h"
 #include "app/scene_state.h"
 #include "app/scene_presets.h"
+#include "app/sim_mode.h"
+#include "app/quality_profiles.h"
 #include "input/input.h"
 #include "input/stroke_buffer.h"
 #include "physics/fluid2d/fluid2d.h"
@@ -48,6 +50,12 @@ static bool handle_scene_command(const Command *cmd, void *user_data) {
     switch (cmd->type) {
     case COMMAND_EXPORT_SNAPSHOT:
         ctx->snapshot_requested = true;
+        return true;
+    case COMMAND_TOGGLE_VORTICITY:
+        renderer_sdl_toggle_vorticity();
+        return true;
+    case COMMAND_TOGGLE_PRESSURE:
+        renderer_sdl_toggle_pressure();
         return true;
     default:
         return scene_handle_command(ctx->scene, cmd);
@@ -179,15 +187,24 @@ int scene_controller_run(const AppConfig *initial_cfg,
     sdl_initialized = true;
 
     AppConfig cfg = *initial_cfg;
+    const FluidScenePreset *preset_fallback = preset ? preset : scene_presets_get_default();
+    FluidScenePreset runtime_preset = preset_fallback ? *preset_fallback : (FluidScenePreset){0};
+    const SimModeHooks *mode_hooks = sim_mode_get_hooks(cfg.sim_mode);
+    if (mode_hooks && mode_hooks->configure_app) {
+        mode_hooks->configure_app(&cfg, &runtime_preset);
+    }
 
     if (!renderer_sdl_init(cfg.window_w, cfg.window_h, cfg.grid_w, cfg.grid_h)) {
         SDL_Quit();
         return 1;
     }
 
-    SceneState scene = scene_create(&cfg, preset);
+    SceneState scene = scene_create(&cfg, &runtime_preset);
     if (!scene.smoke) {
         fprintf(stderr, "[scene] Fluid grid failed to initialize.\n");
+    }
+    if (mode_hooks && mode_hooks->prepare_scene) {
+        mode_hooks->prepare_scene(&scene);
     }
 
     FrameTimer timer;
@@ -262,17 +279,28 @@ int scene_controller_run(const AppConfig *initial_cfg,
             int substeps = cfg.physics_substeps > 0 ? cfg.physics_substeps : 1;
             double sub_dt = dt / (double)substeps;
             for (int i = 0; i < substeps; ++i) {
+                if (mode_hooks && mode_hooks->pre_substep) {
+                    mode_hooks->pre_substep(&scene, sub_dt);
+                }
                 ts_start_timer("emitters");
                 scene_apply_emitters(&scene, sub_dt);
                 ts_stop_timer("emitters");
 
+                ts_start_timer("boundary_flows");
+                scene_apply_boundary_flows(&scene, sub_dt);
+                ts_stop_timer("boundary_flows");
+
                 ts_start_timer("fluid_step");
-                fluid2d_step(scene.smoke, sub_dt, &cfg);
+                const BoundaryFlow *flows = scene.preset ? scene.preset->boundary_flows : NULL;
+                fluid2d_step(scene.smoke, sub_dt, &cfg, flows);
                 ts_stop_timer("fluid_step");
 
-                fluid2d_apply_static_mask(scene.smoke, scene.static_mask);
-                fluid2d_apply_object_mask(scene.smoke, &scene.objects, &cfg);
+                scene_enforce_obstacles(&scene);
+                scene_enforce_boundary_flows(&scene);
 
+                if (mode_hooks && mode_hooks->post_substep) {
+                    mode_hooks->post_substep(&scene, sub_dt);
+                }
 
                 object_manager_step(&scene.objects, sub_dt, &cfg);
                 scene.time += sub_dt;
@@ -290,14 +318,24 @@ int scene_controller_run(const AppConfig *initial_cfg,
             }
         }
 
+        const char *quality_label = quality_profile_name(cfg.quality_index);
         RendererHudInfo hud = {
             .preset_name = (scene.preset && scene.preset->name) ? scene.preset->name : "Preset",
             .preset_is_custom = scene.preset ? scene.preset->is_custom : false,
             .grid_w = scene.config ? scene.config->grid_w : cfg.grid_w,
             .grid_h = scene.config ? scene.config->grid_h : cfg.grid_h,
+            .window_w = cfg.window_w,
+            .window_h = cfg.window_h,
             .emitter_count = scene.preset ? scene.preset->emitter_count : 0,
             .stroke_samples = stroke_buffer_count(&sampler.buffer),
-            .paused = scene.paused
+            .paused = scene.paused,
+            .sim_mode = cfg.sim_mode,
+            .tunnel_inflow_speed = cfg.tunnel_inflow_speed,
+            .vorticity_enabled = renderer_sdl_vorticity_enabled(),
+            .pressure_enabled = renderer_sdl_pressure_enabled(),
+            .quality_name = quality_label ? quality_label : "Custom",
+            .solver_iterations = cfg.fluid_solver_iterations,
+            .physics_substeps = cfg.physics_substeps
         };
 
 	ts_start_timer("frame_send");

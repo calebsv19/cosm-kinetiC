@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <math.h>
+#include <float.h>
 #include <stdio.h>
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -42,6 +43,27 @@ static int g_grid_h   = 0;
 static float *g_density_tmp = NULL;
 static float *g_density_blur = NULL;
 static size_t g_density_capacity = 0;
+static float *g_vorticity_tmp = NULL;
+static float *g_vorticity_blur = NULL;
+static size_t g_vorticity_capacity = 0;
+static float *g_pressure_tmp = NULL;
+static float *g_pressure_blur = NULL;
+static size_t g_pressure_capacity = 0;
+static bool g_draw_vorticity = false;
+static bool g_draw_pressure = false;
+
+static void renderer_apply_overlays(const SceneState *scene);
+static void renderer_apply_vorticity_overlay(const SceneState *scene,
+                                             Uint8 *pixels,
+                                             int pitch);
+static void renderer_apply_pressure_overlay(const SceneState *scene,
+                                            Uint8 *pixels,
+                                            int pitch);
+static inline void blend_pixel(Uint32 *dst,
+                               Uint8 r,
+                               Uint8 g,
+                               Uint8 b,
+                               Uint8 alpha);
 
 static bool ensure_density_buffers(size_t cell_count) {
     if (cell_count == 0) return false;
@@ -54,6 +76,46 @@ static bool ensure_density_buffers(size_t cell_count) {
     g_density_blur = blur;
     g_density_capacity = cell_count;
     return true;
+}
+
+static bool ensure_vorticity_buffers(size_t cell_count) {
+    if (cell_count == 0) return false;
+    if (cell_count <= g_vorticity_capacity) return true;
+    float *tmp = (float *)realloc(g_vorticity_tmp, cell_count * sizeof(float));
+    if (!tmp) return false;
+    g_vorticity_tmp = tmp;
+    float *blur = (float *)realloc(g_vorticity_blur, cell_count * sizeof(float));
+    if (!blur) return false;
+    g_vorticity_blur = blur;
+    g_vorticity_capacity = cell_count;
+    return true;
+}
+
+static bool ensure_pressure_buffers(size_t cell_count) {
+    if (cell_count == 0) return false;
+    if (cell_count <= g_pressure_capacity) return true;
+    float *tmp = (float *)realloc(g_pressure_tmp, cell_count * sizeof(float));
+    if (!tmp) return false;
+    g_pressure_tmp = tmp;
+    float *blur = (float *)realloc(g_pressure_blur, cell_count * sizeof(float));
+    if (!blur) return false;
+    g_pressure_blur = blur;
+    g_pressure_capacity = cell_count;
+    return true;
+}
+
+static inline void blend_pixel(Uint32 *dst,
+                               Uint8 r,
+                               Uint8 g,
+                               Uint8 b,
+                               Uint8 alpha) {
+    if (!dst || alpha == 0) return;
+    Uint8 base_r = 0, base_g = 0, base_b = 0, base_a = 0;
+    SDL_GetRGBA(*dst, g_format, &base_r, &base_g, &base_b, &base_a);
+    base_r = (Uint8)((r * alpha + base_r * (255 - alpha)) / 255);
+    base_g = (Uint8)((g * alpha + base_g * (255 - alpha)) / 255);
+    base_b = (Uint8)((b * alpha + base_b * (255 - alpha)) / 255);
+    *dst = SDL_MapRGBA(g_format, base_r, base_g, base_b, base_a ? base_a : 255);
 }
 
 static TTF_Font *load_hud_font(void) {
@@ -112,32 +174,65 @@ static void renderer_draw_hud(const RendererHudInfo *hud) {
              hud->preset_is_custom ? "custom" : "built-in");
     char grid_line[64];
     snprintf(grid_line, sizeof(grid_line), "Grid: %dx%d", hud->grid_w, hud->grid_h);
+    char window_line[64];
+    snprintf(window_line, sizeof(window_line), "Window: %dx%d", hud->window_w, hud->window_h);
+    char mode_line[64];
+    if (hud->sim_mode == SIM_MODE_WIND_TUNNEL) {
+        snprintf(mode_line, sizeof(mode_line),
+                 "Mode: Wind (inflow %.1f)",
+                 hud->tunnel_inflow_speed);
+    } else {
+        snprintf(mode_line, sizeof(mode_line), "Mode: Box");
+    }
     char emitter_line[64];
     snprintf(emitter_line, sizeof(emitter_line), "Emitters: %zu", hud->emitter_count);
     char brush_line[64];
     snprintf(brush_line, sizeof(brush_line), "Brush Queue: %zu", hud->stroke_samples);
+    char quality_line[64];
+    snprintf(quality_line, sizeof(quality_line), "Quality: %s",
+             (hud->quality_name && hud->quality_name[0]) ? hud->quality_name : "Custom");
+    char solver_line[64];
+    snprintf(solver_line, sizeof(solver_line),
+             "Solver: iter %d, substeps %d",
+             hud->solver_iterations,
+             hud->physics_substeps);
+    char vorticity_line[48];
+    snprintf(vorticity_line, sizeof(vorticity_line),
+             "Vorticity Overlay: %s",
+             hud->vorticity_enabled ? "On" : "Off");
+    char pressure_line[48];
+    snprintf(pressure_line, sizeof(pressure_line),
+             "Pressure Overlay: %s",
+             hud->pressure_enabled ? "On" : "Off");
     char status_line[32];
     snprintf(status_line, sizeof(status_line), "Status: %s", hud->paused ? "Paused" : "Running");
-    const char *hint_line = "Esc to exit";
+    const char *hint_line = "Esc exit | P pause | C clear | E snapshot | V vorticity | B pressure";
 
-    const char *lines[] = {
-        preset_line,
-        grid_line,
-        emitter_line,
-        brush_line,
-        status_line,
-        hint_line
-    };
+    const int MAX_HUD_LINES = 10;
+    const char *lines[MAX_HUD_LINES];
+    size_t line_count = 0;
+    lines[line_count++] = preset_line;
+    lines[line_count++] = grid_line;
+    lines[line_count++] = window_line;
+    lines[line_count++] = mode_line;
+    lines[line_count++] = quality_line;
+    lines[line_count++] = solver_line;
+    lines[line_count++] = emitter_line;
+    lines[line_count++] = brush_line;
+    lines[line_count++] = vorticity_line;
+    lines[line_count++] = pressure_line;
+    lines[line_count++] = status_line;
+    lines[line_count++] = hint_line;
 
-    SDL_Surface *surfaces[6] = {0};
-    SDL_Texture *textures[6] = {0};
-    int widths[6] = {0};
-    int heights[6] = {0};
+    SDL_Surface *surfaces[MAX_HUD_LINES] = {0};
+    SDL_Texture *textures[MAX_HUD_LINES] = {0};
+    int widths[MAX_HUD_LINES] = {0};
+    int heights[MAX_HUD_LINES] = {0};
     int count = 0;
     int max_w = 0;
     int total_h = 0;
 
-    for (size_t i = 0; i < sizeof(lines) / sizeof(lines[0]); ++i) {
+    for (size_t i = 0; i < line_count; ++i) {
         SDL_Texture *tex = NULL;
         SDL_Surface *surf = NULL;
         int w = 0, h = 0;
@@ -271,6 +366,16 @@ void renderer_sdl_shutdown(void) {
     free(g_density_blur);
     g_density_blur = NULL;
     g_density_capacity = 0;
+    free(g_vorticity_tmp);
+    g_vorticity_tmp = NULL;
+    free(g_vorticity_blur);
+    g_vorticity_blur = NULL;
+    g_vorticity_capacity = 0;
+    free(g_pressure_tmp);
+    g_pressure_tmp = NULL;
+    free(g_pressure_blur);
+    g_pressure_blur = NULL;
+    g_pressure_capacity = 0;
     if (g_renderer) {
         SDL_DestroyRenderer(g_renderer);
         g_renderer = NULL;
@@ -414,6 +519,7 @@ static bool renderer_upload_scene(const SceneState *scene) {
 
 bool renderer_sdl_render_scene(const SceneState *scene) {
     if (!renderer_upload_scene(scene)) return false;
+    renderer_apply_overlays(scene);
 
     SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
     SDL_RenderClear(g_renderer);
@@ -459,6 +565,284 @@ int renderer_sdl_output_width(void) {
 
 int renderer_sdl_output_height(void) {
     return g_window_h;
+}
+
+static void renderer_apply_vorticity_overlay(const SceneState *scene,
+                                             Uint8 *pixels,
+                                             int pitch) {
+    if (!scene || !scene->smoke || !pixels) return;
+    const Fluid2D *grid = scene->smoke;
+    int w = grid->w;
+    int h = grid->h;
+    if (w < 3 || h < 3) return;
+
+    size_t cell_count = (size_t)w * (size_t)h;
+    if (!ensure_vorticity_buffers(cell_count)) return;
+
+    // 1) Compute raw vorticity (centered differences) in interior
+    for (int y = 1; y < h - 1; ++y) {
+        for (int x = 1; x < w - 1; ++x) {
+            size_t id = (size_t)y * (size_t)w + (size_t)x;
+
+            float dvy_dx = (grid->velY[id + 1]     - grid->velY[id - 1]) * 0.5f;
+            float dvx_dy = (grid->velX[id + w]     - grid->velX[id - w]) * 0.5f;
+            float vort   = dvy_dx - dvx_dy;
+
+            g_vorticity_tmp[id] = vort;
+        }
+    }
+
+    // Zero borders (we don't have valid centered differences there)
+    for (int x = 0; x < w; ++x) {
+        g_vorticity_tmp[x] = 0.0f;
+        g_vorticity_tmp[(size_t)(h - 1) * (size_t)w + (size_t)x] = 0.0f;
+    }
+    for (int y = 0; y < h; ++y) {
+        g_vorticity_tmp[(size_t)y * (size_t)w]               = 0.0f;
+        g_vorticity_tmp[(size_t)y * (size_t)w + (size_t)(w - 1)] = 0.0f;
+    }
+
+    // 2) Optional blur to make vort filaments softer
+    bool blur_enabled = (scene->config && scene->config->enable_render_blur);
+#if RENDERER_ENABLE_SMOOTHING
+    if (blur_enabled) {
+        // Horizontal blur
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                float accum = 0.0f;
+                for (int k = -1; k <= 1; ++k) {
+                    int sx = x + k;
+                    if (sx < 0)    sx = 0;
+                    if (sx >= w)   sx = w - 1;
+                    accum += g_vorticity_tmp[(size_t)y * (size_t)w + (size_t)sx] *
+                             RENDERER_SMOOTH_KERNEL_1D[k + 1];
+                }
+                g_vorticity_blur[(size_t)y * (size_t)w + (size_t)x] =
+                    accum / RENDERER_SMOOTH_KERNEL_1D_SUM;
+            }
+        }
+        // Vertical blur
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                float accum = 0.0f;
+                for (int k = -1; k <= 1; ++k) {
+                    int sy = y + k;
+                    if (sy < 0)    sy = 0;
+                    if (sy >= h)   sy = h - 1;
+                    accum += g_vorticity_blur[(size_t)sy * (size_t)w + (size_t)x] *
+                             RENDERER_SMOOTH_KERNEL_1D[k + 1];
+                }
+                g_vorticity_tmp[(size_t)y * (size_t)w + (size_t)x] =
+                    accum / RENDERER_SMOOTH_KERNEL_1D_SUM;
+            }
+        }
+    }
+#else
+    (void)blur_enabled;
+#endif
+
+    // 3) Find symmetric range for vorticity
+    float min_v = FLT_MAX;
+    float max_v = -FLT_MAX;
+    for (size_t i = 0; i < cell_count; ++i) {
+        float v = g_vorticity_tmp[i];
+        if (!isfinite(v)) continue;
+        if (v < min_v) min_v = v;
+        if (v > max_v) max_v = v;
+    }
+    if (!isfinite(min_v) || !isfinite(max_v)) {
+        min_v = -1.0f;
+        max_v =  1.0f;
+    }
+    float v_range = fmaxf(fabsf(min_v), fabsf(max_v));
+    if (v_range < 1e-6f) v_range = 1.0f;
+    v_range *= 1.5f;
+
+    for (int y = 0; y < h; ++y) {
+        Uint32 *row = (Uint32 *)(pixels + y * pitch);
+        for (int x = 0; x < w; ++x) {
+            size_t id = (size_t)y * (size_t)w + (size_t)x;
+            float vort = g_vorticity_tmp[id];
+            float norm = vort / v_range;
+            if (!isfinite(norm)) norm = 0.0f;
+            if (norm >  1.0f) norm =  1.0f;
+            if (norm < -1.0f) norm = -1.0f;
+
+            float magnitude = fabsf(norm);
+            magnitude = powf(magnitude, 1.1f);
+            if (magnitude > 1.0f) magnitude = 1.0f;
+
+            const float base = 0.12f;
+            float r = base;
+            float g = base;
+            float b = base;
+            if (norm >= 0.0f) {
+                // Make positive vorticity a vivid orange/yellow
+                r += 0.95f * magnitude;
+                g += 0.40f * magnitude;
+                b *= (1.0f - 0.8f * magnitude);
+            } else {
+                // Negative vorticity becomes a saturated purple
+                r += 0.55f * magnitude;
+                b += 1.05f * magnitude;
+                g *= (1.0f - 0.75f * magnitude);
+            }
+
+            if (r < 0.0f) r = 0.0f; if (r > 1.0f) r = 1.0f;
+            if (g < 0.0f) g = 0.0f; if (g > 1.0f) g = 1.0f;
+            if (b < 0.0f) b = 0.0f; if (b > 1.0f) b = 1.0f;
+
+            Uint8 overlay_r = (Uint8)lroundf(r * 255.0f);
+            Uint8 overlay_g = (Uint8)lroundf(g * 255.0f);
+            Uint8 overlay_b = (Uint8)lroundf(b * 255.0f);
+            Uint8 alpha = (Uint8)lroundf(60.0f + 195.0f * magnitude);
+            blend_pixel(&row[x], overlay_r, overlay_g, overlay_b, alpha);
+        }
+    }
+}
+
+
+static void renderer_apply_pressure_overlay(const SceneState *scene,
+                                            Uint8 *pixels,
+                                            int pitch) {
+    if (!scene || !scene->smoke || !scene->smoke->pressure || !pixels) return;
+    const Fluid2D *grid = scene->smoke;
+    int w = grid->w;
+    int h = grid->h;
+    if (w < 2 || h < 2) return;
+
+    size_t cell_count = (size_t)w * (size_t)h;
+    if (!ensure_pressure_buffers(cell_count)) return;
+
+    // 1) Find symmetric min/max so 0 = mid, +/-max = full red/blue.
+    float min_p = FLT_MAX;
+    float max_p = -FLT_MAX;
+    for (size_t i = 0; i < cell_count; ++i) {
+        float p = grid->pressure[i];
+        if (!isfinite(p)) continue;
+        if (p < min_p) min_p = p;
+        if (p > max_p) max_p = p;
+    }
+    if (!isfinite(min_p) || !isfinite(max_p)) {
+        min_p = -1.0f;
+        max_p =  1.0f;
+    }
+    float range = fmaxf(fabsf(min_p), fabsf(max_p));
+    if (range < 1e-6f) range = 1.0f;
+    const float exaggerate = 1.1f;
+    range *= exaggerate;
+
+    // Normalize to [-1,1]
+    for (size_t i = 0; i < cell_count; ++i) {
+        float norm = grid->pressure[i] / range;
+        if (!isfinite(norm)) norm = 0.0f;
+        if (norm >  1.0f) norm =  1.0f;
+        if (norm < -1.0f) norm = -1.0f;
+        g_pressure_tmp[i] = norm;
+    }
+
+    bool blur_enabled = (scene->config && scene->config->enable_render_blur);
+#if RENDERER_ENABLE_SMOOTHING
+    if (blur_enabled) {
+        // Horizontal blur
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                float accum = 0.0f;
+                for (int k = -1; k <= 1; ++k) {
+                    int sx = x + k;
+                    if (sx < 0)    sx = 0;
+                    if (sx >= w)   sx = w - 1;
+                    accum += g_pressure_tmp[(size_t)y * (size_t)w + (size_t)sx] *
+                             RENDERER_SMOOTH_KERNEL_1D[k + 1];
+                }
+                g_pressure_blur[(size_t)y * (size_t)w + (size_t)x] =
+                    accum / RENDERER_SMOOTH_KERNEL_1D_SUM;
+            }
+        }
+        // Vertical blur
+        for (int y = 0; y < h; ++y) {
+            for (int x = 0; x < w; ++x) {
+                float accum = 0.0f;
+                for (int k = -1; k <= 1; ++k) {
+                    int sy = y + k;
+                    if (sy < 0)    sy = 0;
+                    if (sy >= h)   sy = h - 1;
+                    accum += g_pressure_blur[(size_t)sy * (size_t)w + (size_t)x] *
+                             RENDERER_SMOOTH_KERNEL_1D[k + 1];
+                }
+                g_pressure_tmp[(size_t)y * (size_t)w + (size_t)x] =
+                    accum / RENDERER_SMOOTH_KERNEL_1D_SUM;
+            }
+        }
+    }
+#else
+    (void)blur_enabled;
+#endif
+
+    const Uint8 base_gray = 200;
+    for (int y = 0; y < h; ++y) {
+        Uint32 *row = (Uint32 *)(pixels + y * pitch);
+        for (int x = 0; x < w; ++x) {
+            size_t id = (size_t)y * (size_t)w + (size_t)x;
+            float value = g_pressure_tmp[id];
+            float magnitude = fabsf(value);
+            magnitude = powf(magnitude, 1.05f);
+            if (magnitude > 1.0f) magnitude = 1.0f;
+
+            Uint8 overlay_r = base_gray;
+            Uint8 overlay_g = base_gray;
+            Uint8 overlay_b = base_gray;
+            if (value >= 0.0f) {
+                overlay_r = (Uint8)lroundf(base_gray + (255.0f - base_gray) * magnitude);
+                overlay_g = (Uint8)lroundf((float)base_gray * (1.0f - magnitude));
+                overlay_b = overlay_g;
+            } else {
+                overlay_b = (Uint8)lroundf(base_gray + (255.0f - base_gray) * magnitude);
+                overlay_r = (Uint8)lroundf((float)base_gray * (1.0f - magnitude));
+                overlay_g = overlay_r;
+            }
+            Uint8 alpha = (Uint8)lroundf(40.0f + 140.0f * magnitude);
+            blend_pixel(&row[x], overlay_r, overlay_g, overlay_b, alpha);
+        }
+    }
+}
+
+
+bool renderer_sdl_toggle_vorticity(void) {
+    g_draw_vorticity = !g_draw_vorticity;
+    return g_draw_vorticity;
+}
+
+bool renderer_sdl_vorticity_enabled(void) {
+    return g_draw_vorticity;
+}
+
+bool renderer_sdl_toggle_pressure(void) {
+    g_draw_pressure = !g_draw_pressure;
+    return g_draw_pressure;
+}
+
+bool renderer_sdl_pressure_enabled(void) {
+    return g_draw_pressure;
+}
+
+static void renderer_apply_overlays(const SceneState *scene) {
+    if (!scene || !scene->smoke || !g_texture) return;
+    if (!g_draw_pressure && !g_draw_vorticity) return;
+    void *pixels = NULL;
+    int pitch = 0;
+    if (SDL_LockTexture(g_texture, NULL, &pixels, &pitch) != 0) {
+        fprintf(stderr, "[renderer] Failed to lock scene texture: %s\n", SDL_GetError());
+        return;
+    }
+    Uint8 *base = (Uint8 *)pixels;
+    if (g_draw_pressure) {
+        renderer_apply_pressure_overlay(scene, base, pitch);
+    }
+    if (g_draw_vorticity) {
+        renderer_apply_vorticity_overlay(scene, base, pitch);
+    }
+    SDL_UnlockTexture(g_texture);
 }
 static void renderer_draw_object_borders(const SceneState *scene) {
 #if OBJECT_BORDER_THICKNESS <= 0

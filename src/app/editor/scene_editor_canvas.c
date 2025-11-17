@@ -10,6 +10,7 @@ static SDL_Color COLOR_SINK      = {200, 80, 255, 255};
 static SDL_Color COLOR_TEXT      = {245, 247, 250, 255};
 static SDL_Color COLOR_SELECTED  = {255, 255, 255, 255};
 static SDL_Color COLOR_GRID_LINE = {32, 36, 40, 255};
+static SDL_Color COLOR_BOUNDARY_DISABLED = {45, 50, 58, 180};
 
 static SDL_Color emitter_color(const FluidEmitter *em) {
     switch (em->type) {
@@ -36,7 +37,6 @@ static float object_handle_base_size(const PresetObject *obj) {
                      ? fmaxf(obj->size_x, obj->size_y)
                      : obj->size_x;
     if (base < SCENE_EDITOR_OBJECT_HANDLE_MIN) base = SCENE_EDITOR_OBJECT_HANDLE_MIN;
-    if (base > SCENE_EDITOR_OBJECT_HANDLE_MAX) base = SCENE_EDITOR_OBJECT_HANDLE_MAX;
     return base;
 }
 
@@ -46,26 +46,28 @@ static float object_handle_visual_length(const PresetObject *obj) {
 
 void scene_editor_canvas_project(int canvas_x,
                                  int canvas_y,
-                                 int canvas_size,
+                                 int canvas_w,
+                                 int canvas_h,
                                  float px,
                                  float py,
                                  int *out_x,
                                  int *out_y) {
     if (!out_x || !out_y) return;
-    *out_x = canvas_x + (int)lroundf(px * (float)canvas_size);
-    *out_y = canvas_y + (int)lroundf(py * (float)canvas_size);
+    *out_x = canvas_x + (int)lroundf(px * (float)canvas_w);
+    *out_y = canvas_y + (int)lroundf(py * (float)canvas_h);
 }
 
 void scene_editor_canvas_to_normalized(int canvas_x,
                                        int canvas_y,
-                                       int canvas_size,
+                                       int canvas_w,
+                                       int canvas_h,
                                        int sx,
                                        int sy,
                                        float *out_x,
                                        float *out_y) {
     if (!out_x || !out_y) return;
-    float nx = (float)(sx - canvas_x) / (float)canvas_size;
-    float ny = (float)(sy - canvas_y) / (float)canvas_size;
+    float nx = (float)(sx - canvas_x) / (float)canvas_w;
+    float ny = (float)(sy - canvas_y) / (float)canvas_h;
     if (nx < 0.0f) nx = 0.0f;
     if (nx > 1.0f) nx = 1.0f;
     if (ny < 0.0f) ny = 0.0f;
@@ -77,9 +79,10 @@ void scene_editor_canvas_to_normalized(int canvas_x,
 void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
                                          int canvas_x,
                                          int canvas_y,
-                                         int canvas_size) {
-    if (!renderer || canvas_size <= 0) return;
-    SDL_Rect rect = {canvas_x, canvas_y, canvas_size, canvas_size};
+                                         int canvas_w,
+                                         int canvas_h) {
+    if (!renderer || canvas_w <= 0 || canvas_h <= 0) return;
+    SDL_Rect rect = {canvas_x, canvas_y, canvas_w, canvas_h};
     SDL_SetRenderDrawColor(renderer,
                            COLOR_CANVAS.r,
                            COLOR_CANVAS.g,
@@ -95,17 +98,18 @@ void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
                            COLOR_GRID_LINE.b,
                            255);
     for (int i = 1; i < grid_steps; ++i) {
-        int offset = (int)((float)canvas_size / (float)grid_steps * (float)i);
+        int offset_x = (int)((float)canvas_w / (float)grid_steps * (float)i);
+        int offset_y = (int)((float)canvas_h / (float)grid_steps * (float)i);
         SDL_RenderDrawLine(renderer,
-                           canvas_x + offset,
+                           canvas_x + offset_x,
                            canvas_y,
-                           canvas_x + offset,
-                           canvas_y + canvas_size);
+                           canvas_x + offset_x,
+                           canvas_y + canvas_h);
         SDL_RenderDrawLine(renderer,
                            canvas_x,
-                           canvas_y + offset,
-                           canvas_x + canvas_size,
-                           canvas_y + offset);
+                           canvas_y + offset_y,
+                           canvas_x + canvas_w,
+                           canvas_y + offset_y);
     }
 
     SDL_SetRenderDrawColor(renderer,
@@ -119,7 +123,8 @@ void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
 int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
                                  int canvas_x,
                                  int canvas_y,
-                                 int canvas_size,
+                                 int canvas_w,
+                                 int canvas_h,
                                  int px,
                                  int py,
                                  EditorDragMode *mode) {
@@ -130,10 +135,10 @@ int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
     for (size_t i = 0; i < preset->emitter_count; ++i) {
         const FluidEmitter *em = &preset->emitters[i];
         int cx, cy;
-        scene_editor_canvas_project(canvas_x, canvas_y, canvas_size,
+        scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
                                     em->position_x, em->position_y,
                                     &cx, &cy);
-        int radius_px = (int)(em->radius * canvas_size);
+        int radius_px = (int)(em->radius * (float)fmin(canvas_w, canvas_h));
         if (radius_px < 4) radius_px = 4;
         float dx = (float)px - (float)cx;
         float dy = (float)py - (float)cy;
@@ -178,22 +183,23 @@ static void draw_line(SDL_Renderer *renderer, int x0, int y0, int x1, int y1, SD
 }
 
 void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
-                                      int canvas_x,
-                                      int canvas_y,
-                                      int canvas_size,
-                                      const FluidScenePreset *preset,
-                                      int selected_emitter,
-                                      int hover_emitter,
-                                      TTF_Font *font_small) {
+                                       int canvas_x,
+                                       int canvas_y,
+                                       int canvas_w,
+                                       int canvas_h,
+                                       const FluidScenePreset *preset,
+                                       int selected_emitter,
+                                       int hover_emitter,
+                                       TTF_Font *font_small) {
     if (!renderer || !preset) return;
 
     for (size_t i = 0; i < preset->emitter_count; ++i) {
         const FluidEmitter *em = &preset->emitters[i];
         int cx, cy;
-        scene_editor_canvas_project(canvas_x, canvas_y, canvas_size,
+        scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
                                     em->position_x, em->position_y,
                                     &cx, &cy);
-        int radius_px = (int)(em->radius * canvas_size);
+        int radius_px = (int)(em->radius * (float)fmin(canvas_w, canvas_h));
         if (radius_px < 4) radius_px = 4;
 
         SDL_Color color = emitter_color(em);
@@ -201,6 +207,8 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
             SDL_Color outline = lighten_color(color, SCENE_EDITOR_SELECT_HIGHLIGHT_FACTOR);
             draw_circle(renderer, cx, cy, radius_px + 3, outline);
             color = outline;
+        } else if ((int)i == hover_emitter) {
+            color = lighten_color(color, 0.15f);
         }
         draw_circle(renderer, cx, cy, radius_px, color);
 
@@ -289,18 +297,19 @@ static void draw_rotated_box(SDL_Renderer *renderer,
 int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
                                    int canvas_x,
                                    int canvas_y,
-                                   int canvas_size,
+                                   int canvas_w,
+                                   int canvas_h,
                                    int px,
                                    int py) {
     if (!preset) return -1;
     for (size_t i = 0; i < preset->object_count; ++i) {
         const PresetObject *obj = &preset->objects[i];
         int cx, cy;
-        scene_editor_canvas_project(canvas_x, canvas_y, canvas_size,
+        scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
                                     obj->position_x, obj->position_y,
                                     &cx, &cy);
         if (obj->type == PRESET_OBJECT_CIRCLE) {
-            int radius = (int)(obj->size_x * (float)canvas_size);
+            int radius = (int)lroundf(obj->size_x * (float)canvas_w);
             if (radius < 6) radius = 6;
             float dx = (float)px - (float)cx;
             float dy = (float)py - (float)cy;
@@ -308,8 +317,8 @@ int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
                 return (int)i;
             }
         } else {
-            float half_w = obj->size_x * (float)canvas_size;
-            float half_h = obj->size_y * (float)canvas_size;
+            float half_w = obj->size_x * (float)canvas_w;
+            float half_h = obj->size_y * (float)canvas_h;
             if (half_w < 4.0f) half_w = 4.0f;
             if (half_h < 4.0f) half_h = 4.0f;
             float dx = (float)px - (float)cx;
@@ -329,7 +338,8 @@ int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
 bool scene_editor_canvas_object_handle_point(const FluidScenePreset *preset,
                                              int canvas_x,
                                              int canvas_y,
-                                             int canvas_size,
+                                             int canvas_w,
+                                             int canvas_h,
                                              int object_index,
                                              int *out_x,
                                              int *out_y) {
@@ -339,13 +349,14 @@ bool scene_editor_canvas_object_handle_point(const FluidScenePreset *preset,
     int cx, cy;
     scene_editor_canvas_project(canvas_x,
                                 canvas_y,
-                                canvas_size,
+                                canvas_w,
+                                canvas_h,
                                 obj->position_x,
                                 obj->position_y,
                                 &cx,
                                 &cy);
     float total = object_handle_visual_length(obj);
-    int length_px = (int)lroundf(total * (float)canvas_size);
+    int length_px = (int)lroundf(total * (float)fmin(canvas_w, canvas_h));
     float angle = obj->angle;
     int hx = cx + (int)lroundf(cosf(angle) * (float)length_px);
     int hy = cy + (int)lroundf(sinf(angle) * (float)length_px);
@@ -357,7 +368,8 @@ bool scene_editor_canvas_object_handle_point(const FluidScenePreset *preset,
 int scene_editor_canvas_hit_object_handle(const FluidScenePreset *preset,
                                           int canvas_x,
                                           int canvas_y,
-                                          int canvas_size,
+                                          int canvas_w,
+                                          int canvas_h,
                                           int px,
                                           int py) {
     if (!preset) return -1;
@@ -367,7 +379,8 @@ int scene_editor_canvas_hit_object_handle(const FluidScenePreset *preset,
         if (!scene_editor_canvas_object_handle_point(preset,
                                                      canvas_x,
                                                      canvas_y,
-                                                     canvas_size,
+                                                     canvas_w,
+                                                     canvas_h,
                                                      (int)i,
                                                      &hx,
                                                      &hy)) {
@@ -382,10 +395,40 @@ int scene_editor_canvas_hit_object_handle(const FluidScenePreset *preset,
     return -1;
 }
 
+int scene_editor_canvas_hit_edge(int canvas_x,
+                                 int canvas_y,
+                                 int canvas_w,
+                                 int canvas_h,
+                                 int px,
+                                 int py) {
+    int canvas_right = canvas_x + canvas_w;
+    int canvas_bottom = canvas_y + canvas_h;
+    int margin = SCENE_EDITOR_BOUNDARY_HIT_MARGIN;
+
+    bool inside_x = (px >= canvas_x - margin) && (px <= canvas_right + margin);
+    bool inside_y = (py >= canvas_y - margin) && (py <= canvas_bottom + margin);
+    if (!inside_x || !inside_y) return -1;
+
+    if (py >= canvas_y - margin && py <= canvas_y + margin) {
+        return BOUNDARY_EDGE_TOP;
+    }
+    if (py >= canvas_bottom - margin && py <= canvas_bottom + margin) {
+        return BOUNDARY_EDGE_BOTTOM;
+    }
+    if (px >= canvas_x - margin && px <= canvas_x + margin) {
+        return BOUNDARY_EDGE_LEFT;
+    }
+    if (px >= canvas_right - margin && px <= canvas_right + margin) {
+        return BOUNDARY_EDGE_RIGHT;
+    }
+    return -1;
+}
+
 void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
                                       int canvas_x,
                                       int canvas_y,
-                                      int canvas_size,
+                                      int canvas_w,
+                                      int canvas_h,
                                       const FluidScenePreset *preset,
                                       int selected_object,
                                       int hover_object) {
@@ -394,7 +437,7 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
     for (size_t i = 0; i < preset->object_count; ++i) {
         const PresetObject *obj = &preset->objects[i];
         int cx, cy;
-        scene_editor_canvas_project(canvas_x, canvas_y, canvas_size,
+        scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
                                     obj->position_x, obj->position_y,
                                     &cx, &cy);
         SDL_Color base = (obj->type == PRESET_OBJECT_BOX)
@@ -403,15 +446,15 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
         if ((int)i == selected_object) {
             base = lighten_color(base, SCENE_EDITOR_SELECT_HIGHLIGHT_FACTOR);
         } else if ((int)i == hover_object) {
-            base = lighten_color(base, 0.2f);
+            base = lighten_color(base, 0.15f);
         }
         if (obj->type == PRESET_OBJECT_CIRCLE) {
-            int radius = (int)(obj->size_x * (float)canvas_size);
+            int radius = (int)lroundf(obj->size_x * (float)canvas_w);
             if (radius < 6) radius = 6;
             draw_circle(renderer, cx, cy, radius, base);
         } else {
-            float half_w = obj->size_x * (float)canvas_size;
-            float half_h = obj->size_y * (float)canvas_size;
+            float half_w = obj->size_x * (float)canvas_w;
+            float half_h = obj->size_y * (float)canvas_h;
             if (half_w < 4.0f) half_w = 4.0f;
             if (half_h < 4.0f) half_h = 4.0f;
             draw_rotated_box(renderer,
@@ -428,7 +471,8 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
             if (scene_editor_canvas_object_handle_point(preset,
                                                         canvas_x,
                                                         canvas_y,
-                                                        canvas_size,
+                                                        canvas_w,
+                                                        canvas_h,
                                                         (int)i,
                                                         &hx,
                                                         &hy)) {
@@ -444,20 +488,130 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
     }
 }
 
+static SDL_Color boundary_color(const BoundaryFlow *flow) {
+    if (!flow || flow->mode == BOUNDARY_FLOW_DISABLED) {
+        return COLOR_BOUNDARY_DISABLED;
+    }
+    if (flow->mode == BOUNDARY_FLOW_RECEIVE) {
+        return COLOR_SINK;
+    }
+    return COLOR_SOURCE;
+}
+
+void scene_editor_canvas_draw_boundary_flows(SDL_Renderer *renderer,
+                                             int canvas_x,
+                                             int canvas_y,
+                                             int canvas_w,
+                                             int canvas_h,
+                                             const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
+                                             int hover_edge,
+                                             int selected_edge,
+                                             bool edit_mode) {
+    if (!renderer || !flows) return;
+    SDL_Rect rects[BOUNDARY_EDGE_COUNT];
+    rects[BOUNDARY_EDGE_TOP] = (SDL_Rect){canvas_x, canvas_y, canvas_w, 12};
+    rects[BOUNDARY_EDGE_BOTTOM] = (SDL_Rect){canvas_x, canvas_y + canvas_h - 12, canvas_w, 12};
+    rects[BOUNDARY_EDGE_LEFT] = (SDL_Rect){canvas_x, canvas_y, 12, canvas_h};
+    rects[BOUNDARY_EDGE_RIGHT] = (SDL_Rect){canvas_x + canvas_w - 12, canvas_y, 12, canvas_h};
+
+    for (int edge = 0; edge < BOUNDARY_EDGE_COUNT; ++edge) {
+        SDL_Color color = boundary_color(&flows[edge]);
+        if (selected_edge == edge) {
+            color = lighten_color(color, 0.4f);
+        } else if (hover_edge == edge) {
+            color = lighten_color(color, edit_mode ? 0.3f : 0.15f);
+        }
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderFillRect(renderer, &rects[edge]);
+    }
+}
+
+void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
+                                      TTF_Font *font,
+                                      int x,
+                                      int y,
+                                      const char *lines[],
+                                      int line_count) {
+    if (!renderer || !font || !lines || line_count <= 0) return;
+    SDL_Color bg = {20, 22, 28, 230};
+    SDL_Color border = {255, 255, 255, 60};
+    SDL_Color text = COLOR_TEXT;
+
+    int padding = 6;
+    int max_w = 0;
+    int total_h = 0;
+    SDL_Texture *textures[8] = {0};
+    SDL_Surface *surfaces[8] = {0};
+    if (line_count > 8) line_count = 8;
+
+    for (int i = 0; i < line_count; ++i) {
+        if (!lines[i]) continue;
+        SDL_Surface *surf = TTF_RenderUTF8_Blended(font, lines[i], text);
+        if (!surf) continue;
+        SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
+        if (!tex) {
+            SDL_FreeSurface(surf);
+            continue;
+        }
+        textures[i] = tex;
+        surfaces[i] = surf;
+        if (surf->w > max_w) max_w = surf->w;
+        total_h += surf->h;
+    }
+    if (max_w == 0 || total_h == 0) {
+        for (int i = 0; i < line_count; ++i) {
+            if (textures[i]) SDL_DestroyTexture(textures[i]);
+            if (surfaces[i]) SDL_FreeSurface(surfaces[i]);
+        }
+        return;
+    }
+    int spacing = 2;
+    total_h += spacing * (line_count - 1);
+
+    SDL_Rect rect = {
+        .x = x + 16,
+        .y = y + 16,
+        .w = max_w + padding * 2,
+        .h = total_h + padding * 2
+    };
+
+    SDL_SetRenderDrawColor(renderer, bg.r, bg.g, bg.b, bg.a);
+    SDL_RenderFillRect(renderer, &rect);
+    SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, border.a);
+    SDL_RenderDrawRect(renderer, &rect);
+
+    int y_cursor = rect.y + padding;
+    for (int i = 0; i < line_count; ++i) {
+        SDL_Texture *tex = textures[i];
+        SDL_Surface *surf = surfaces[i];
+        if (!tex || !surf) continue;
+        SDL_Rect dst = {rect.x + padding, y_cursor, surf->w, surf->h};
+        SDL_RenderCopy(renderer, tex, NULL, &dst);
+        y_cursor += surf->h + spacing;
+    }
+
+    for (int i = 0; i < line_count; ++i) {
+        if (textures[i]) SDL_DestroyTexture(textures[i]);
+        if (surfaces[i]) SDL_FreeSurface(surfaces[i]);
+    }
+}
+
 void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
                                    int canvas_x,
                                    int canvas_y,
-                                   int canvas_size,
+                                   int canvas_w,
+                                   int canvas_h,
                                    TTF_Font *font_main,
                                    TTF_Font *font_small,
                                    const char *name,
                                    bool renaming,
                                    const TextInputField *input) {
     if (!renderer) return;
+    (void)canvas_h;
     SDL_Rect rect = {
         .x = canvas_x,
         .y = canvas_y - 50,
-        .w = canvas_size,
+        .w = canvas_w,
         .h = 36
     };
     if (rect.y < 20) rect.y = 20;
