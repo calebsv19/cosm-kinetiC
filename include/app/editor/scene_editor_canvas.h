@@ -9,8 +9,10 @@
 #include "ui/text_input.h"
 
 #define SCENE_EDITOR_SELECT_HIGHLIGHT_FACTOR 0.35f
-#define SCENE_EDITOR_OBJECT_HANDLE_MARGIN 0.05f
-#define SCENE_EDITOR_OBJECT_HANDLE_MIN 0.02f
+#define SCENE_EDITOR_OBJECT_MIN_RADIUS_PX 6
+#define SCENE_EDITOR_OBJECT_MIN_HALF_PX 4
+#define SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX 10
+#define SCENE_EDITOR_OBJECT_HANDLE_HIT_RADIUS_PX 12
 #define SCENE_EDITOR_BOUNDARY_HIT_MARGIN 16
 
 typedef enum EditorDragMode {
@@ -73,6 +75,15 @@ bool scene_editor_canvas_object_handle_point(const FluidScenePreset *preset,
                                              int object_index,
                                              int *out_x,
                                              int *out_y);
+float scene_editor_canvas_object_visual_radius_px(const PresetObject *obj, int canvas_w);
+void scene_editor_canvas_object_visual_half_sizes_px(const PresetObject *obj,
+                                                     int canvas_w,
+                                                     int canvas_h,
+                                                     float *out_half_w_px,
+                                                     float *out_half_h_px);
+float scene_editor_canvas_object_handle_length_px(const PresetObject *obj,
+                                                  int canvas_w,
+                                                  int canvas_h);
 
 int scene_editor_canvas_hit_edge(int canvas_x,
                                  int canvas_y,

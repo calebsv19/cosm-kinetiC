@@ -1,5 +1,5 @@
 {
-  "hud_enabled": false,
+  "hud_enabled": true,
   "log_enabled": false,
   "event_tagging_enabled": false,
   "timer_buffer_size": 128,
@@ -8,7 +8,7 @@
   "render_mode": "throttled",
   "render_threshold": 0.503,
 
-  "hud_position": "bottom-left", 
+  "hud_position": "bottom-right", 
   "hud_offset_x": 10,               
   "hud_offset_y": 10                
 }

@@ -2,7 +2,7 @@
 
 Root for every solver. Each subsystem lives in its own folder so we can scale from simple 2D demos to the future 3D pipeline without growing monolithic files.
 
-- `fluid2d/` – density + velocity grid plus stepping logic (diffusion, advection, damping) driven by `AppConfig`.
+- `fluid2d/` – density + velocity grid plus stepping logic (diffusion, advection, damping) driven by `AppConfig`. The solver now enforces scene-driven solid masks before/after every major phase and exposes the cached mask/distance arrays so overlays and particles can reuse the same boundary data cheaply.
 - `particles/` – tracer particle pool that can read from the fluid and rigid worlds.
 - `rigid/` – minimal rigid-body integrator with collisions against the ground plane and other circles.
 - `soft/` – placeholder for deformable bodies; currently just alloc/free + linear integration.

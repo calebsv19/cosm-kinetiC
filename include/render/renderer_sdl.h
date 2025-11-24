@@ -19,6 +19,9 @@ typedef struct RendererHudInfo {
     float       tunnel_inflow_speed;
     bool        vorticity_enabled;
     bool        pressure_enabled;
+    bool        velocity_overlay_enabled;
+    bool        particle_overlay_enabled;
+    bool        velocity_fixed_length;
     const char *quality_name;
     int         solver_iterations;
     int         physics_substeps;
@@ -37,6 +40,12 @@ bool renderer_sdl_toggle_vorticity(void);
 bool renderer_sdl_vorticity_enabled(void);
 bool renderer_sdl_toggle_pressure(void);
 bool renderer_sdl_pressure_enabled(void);
+bool renderer_sdl_toggle_velocity_vectors(void);
+bool renderer_sdl_velocity_vectors_enabled(void);
+bool renderer_sdl_toggle_flow_particles(void);
+bool renderer_sdl_flow_particles_enabled(void);
+bool renderer_sdl_toggle_velocity_mode(void);
+bool renderer_sdl_velocity_mode_fixed(void);
 
 static inline void renderer_sdl_draw(const SceneState *scene,
                                      const RendererHudInfo *hud) {

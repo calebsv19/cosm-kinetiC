@@ -24,7 +24,12 @@ typedef struct SceneState {
     const AppConfig *config; // non-owning pointer
     ObjectManager objects;
     uint8_t *static_mask;
-    int     wind_ramp_steps;
+    uint8_t *obstacle_mask;
+    float   *obstacle_velX;
+    float   *obstacle_velY;
+    float   *obstacle_distance;
+    bool     obstacle_mask_dirty;
+    int      wind_ramp_steps;
 } SceneState;
 
 SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset);

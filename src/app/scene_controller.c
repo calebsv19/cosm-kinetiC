@@ -57,6 +57,15 @@ static bool handle_scene_command(const Command *cmd, void *user_data) {
     case COMMAND_TOGGLE_PRESSURE:
         renderer_sdl_toggle_pressure();
         return true;
+    case COMMAND_TOGGLE_VELOCITY_VECTORS:
+        renderer_sdl_toggle_velocity_vectors();
+        return true;
+    case COMMAND_TOGGLE_VELOCITY_MODE:
+        renderer_sdl_toggle_velocity_mode();
+        return true;
+    case COMMAND_TOGGLE_PARTICLE_FLOW:
+        renderer_sdl_toggle_flow_particles();
+        return true;
     default:
         return scene_handle_command(ctx->scene, cmd);
     }
@@ -235,9 +244,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
 
         InputCommands cmds;
         bool ignore_input = headless_mode && headless->ignore_input;
-        ts_start_timer("input");
         bool polled = input_poll_events(&cmds, &bus, &ctx_mgr);
-        ts_stop_timer("input");
         if (ignore_input) {
             bool quit_requested = cmds.quit;
             memset(&cmds, 0, sizeof(cmds));
@@ -282,17 +289,24 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 if (mode_hooks && mode_hooks->pre_substep) {
                     mode_hooks->pre_substep(&scene, sub_dt);
                 }
-                ts_start_timer("emitters");
-                scene_apply_emitters(&scene, sub_dt);
-                ts_stop_timer("emitters");
 
-                ts_start_timer("boundary_flows");
+                scene_apply_emitters(&scene, sub_dt);
+
+                // ts_start_timer("boundary_flows");
                 scene_apply_boundary_flows(&scene, sub_dt);
-                ts_stop_timer("boundary_flows");
+                // ts_stop_timer("boundary_flows");
+
+                scene_enforce_obstacles(&scene);
 
                 ts_start_timer("fluid_step");
                 const BoundaryFlow *flows = scene.preset ? scene.preset->boundary_flows : NULL;
-                fluid2d_step(scene.smoke, sub_dt, &cfg, flows);
+                fluid2d_step(scene.smoke,
+                             sub_dt,
+                             &cfg,
+                             flows,
+                             scene.obstacle_mask,
+                             scene.obstacle_velX,
+                             scene.obstacle_velY);
                 ts_stop_timer("fluid_step");
 
                 scene_enforce_obstacles(&scene);
@@ -303,9 +317,12 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 }
 
                 object_manager_step(&scene.objects, sub_dt, &cfg);
+                scene.obstacle_mask_dirty = true;
                 scene.time += sub_dt;
             }
             ts_stop_timer("physics");
+        } else {
+            scene_enforce_obstacles(&scene);
         }
 
         if (dispatch_ctx.snapshot_requested) {
@@ -326,25 +343,25 @@ int scene_controller_run(const AppConfig *initial_cfg,
             .grid_h = scene.config ? scene.config->grid_h : cfg.grid_h,
             .window_w = cfg.window_w,
             .window_h = cfg.window_h,
-            .emitter_count = scene.preset ? scene.preset->emitter_count : 0,
-            .stroke_samples = stroke_buffer_count(&sampler.buffer),
             .paused = scene.paused,
             .sim_mode = cfg.sim_mode,
             .tunnel_inflow_speed = cfg.tunnel_inflow_speed,
             .vorticity_enabled = renderer_sdl_vorticity_enabled(),
             .pressure_enabled = renderer_sdl_pressure_enabled(),
+            .velocity_overlay_enabled = renderer_sdl_velocity_vectors_enabled(),
+            .particle_overlay_enabled = renderer_sdl_flow_particles_enabled(),
+            .velocity_fixed_length = renderer_sdl_velocity_mode_fixed(),
             .quality_name = quality_label ? quality_label : "Custom",
             .solver_iterations = cfg.fluid_solver_iterations,
             .physics_substeps = cfg.physics_substeps
         };
 
-	ts_start_timer("frame_send");
+
         if (cfg.save_volume_frames) {
             volume_frames_write(&scene, frame_index);
         }
- 	ts_stop_timer("frame_send");
 
-        ts_start_timer("render");
+
         if (renderer_sdl_render_scene(&scene)) {
             if (cfg.save_render_frames) {
                 uint8_t *pixels = NULL;
@@ -362,7 +379,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 renderer_sdl_present_with_hud(&hud);
             }
         }
-        ts_stop_timer("render");
+
 
         frame_index++;
         if (headless_mode && headless->frame_limit > 0 &&

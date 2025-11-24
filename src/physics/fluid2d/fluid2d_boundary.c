@@ -25,6 +25,13 @@ static int boundary_span_end(const Fluid2D *grid, BoundaryFlowEdge edge) {
                : grid->h - 2;
 }
 
+static int boundary_depth_limit(const Fluid2D *grid, BoundaryFlowEdge edge) {
+    if (!grid) return 0;
+    return (edge == BOUNDARY_EDGE_TOP || edge == BOUNDARY_EDGE_BOTTOM)
+               ? grid->h - 2
+               : grid->w - 2;
+}
+
 static bool boundary_interior_cell(const Fluid2D *grid,
                                    BoundaryFlowEdge edge,
                                    int span_index,
@@ -105,15 +112,58 @@ static float clamp01(float value) {
     return value;
 }
 
-static void wind_clamp_backflow(Fluid2D *grid,
+static void copy_neumann_band(Fluid2D *grid,
+                              BoundaryFlowEdge edge,
+                              bool copy_pressure) {
+    if (!grid) return;
+    int span_end = boundary_span_end(grid, edge);
+    if (span_end < 1) return;
+
+    for (int i = 1; i <= span_end; ++i) {
+        int ix = 0, iy = 0;
+        if (!boundary_interior_cell(grid, edge, i, 0, &ix, &iy)) continue;
+        int gx = 0, gy = 0;
+        if (!boundary_ghost_cell(grid, edge, i, &gx, &gy)) continue;
+        size_t interior_id = cell_index(grid, ix, iy);
+        size_t ghost_id = cell_index(grid, gx, gy);
+        grid->velX[ghost_id] = grid->velX[interior_id];
+        grid->velY[ghost_id] = grid->velY[interior_id];
+        grid->density[ghost_id] = grid->density[interior_id];
+        if (copy_pressure && grid->pressure) {
+            grid->pressure[ghost_id] = grid->pressure[interior_id];
+        }
+    }
+}
+
+static void apply_outlet_sponge(Fluid2D *grid,
                                 BoundaryFlowEdge edge,
-                                size_t id) {
-    float nx = 0.0f, ny = 0.0f;
-    boundary_outward_normal(edge, &nx, &ny);
-    float vn = grid->velX[id] * nx + grid->velY[id] * ny;
-    if (vn < 0.0f) {
-        grid->velX[id] -= vn * nx;
-        grid->velY[id] -= vn * ny;
+                                int layer_count,
+                                float fade) {
+    if (!grid || layer_count <= 0) return;
+    fade = clamp01(fade);
+    if (fade <= 0.0f) return;
+    int span_end = boundary_span_end(grid, edge);
+    int depth_limit = boundary_depth_limit(grid, edge);
+    if (span_end < 1 || depth_limit < 1) return;
+    if (layer_count > depth_limit) layer_count = depth_limit;
+
+    float inv_layers = 1.0f / (float)layer_count;
+    for (int i = 1; i <= span_end; ++i) {
+        for (int depth = 0; depth < layer_count; ++depth) {
+            int x = 0, y = 0;
+            if (!boundary_interior_cell(grid, edge, i, depth, &x, &y)) continue;
+            size_t id = cell_index(grid, x, y);
+            float weight = 1.0f - (float)depth * inv_layers;
+            if (weight < 0.0f) weight = 0.0f;
+            float damp = 1.0f - fade * weight;
+            if (damp < 0.0f) damp = 0.0f;
+            grid->velX[id] *= damp;
+            grid->velY[id] *= damp;
+            grid->density[id] *= damp;
+            if (grid->pressure) {
+                grid->pressure[id] *= damp;
+            }
+        }
     }
 }
 
@@ -123,7 +173,7 @@ static void wind_set_inlet(Fluid2D *grid,
                            float inflow_density,
                            float vel_mix,
                            float density_mix) {
-    if (!grid || inflow_speed <= 0.0f) return;
+    if (!grid) return;
     int span_end = boundary_span_end(grid, edge);
     if (span_end < 1) return;
 
@@ -137,23 +187,38 @@ static void wind_set_inlet(Fluid2D *grid,
 
     vel_mix = clamp01(vel_mix);
     density_mix = clamp01(density_mix);
+    bool apply_velocity = vel_mix > 0.0f;
+    bool apply_density = density_mix > 0.0f;
+    if (!apply_velocity && !apply_density) {
+        // Still mirror ghost cells so the solver sees a neutral inlet.
+        apply_velocity = true;
+    }
 
     for (int i = 1; i <= span_end; ++i) {
         int ix = 0, iy = 0;
         if (boundary_interior_cell(grid, edge, i, 0, &ix, &iy)) {
             size_t id = cell_index(grid, ix, iy);
-            if (vel_mix >= 1.0f) {
-                grid->velX[id] = target_vx;
-                grid->velY[id] = target_vy;
-            } else if (vel_mix > 0.0f) {
-                grid->velX[id] = grid->velX[id] * (1.0f - vel_mix) + target_vx * vel_mix;
-                grid->velY[id] = grid->velY[id] * (1.0f - vel_mix) + target_vy * vel_mix;
+            if (apply_velocity) {
+                if (vel_mix >= 1.0f) {
+                    grid->velX[id] = target_vx;
+                    grid->velY[id] = target_vy;
+                } else if (vel_mix > 0.0f) {
+                    grid->velX[id] = grid->velX[id] * (1.0f - vel_mix) + target_vx * vel_mix;
+                    grid->velY[id] = grid->velY[id] * (1.0f - vel_mix) + target_vy * vel_mix;
+                } else {
+                    grid->velX[id] = target_vx;
+                    grid->velY[id] = target_vy;
+                }
             }
-            if (density_mix >= 1.0f) {
-                grid->density[id] = inflow_density;
-            } else if (density_mix > 0.0f) {
-                grid->density[id] = grid->density[id] * (1.0f - density_mix) +
-                                    inflow_density * density_mix;
+            if (apply_density) {
+                if (density_mix >= 1.0f) {
+                    grid->density[id] = inflow_density;
+                } else if (density_mix > 0.0f) {
+                    grid->density[id] = grid->density[id] * (1.0f - density_mix) +
+                                        inflow_density * density_mix;
+                } else {
+                    grid->density[id] = inflow_density;
+                }
             }
         }
 
@@ -169,43 +234,13 @@ static void wind_set_inlet(Fluid2D *grid,
 
 static void wind_set_outlet(Fluid2D *grid,
                             BoundaryFlowEdge edge,
-                            float sponge_strength,
-                            bool clamp_backflow) {
+                            float fade,
+                            bool copy_pressure) {
     if (!grid) return;
-    int span_end = boundary_span_end(grid, edge);
-    if (span_end < 1) return;
-
-    sponge_strength = clamp01(sponge_strength);
-    int layers = 4;
-
-    for (int i = 1; i <= span_end; ++i) {
-        int inner_x = 0, inner_y = 0;
-        if (boundary_interior_cell(grid, edge, i, 0, &inner_x, &inner_y)) {
-            size_t inner_id = cell_index(grid, inner_x, inner_y);
-            int gx = 0, gy = 0;
-            if (boundary_ghost_cell(grid, edge, i, &gx, &gy)) {
-                size_t gid = cell_index(grid, gx, gy);
-                grid->velX[gid] = grid->velX[inner_id];
-                grid->velY[gid] = grid->velY[inner_id];
-                grid->density[gid] = grid->density[inner_id];
-            }
-        }
-
-        for (int depth = 0; depth < layers; ++depth) {
-            int x = 0, y = 0;
-            if (!boundary_interior_cell(grid, edge, i, depth, &x, &y)) continue;
-            size_t id = cell_index(grid, x, y);
-            float layer_weight = (float)(layers - depth) / (float)layers;
-            float damp = 1.0f - sponge_strength * layer_weight;
-            if (damp < 0.0f) damp = 0.0f;
-            grid->velX[id] *= damp;
-            grid->velY[id] *= damp;
-            grid->density[id] *= damp;
-            if (clamp_backflow) {
-                wind_clamp_backflow(grid, edge, id);
-            }
-        }
-    }
+    copy_neumann_band(grid, edge, copy_pressure);
+    if (fade <= 0.0f) return;
+    const int layers = 24;
+    apply_outlet_sponge(grid, edge, layers, fade);
 }
 
 
@@ -249,37 +284,9 @@ static void apply_receive_edge(Fluid2D *grid,
                                BoundaryFlowEdge edge,
                                float strength,
                                double dt) {
-    if (!grid || strength <= 0.0f || dt <= 0.0) return;
-    if (grid->w < 3 || grid->h < 3) return;
-    int span_end = boundary_span_end(grid, edge);
-    if (span_end < 1) return;
-
-    float outward_x = 0.0f, outward_y = 0.0f;
-    boundary_outward_normal(edge, &outward_x, &outward_y);
-
-    float damp = strength * (float)dt;
-    if (damp > 1.0f) damp = 1.0f;
-    float keep = 1.0f - damp;
-    float pull = strength * 0.4f * (float)dt;
-
-    for (int i = 1; i <= span_end; ++i) {
-        for (int depth = 0; depth < 2; ++depth) {
-            int x = 0, y = 0;
-            if (!boundary_interior_cell(grid, edge, i, depth, &x, &y)) continue;
-            size_t id = cell_index(grid, x, y);
-            grid->density[id] = fmaxf(grid->density[id] * keep - strength * 0.1f, 0.0f);
-            grid->velX[id] = outward_x * pull;
-            grid->velY[id] = outward_y * pull;
-        }
-
-        int gx = 0, gy = 0;
-        if (boundary_ghost_cell(grid, edge, i, &gx, &gy)) {
-            size_t boundary_id = cell_index(grid, gx, gy);
-            grid->density[boundary_id] = 0.0f;
-            grid->velX[boundary_id] = outward_x * pull;
-            grid->velY[boundary_id] = outward_y * pull;
-        }
-    }
+    (void)strength;
+    (void)dt;
+    copy_neumann_band(grid, edge, false);
 }
 
 void fluid2d_boundary_apply(const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
@@ -297,18 +304,7 @@ void fluid2d_boundary_apply(const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
 }
 
 static void enforce_receiver(Fluid2D *grid, BoundaryFlowEdge edge) {
-    if (!grid) return;
-    int span_end = boundary_span_end(grid, edge);
-    if (span_end < 1) return;
-
-    for (int i = 1; i <= span_end; ++i) {
-        int x = 0, y = 0;
-        if (!boundary_interior_cell(grid, edge, i, 0, &x, &y)) continue;
-        size_t id = cell_index(grid, x, y);
-        grid->density[id] *= 0.2f;
-        grid->velX[id] *= 0.2f;
-        grid->velY[id] *= 0.2f;
-    }
+    copy_neumann_band(grid, edge, true);
 }
 
 static void enforce_emitter(Fluid2D *grid, BoundaryFlowEdge edge) {
@@ -364,28 +360,37 @@ void fluid2d_boundary_apply_wind(const AppConfig *cfg,
     float inflow_density = clamp_positive(cfg->tunnel_inflow_density, 10.0f);
     if (!isfinite(ramp) || ramp < 0.0f) ramp = 0.0f;
     if (ramp > 1.0f) ramp = 1.0f;
+    float ramp_factor = ramp;
+    float mix_boost = ramp_factor * ramp_factor;
     for (int edge = 0; edge < BOUNDARY_EDGE_COUNT; ++edge) {
         const BoundaryFlow *flow = &flows[edge];
         switch (flow->mode) {
         case BOUNDARY_FLOW_EMIT: {
-            float speed = clamp_positive(flow->strength, cfg->tunnel_inflow_speed) * ramp;
-            float vel_mix = clamp01((float)(dt * 6.0));
-            float density_mix = clamp01((float)(dt * 3.0));
+            float target_speed = clamp_positive(flow->strength, cfg->tunnel_inflow_speed);
+            float speed = target_speed * ramp_factor;
+            float vel_mix = clamp01((float)(dt * 6.0)) * mix_boost;
+            float density_mix = clamp01((float)(dt * 3.0)) * mix_boost;
+            float target_density = inflow_density * ramp_factor;
             wind_set_inlet(grid,
                            (BoundaryFlowEdge)edge,
                            speed,
-                           inflow_density,
+                           target_density,
                            vel_mix,
                            density_mix);
             break;
         }
         case BOUNDARY_FLOW_RECEIVE: {
             float strength = clamp_positive(flow->strength, cfg->tunnel_inflow_speed);
-            float sponge = clamp01((float)(dt * (0.02f * strength + 1.5f)));
+            float sponge_scale = fmaxf(cfg->tunnel_viscosity_scale, 0.1f);
+            float base = strength * (1.0f + sponge_scale);
+            float fade = (float)(dt * base * 2.5f);
+            float min_fade = 0.02f * sponge_scale;
+            if (fade < min_fade) fade = min_fade;
+            if (fade > 1.0f) fade = 1.0f;
             wind_set_outlet(grid,
                             (BoundaryFlowEdge)edge,
-                            sponge,
-                            true);
+                            fade,
+                            false);
             break;
         }
         default:

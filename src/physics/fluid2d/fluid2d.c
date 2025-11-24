@@ -1,6 +1,8 @@
 #include "physics/fluid2d/fluid2d.h"
 #include "physics/objects/object_manager.h"
 
+#include "render/TimerHUD/src/api/time_scope.h"
+
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -289,144 +291,279 @@ void fluid2d_add_velocity(Fluid2D *f, int x, int y, float vx, float vy) {
     f->velY[id] += vy;
 }
 
-static int cell_from_world(float pos, int grid, float world_max) {
-    float normalized = pos / world_max;
-    if (normalized < 0.0f) normalized = 0.0f;
-    if (normalized > 1.0f) normalized = 1.0f;
-    return (int)(normalized * (float)(grid - 1));
-}
+void fluid2d_enforce_solid_mask(Fluid2D *f,
+                                const uint8_t *mask,
+                                const float *mask_vel_x,
+                                const float *mask_vel_y) {
+    if (!f || !mask) return;
+    int w = f->w;
+    int h = f->h;
+    size_t count = (size_t)w * (size_t)h;
+    for (size_t i = 0; i < count; ++i) {
+        if (mask[i]) {
+            float vx = mask_vel_x ? mask_vel_x[i] : 0.0f;
+            float vy = mask_vel_y ? mask_vel_y[i] : 0.0f;
+            f->velX[i] = vx;
+            f->velY[i] = vy;
+            f->density[i] = 0.0f;
+            f->pressure[i] = 0.0f;
+        }
+    }
 
-static float cell_to_world(int cell, int grid, float world_max) {
-    if (grid <= 1) return 0.0f;
-    float t = (float)cell / (float)(grid - 1);
-    if (t < 0.0f) t = 0.0f;
-    if (t > 1.0f) t = 1.0f;
-    return t * world_max;
-}
+    for (int y = 1; y < h - 1; ++y) {
+        for (int x = 1; x < w - 1; ++x) {
+            size_t id = idx(f, x, y);
+            if (mask[id]) continue;
 
-static float world_velocity_to_grid(float v, int grid, float world_max) {
-    if (grid <= 1 || world_max <= 0.0f) return 0.0f;
-    return v * (float)(grid - 1) / world_max;
-}
-
-void fluid2d_apply_object_mask(Fluid2D *f,
-                               const ObjectManager *objects,
-                               const AppConfig *cfg) {
-    if (!f || !objects || !cfg) return;
-    if (!objects->objects || objects->count == 0) return;
-
-    for (int i = 0; i < objects->count; ++i) {
-        const SceneObject *obj = &objects->objects[i];
-        if (!obj || obj->body.is_static) continue;
-        float vel_grid_x = world_velocity_to_grid(obj->body.velocity.x,
-                                                  f->w,
-                                                  (float)cfg->window_w);
-        float vel_grid_y = world_velocity_to_grid(obj->body.velocity.y,
-                                                  f->h,
-                                                  (float)cfg->window_h);
-        if (obj->type == SCENE_OBJECT_CIRCLE) {
-            int cx = cell_from_world(obj->body.position.x, f->w, (float)cfg->window_w);
-            int cy = cell_from_world(obj->body.position.y, f->h, (float)cfg->window_h);
-            int radius = (int)(obj->body.radius / (float)cfg->window_w * (float)f->w);
-            if (radius < 1) radius = 1;
-            for (int y = cy - radius; y <= cy + radius; ++y) {
-                if (y <= 0 || y >= f->h - 1) continue;
-                for (int x = cx - radius; x <= cx + radius; ++x) {
-                    if (x <= 0 || x >= f->w - 1) continue;
-                    float dx = (float)(x - cx);
-                    float dy = (float)(y - cy);
-                    if (dx * dx + dy * dy <= (float)(radius * radius)) {
-                        size_t id = idx(f, x, y);
-                        f->density[id] = 0.0f;
-                        f->velX[id] = vel_grid_x;
-                        f->velY[id] = vel_grid_y;
-                    }
-                }
+            float vx_sum = 0.0f;
+            float vy_sum = 0.0f;
+            int touching = 0;
+            const int offsets[4][2] = {
+                {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+            };
+            for (int n = 0; n < 4; ++n) {
+                int nx = x + offsets[n][0];
+                int ny = y + offsets[n][1];
+                if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+                size_t nid = idx(f, nx, ny);
+                if (!mask[nid]) continue;
+                float target_vx = mask_vel_x ? mask_vel_x[nid] : 0.0f;
+                float target_vy = mask_vel_y ? mask_vel_y[nid] : 0.0f;
+                vx_sum += target_vx;
+                vy_sum += target_vy;
+                ++touching;
             }
-        } else if (obj->type == SCENE_OBJECT_BOX) {
-            float half_diag = sqrtf(obj->body.half_extents.x * obj->body.half_extents.x +
-                                    obj->body.half_extents.y * obj->body.half_extents.y);
-            int min_x = cell_from_world(obj->body.position.x - half_diag,
-                                        f->w, (float)cfg->window_w);
-            int max_x = cell_from_world(obj->body.position.x + half_diag,
-                                        f->w, (float)cfg->window_w);
-            int min_y = cell_from_world(obj->body.position.y - half_diag,
-                                        f->h, (float)cfg->window_h);
-            int max_y = cell_from_world(obj->body.position.y + half_diag,
-                                        f->h, (float)cfg->window_h);
-            if (min_x < 1) min_x = 1;
-            if (max_x > f->w - 2) max_x = f->w - 2;
-            if (min_y < 1) min_y = 1;
-            if (max_y > f->h - 2) max_y = f->h - 2;
-
-            float cos_a = cosf(obj->body.angle);
-            float sin_a = sinf(obj->body.angle);
-            for (int y = min_y; y <= max_y; ++y) {
-                float world_y = cell_to_world(y, f->h, (float)cfg->window_h);
-                for (int x = min_x; x <= max_x; ++x) {
-                    float world_x = cell_to_world(x, f->w, (float)cfg->window_w);
-                    float rel_x = world_x - obj->body.position.x;
-                    float rel_y = world_y - obj->body.position.y;
-                    float local_x =  rel_x * cos_a + rel_y * sin_a;
-                    float local_y = -rel_x * sin_a + rel_y * cos_a;
-                    if (fabsf(local_x) <= obj->body.half_extents.x &&
-                        fabsf(local_y) <= obj->body.half_extents.y) {
-                        size_t id = idx(f, x, y);
-                        f->density[id] = 0.0f;
-                        f->velX[id] = vel_grid_x;
-                        f->velY[id] = vel_grid_y;
-                    }
-                }
+            if (touching > 0) {
+                float inv = 1.0f / (float)touching;
+                f->velX[id] = vx_sum * inv;
+                f->velY[id] = vy_sum * inv;
             }
         }
     }
 }
 
-void fluid2d_apply_static_mask(Fluid2D *f, const uint8_t *mask) {
-    if (!f || !mask) return;
-    size_t count = (size_t)f->w * (size_t)f->h;
-    for (size_t i = 0; i < count; ++i) {
-        if (mask[i]) {
-            f->density[i] = 0.0f;
-            f->velX[i] = 0.0f;
-            f->velY[i] = 0.0f;
+static inline void enforce_solids_if_needed(Fluid2D *f,
+                                            const uint8_t *mask,
+                                            const float *mask_vel_x,
+                                            const float *mask_vel_y) {
+    if (!mask) return;
+    fluid2d_enforce_solid_mask(f, mask, mask_vel_x, mask_vel_y);
+}
+
+static inline void boundary_outward_normal(BoundaryFlowEdge edge, float *nx, float *ny) {
+    if (!nx || !ny) return;
+    switch (edge) {
+    case BOUNDARY_EDGE_TOP:    *nx = 0.0f;  *ny = -1.0f; break;
+    case BOUNDARY_EDGE_BOTTOM: *nx = 0.0f;  *ny = 1.0f;  break;
+    case BOUNDARY_EDGE_LEFT:   *nx = -1.0f; *ny = 0.0f;  break;
+    case BOUNDARY_EDGE_RIGHT:  *nx = 1.0f;  *ny = 0.0f;  break;
+    default:                   *nx = 0.0f;  *ny = 0.0f;  break;
+    }
+}
+
+static inline int clamp_band(int value, int lo, int hi) {
+    if (value < lo) return lo;
+    if (value > hi) return hi;
+    return value;
+}
+
+static inline float smooth_clamp_weight(int depth, int band) {
+    if (band <= 1) return 1.0f;
+    float t = 1.0f - (float)depth / (float)band;
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    // smoothstep for gentler transition.
+    return t * t * (3.0f - 2.0f * t);
+}
+
+static inline void clamp_velocity_along_normal(float *vx,
+                                               float *vy,
+                                               float nx,
+                                               float ny,
+                                               float min_out) {
+    float vn = (*vx) * nx + (*vy) * ny;
+    float tx = *vx - vn * nx;
+    float ty = *vy - vn * ny;
+    float clamped_vn = vn;
+    if (clamped_vn < 0.0f) clamped_vn = 0.0f;
+    if (min_out > 0.0f && clamped_vn < min_out) clamped_vn = min_out;
+    *vx = tx + clamped_vn * nx;
+    *vy = ty + clamped_vn * ny;
+}
+
+static int outlet_band_size(const Fluid2D *f, BoundaryFlowEdge edge) {
+    if (!f) return 0;
+    int dim = (edge == BOUNDARY_EDGE_TOP || edge == BOUNDARY_EDGE_BOTTOM)
+                  ? f->h
+                  : f->w;
+    if (dim < 4) return 0;
+    int band = dim / 5;
+    if (band < 8) band = 8;
+    if (band > 100) band = 100;
+    if (band > dim - 2) band = dim - 2;
+    return band;
+}
+
+static void enforce_outflow_band_for_edge(Fluid2D *f,
+                                          BoundaryFlowEdge edge,
+                                          int band,
+                                          float min_out) {
+    if (!f || band <= 0) return;
+    int w = f->w;
+    int h = f->h;
+    float nx = 0.0f, ny = 0.0f;
+    boundary_outward_normal(edge, &nx, &ny);
+    if (nx == 0.0f && ny == 0.0f) return;
+
+    switch (edge) {
+    case BOUNDARY_EDGE_RIGHT: {
+        int x_start = clamp_band(w - 1 - band, 1, w - 2);
+        for (int y = 1; y < h - 1; ++y) {
+            for (int x = x_start; x < w - 1; ++x) {
+                int depth = (w - 2) - x;
+                if (depth < 0) depth = 0;
+                float weight = smooth_clamp_weight(depth, band);
+                if (weight <= 0.0f) continue;
+                size_t id = idx(f, x, y);
+                float orig_vx = f->velX[id];
+                float orig_vy = f->velY[id];
+                float clamped_vx = orig_vx;
+                float clamped_vy = orig_vy;
+                clamp_velocity_along_normal(&clamped_vx, &clamped_vy, nx, ny, min_out);
+                f->velX[id] = orig_vx + (clamped_vx - orig_vx) * weight;
+                f->velY[id] = orig_vy + (clamped_vy - orig_vy) * weight;
+            }
         }
+        break;
+    }
+    case BOUNDARY_EDGE_LEFT: {
+        int x_end = clamp_band(band, 1, w - 2);
+        for (int y = 1; y < h - 1; ++y) {
+            for (int x = 1; x <= x_end; ++x) {
+                int depth = x - 1;
+                float weight = smooth_clamp_weight(depth, band);
+                if (weight <= 0.0f) continue;
+                size_t id = idx(f, x, y);
+                float orig_vx = f->velX[id];
+                float orig_vy = f->velY[id];
+                float clamped_vx = orig_vx;
+                float clamped_vy = orig_vy;
+                clamp_velocity_along_normal(&clamped_vx, &clamped_vy, nx, ny, min_out);
+                f->velX[id] = orig_vx + (clamped_vx - orig_vx) * weight;
+                f->velY[id] = orig_vy + (clamped_vy - orig_vy) * weight;
+            }
+        }
+        break;
+    }
+    case BOUNDARY_EDGE_TOP: {
+        int y_end = clamp_band(band, 1, h - 2);
+        for (int y = 1; y <= y_end; ++y) {
+            int depth = y - 1;
+            float weight = smooth_clamp_weight(depth, band);
+            if (weight <= 0.0f) continue;
+            for (int x = 1; x < w - 1; ++x) {
+                size_t id = idx(f, x, y);
+                float orig_vx = f->velX[id];
+                float orig_vy = f->velY[id];
+                float clamped_vx = orig_vx;
+                float clamped_vy = orig_vy;
+                clamp_velocity_along_normal(&clamped_vx, &clamped_vy, nx, ny, min_out);
+                f->velX[id] = orig_vx + (clamped_vx - orig_vx) * weight;
+                f->velY[id] = orig_vy + (clamped_vy - orig_vy) * weight;
+            }
+        }
+        break;
+    }
+    case BOUNDARY_EDGE_BOTTOM: {
+        int y_start = clamp_band(h - 1 - band, 1, h - 2);
+        for (int y = y_start; y < h - 1; ++y) {
+            int depth = (h - 2) - y;
+            float weight = smooth_clamp_weight(depth, band);
+            if (weight <= 0.0f) continue;
+            for (int x = 1; x < w - 1; ++x) {
+                size_t id = idx(f, x, y);
+                float orig_vx = f->velX[id];
+                float orig_vy = f->velY[id];
+                float clamped_vx = orig_vx;
+                float clamped_vy = orig_vy;
+                clamp_velocity_along_normal(&clamped_vx, &clamped_vy, nx, ny, min_out);
+                f->velX[id] = orig_vx + (clamped_vx - orig_vx) * weight;
+                f->velY[id] = orig_vy + (clamped_vy - orig_vy) * weight;
+            }
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+static void enforce_outflow_direction(Fluid2D *f,
+                                      const AppConfig *cfg,
+                                      const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
+    if (!f || !cfg || !flows) return;
+    float inflow_speed = cfg->tunnel_inflow_speed;
+    if (!isfinite(inflow_speed) || inflow_speed < 0.0f) inflow_speed = 0.0f;
+    float min_out = inflow_speed > 0.0f ? inflow_speed * 0.25f : 0.0f;
+    for (int edge = 0; edge < BOUNDARY_EDGE_COUNT; ++edge) {
+        if (flows[edge].mode != BOUNDARY_FLOW_RECEIVE) continue;
+        int band = outlet_band_size(f, (BoundaryFlowEdge)edge);
+        if (band <= 0) continue;
+        enforce_outflow_band_for_edge(f, (BoundaryFlowEdge)edge, band, min_out);
     }
 }
 
 void fluid2d_step(Fluid2D *f,
                   double dt,
                   const AppConfig *cfg,
-                  const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
+                  const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
+                  const uint8_t *solid_mask,
+                  const float *solid_vel_x,
+                  const float *solid_vel_y) {
     if (!f || !cfg) return;
     float diff = cfg->density_diffusion;
     float visc = cfg->velocity_damping;
     float fdt  = (float)dt;
     int iterations = solver_iterations_from_config(cfg);
 
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
+
+    ts_start_timer("1st_diffuse");
     swap_buffers(&f->velX_prev, &f->velX);
     diffuse(f, 1, f->velX, f->velX_prev, visc, fdt, iterations, flows);
 
     swap_buffers(&f->velY_prev, &f->velY);
     diffuse(f, 2, f->velY, f->velY_prev, visc, fdt, iterations, flows);
+    ts_stop_timer("1st_diffuse");
 
+    ts_start_timer("proj_advect");
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
     project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
+    enforce_outflow_direction(f, cfg, flows);
 
     swap_buffers(&f->velX_prev, &f->velX);
     swap_buffers(&f->velY_prev, &f->velY);
     advect(f, 1, f->velX, f->velX_prev, f->velX_prev, f->velY_prev, fdt, flows);
     advect(f, 2, f->velY, f->velY_prev, f->velX_prev, f->velY_prev, fdt, flows);
 
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
     project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
+    enforce_outflow_direction(f, cfg, flows);
+    ts_stop_timer("proj_advect");
 
+    ts_start_timer("buoyancy");
     apply_buoyancy(f, cfg, fdt);
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
     project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
+    enforce_outflow_direction(f, cfg, flows);
 
     swap_buffers(&f->density_prev, &f->density);
     diffuse(f, 0, f->density, f->density_prev, diff, fdt, iterations, flows);
 
     swap_buffers(&f->density_prev, &f->density);
     advect(f, 0, f->density, f->density_prev, f->velX, f->velY, fdt, flows);
+    ts_stop_timer("buoyancy");
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
 
     size_t count = (size_t)f->w * (size_t)f->h;
     float decay = (float)(cfg->density_decay * dt);

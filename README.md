@@ -20,10 +20,15 @@ Small SDL-based sandbox for experimenting with paired fluid, particle, and rigid
 ### Default controls
 - Mouse drag deposits buffered brush samples: `1` selects the high-density brush, `2` switches to the pure velocity brush.
 - `P` toggles pause, `C` clears the field, `E` exports a snapshot, `Esc` exits the sim and returns to the scene menu.
+- Overlays: `V` toggles the vorticity overlay, `B` toggles the pressure overlay, `S` toggles velocity vectors, **Shift + S** switches the velocity vector mode (magnitude vs. fixed-length slope field), and `L` toggles the particle flow trails. The HUD reflects the current state of each overlay.
 
 ### Scene editor & menu
 - Launch the app to enter the SDL scene menu. Custom preset slots are displayed on the left; double-click a slot name to rename it, single-click to select it, and hit **Edit Preset** to open the editor canvas. Grid and quality controls live on the right, plus headless toggles/inline frame-count editing when you want to run offline batches.
 - In the editor view, drag emitters to reposition them, drag the arrow handle on jets/sinks to rotate the flow direction, and press `+`/`-` (or the numpad equivalents) to grow/shrink the emitter radius/strength. Density sources render as orange, jets cyan, sinks magenta, and preset objects are editable/rotatable. Double-click the preset title above the canvas to rename it.
 - Press `Enter` to apply edits or `Esc` to cancel and return to the menu. The simulation uses the latest edited slot when you click **Start**, and your edits persist via `config/custom_preset.txt`. Enabling headless mode queues a run, keeps the menu window up, and shows live status until it finishes (or you cancel with `Esc`).
+
+### Solid mask & overlays
+- Static and preset obstacles are rasterized into a dedicated solid mask (`scene->obstacle_mask`), and a cached distance transform keeps track of how far each fluid cell is from the nearest solid boundary. The fluid solver enforces no-slip conditions against that mask every major phase, so particles/velocity vectors/pressure overlays all see consistent boundary conditions without recomputing distances each frame.
+- Overlays reuse that cached distance map for alpha falloff, which keeps the far-field uncluttered while rendering the high-contrast pressure/vorticity detail near objects.
 
 Adding new systems (particles, rigid bodies, tools, exporters, etc.) should follow this same layout: pair a header in `include/` with implementation under `src/` and describe the module in the directory-level README.

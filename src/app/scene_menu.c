@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "app/editor/scene_editor.h"
 #include "app/quality_profiles.h"
@@ -78,7 +79,15 @@ typedef struct SceneMenuInteraction {
     TextInputField headless_frames_input;
     bool editing_headless_frames;
     SDL_Rect headless_frames_rect;
+    TextInputField viscosity_input;
+    bool editing_viscosity;
+    SDL_Rect viscosity_rect;
+    TextInputField inflow_input;
+    bool editing_inflow;
+    SDL_Rect inflow_rect;
     Uint32 last_headless_click_ticks;
+    Uint32 last_viscosity_click_ticks;
+    Uint32 last_inflow_click_ticks;
     SimulationMode active_mode;
 } SceneMenuInteraction;
 
@@ -89,6 +98,12 @@ static void set_status(SceneMenuInteraction *ctx, const char *text, bool wait_ac
 static void clear_status(SceneMenuInteraction *ctx);
 static void begin_headless_frames_edit(SceneMenuInteraction *ctx);
 static void finish_headless_frames_edit(SceneMenuInteraction *ctx, bool apply);
+static void begin_viscosity_edit(SceneMenuInteraction *ctx);
+static void finish_viscosity_edit(SceneMenuInteraction *ctx, bool apply);
+static void begin_inflow_edit(SceneMenuInteraction *ctx);
+static void finish_inflow_edit(SceneMenuInteraction *ctx, bool apply);
+static void begin_viscosity_edit(SceneMenuInteraction *ctx);
+static void finish_viscosity_edit(SceneMenuInteraction *ctx, bool apply);
 
 static SDL_Color COLOR_BG       = {18, 18, 22, 255};
 static SDL_Color COLOR_PANEL    = {32, 36, 40, 255};
@@ -789,6 +804,64 @@ static void finish_headless_frames_edit(SceneMenuInteraction *ctx, bool apply) {
     ctx->editing_headless_frames = false;
 }
 
+static void begin_viscosity_edit(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return;
+    char buffer[32];
+    float v = ctx->cfg ? ctx->cfg->velocity_damping : 0.0f;
+    if (v < 0.0f) v = 0.0f;
+    snprintf(buffer, sizeof(buffer), "%.8f", v);
+    text_input_begin(&ctx->viscosity_input, buffer, sizeof(buffer) - 1);
+    ctx->editing_viscosity = true;
+}
+
+static void finish_viscosity_edit(SceneMenuInteraction *ctx, bool apply) {
+    if (!ctx || !ctx->editing_viscosity) return;
+    if (apply && ctx->cfg) {
+        const char *value = text_input_value(&ctx->viscosity_input);
+        if (value && value[0]) {
+            char *end = NULL;
+            double v = strtod(value, &end);
+            if (end != value && isfinite(v)) {
+                if (v < 0.0) v = 0.0;
+                if (v > 0.1) v = 0.1;
+                ctx->cfg->velocity_damping = (float)v;
+            }
+        }
+    }
+    text_input_end(&ctx->viscosity_input);
+    ctx->editing_viscosity = false;
+}
+
+static void begin_inflow_edit(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return;
+    char buffer[32];
+    float v = ctx->cfg ? ctx->cfg->tunnel_inflow_speed : 0.0f;
+    snprintf(buffer, sizeof(buffer), "%.6f", v);
+    text_input_begin(&ctx->inflow_input, buffer, sizeof(buffer) - 1);
+    ctx->editing_inflow = true;
+}
+
+static void finish_inflow_edit(SceneMenuInteraction *ctx, bool apply) {
+    if (!ctx || !ctx->editing_inflow) return;
+    if (apply && ctx->cfg) {
+        const char *value = text_input_value(&ctx->inflow_input);
+        if (value && value[0]) {
+            char *end = NULL;
+            double v = strtod(value, &end);
+            if (end != value && isfinite(v)) {
+                if (v < 0.0) v = 0.0;
+                if (v > 500.0) v = 500.0;
+                ctx->cfg->tunnel_inflow_speed = (float)v;
+                if (ctx->selection) {
+                    ctx->selection->tunnel_inflow_speed = (float)v;
+                }
+            }
+        }
+    }
+    text_input_end(&ctx->inflow_input);
+    ctx->editing_inflow = false;
+}
+
 static void menu_pointer_up(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
@@ -820,6 +893,30 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
         return;
     }
 
+    if (point_in_rect(x, y, &ctx->inflow_rect)) {
+        Uint32 now = SDL_GetTicks();
+        bool double_click = (now - ctx->last_inflow_click_ticks) <= DOUBLE_CLICK_MS;
+        ctx->last_inflow_click_ticks = now;
+        if (double_click) {
+            begin_inflow_edit(ctx);
+        }
+        return;
+    } else if (ctx->editing_inflow) {
+        finish_inflow_edit(ctx, true);
+    }
+
+    if (point_in_rect(x, y, &ctx->viscosity_rect)) {
+        Uint32 now = SDL_GetTicks();
+        bool double_click = (now - ctx->last_viscosity_click_ticks) <= DOUBLE_CLICK_MS;
+        ctx->last_viscosity_click_ticks = now;
+        if (double_click) {
+            begin_viscosity_edit(ctx);
+        }
+        return;
+    } else if (ctx->editing_viscosity) {
+        finish_viscosity_edit(ctx, true);
+    }
+
     if (point_in_rect(x, y, &ctx->headless_frames_rect)) {
         Uint32 now = SDL_GetTicks();
         bool double_click = (now - ctx->last_headless_click_ticks) <= DOUBLE_CLICK_MS;
@@ -838,6 +935,12 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
         }
         if (ctx->editing_headless_frames) {
             finish_headless_frames_edit(ctx, true);
+        }
+        if (ctx->editing_inflow) {
+            finish_inflow_edit(ctx, true);
+        }
+        if (ctx->editing_viscosity) {
+            finish_viscosity_edit(ctx, true);
         }
         if (ctx->cfg->headless_enabled) {
             ctx->headless_pending = true;
@@ -933,6 +1036,16 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
     bool in_frames_rect = point_in_rect(x, y, &frames_rect);
     if (!in_frames_rect && ctx->editing_headless_frames) {
         finish_headless_frames_edit(ctx, true);
+    }
+    SDL_Rect inflow_rect = ctx->inflow_rect;
+    bool in_inflow_rect = point_in_rect(x, y, &inflow_rect);
+    if (!in_inflow_rect && ctx->editing_inflow) {
+        finish_inflow_edit(ctx, true);
+    }
+    SDL_Rect viscosity_rect = ctx->viscosity_rect;
+    bool in_viscosity_rect = point_in_rect(x, y, &viscosity_rect);
+    if (!in_viscosity_rect && ctx->editing_viscosity) {
+        finish_viscosity_edit(ctx, true);
     }
 
     bool is_add = false;
@@ -1043,6 +1156,28 @@ static void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         }
         return;
     }
+
+    if (ctx->editing_inflow) {
+        if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+            finish_inflow_edit(ctx, true);
+        } else if (key == SDLK_ESCAPE) {
+            finish_inflow_edit(ctx, false);
+        } else {
+            text_input_handle_key(&ctx->inflow_input, key);
+        }
+        return;
+    }
+
+    if (ctx->editing_viscosity) {
+        if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+            finish_viscosity_edit(ctx, true);
+        } else if (key == SDLK_ESCAPE) {
+            finish_viscosity_edit(ctx, false);
+        } else {
+            text_input_handle_key(&ctx->viscosity_input, key);
+        }
+        return;
+    }
 }
 
 static void menu_text_input(void *user, const char *text) {
@@ -1055,6 +1190,14 @@ static void menu_text_input(void *user, const char *text) {
     }
     if (ctx->editing_headless_frames) {
         text_input_handle_text(&ctx->headless_frames_input, text);
+        return;
+    }
+    if (ctx->editing_inflow) {
+        text_input_handle_text(&ctx->inflow_input, text);
+        return;
+    }
+    if (ctx->editing_viscosity) {
+        text_input_handle_text(&ctx->viscosity_input, text);
         return;
     }
 }
@@ -1154,6 +1297,11 @@ bool scene_menu_run(AppConfig *cfg,
     } else {
         current_selection.headless_frame_count = cfg->headless_frame_count;
     }
+    if (current_selection.tunnel_inflow_speed > 0.0f) {
+        cfg->tunnel_inflow_speed = current_selection.tunnel_inflow_speed;
+    } else {
+        current_selection.tunnel_inflow_speed = cfg->tunnel_inflow_speed;
+    }
 
     bool run = true;
     bool start_requested = false;
@@ -1195,8 +1343,14 @@ bool scene_menu_run(AppConfig *cfg,
         .status_wait_ack = false,
         .headless_run_requested = false,
         .editing_headless_frames = false,
+        .editing_inflow = false,
+        .editing_viscosity = false,
         .last_headless_click_ticks = 0,
+        .last_inflow_click_ticks = 0,
+        .last_viscosity_click_ticks = 0,
         .headless_frames_rect = {0, 0, 0, 0},
+        .inflow_rect = {0, 0, 0, 0},
+        .viscosity_rect = {0, 0, 0, 0},
         .active_mode = selection_mode
     };
 
@@ -1239,6 +1393,12 @@ bool scene_menu_run(AppConfig *cfg,
         text_input_update(&ctx.rename_input, dt);
         if (ctx.editing_headless_frames) {
             text_input_update(&ctx.headless_frames_input, dt);
+        }
+        if (ctx.editing_inflow) {
+            text_input_update(&ctx.inflow_input, dt);
+        }
+        if (ctx.editing_viscosity) {
+            text_input_update(&ctx.viscosity_input, dt);
         }
 
         InputCommands cmds;
@@ -1346,6 +1506,40 @@ bool scene_menu_run(AppConfig *cfg,
             snprintf(frames_label, sizeof(frames_label), "Frames: %d", ctx.cfg->headless_frame_count);
             draw_text(renderer, font_body, frames_label, frames_rect.x + 8, frames_rect.y + 6, COLOR_TEXT);
         }
+
+        SDL_Rect viscosity_rect = {frames_rect.x,
+                                   frames_rect.y - 35,
+                                   frames_rect.w,
+                                   frames_rect.h};
+        ctx.viscosity_rect = viscosity_rect;
+        SDL_SetRenderDrawColor(renderer, COLOR_PANEL.r, COLOR_PANEL.g, COLOR_PANEL.b, 255);
+        SDL_RenderFillRect(renderer, &viscosity_rect);
+        SDL_SetRenderDrawColor(renderer, COLOR_ACCENT.r, COLOR_ACCENT.g, COLOR_ACCENT.b, 140);
+        SDL_RenderDrawRect(renderer, &viscosity_rect);
+        if (ctx.editing_viscosity) {
+            draw_text_input(renderer, font_small, &viscosity_rect, &ctx.viscosity_input);
+        } else {
+            char viscosity_label[64];
+            snprintf(viscosity_label, sizeof(viscosity_label), "Viscosity: %.6g", ctx.cfg->velocity_damping);
+            draw_text(renderer, font_small, viscosity_label, viscosity_rect.x + 8, viscosity_rect.y + 6, COLOR_TEXT);
+        }
+
+        SDL_Rect inflow_rect = {viscosity_rect.x,
+                                viscosity_rect.y - 35,
+                                viscosity_rect.w,
+                                viscosity_rect.h};
+        ctx.inflow_rect = inflow_rect;
+        SDL_SetRenderDrawColor(renderer, COLOR_PANEL.r, COLOR_PANEL.g, COLOR_PANEL.b, 255);
+        SDL_RenderFillRect(renderer, &inflow_rect);
+        SDL_SetRenderDrawColor(renderer, COLOR_ACCENT.r, COLOR_ACCENT.g, COLOR_ACCENT.b, 120);
+        SDL_RenderDrawRect(renderer, &inflow_rect);
+        if (ctx.editing_inflow) {
+            draw_text_input(renderer, font_small, &inflow_rect, &ctx.inflow_input);
+        } else {
+            char inflow_label[64];
+            snprintf(inflow_label, sizeof(inflow_label), "Inflow: %.3f", ctx.cfg->tunnel_inflow_speed);
+            draw_text(renderer, font_small, inflow_label, inflow_rect.x + 8, inflow_rect.y + 6, COLOR_TEXT);
+        }
         draw_button(renderer, &ctx.start_button.rect, ctx.start_button.label, font_body, false);
         draw_button(renderer, &ctx.edit_button.rect, ctx.edit_button.label, font_body, false);
         draw_button(renderer, &ctx.quit_button.rect, ctx.quit_button.label, font_body, false);
@@ -1395,6 +1589,7 @@ bool scene_menu_run(AppConfig *cfg,
         *preset_state = *ctx.active_preset;
     }
     current_selection.headless_frame_count = ctx.cfg ? ctx.cfg->headless_frame_count : current_selection.headless_frame_count;
+    current_selection.tunnel_inflow_speed = ctx.cfg ? ctx.cfg->tunnel_inflow_speed : current_selection.tunnel_inflow_speed;
     *selection = current_selection;
 
     return start_requested;

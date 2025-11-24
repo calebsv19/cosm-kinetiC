@@ -5,6 +5,7 @@ Translates raw SDL events into the higher-level `InputCommands` struct that the 
 - `input.c` – gathers SDL events, sets the analog cursor state (`mouse_down`, `mouse_x`, `mouse_y`), and pushes discrete actions into the `CommandBus`:
   - `P` pauses, `C` clears the smoke field, `E` exports a snapshot.
   - `1` selects the high-density brush, `2` selects the pure-velocity brush. The selected mode is mirrored back via `InputCommands` so the stroke sampler can tag buffered samples correctly.
+  - Overlay toggles: `V` (vorticity), `B` (pressure), `S` (velocity vectors), **Shift + S** (velocity-mode toggle between magnitude and fixed length), `L` (particle trails). These feed the renderer through the command bus so the HUD stays in sync.
 - `input_context.c` – stack-based input context manager that lets the menu, editor, and runtime push their own pointer/key handlers without rewiring the global input loop.
 - `stroke_buffer.c` – dynamically resizable ring buffer used by the scene controller to keep a high-frequency history of cursor samples. This is what makes brush strokes appear continuous even when the simulation takes longer per frame.
 

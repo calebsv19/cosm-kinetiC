@@ -49,7 +49,8 @@ int main(int argc, char **argv) {
         .custom_slot_index = library.active_slot,
         .quality_index = cfg.quality_index,
         .headless_frame_count = cfg.headless_frame_count,
-        .sim_mode = cfg.sim_mode
+        .sim_mode = cfg.sim_mode,
+        .tunnel_inflow_speed = cfg.tunnel_inflow_speed
     };
     for (int i = 0; i < SIMULATION_MODE_COUNT; ++i) {
         selection.last_mode_slot[i] = -1;

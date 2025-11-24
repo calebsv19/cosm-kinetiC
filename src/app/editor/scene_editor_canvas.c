@@ -31,17 +31,40 @@ static SDL_Color lighten_color(SDL_Color color, float factor) {
     return result;
 }
 
-static float object_handle_base_size(const PresetObject *obj) {
-    if (!obj) return SCENE_EDITOR_OBJECT_HANDLE_MIN;
-    float base = (obj->type == PRESET_OBJECT_BOX)
-                     ? fmaxf(obj->size_x, obj->size_y)
-                     : obj->size_x;
-    if (base < SCENE_EDITOR_OBJECT_HANDLE_MIN) base = SCENE_EDITOR_OBJECT_HANDLE_MIN;
-    return base;
+float scene_editor_canvas_object_visual_radius_px(const PresetObject *obj, int canvas_w) {
+    if (!obj) return (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
+    float radius = obj->size_x * (float)canvas_w;
+    if (radius < (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX) {
+        radius = (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
+    }
+    return radius;
 }
 
-static float object_handle_visual_length(const PresetObject *obj) {
-    return object_handle_base_size(obj) + SCENE_EDITOR_OBJECT_HANDLE_MARGIN;
+void scene_editor_canvas_object_visual_half_sizes_px(const PresetObject *obj,
+                                                     int canvas_w,
+                                                     int canvas_h,
+                                                     float *out_half_w_px,
+                                                     float *out_half_h_px) {
+    if (!obj) return;
+    float half_w = obj->size_x * (float)canvas_w;
+    float half_h = obj->size_y * (float)canvas_h;
+    if (half_w < (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX) half_w = (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX;
+    if (half_h < (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX) half_h = (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX;
+    if (out_half_w_px) *out_half_w_px = half_w;
+    if (out_half_h_px) *out_half_h_px = half_h;
+}
+
+float scene_editor_canvas_object_handle_length_px(const PresetObject *obj,
+                                                  int canvas_w,
+                                                  int canvas_h) {
+    if (!obj) return 0.0f;
+    if (obj->type == PRESET_OBJECT_CIRCLE) {
+        return scene_editor_canvas_object_visual_radius_px(obj, canvas_w);
+    }
+    float half_w = 0.0f, half_h = 0.0f;
+    scene_editor_canvas_object_visual_half_sizes_px(obj, canvas_w, canvas_h, &half_w, &half_h);
+    (void)half_h; // currently unused; handle follows the box's local +X axis.
+    return half_w;
 }
 
 void scene_editor_canvas_project(int canvas_x,
@@ -309,18 +332,15 @@ int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
                                     obj->position_x, obj->position_y,
                                     &cx, &cy);
         if (obj->type == PRESET_OBJECT_CIRCLE) {
-            int radius = (int)lroundf(obj->size_x * (float)canvas_w);
-            if (radius < 6) radius = 6;
+            int radius = (int)lroundf(scene_editor_canvas_object_visual_radius_px(obj, canvas_w));
             float dx = (float)px - (float)cx;
             float dy = (float)py - (float)cy;
             if (dx * dx + dy * dy <= (float)(radius * radius)) {
                 return (int)i;
             }
         } else {
-            float half_w = obj->size_x * (float)canvas_w;
-            float half_h = obj->size_y * (float)canvas_h;
-            if (half_w < 4.0f) half_w = 4.0f;
-            if (half_h < 4.0f) half_h = 4.0f;
+            float half_w = 0.0f, half_h = 0.0f;
+            scene_editor_canvas_object_visual_half_sizes_px(obj, canvas_w, canvas_h, &half_w, &half_h);
             float dx = (float)px - (float)cx;
             float dy = (float)py - (float)cy;
             float cos_a = cosf(obj->angle);
@@ -355,13 +375,11 @@ bool scene_editor_canvas_object_handle_point(const FluidScenePreset *preset,
                                 obj->position_y,
                                 &cx,
                                 &cy);
-    float total = object_handle_visual_length(obj);
-    int length_px = (int)lroundf(total * (float)fmin(canvas_w, canvas_h));
+    float handle_len_px = scene_editor_canvas_object_handle_length_px(obj, canvas_w, canvas_h)
+                          + (float)SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX;
     float angle = obj->angle;
-    int hx = cx + (int)lroundf(cosf(angle) * (float)length_px);
-    int hy = cy + (int)lroundf(sinf(angle) * (float)length_px);
-    *out_x = hx;
-    *out_y = hy;
+    *out_x = cx + (int)lroundf(cosf(angle) * handle_len_px);
+    *out_y = cy + (int)lroundf(sinf(angle) * handle_len_px);
     return true;
 }
 
@@ -373,7 +391,7 @@ int scene_editor_canvas_hit_object_handle(const FluidScenePreset *preset,
                                           int px,
                                           int py) {
     if (!preset) return -1;
-    const int handle_radius = 12;
+    const int handle_radius = SCENE_EDITOR_OBJECT_HANDLE_HIT_RADIUS_PX;
     for (size_t i = 0; i < preset->object_count; ++i) {
         int hx = 0, hy = 0;
         if (!scene_editor_canvas_object_handle_point(preset,
@@ -449,14 +467,11 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
             base = lighten_color(base, 0.15f);
         }
         if (obj->type == PRESET_OBJECT_CIRCLE) {
-            int radius = (int)lroundf(obj->size_x * (float)canvas_w);
-            if (radius < 6) radius = 6;
+            int radius = (int)lroundf(scene_editor_canvas_object_visual_radius_px(obj, canvas_w));
             draw_circle(renderer, cx, cy, radius, base);
         } else {
-            float half_w = obj->size_x * (float)canvas_w;
-            float half_h = obj->size_y * (float)canvas_h;
-            if (half_w < 4.0f) half_w = 4.0f;
-            if (half_h < 4.0f) half_h = 4.0f;
+            float half_w = 0.0f, half_h = 0.0f;
+            scene_editor_canvas_object_visual_half_sizes_px(obj, canvas_w, canvas_h, &half_w, &half_h);
             draw_rotated_box(renderer,
                              (float)cx,
                              (float)cy,

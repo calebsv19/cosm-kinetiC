@@ -11,6 +11,7 @@
 
 #include "app/editor/scene_editor_canvas.h"
 #include "app/editor/scene_editor_widgets.h"
+#include "app/editor/scene_editor_precision.h"
 
 #define DOUBLE_CLICK_MS 350
 #define OBJECT_DELETE_MARGIN 0.15f
@@ -71,6 +72,7 @@ typedef struct SceneEditorState {
     float handle_initial_length;
     bool  handle_resize_started;
     EditorSelectionKind selection_kind;
+    Uint32 last_canvas_click;
 
     EditorButton btn_save;
     EditorButton btn_cancel;
@@ -169,14 +171,28 @@ static void editor_update_canvas_layout(SceneEditorState *state) {
     float aspect = w_units / h_units;
     if (aspect < 0.2f) aspect = 0.2f;
     if (aspect > 10.0f) aspect = 10.0f;
+
     int canvas_w = max_canvas_w;
     int canvas_h = (int)lroundf((float)canvas_w / aspect);
     if (canvas_h > max_canvas_h) {
         canvas_h = max_canvas_h;
         canvas_w = (int)lroundf((float)canvas_h * aspect);
     }
-    if (canvas_w < 220) canvas_w = 220;
-    if (canvas_h < 180) canvas_h = 180;
+
+    const int min_canvas_w = 220;
+    const int min_canvas_h = 180;
+    if (canvas_w < min_canvas_w) {
+        canvas_w = min_canvas_w;
+        canvas_h = (int)lroundf((float)canvas_w / aspect);
+    }
+    if (canvas_h < min_canvas_h) {
+        canvas_h = min_canvas_h;
+        canvas_w = (int)lroundf((float)canvas_h * aspect);
+        if (canvas_w > max_canvas_w) {
+            canvas_w = max_canvas_w;
+            canvas_h = (int)lroundf((float)canvas_w / aspect);
+        }
+    }
 
     state->canvas_y = canvas_top + (max_canvas_h - canvas_h) / 2;
     state->canvas_x = canvas_margin + (max_canvas_w - canvas_w) / 2;
@@ -1026,6 +1042,31 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
         return;
     }
 
+    SDL_Rect canvas_rect = {state->canvas_x, state->canvas_y, state->canvas_width, state->canvas_height};
+    if (point_in_rect(&canvas_rect, x, y)) {
+        Uint32 now = SDL_GetTicks();
+        bool double_click = (now - state->last_canvas_click) <= DOUBLE_CLICK_MS;
+        state->last_canvas_click = now;
+        if (double_click) {
+            bool precision_dirty = false;
+            int selected_obj = state->selected_object;
+            if (scene_editor_run_precision(&state->cfg,
+                                           &state->working,
+                                           &selected_obj,
+                                           state->font_small,
+                                           state->font_main,
+                                           &precision_dirty)) {
+                state->selected_object = selected_obj;
+                if (selected_obj >= 0) {
+                    state->selection_kind = SELECTION_OBJECT;
+                }
+                if (precision_dirty) set_dirty(state);
+                editor_update_canvas_layout(state);
+            }
+            return;
+        }
+    }
+
     if (!point_in_rect(&state->panel_rect, x, y)) {
         int handle_hit = scene_editor_canvas_hit_object_handle(&state->working,
                                                                state->canvas_x,
@@ -1040,29 +1081,38 @@ static void editor_pointer_down(void *user, const InputPointerState *ptr) {
             state->selection_kind = SELECTION_OBJECT;
             state->dragging_object_handle = true;
             PresetObject *obj = &state->working.objects[handle_hit];
+            float half_w_px = 0.0f, half_h_px = 0.0f;
+            scene_editor_canvas_object_visual_half_sizes_px(obj,
+                                                            state->canvas_width,
+                                                            state->canvas_height,
+                                                            &half_w_px,
+                                                            &half_h_px);
             if (obj->type == PRESET_OBJECT_CIRCLE) {
                 state->object_handle_ratio = 1.0f;
             } else {
-                state->object_handle_ratio = (obj->size_x > 0.0001f)
-                                                 ? (obj->size_y / obj->size_x)
+                state->object_handle_ratio = (half_w_px > 0.0001f)
+                                                 ? (half_h_px / half_w_px)
                                                  : 1.0f;
                 if (state->object_handle_ratio <= 0.0f) state->object_handle_ratio = 1.0f;
             }
-            float nx = 0.0f, ny = 0.0f;
-            scene_editor_canvas_to_normalized(state->canvas_x,
-                                              state->canvas_y,
-                                              state->canvas_width,
-                                              state->canvas_height,
-                                              x,
-                                              y,
-                                              &nx,
-                                              &ny);
-            float dx = nx - obj->position_x;
-            float dy = ny - obj->position_y;
-            float len = sqrtf(dx * dx + dy * dy);
-            float adjusted = len - SCENE_EDITOR_OBJECT_HANDLE_MARGIN;
-            if (adjusted < 0.0f) adjusted = 0.0f;
-            state->handle_initial_length = adjusted;
+            int cx = 0, cy = 0;
+            scene_editor_canvas_project(state->canvas_x,
+                                        state->canvas_y,
+                                        state->canvas_width,
+                                        state->canvas_height,
+                                        obj->position_x,
+                                        obj->position_y,
+                                        &cx,
+                                        &cy);
+            float dx_px = (float)x - (float)cx;
+            float dy_px = (float)y - (float)cy;
+            float len_px = sqrtf(dx_px * dx_px + dy_px * dy_px);
+            float min_len_px = (obj->type == PRESET_OBJECT_BOX)
+                                   ? (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX
+                                   : (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
+            float adjusted_px = len_px - (float)SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX;
+            if (adjusted_px < min_len_px) adjusted_px = min_len_px;
+            state->handle_initial_length = adjusted_px;
             state->handle_resize_started = false;
             return;
         }
@@ -1158,32 +1208,48 @@ static void editor_pointer_move(void *user, const InputPointerState *ptr) {
         state->selected_object >= 0 &&
         state->selected_object < (int)state->working.object_count) {
         PresetObject *obj = &state->working.objects[state->selected_object];
-        float norm_x = 0.0f, norm_y = 0.0f;
-        canvas_to_normalized_unclamped(state, ptr->x, ptr->y, &norm_x, &norm_y);
-        float dx = norm_x - obj->position_x;
-        float dy = norm_y - obj->position_y;
-        float len = sqrtf(dx * dx + dy * dy);
-        float adjusted = len - SCENE_EDITOR_OBJECT_HANDLE_MARGIN;
-        if (adjusted < SCENE_EDITOR_OBJECT_HANDLE_MIN) {
-            adjusted = SCENE_EDITOR_OBJECT_HANDLE_MIN;
+        int cx = 0, cy = 0;
+        scene_editor_canvas_project(state->canvas_x,
+                                    state->canvas_y,
+                                    state->canvas_width,
+                                    state->canvas_height,
+                                    obj->position_x,
+                                    obj->position_y,
+                                    &cx,
+                                    &cy);
+        float dx_px = (float)ptr->x - (float)cx;
+        float dy_px = (float)ptr->y - (float)cy;
+        float len_px = sqrtf(dx_px * dx_px + dy_px * dy_px);
+        float min_len_px = (obj->type == PRESET_OBJECT_BOX)
+                               ? (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX
+                               : (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
+        float adjusted_px = len_px - (float)SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX;
+        if (adjusted_px < min_len_px) {
+            adjusted_px = min_len_px;
         }
         if (!state->handle_resize_started) {
-            if (fabsf(adjusted - state->handle_initial_length) <= 0.002f) {
+            if (fabsf(adjusted_px - state->handle_initial_length) <= 1.0f) {
                 return;
             }
             state->handle_resize_started = true;
         }
-        obj->angle = atan2f(dy, dx);
+        obj->angle = atan2f(dy_px, dx_px);
         if (obj->type == PRESET_OBJECT_BOX) {
-            float ratio = state->object_handle_ratio;
-            if (ratio <= 0.01f) ratio = 1.0f;
-            obj->size_x = adjusted;
-            float scaled_y = adjusted * ratio;
-            if (scaled_y < SCENE_EDITOR_OBJECT_HANDLE_MIN) scaled_y = SCENE_EDITOR_OBJECT_HANDLE_MIN;
-            obj->size_y = scaled_y;
+            float ratio_px = state->object_handle_ratio;
+            if (ratio_px <= 0.01f) ratio_px = 1.0f;
+            float half_w_px = adjusted_px;
+            float half_h_px = adjusted_px * ratio_px;
+            if (half_w_px < (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX) {
+                half_w_px = (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX;
+            }
+            if (half_h_px < (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX) {
+                half_h_px = (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX;
+            }
+            obj->size_x = half_w_px / (float)state->canvas_width;
+            obj->size_y = half_h_px / (float)state->canvas_height;
         } else {
-            obj->size_x = adjusted;
-            obj->size_y = adjusted;
+            obj->size_x = adjusted_px / (float)state->canvas_width;
+            obj->size_y = adjusted_px / (float)state->canvas_width;
         }
         clamp_object(obj);
         set_dirty(state);
@@ -1476,6 +1542,7 @@ bool scene_editor_run(SDL_Window *window,
         .object_handle_ratio = 1.0f,
         .handle_initial_length = 0.0f,
         .handle_resize_started = false,
+        .last_canvas_click = 0,
         .selection_kind = (preset->emitter_count > 0)
                               ? SELECTION_EMITTER
                               : ((preset->object_count > 0) ? SELECTION_OBJECT : SELECTION_NONE),

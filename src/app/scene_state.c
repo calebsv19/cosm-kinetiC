@@ -115,6 +115,279 @@ static void static_mask_apply_preset(SceneState *scene,
     }
 }
 
+static inline int clamp_int(int v, int lo, int hi) {
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
+static int world_to_cell(float world_value, float world_max, int grid_res) {
+    if (grid_res <= 1 || world_max <= 0.0f) return 0;
+    float norm = world_value / world_max;
+    if (norm < 0.0f) norm = 0.0f;
+    if (norm > 1.0f) norm = 1.0f;
+    return (int)lroundf(norm * (float)(grid_res - 1));
+}
+
+static float world_velocity_to_grid(const SceneState *scene, float v, bool axis_x) {
+    if (!scene || !scene->config) return 0.0f;
+    int grid = axis_x ? scene->config->grid_w : scene->config->grid_h;
+    float world_max = axis_x ? (float)scene->config->window_w
+                             : (float)scene->config->window_h;
+    if (grid <= 1 || world_max <= 0.0f) return 0.0f;
+    return v * (float)(grid - 1) / world_max;
+}
+
+static void obstacle_mask_mark_cell(SceneState *scene,
+                                    int gx,
+                                    int gy,
+                                    float vel_x,
+                                    float vel_y) {
+    if (!scene || !scene->obstacle_mask || !scene->config) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    if (gx < 1 || gx >= w - 1 || gy < 1 || gy >= h - 1) return;
+    size_t id = (size_t)gy * (size_t)w + (size_t)gx;
+    scene->obstacle_mask[id] = 1;
+    if (scene->obstacle_velX) {
+        scene->obstacle_velX[id] = vel_x;
+    }
+    if (scene->obstacle_velY) {
+        scene->obstacle_velY[id] = vel_y;
+    }
+}
+
+static void obstacle_mask_apply_circle(SceneState *scene,
+                                       const SceneObject *obj) {
+    if (!scene || !scene->config || !obj) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    if (w <= 1 || h <= 1) return;
+
+    float vel_x = obj->body.is_static
+                      ? 0.0f
+                      : world_velocity_to_grid(scene, obj->body.velocity.x, true);
+    float vel_y = obj->body.is_static
+                      ? 0.0f
+                      : world_velocity_to_grid(scene, obj->body.velocity.y, false);
+
+    int cx = world_to_cell(obj->body.position.x,
+                           (float)scene->config->window_w, w);
+    int cy = world_to_cell(obj->body.position.y,
+                           (float)scene->config->window_h, h);
+    float grid_radius_x = obj->body.radius /
+                          (float)scene->config->window_w * (float)(w - 1);
+    float grid_radius_y = obj->body.radius /
+                          (float)scene->config->window_h * (float)(h - 1);
+    int radius = (int)ceilf(fmaxf(grid_radius_x, grid_radius_y));
+    if (radius < 1) radius = 1;
+
+    for (int y = cy - radius; y <= cy + radius; ++y) {
+        if (y <= 0 || y >= h - 1) continue;
+        for (int x = cx - radius; x <= cx + radius; ++x) {
+            if (x <= 0 || x >= w - 1) continue;
+            float dx = (float)(x - cx);
+            float dy = (float)(y - cy);
+            float nx = dx / fmaxf(grid_radius_x, 1.0f);
+            float ny = dy / fmaxf(grid_radius_y, 1.0f);
+            if (nx * nx + ny * ny <= 1.0f) {
+                obstacle_mask_mark_cell(scene, x, y, vel_x, vel_y);
+            }
+        }
+    }
+}
+
+static void obstacle_mask_apply_box(SceneState *scene,
+                                    const SceneObject *obj) {
+    if (!scene || !scene->config || !obj) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    if (w <= 1 || h <= 1) return;
+
+    float vel_x = obj->body.is_static
+                      ? 0.0f
+                      : world_velocity_to_grid(scene, obj->body.velocity.x, true);
+    float vel_y = obj->body.is_static
+                      ? 0.0f
+                      : world_velocity_to_grid(scene, obj->body.velocity.y, false);
+
+    float half_diag = sqrtf(obj->body.half_extents.x * obj->body.half_extents.x +
+                            obj->body.half_extents.y * obj->body.half_extents.y);
+    float min_w = obj->body.position.x - half_diag;
+    float max_w = obj->body.position.x + half_diag;
+    float min_h = obj->body.position.y - half_diag;
+    float max_h = obj->body.position.y + half_diag;
+
+    int min_x = world_to_cell(min_w, (float)scene->config->window_w, w);
+    int max_x = world_to_cell(max_w, (float)scene->config->window_w, w);
+    int min_y = world_to_cell(min_h, (float)scene->config->window_h, h);
+    int max_y = world_to_cell(max_h, (float)scene->config->window_h, h);
+
+    min_x = clamp_int(min_x, 1, w - 2);
+    max_x = clamp_int(max_x, 1, w - 2);
+    min_y = clamp_int(min_y, 1, h - 2);
+    max_y = clamp_int(max_y, 1, h - 2);
+
+    float cos_a = cosf(obj->body.angle);
+    float sin_a = sinf(obj->body.angle);
+    float half_w_world = obj->body.half_extents.x;
+    float half_h_world = obj->body.half_extents.y;
+
+    for (int y = min_y; y <= max_y; ++y) {
+        float world_y = ((float)y / (float)(h - 1)) * (float)scene->config->window_h;
+        for (int x = min_x; x <= max_x; ++x) {
+            float world_x = ((float)x / (float)(w - 1)) * (float)scene->config->window_w;
+            float rel_x = world_x - obj->body.position.x;
+            float rel_y = world_y - obj->body.position.y;
+            float local_x =  rel_x * cos_a + rel_y * sin_a;
+            float local_y = -rel_x * sin_a + rel_y * cos_a;
+            if (fabsf(local_x) <= half_w_world &&
+                fabsf(local_y) <= half_h_world) {
+                obstacle_mask_mark_cell(scene, x, y, vel_x, vel_y);
+            }
+        }
+    }
+}
+
+static void scene_compute_obstacle_distance(SceneState *scene) {
+    if (!scene || !scene->config || !scene->obstacle_distance) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    if (w <= 0 || h <= 0) return;
+    size_t count = (size_t)w * (size_t)h;
+    float *distance = scene->obstacle_distance;
+    const uint8_t *mask = scene->obstacle_mask;
+    if (!mask) {
+        for (size_t i = 0; i < count; ++i) {
+            distance[i] = 1.0f;
+        }
+        return;
+    }
+
+    const float INF = (float)(w + h + 10);
+    int *queue_x = (int *)malloc(count * sizeof(int));
+    int *queue_y = (int *)malloc(count * sizeof(int));
+    if (!queue_x || !queue_y) {
+        for (size_t i = 0; i < count; ++i) {
+            distance[i] = mask[i] ? 0.0f : 1.0f;
+        }
+        free(queue_x);
+        free(queue_y);
+        return;
+    }
+
+    size_t head = 0;
+    size_t tail = 0;
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            size_t id = (size_t)y * (size_t)w + (size_t)x;
+            if (mask[id]) {
+                distance[id] = 0.0f;
+                queue_x[tail] = x;
+                queue_y[tail] = y;
+                ++tail;
+            } else {
+                distance[id] = INF;
+            }
+        }
+    }
+
+    if (tail == 0) {
+        for (size_t i = 0; i < count; ++i) {
+            distance[i] = 1.0f;
+        }
+        free(queue_x);
+        free(queue_y);
+        return;
+    }
+
+    static const int OFFSETS[4][2] = {
+        {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+    };
+
+    while (head < tail) {
+        int x = queue_x[head];
+        int y = queue_y[head];
+        size_t id = (size_t)y * (size_t)w + (size_t)x;
+        ++head;
+        float current = distance[id];
+        for (int k = 0; k < 4; ++k) {
+            int nx = x + OFFSETS[k][0];
+            int ny = y + OFFSETS[k][1];
+            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+            size_t nid = (size_t)ny * (size_t)w + (size_t)nx;
+            float candidate = current + 1.0f;
+            if (distance[nid] > candidate) {
+                distance[nid] = candidate;
+                queue_x[tail] = nx;
+                queue_y[tail] = ny;
+                ++tail;
+            }
+        }
+    }
+
+    float max_d = 0.0f;
+    for (size_t i = 0; i < count; ++i) {
+        float d = distance[i];
+        if (d > max_d && d < INF) {
+            max_d = d;
+        }
+    }
+    if (max_d <= 0.0f) {
+        for (size_t i = 0; i < count; ++i) {
+            distance[i] = mask[i] ? 0.0f : 1.0f;
+        }
+    } else {
+        for (size_t i = 0; i < count; ++i) {
+            float d = distance[i];
+            if (d >= INF) d = max_d;
+            distance[i] = d / max_d;
+        }
+    }
+
+    free(queue_x);
+    free(queue_y);
+}
+
+static void scene_build_obstacle_mask(SceneState *scene) {
+    if (!scene || !scene->config) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    size_t count = (size_t)w * (size_t)h;
+    if (!scene->obstacle_mask) {
+        if (scene->obstacle_distance) {
+            for (size_t i = 0; i < count; ++i) {
+                scene->obstacle_distance[i] = 1.0f;
+            }
+        }
+        scene->obstacle_mask_dirty = false;
+        return;
+    }
+    if (scene->static_mask) {
+        memcpy(scene->obstacle_mask, scene->static_mask, count);
+    } else {
+        memset(scene->obstacle_mask, 0, count);
+    }
+    if (scene->obstacle_velX) {
+        memset(scene->obstacle_velX, 0, count * sizeof(float));
+    }
+    if (scene->obstacle_velY) {
+        memset(scene->obstacle_velY, 0, count * sizeof(float));
+    }
+
+    for (int i = 0; i < scene->objects.count; ++i) {
+        const SceneObject *obj = &scene->objects.objects[i];
+        if (!obj) continue;
+        if (obj->type == SCENE_OBJECT_CIRCLE) {
+            obstacle_mask_apply_circle(scene, obj);
+        } else {
+            obstacle_mask_apply_box(scene, obj);
+        }
+    }
+    scene_compute_obstacle_distance(scene);
+    scene->obstacle_mask_dirty = false;
+}
+
 void scene_apply_boundary_flows(SceneState *scene, double dt) {
     if (!scene || !scene->preset || !scene->smoke) return;
     if (scene->config && scene->config->sim_mode == SIM_MODE_WIND_TUNNEL) {
@@ -144,10 +417,13 @@ void scene_enforce_boundary_flows(SceneState *scene) {
 
 void scene_enforce_obstacles(SceneState *scene) {
     if (!scene || !scene->smoke) return;
-    if (scene->static_mask) {
-        fluid2d_apply_static_mask(scene->smoke, scene->static_mask);
+    if (scene->obstacle_mask_dirty) {
+        scene_build_obstacle_mask(scene);
     }
-    fluid2d_apply_object_mask(scene->smoke, &scene->objects, scene->config);
+    fluid2d_enforce_solid_mask(scene->smoke,
+                               scene->obstacle_mask,
+                               scene->obstacle_velX,
+                               scene->obstacle_velY);
 }
 
 SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
@@ -169,6 +445,19 @@ SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
     s.static_mask = (mask_count > 0)
                         ? (uint8_t *)calloc(mask_count, sizeof(uint8_t))
                         : NULL;
+    s.obstacle_mask = (mask_count > 0)
+                        ? (uint8_t *)calloc(mask_count, sizeof(uint8_t))
+                        : NULL;
+    s.obstacle_velX = (mask_count > 0)
+                        ? (float *)calloc(mask_count, sizeof(float))
+                        : NULL;
+    s.obstacle_velY = (mask_count > 0)
+                        ? (float *)calloc(mask_count, sizeof(float))
+                        : NULL;
+    s.obstacle_distance = (mask_count > 0)
+                        ? (float *)calloc(mask_count, sizeof(float))
+                        : NULL;
+    s.obstacle_mask_dirty = true;
 
     object_manager_init(&s.objects, 8);
     if (preset) {
@@ -208,6 +497,12 @@ void scene_destroy(SceneState *scene) {
     scene->smoke = NULL;
     free(scene->static_mask);
     scene->static_mask = NULL;
+    free(scene->obstacle_mask);
+    scene->obstacle_mask = NULL;
+    free(scene->obstacle_velX);
+    scene->obstacle_velX = NULL;
+    free(scene->obstacle_velY);
+    scene->obstacle_velY = NULL;
     object_manager_shutdown(&scene->objects);
 }
 

@@ -4,12 +4,12 @@
     "height": 772
   },
   "grid": {
-    "width": 256,
-    "height": 256
+    "width": 96,
+    "height": 96
   },
   "simulation": {
     "mode": 1,
-    "tunnel_inflow_speed": 40.000000,
+    "tunnel_inflow_speed": 25.000000,
     "tunnel_inflow_density": 15.000000,
     "tunnel_viscosity_scale": 0.500000
   },
@@ -23,7 +23,7 @@
   },
   "fluid": {
     "diffusion": 0.000100,
-    "viscosity": 0.000010,
+    "viscosity": 0.000002,
     "density_decay": 0.050000,
     "buoyancy": 1.500000,
     "solver_iterations": 12
@@ -33,7 +33,7 @@
   },
   "headless": {
     "enabled": false,
-    "frame_count": 12000,
+    "frame_count": 10000,
     "custom_slot_index": 0,
     "quality_index": -1,
     "skip_present": true

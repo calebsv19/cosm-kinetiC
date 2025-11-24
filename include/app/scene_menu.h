@@ -17,6 +17,7 @@ typedef struct SceneMenuSelection {
     int  quality_index;
     int  headless_frame_count;
     SimulationMode sim_mode;
+    float tunnel_inflow_speed;
     int  last_mode_slot[SIMULATION_MODE_COUNT];
 } SceneMenuSelection;
 
