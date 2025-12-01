@@ -42,6 +42,7 @@ typedef struct AppConfig {
     bool   save_volume_frames;
     bool   save_render_frames;
     bool   enable_render_blur;
+    int    render_black_level; // 0-255 base luminance for empty space
 
     int    quality_index;
 

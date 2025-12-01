@@ -6,6 +6,7 @@
 #include "app/app_config.h"
 #include "app/scene_presets.h"
 #include "app/preset_io.h"
+#include "geo/shape_library.h"
 
 typedef struct SceneMenuResult {
     const FluidScenePreset *preset;
@@ -25,6 +26,7 @@ typedef struct SceneMenuSelection {
 bool scene_menu_run(AppConfig *cfg,
                     FluidScenePreset *in_out_preset,
                     SceneMenuSelection *selection,
-                    CustomPresetLibrary *library);
+                    CustomPresetLibrary *library,
+                    const ShapeAssetLibrary *shape_library);
 
 #endif // SCENE_MENU_H

@@ -8,17 +8,20 @@
 #include "physics/fluid2d/fluid2d.h"
 #include "physics/math/math2d.h"
 
-#define FLOW_PARTICLE_CAPACITY   1500
-#define FLOW_SPAWN_RATE_PER_SEC  600.0f
+#define FLOW_PARTICLE_CAPACITY   2400
+#define FLOW_SPAWN_RATE_PER_SEC  800.0f
 #define FLOW_MIN_LIFETIME        4.0f
-#define FLOW_MAX_LIFETIME        12.5f
-#define FLOW_TRAIL_MAX_POINTS    32
+#define FLOW_MAX_LIFETIME        40.5f
+#define FLOW_FADE_FRAMES         60.0f  // fade duration in frame-equivalents (120 ~= 2s at 60fps)
+#define FLOW_TRAIL_MAX_POINTS    128
+#define FLOW_FADE_CAPACITY       3000
 
 typedef struct FlowParticle {
     float x;
     float y;
     float life;
     float max_life;
+    float fade;
     float trail_x[FLOW_TRAIL_MAX_POINTS];
     float trail_y[FLOW_TRAIL_MAX_POINTS];
     int   trail_count;
@@ -30,6 +33,17 @@ static int g_grid_w              = 0;
 static int g_grid_h              = 0;
 static float g_spawn_accumulator = 0.0f;
 static int g_next_slot           = 0;
+
+typedef struct FlowFadeTrail {
+    float frames_left;
+    float start_strength;
+    int   count;
+    float xs[FLOW_TRAIL_MAX_POINTS];
+    float ys[FLOW_TRAIL_MAX_POINTS];
+} FlowFadeTrail;
+
+static FlowFadeTrail *g_fade_trails = NULL;
+static int g_fade_capacity          = 0;
 
 static float randf01(void) {
     return (float)rand() / (float)RAND_MAX;
@@ -81,12 +95,25 @@ static bool sample_velocity_safe(const SceneState *scene,
 }
 
 bool particle_overlay_init(int grid_w, int grid_h) {
-    if (g_particles) return true;
-    g_capacity = FLOW_PARTICLE_CAPACITY;
-    g_particles = (FlowParticle *)calloc((size_t)g_capacity, sizeof(FlowParticle));
     if (!g_particles) {
-        g_capacity = 0;
-        return false;
+        g_capacity = FLOW_PARTICLE_CAPACITY;
+        g_particles = (FlowParticle *)calloc((size_t)g_capacity, sizeof(FlowParticle));
+        if (!g_particles) {
+            g_capacity = 0;
+            return false;
+        }
+    }
+
+    if (!g_fade_trails) {
+        g_fade_capacity = FLOW_FADE_CAPACITY;
+        g_fade_trails = (FlowFadeTrail *)calloc((size_t)g_fade_capacity, sizeof(FlowFadeTrail));
+        if (!g_fade_trails) {
+            free(g_particles);
+            g_particles = NULL;
+            g_capacity = 0;
+            g_fade_capacity = 0;
+            return false;
+        }
     }
 
     if (grid_w <= 0) grid_w = 1;
@@ -103,13 +130,20 @@ void particle_overlay_shutdown(void) {
     free(g_particles);
     g_particles = NULL;
     g_capacity = 0;
+    free(g_fade_trails);
+    g_fade_trails = NULL;
+    g_fade_capacity = 0;
     g_spawn_accumulator = 0.0f;
     g_next_slot = 0;
 }
 
 void particle_overlay_reset(void) {
-    if (!g_particles) return;
-    memset(g_particles, 0, (size_t)g_capacity * sizeof(FlowParticle));
+    if (g_particles) {
+        memset(g_particles, 0, (size_t)g_capacity * sizeof(FlowParticle));
+    }
+    if (g_fade_trails && g_fade_capacity > 0) {
+        memset(g_fade_trails, 0, (size_t)g_fade_capacity * sizeof(FlowFadeTrail));
+    }
     g_spawn_accumulator = 0.0f;
     g_next_slot = 0;
 }
@@ -139,10 +173,53 @@ static void flow_particle_push_trail(FlowParticle *pt, float x, float y) {
     }
 }
 
+static void capture_fade_trail(const FlowParticle *pt) {
+    if (!pt || !g_fade_trails || g_fade_capacity <= 0) return;
+    int slot = -1;
+    int oldest_idx = 0;
+    float oldest_time = 1e9f;
+    for (int i = 0; i < g_fade_capacity; ++i) {
+        int idx = i;
+        float tl = g_fade_trails[idx].frames_left;
+        if (tl <= 0.0f) {
+            slot = idx;
+            break;
+        }
+        if (tl < oldest_time) {
+            oldest_time = tl;
+            oldest_idx = idx;
+        }
+    }
+    if (slot < 0) slot = oldest_idx;
+    FlowFadeTrail *fade = &g_fade_trails[slot];
+    fade->frames_left = FLOW_FADE_FRAMES;
+    float life_ratio = (pt->max_life > 0.0f) ? fmaxf(pt->life / pt->max_life, 0.0f) : 1.0f;
+    fade->start_strength = 0.6f + 0.4f * life_ratio;
+    int count = pt->trail_count;
+    if (count < 2) count = 2;
+    if (count > FLOW_TRAIL_MAX_POINTS) count = FLOW_TRAIL_MAX_POINTS;
+    fade->count = count;
+    for (int i = 0; i < count; ++i) {
+        int src = i;
+        if (src >= pt->trail_count) src = pt->trail_count - 1;
+        fade->xs[i] = pt->trail_x[src];
+        fade->ys[i] = pt->trail_y[src];
+    }
+}
+
 static void spawn_particle(const SceneState *scene) {
     if (!g_particles || g_capacity == 0) return;
-    FlowParticle *pt = &g_particles[g_next_slot];
-    g_next_slot = (g_next_slot + 1) % g_capacity;
+    int slot = g_next_slot;
+    for (int i = 0; i < g_capacity; ++i) {
+        int idx = (g_next_slot + i) % g_capacity;
+        FlowParticle *candidate = &g_particles[idx];
+        if (candidate->life <= 0.0f && candidate->fade <= 0.0f) {
+            slot = idx;
+            break;
+        }
+    }
+    g_next_slot = (slot + 1) % g_capacity;
+    FlowParticle *pt = &g_particles[slot];
 
     float x = randf01() * (float)g_grid_w;
     float y = randf01() * (float)g_grid_h;
@@ -165,21 +242,37 @@ static void spawn_particle(const SceneState *scene) {
     pt->y = y;
     pt->life = life;
     pt->max_life = life;
+    pt->fade = 0.0f;
     flow_particle_reset_trail(pt, x, y);
 }
 
 static void update_particle(FlowParticle *pt,
                             const SceneState *scene,
-                            float dt_seconds) {
-    if (!pt || pt->life <= 0.0f) return;
-    pt->life -= dt_seconds;
-    if (pt->life <= 0.0f) {
+                            float dt_seconds,
+                            float frame_equiv) {
+    if (!pt) return;
+
+    if (pt->life > 0.0f) {
+        pt->life -= dt_seconds;
+        if (pt->life <= 0.0f) {
+            pt->life = 0.0f;
+            pt->fade = FLOW_FADE_FRAMES;
+            capture_fade_trail(pt);
+            return;
+        }
+    } else if (pt->fade > 0.0f) {
+        pt->fade -= frame_equiv;
+        if (pt->fade < 0.0f) pt->fade = 0.0f;
+        return;
+    } else {
         return;
     }
 
     Vec2 vel = vec2(0.0f, 0.0f);
     if (!sample_velocity_safe(scene, pt->x, pt->y, &vel)) {
         pt->life = 0.0f;
+        pt->fade = FLOW_FADE_FRAMES;
+        capture_fade_trail(pt);
         return;
     }
 
@@ -189,11 +282,15 @@ static void update_particle(FlowParticle *pt,
     if (new_x < 0.0f || new_x >= (float)g_grid_w ||
         new_y < 0.0f || new_y >= (float)g_grid_h) {
         pt->life = 0.0f;
+        pt->fade = FLOW_FADE_FRAMES;
+        capture_fade_trail(pt);
         return;
     }
 
     if (point_in_solid(scene, new_x, new_y)) {
         pt->life = 0.0f;
+        pt->fade = FLOW_FADE_FRAMES;
+        capture_fade_trail(pt);
         return;
     }
 
@@ -202,23 +299,37 @@ static void update_particle(FlowParticle *pt,
     flow_particle_push_trail(pt, pt->x, pt->y);
 }
 
-void particle_overlay_update(const SceneState *scene, double dt) {
+void particle_overlay_update(const SceneState *scene, double dt, bool spawn_enabled) {
     if (!scene || !scene->smoke || !g_particles) return;
     if (dt <= 0.0) dt = 1.0 / 60.0;
     float fdt = (float)dt;
+    float frame_equiv = fdt / (1.0f / 60.0f);
+    if (frame_equiv < 0.1f) frame_equiv = 0.1f;
+    if (frame_equiv > 8.0f) frame_equiv = 8.0f;
 
-    g_spawn_accumulator += FLOW_SPAWN_RATE_PER_SEC * fdt;
-    int spawn_count = (int)g_spawn_accumulator;
-    if (spawn_count > 0) {
-        g_spawn_accumulator -= (float)spawn_count;
-        if (spawn_count > g_capacity) spawn_count = g_capacity;
-        for (int i = 0; i < spawn_count; ++i) {
-            spawn_particle(scene);
+    if (spawn_enabled) {
+        g_spawn_accumulator += FLOW_SPAWN_RATE_PER_SEC * fdt;
+        int spawn_count = (int)g_spawn_accumulator;
+        if (spawn_count > 0) {
+            g_spawn_accumulator -= (float)spawn_count;
+            if (spawn_count > g_capacity) spawn_count = g_capacity;
+            for (int i = 0; i < spawn_count; ++i) {
+                spawn_particle(scene);
+            }
         }
     }
 
     for (int i = 0; i < g_capacity; ++i) {
-        update_particle(&g_particles[i], scene, fdt);
+        update_particle(&g_particles[i], scene, fdt, frame_equiv);
+    }
+
+    if (g_fade_trails && g_fade_capacity > 0) {
+        for (int i = 0; i < g_fade_capacity; ++i) {
+            FlowFadeTrail *ft = &g_fade_trails[i];
+            if (ft->frames_left <= 0.0f) continue;
+            ft->frames_left -= frame_equiv;
+            if (ft->frames_left < 0.0f) ft->frames_left = 0.0f;
+        }
     }
 }
 
@@ -238,19 +349,27 @@ void particle_overlay_draw(const SceneState *scene,
 
     for (int i = 0; i < g_capacity; ++i) {
         FlowParticle *pt = &g_particles[i];
-        if (pt->life <= 0.0f || pt->max_life <= 0.0f) continue;
-
+        if (pt->life <= 0.0f && pt->fade <= 0.0f) continue;
         if (pt->trail_count < 2) continue;
 
-        float life_ratio = pt->life / pt->max_life;
+        float visibility = 0.0f;
+        if (pt->life > 0.0f && pt->max_life > 0.0f) {
+            visibility = pt->life / pt->max_life;
+        } else if (pt->fade > 0.0f) {
+            visibility = pt->fade / FLOW_FADE_FRAMES;
+        }
+        if (visibility <= 0.0f) continue;
+
+        float life_ratio = (pt->max_life > 0.0f) ? (pt->life / pt->max_life) : 0.0f;
         for (int j = 1; j < pt->trail_count; ++j) {
             float t = (float)j / (float)(pt->trail_count - 1);
-            float strength = (0.2f + 0.8f * t) * (0.6f + 0.4f * life_ratio);
+            float strength = (0.2f + 0.8f * t) * (0.6f + 0.4f * life_ratio) * visibility;
             if (strength > 1.0f) strength = 1.0f;
             Uint8 r = (Uint8)lroundf(30.0f * (1.0f - t));
             Uint8 g = (Uint8)lroundf(140.0f + 110.0f * t);
             Uint8 b = (Uint8)lroundf(50.0f * (1.0f - t));
-            Uint8 a = (Uint8)lroundf(220.0f * strength);
+            Uint8 a = (Uint8)lroundf(255.0f * strength);
+            if (a < 16) a = 16;
 
             float x0 = pt->trail_x[j - 1] * scale_x;
             float y0 = pt->trail_y[j - 1] * scale_y;
@@ -263,6 +382,36 @@ void particle_overlay_draw(const SceneState *scene,
                                (int)lroundf(y0),
                                (int)lroundf(x1),
                                (int)lroundf(y1));
+        }
+    }
+
+    if (g_fade_trails && g_fade_capacity > 0) {
+        for (int i = 0; i < g_fade_capacity; ++i) {
+            FlowFadeTrail *ft = &g_fade_trails[i];
+            if (ft->frames_left <= 0.0f || ft->count < 2) continue;
+            float visibility = ft->frames_left / FLOW_FADE_FRAMES;
+            for (int j = 1; j < ft->count; ++j) {
+                float t = (float)j / (float)(ft->count - 1);
+                float strength = (0.2f + 0.8f * t) * ft->start_strength * visibility;
+                if (strength > 1.0f) strength = 1.0f;
+                Uint8 r = (Uint8)lroundf(30.0f * (1.0f - t));
+                Uint8 g = (Uint8)lroundf(140.0f + 110.0f * t);
+                Uint8 b = (Uint8)lroundf(50.0f * (1.0f - t));
+                Uint8 a = (Uint8)lroundf(255.0f * strength);
+                if (a < 16) a = 16;
+
+                float x0 = ft->xs[j - 1] * scale_x;
+                float y0 = ft->ys[j - 1] * scale_y;
+                float x1 = ft->xs[j] * scale_x;
+                float y1 = ft->ys[j] * scale_y;
+
+                SDL_SetRenderDrawColor(renderer, r, g, b, a);
+                SDL_RenderDrawLine(renderer,
+                                   (int)lroundf(x0),
+                                   (int)lroundf(y0),
+                                   (int)lroundf(x1),
+                                   (int)lroundf(y1));
+            }
         }
     }
 }

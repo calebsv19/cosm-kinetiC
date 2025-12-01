@@ -179,6 +179,7 @@ static void stroke_sampler_apply(StrokeSampler *sampler,
 
 int scene_controller_run(const AppConfig *initial_cfg,
                         const FluidScenePreset *preset,
+                        const ShapeAssetLibrary *shape_library,
                         const char *snapshot_dir,
                         const HeadlessOptions *headless) {
     if (!initial_cfg) {
@@ -208,7 +209,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
         return 1;
     }
 
-    SceneState scene = scene_create(&cfg, &runtime_preset);
+    SceneState scene = scene_create(&cfg, &runtime_preset, shape_library);
     if (!scene.smoke) {
         fprintf(stderr, "[scene] Fluid grid failed to initialize.\n");
     }

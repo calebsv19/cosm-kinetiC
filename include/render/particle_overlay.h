@@ -9,7 +9,7 @@
 bool particle_overlay_init(int grid_w, int grid_h);
 void particle_overlay_shutdown(void);
 void particle_overlay_reset(void);
-void particle_overlay_update(const SceneState *scene, double dt);
+void particle_overlay_update(const SceneState *scene, double dt, bool spawn_enabled);
 void particle_overlay_draw(const SceneState *scene,
                            SDL_Renderer *renderer,
                            int window_w,

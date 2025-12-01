@@ -20,6 +20,7 @@ static SDL_Texture  *g_texture  = NULL;
 static SDL_PixelFormat *g_format = NULL;
 static bool g_ttf_initialized = false;
 static const float DENSITY_VISUAL_SCALE = 0.05f;
+static Uint8 g_base_black_level = 0;
 
 static int g_window_w = 0;
 static int g_window_h = 0;
@@ -53,6 +54,7 @@ bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH) {
     g_window_h = windowH;
     g_grid_w   = gridW;
     g_grid_h   = gridH;
+    g_base_black_level = 0;
 
 #if RENDERER_ENABLE_LINEAR_FILTER
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -155,6 +157,15 @@ void renderer_sdl_shutdown(void) {
 
 static bool renderer_upload_scene(const SceneState *scene) {
     if (!scene || !scene->smoke || !g_renderer || !g_texture) return false;
+    const AppConfig *cfg = scene->config;
+    if (cfg) {
+        int level = cfg->render_black_level;
+        if (level < 0) level = 0;
+        if (level > 255) level = 255;
+        g_base_black_level = (Uint8)level;
+    } else {
+        g_base_black_level = 0;
+    }
     int tex_pitch = 0;
     void *pixels = NULL;
     if (SDL_LockTexture(g_texture, NULL, &pixels, &tex_pitch) != 0) {
@@ -218,15 +229,16 @@ static bool renderer_upload_scene(const SceneState *scene) {
         Uint32 *dst = (Uint32 *)((Uint8 *)pixels + y * tex_pitch);
         for (int x = 0; x < w; ++x) {
             size_t i = (size_t)y * (size_t)w + (size_t)x;
-            float norm = g_density_tmp[i];
-            if (norm < 0.0f) norm = 0.0f;
-            if (norm > 1.0f) norm = 1.0f;
-            Uint8 c = (Uint8)(norm * 255.0f);
-            Uint32 pixel = g_format
-                ? SDL_MapRGBA(g_format, c, c, c, 255)
-                : (Uint32)(0xFFu << 24 | (c << 16) | (c << 8) | c);
-            dst[x] = pixel;
-        }
+        float norm = g_density_tmp[i];
+        if (norm < 0.0f) norm = 0.0f;
+        if (norm > 1.0f) norm = 1.0f;
+        float span = 255.0f - (float)g_base_black_level;
+        Uint8 c = (Uint8)lroundf((float)g_base_black_level + norm * span);
+        Uint32 pixel = g_format
+            ? SDL_MapRGBA(g_format, c, c, c, 255)
+            : (Uint32)(0xFFu << 24 | (c << 16) | (c << 8) | c);
+        dst[x] = pixel;
+    }
     }
 
     SDL_UnlockTexture(g_texture);
@@ -243,14 +255,16 @@ bool renderer_sdl_render_scene(const SceneState *scene) {
     };
     field_overlay_apply(scene, g_texture, g_format, &overlay_cfg);
 
-    if (g_draw_flow_particles) {
+    {
         double dt = (scene) ? scene->dt : (1.0 / 60.0);
-        particle_overlay_update(scene, dt);
-    } else {
-        particle_overlay_reset();
+        particle_overlay_update(scene, dt, g_draw_flow_particles);
     }
 
-    SDL_SetRenderDrawColor(g_renderer, 0, 0, 0, 255);
+    SDL_SetRenderDrawColor(g_renderer,
+                           g_base_black_level,
+                           g_base_black_level,
+                           g_base_black_level,
+                           255);
     SDL_RenderClear(g_renderer);
 
     SDL_Rect dst_rect = {0, 0, g_window_w, g_window_h};

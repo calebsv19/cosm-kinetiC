@@ -6,6 +6,12 @@
 #include <math.h>
 
 #include "physics/fluid2d/fluid2d_boundary.h"
+#include "import/shape_import.h"
+#include "geo/shape_asset.h"
+#include "physics/objects/physics_object_builder.h"
+#include "app/shape_lookup.h"
+#include "render/import_project.h"
+#include "render/import_project.h"
 
 // simple mapping from window coords to grid coords
 static void window_to_grid(const SceneState *scene, int win_x, int win_y,
@@ -113,6 +119,164 @@ static void static_mask_apply_preset(SceneState *scene,
     } else {
         static_mask_apply_box(scene, po);
     }
+}
+
+static void apply_mask_or(uint8_t *dst, const uint8_t *src, size_t count) {
+    if (!dst || !src) return;
+    for (size_t i = 0; i < count; ++i) {
+        if (src[i]) dst[i] = 1;
+    }
+}
+
+static void resolve_import_shapes(SceneState *scene) {
+    if (!scene || !scene->shape_library) return;
+    for (size_t i = 0; i < scene->import_shape_count; ++i) {
+        ImportedShape *imp = &scene->import_shapes[i];
+        if (!imp->enabled || imp->path[0] == '\0') continue;
+        const ShapeAsset *asset = shape_lookup_from_path(scene->shape_library, imp->path);
+        if (!asset) {
+            imp->shape_id = -1;
+            continue;
+        }
+        for (size_t si = 0; si < scene->shape_library->count; ++si) {
+            if (&scene->shape_library->assets[si] == asset) {
+                imp->shape_id = (int)si;
+                break;
+            }
+        }
+    }
+}
+
+static inline float import_pos_to_unit(float pos, float span) {
+    float min = 0.5f - span;
+    float max = 0.5f + span;
+    float t = (pos - min) / (max - min);
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    return t;
+}
+
+static float shape_bounds_max_dim(const ShapeAssetBounds *b) {
+    if (!b || !b->valid) return 0.0f;
+    float sx = b->max_x - b->min_x;
+    float sy = b->max_y - b->min_y;
+    return (sx > sy) ? sx : sy;
+}
+
+static void static_mask_apply_imports(SceneState *scene) {
+    if (!scene || !scene->config || !scene->static_mask) return;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    if (w <= 0 || h <= 0) return;
+    size_t mask_count = (size_t)w * (size_t)h;
+    uint8_t *tmp = (uint8_t *)calloc(mask_count, sizeof(uint8_t));
+    if (!tmp) return;
+
+    float span_x = 1.0f, span_y = 1.0f;
+    import_compute_span_from_window(scene->config->window_w, scene->config->window_h, &span_x, &span_y);
+    float grid_min_dim = (float)((w < h) ? w : h);
+    if (grid_min_dim <= 0.0f) grid_min_dim = 1.0f;
+
+    for (size_t i = 0; i < scene->import_shape_count; ++i) {
+        ImportedShape *imp = &scene->import_shapes[i];
+        if (!imp->enabled || imp->path[0] == '\0') continue;
+        if (!imp->is_static) continue; // skip dynamic shapes for now
+
+        float pos_x_unit = import_pos_to_unit(imp->position_x, span_x);
+        float pos_y_unit = import_pos_to_unit(imp->position_y, span_y);
+
+        const ShapeAsset *asset = shape_lookup_from_path(scene->shape_library, imp->path);
+        if (asset && imp->shape_id < 0) {
+            // Assign stable index if available.
+            for (size_t si = 0; si < scene->shape_library->count; ++si) {
+                if (&scene->shape_library->assets[si] == asset) {
+                    imp->shape_id = (int)si;
+                    break;
+                }
+            }
+        }
+
+        bool raster_ok = false;
+        if (asset) {
+            ShapeAssetBounds bnds;
+            if (!shape_asset_bounds(asset, &bnds) || !bnds.valid) continue;
+            float max_dim = shape_bounds_max_dim(&bnds);
+            if (max_dim <= 0.0001f) continue;
+            const float desired_fit = 0.25f;
+            float norm = (imp->scale * desired_fit) / max_dim;
+            float raster_scale = norm * grid_min_dim;
+            ShapeAssetRasterOptions ropts = {
+                .margin_cells = 1.0f,
+                .stroke = 1.0f,
+                .position_x_norm = pos_x_unit,
+                .position_y_norm = pos_y_unit,
+                .rotation_deg = imp->rotation_deg,
+                .scale = raster_scale,
+                .center_fit = false,
+            };
+            memset(tmp, 0, mask_count);
+            int sid = (imp->shape_id >= 0) ? imp->shape_id : (int)i;
+            SceneObjectBase base = {
+                .shape_id = sid,
+                .position = vec2(pos_x_unit, pos_y_unit),
+                .rotation = imp->rotation_deg * (float)M_PI / 180.0f,
+                .scale = vec2(raster_scale, raster_scale),
+                .flags = 0,
+            };
+            PhysicsObject phys = {0};
+            raster_ok = physics_object_from_asset(asset, &base, w, h, &ropts, &phys);
+            if (raster_ok && phys.mask) {
+                memcpy(tmp, phys.mask, mask_count);
+            } else {
+                fprintf(stderr, "[import] Asset rasterization failed for %s\n",
+                        imp->path[0] ? imp->path : "(unnamed asset)");
+            }
+            physics_object_free(&phys);
+        }
+
+        if (!raster_ok) {
+            ShapeDocument doc;
+            if (!shape_import_load(imp->path, &doc) || doc.shapeCount == 0) {
+                fprintf(stderr, "[import] Failed to load shape JSON: %s\n", imp->path);
+                continue;
+            }
+
+            const Shape *shape = &doc.shapes[0];
+            ShapeBounds sb = {0};
+            if (!shape_import_bounds(shape, &sb) || !sb.valid) {
+                ShapeDocument_Free(&doc);
+                continue;
+            }
+            float max_dim = fmaxf(sb.max_x - sb.min_x, sb.max_y - sb.min_y);
+            if (max_dim <= 0.0001f) max_dim = 1.0f;
+            const float desired_fit = 0.25f;
+            float norm = (imp->scale * desired_fit) / max_dim;
+            float raster_scale = norm * grid_min_dim;
+            ShapeRasterOptions ropts = {
+                .margin_cells = 1.0f,
+                .stroke = 1.0f,
+                .max_error = 0.5f,
+                .position_x_norm = pos_x_unit,
+                .position_y_norm = pos_y_unit,
+                .rotation_deg = imp->rotation_deg,
+                .scale = raster_scale,
+                .center_fit = false,
+            };
+
+            memset(tmp, 0, mask_count);
+            raster_ok = shape_import_rasterize(shape, w, h, &ropts, tmp);
+            if (!raster_ok) {
+                fprintf(stderr, "[import] Rasterization failed for %s\n", imp->path);
+            }
+            ShapeDocument_Free(&doc);
+        }
+
+        if (raster_ok) {
+            apply_mask_or(scene->static_mask, tmp, mask_count);
+        }
+    }
+
+    free(tmp);
 }
 
 static inline int clamp_int(int v, int lo, int hi) {
@@ -426,7 +590,9 @@ void scene_enforce_obstacles(SceneState *scene) {
                                scene->obstacle_velY);
 }
 
-SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
+SceneState scene_create(const AppConfig *cfg,
+                        const FluidScenePreset *preset,
+                        const ShapeAssetLibrary *shape_library) {
     SceneState s;
     s.time   = 0.0;
     s.dt     = 0.0;
@@ -459,7 +625,11 @@ SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
                         : NULL;
     s.obstacle_mask_dirty = true;
 
+    s.import_shape_count = 0;
+    memset(s.import_shapes, 0, sizeof(s.import_shapes));
+
     object_manager_init(&s.objects, 8);
+    s.shape_library = shape_library;
     if (preset) {
         for (size_t i = 0; i < preset->object_count && i < MAX_PRESET_OBJECTS; ++i) {
             const PresetObject *po = &preset->objects[i];
@@ -487,6 +657,14 @@ SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset) {
             }
             static_mask_apply_preset(&s, po);
         }
+        size_t copy_count = (preset->import_shape_count < MAX_IMPORTED_SHAPES)
+                                ? preset->import_shape_count
+                                : MAX_IMPORTED_SHAPES;
+        for (size_t i = 0; i < copy_count; ++i) {
+            s.import_shapes[s.import_shape_count++] = preset->import_shapes[i];
+        }
+        resolve_import_shapes(&s);
+        static_mask_apply_imports(&s);
     }
     return s;
 }

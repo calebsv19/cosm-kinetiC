@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "app/app_config.h"
 #include "app/scene_presets.h"
+#include "geo/shape_library.h"
 
 // Launches a full-size precision editor window at the simulation window size.
 // Mutates `working` and `selected_object` if the user applies changes.
@@ -13,6 +14,8 @@
 bool scene_editor_run_precision(const AppConfig *cfg,
                                 FluidScenePreset *working,
                                 int *selected_object,
+                                int *selected_import,
+                                const ShapeAssetLibrary *shape_library,
                                 TTF_Font *font_small,
                                 TTF_Font *font_main,
                                 bool *dirty_out);

@@ -29,6 +29,10 @@ void velocity_overlay_draw(const SceneState *scene,
     float speed_threshold = (cfg && cfg->speed_threshold > 0.0f)
                                 ? cfg->speed_threshold
                                 : DEFAULT_SPEED_THRESHOLD;
+    float ref_speed = (scene && scene->config && scene->config->tunnel_inflow_speed > 0.0f)
+                          ? scene->config->tunnel_inflow_speed
+                          : 1.0f;
+    if (ref_speed < 0.0001f) ref_speed = 0.0001f;
 
     float scale_x = safe_scale(window_w, grid->w);
     float scale_y = safe_scale(window_h, grid->h);
@@ -79,15 +83,19 @@ void velocity_overlay_draw(const SceneState *scene,
             if (fade <= 0.05f) continue;
 
             if (!fixed) {
-                float norm = fminf(speed / 2.0f, 1.0f);
-                Uint8 r = (Uint8)lroundf(200.0f * norm + 30.0f);
-                Uint8 g = (Uint8)lroundf(220.0f * (1.0f - norm));
-                Uint8 b = 200;
-                Uint8 a = (Uint8)lroundf((80.0f + 120.0f * norm) * fade);
+                float norm = fminf(speed / (ref_speed * 1.2f), 1.0f);
+                Uint8 r = (Uint8)lroundf(30.0f + 40.0f * norm);
+                Uint8 g = (Uint8)lroundf(120.0f + 135.0f * norm);
+                Uint8 b = (Uint8)lroundf(30.0f + 50.0f * norm);
+                Uint8 a = (Uint8)lroundf((70.0f + 180.0f * norm) * fade);
                 SDL_SetRenderDrawColor(renderer, r, g, b, a);
             } else {
-                Uint8 a = (Uint8)lroundf(160.0f * fade);
-                SDL_SetRenderDrawColor(renderer, 120, 230, 190, a);
+                float norm = fminf(speed / (ref_speed * 1.2f), 1.0f);
+                Uint8 r = (Uint8)lroundf(30.0f + 40.0f * norm);
+                Uint8 g = (Uint8)lroundf(120.0f + 135.0f * norm);
+                Uint8 b = (Uint8)lroundf(30.0f + 50.0f * norm);
+                Uint8 a = (Uint8)lroundf((90.0f + 170.0f * norm) * fade);
+                SDL_SetRenderDrawColor(renderer, r, g, b, a);
             }
 
             SDL_RenderDrawLine(renderer,

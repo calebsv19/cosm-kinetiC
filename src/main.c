@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "app/app_config.h"
 #include "app/scene_controller.h"
@@ -8,6 +9,7 @@
 #include "app/scene_presets.h"
 #include "app/quality_profiles.h"
 #include "config/config_loader.h"
+#include "geo/shape_library.h"
 #include "render/TimerHUD/src/api/time_scope.h"
 
 int main(int argc, char **argv) {
@@ -27,6 +29,13 @@ int main(int argc, char **argv) {
     const char *config_path = opts.path ? opts.path : "config/app.json";
 
     ts_init();
+
+    ShapeAssetLibrary shape_lib;
+    bool loaded_shapes = shape_library_load_dir("config/objects", &shape_lib);
+    if (!loaded_shapes) {
+        fprintf(stderr, "[shape] No ShapeAssets loaded from config/objects\n");
+        memset(&shape_lib, 0, sizeof(shape_lib));
+    }
 
     CustomPresetLibrary library;
     preset_library_init(&library);
@@ -81,19 +90,20 @@ int main(int argc, char **argv) {
         const char *output_dir = cfg.headless_output_dir[0]
                                      ? cfg.headless_output_dir
                                      : "data/snapshots";
-        scene_controller_run(&cfg, preset_to_run, output_dir, &headless_opts);
+        scene_controller_run(&cfg, preset_to_run, &shape_lib, output_dir, &headless_opts);
 
         preset_library_save(preset_path, &library);
         config_loader_save(&cfg, config_path);
+        shape_library_free(&shape_lib);
         preset_library_shutdown(&library);
         ts_shutdown();
         return 0;
     }
 
-    while (scene_menu_run(&cfg, &preset_state, &selection, &library)) {
+    while (scene_menu_run(&cfg, &preset_state, &selection, &library, &shape_lib)) {
         CustomPresetSlot *slot = preset_library_get_slot(&library, selection.custom_slot_index);
         FluidScenePreset *preset_to_run = slot ? &slot->preset : &preset_state;
-        scene_controller_run(&cfg, preset_to_run, "data/snapshots", NULL);
+        scene_controller_run(&cfg, preset_to_run, &shape_lib, "data/snapshots", NULL);
         cfg.quality_index = selection.quality_index;
         cfg.headless_frame_count = selection.headless_frame_count;
         cfg.sim_mode = selection.sim_mode;
@@ -101,6 +111,7 @@ int main(int argc, char **argv) {
 
     preset_library_save(preset_path, &library);
     config_loader_save(&cfg, config_path);
+    shape_library_free(&shape_lib);
     preset_library_shutdown(&library);
 
     ts_shutdown();

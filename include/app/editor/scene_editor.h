@@ -9,6 +9,7 @@
 #include "app/scene_presets.h"
 #include "app/preset_io.h"
 #include "input/input_context.h"
+#include "geo/shape_library.h"
 
 typedef struct SceneEditorResult {
     bool applied;
@@ -21,6 +22,7 @@ bool scene_editor_run(SDL_Window *window,
                       const AppConfig *cfg,
                       FluidScenePreset *preset,
                       InputContextManager *ctx_mgr,
+                      const ShapeAssetLibrary *shape_library,
                       char *name_buffer,
                       size_t name_capacity);
 

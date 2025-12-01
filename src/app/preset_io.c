@@ -6,7 +6,7 @@
 #include <string.h>
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-static const int PRESET_FILE_VERSION = 2;
+    static const int PRESET_FILE_VERSION = 4;
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     switch (domain) {
@@ -59,13 +59,33 @@ static void sanitize_preset_object(PresetObject *obj) {
     if (!obj) return;
     obj->position_x = clampf(isfinite(obj->position_x) ? obj->position_x : 0.5f, 0.0f, 1.0f);
     obj->position_y = clampf(isfinite(obj->position_y) ? obj->position_y : 0.5f, 0.0f, 1.0f);
-    obj->size_x = clampf(isfinite(obj->size_x) ? obj->size_x : 0.05f, 0.01f, 1.0f);
-    obj->size_y = clampf(isfinite(obj->size_y) ? obj->size_y : obj->size_x, 0.01f, 1.0f);
+    obj->size_x = clampf(isfinite(obj->size_x) ? obj->size_x : 0.05f, 0.005f, 1.0f);
+    obj->size_y = clampf(isfinite(obj->size_y) ? obj->size_y : obj->size_x, 0.005f, 1.0f);
     if (!isfinite(obj->angle)) obj->angle = 0.0f;
     obj->is_static = obj->is_static ? true : false;
     if (obj->type != PRESET_OBJECT_CIRCLE && obj->type != PRESET_OBJECT_BOX) {
         obj->type = PRESET_OBJECT_CIRCLE;
     }
+}
+
+static void sanitize_import_shape(ImportedShape *imp) {
+    if (!imp) return;
+    if (imp->shape_id < -1) imp->shape_id = -1;
+    // Allow wider-than-unit spans for wide/tall canvases; keep reasonable bounds.
+    if (!isfinite(imp->position_x)) imp->position_x = 0.5f;
+    if (!isfinite(imp->position_y)) imp->position_y = 0.5f;
+    const float POS_MIN = -8.0f;
+    const float POS_MAX = 8.0f;
+    if (imp->position_x < POS_MIN) imp->position_x = POS_MIN;
+    if (imp->position_x > POS_MAX) imp->position_x = POS_MAX;
+    if (imp->position_y < POS_MIN) imp->position_y = POS_MIN;
+    if (imp->position_y > POS_MAX) imp->position_y = POS_MAX;
+    if (!isfinite(imp->rotation_deg)) imp->rotation_deg = 0.0f;
+    if (!isfinite(imp->scale) || imp->scale <= 0.0f) imp->scale = 1.0f;
+    if (!isfinite(imp->density) || imp->density <= 0.0f) imp->density = 1.0f;
+    if (!isfinite(imp->friction) || imp->friction < 0.0f) imp->friction = 0.2f;
+    imp->is_static = imp->is_static ? true : false;
+    imp->enabled = imp->enabled && imp->path[0] != '\0';
 }
 
 static void boundary_flows_reset(BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
@@ -206,11 +226,17 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
         if (slot->preset.object_count > MAX_PRESET_OBJECTS) {
             slot->preset.object_count = MAX_PRESET_OBJECTS;
         }
+        if (slot->preset.import_shape_count > MAX_IMPORTED_SHAPES) {
+            slot->preset.import_shape_count = MAX_IMPORTED_SHAPES;
+        }
         for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
             sanitize_emitter(&slot->preset.emitters[e]);
         }
         for (size_t o = 0; o < slot->preset.object_count; ++o) {
             sanitize_preset_object(&slot->preset.objects[o]);
+        }
+        for (size_t s = 0; s < slot->preset.import_shape_count; ++s) {
+            sanitize_import_shape(&slot->preset.import_shapes[s]);
         }
         boundary_flows_assign(slot->preset.boundary_flows,
                               preset_copy->boundary_flows);
@@ -263,17 +289,17 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
     FILE *f = fopen(path, "r");
     if (!f) return false;
 
-    int header_vals[3] = {0};
-    int read_count = fscanf(f, "%d %d %d\n",
+        int header_vals[3] = {0};
+        int read_count = fscanf(f, "%d %d %d\n",
                             &header_vals[0],
                             &header_vals[1],
                             &header_vals[2]);
-    if (read_count != 3 && read_count != 2) {
-        fclose(f);
-        return false;
-    }
-    int file_version = 0;
-    int active_slot = 0;
+        if (read_count != 3 && read_count != 2) {
+            fclose(f);
+            return false;
+        }
+        int file_version = 0;
+        int active_slot = 0;
     int stored_slots = 0;
     if (read_count == 3) {
         file_version = header_vals[0];
@@ -419,6 +445,63 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
             fseek(f, marker_pos, SEEK_SET);
         }
 
+        long shape_marker_pos = ftell(f);
+        if (file_version >= 3) {
+            char shape_marker[6] = {0};
+            if (fscanf(f, "%5s", shape_marker) == 1 && strcmp(shape_marker, "SHAPE") == 0) {
+                int shape_count = 0;
+                if (fscanf(f, "%d\n", &shape_count) != 1) {
+                    shape_count = 0;
+                }
+                if (shape_count < 0) shape_count = 0;
+                if (shape_count > (int)MAX_IMPORTED_SHAPES) shape_count = (int)MAX_IMPORTED_SHAPES;
+                for (int s = 0; s < shape_count; ++s) {
+                    ImportedShape imp = {0};
+                    if (!read_line(f, imp.path, sizeof(imp.path))) {
+                        break;
+                    }
+                    int enabled = 1;
+                    if (file_version >= 4) {
+                        int static_int = 0;
+                        if (fscanf(f, "%f %f %f %f %d %f %f %d\n",
+                                   &imp.position_x,
+                                   &imp.position_y,
+                                   &imp.scale,
+                                   &imp.rotation_deg,
+                                   &enabled,
+                                   &imp.density,
+                                   &imp.friction,
+                                   &static_int) < 5) {
+                            break;
+                        }
+                        imp.is_static = static_int != 0;
+                    } else {
+                        if (fscanf(f, "%f %f %f %f %d\n",
+                                   &imp.position_x,
+                                   &imp.position_y,
+                                   &imp.scale,
+                                   &imp.rotation_deg,
+                                   &enabled) != 5) {
+                            break;
+                        }
+                        imp.density = 1.0f;
+                        imp.friction = 0.2f;
+                        imp.is_static = true;
+                    }
+                    imp.enabled = enabled != 0;
+                    imp.shape_id = -1;
+                    sanitize_import_shape(&imp);
+                    if (imp.path[0] != '\0') {
+                        slot.preset.import_shapes[slot.preset.import_shape_count++] = imp;
+                    }
+                }
+            } else {
+                fseek(f, shape_marker_pos, SEEK_SET);
+            }
+        } else {
+            fseek(f, shape_marker_pos, SEEK_SET);
+        }
+
         lib->slots[i] = slot;
         lib->slots[i].preset.name = lib->slots[i].name;
         lib->slots[i].preset.domain = domain;
@@ -480,6 +563,23 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
                     obj->size_y,
                     obj->angle,
                     obj->is_static ? 1 : 0);
+        }
+        size_t shape_count = slot->preset.import_shape_count;
+        if (shape_count > MAX_IMPORTED_SHAPES) shape_count = MAX_IMPORTED_SHAPES;
+        fprintf(f, "SHAPE %zu\n", shape_count);
+        for (size_t s = 0; s < shape_count; ++s) {
+            ImportedShape imp = slot->preset.import_shapes[s];
+            sanitize_import_shape(&imp);
+            fprintf(f, "%s\n", imp.path);
+            fprintf(f, "%.6f %.6f %.6f %.6f %d %.6f %.6f %d\n",
+                    imp.position_x,
+                    imp.position_y,
+                    imp.scale,
+                    imp.rotation_deg,
+                    imp.enabled ? 1 : 0,
+                    imp.density,
+                    imp.friction,
+                    imp.is_static ? 1 : 0);
         }
     }
 

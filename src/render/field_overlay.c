@@ -16,6 +16,12 @@ static float *g_pressure_tmp    = NULL;
 static float *g_pressure_blur   = NULL;
 static size_t g_pressure_cap    = 0;
 
+static inline Uint8 clamp_u8(int v) {
+    if (v < 0) return 0;
+    if (v > 255) return 255;
+    return (Uint8)v;
+}
+
 static inline float solid_alpha_falloff(const SceneState *scene, size_t id) {
     if (!scene || !scene->obstacle_distance) return 1.0f;
     return scene->obstacle_distance[id];
@@ -247,9 +253,9 @@ static void apply_pressure_overlay(const SceneState *scene,
     }
     if (max_pos <= FLT_EPSILON) max_pos = 1.0f;
     if (max_neg <= FLT_EPSILON) max_neg = 1.0f;
-    const float intensity_boost = 0.7f; // smaller scale => stronger color
+    const float intensity_boost = 0.3f; // smaller scale => stronger color
     float pos_scale = fmaxf(max_pos * intensity_boost, 1e-3f);
-    float neg_scale = fmaxf(max_neg * intensity_boost, 1e-3f);
+    float neg_scale = fmaxf(max_neg * intensity_boost * 2, 1e-3f);
 
     bool blur_enabled = (scene->config && scene->config->enable_render_blur);
 #if RENDERER_ENABLE_SMOOTHING
@@ -289,7 +295,9 @@ static void apply_pressure_overlay(const SceneState *scene,
     (void)blur_enabled;
 #endif
 
-    const Uint8 base_gray = 200;
+    const AppConfig *cfg = scene->config;
+    Uint8 base_black = cfg ? clamp_u8(cfg->render_black_level) : 0;
+    Uint8 base_gray = (Uint8)lroundf((float)base_black + (200.0f - (float)base_black) * 0.6f);
     for (int y = 0; y < h; ++y) {
         Uint32 *row = (Uint32 *)(pixels + y * pitch);
         for (int x = 0; x < w; ++x) {

@@ -229,6 +229,11 @@ static void apply_render_settings(const char *json, AppConfig *cfg) {
     if (json_block_number(&block, "blur_enabled", &val)) {
         cfg->enable_render_blur = (val != 0.0);
     }
+    if (json_block_number(&block, "black_level", &val)) {
+        if (val < 0.0) val = 0.0;
+        if (val > 255.0) val = 255.0;
+        cfg->render_black_level = (int)val;
+    }
 }
 
 static void apply_headless_settings(const char *json, AppConfig *cfg) {
@@ -396,7 +401,8 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "    \"solver_iterations\": %d\n", cfg->fluid_solver_iterations);
     fprintf(f, "  },\n");
     fprintf(f, "  \"render\": {\n");
-    fprintf(f, "    \"blur_enabled\": %s\n", cfg->enable_render_blur ? "true" : "false");
+    fprintf(f, "    \"blur_enabled\": %s,\n", cfg->enable_render_blur ? "true" : "false");
+    fprintf(f, "    \"black_level\": %d\n", cfg->render_black_level);
     fprintf(f, "  },\n");
     fprintf(f, "  \"headless\": {\n");
     fprintf(f, "    \"enabled\": %s,\n", cfg->headless_enabled ? "true" : "false");

@@ -4,6 +4,38 @@
 #include <stdio.h>
 
 #include "app/editor/scene_editor_canvas.h"
+#include "app/shape_lookup.h"
+#include "geo/shape_asset.h"
+
+static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_Color color) {
+    if (!renderer || radius <= 0) return;
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    int x = radius - 1;
+    int y = 0;
+    int dx = 1;
+    int dy = 1;
+    int err = dx - (radius << 1);
+    while (x >= y) {
+        SDL_RenderDrawPoint(renderer, cx + x, cy + y);
+        SDL_RenderDrawPoint(renderer, cx + y, cy + x);
+        SDL_RenderDrawPoint(renderer, cx - y, cy + x);
+        SDL_RenderDrawPoint(renderer, cx - x, cy + y);
+        SDL_RenderDrawPoint(renderer, cx - x, cy - y);
+        SDL_RenderDrawPoint(renderer, cx - y, cy - x);
+        SDL_RenderDrawPoint(renderer, cx + y, cy - x);
+        SDL_RenderDrawPoint(renderer, cx + x, cy - y);
+        if (err <= 0) {
+            y++;
+            err += dy;
+            dy += 2;
+        }
+        if (err > 0) {
+            x--;
+            dx += 2;
+            err += dx - (radius << 1);
+        }
+    }
+}
 
 static float clamp01(float v) {
     if (v < 0.0f) return 0.0f;
@@ -27,9 +59,82 @@ static void screen_to_normalized(int w, int h, int sx, int sy, float *out_x, flo
     *out_y = (float)sy / (float)h;
 }
 
+static void draw_import_outline(SDL_Renderer *renderer,
+                                const ImportedShape *imp,
+                                const ShapeAssetLibrary *lib,
+                                int win_w,
+                                int win_h,
+                                bool selected,
+                                bool hovered) {
+    if (!renderer || !imp || !lib) return;
+    const ShapeAsset *asset = shape_lookup_from_path(lib, imp->path);
+    if (!asset) return;
+    ShapeAssetBounds b;
+    if (!shape_asset_bounds(asset, &b) || !b.valid) return;
+    float size_x = b.max_x - b.min_x;
+    float size_y = b.max_y - b.min_y;
+    float max_dim = fmaxf(size_x, size_y);
+    if (max_dim <= 0.0001f) return;
+    const float desired_fit = 0.25f;
+    float norm = (imp->scale * desired_fit) / max_dim;
+    float cx = 0.5f * (b.min_x + b.max_x);
+    float cy = 0.5f * (b.min_y + b.max_y);
+    float cos_a = cosf(imp->rotation_deg * (float)M_PI / 180.0f);
+    float sin_a = sinf(imp->rotation_deg * (float)M_PI / 180.0f);
+    SDL_Color col = selected ? (SDL_Color){255, 255, 200, 255}
+                             : (hovered ? (SDL_Color){180, 220, 255, 220}
+                                        : (SDL_Color){180, 186, 195, 200});
+    for (size_t pi = 0; pi < asset->path_count; ++pi) {
+        const ShapeAssetPath *path = &asset->paths[pi];
+        if (!path || path->point_count < 2) continue;
+        for (size_t i = 1; i < path->point_count; ++i) {
+            ShapeAssetPoint a = path->points[i - 1];
+            ShapeAssetPoint bpt = path->points[i];
+            float axn = (a.x - cx) * norm;
+            float ayn = (a.y - cy) * norm;
+            float bxn = (bpt.x - cx) * norm;
+            float byn = (bpt.y - cy) * norm;
+            float ra_x = axn * cos_a - ayn * sin_a + imp->position_x;
+            float ra_y = axn * sin_a + ayn * cos_a + imp->position_y;
+            float rb_x = bxn * cos_a - byn * sin_a + imp->position_x;
+            float rb_y = bxn * sin_a + byn * cos_a + imp->position_y;
+            float scale_px = (float)((win_w < win_h) ? win_w : win_h);
+            float cx_px = 0.5f * (float)win_w;
+            float cy_px = 0.5f * (float)win_h;
+            int ax = (int)lroundf(cx_px + (ra_x - 0.5f) * scale_px);
+            int ay = (int)lroundf(cy_px + (ra_y - 0.5f) * scale_px);
+            int bx = (int)lroundf(cx_px + (rb_x - 0.5f) * scale_px);
+            int by = (int)lroundf(cy_px + (rb_y - 0.5f) * scale_px);
+            SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
+            SDL_RenderDrawLine(renderer, ax, ay, bx, by);
+        }
+    }
+    // draw a larger handle arrow scaled with canvas size for readability
+    float handle_px = scene_editor_canvas_handle_size_px(win_w, win_h);
+    float scale_px = (float)((win_w < win_h) ? win_w : win_h);
+    float handle_norm = (scale_px > 0.0f) ? (handle_px / scale_px) : 0.0f;
+    if (handle_norm > 0.0f) {
+        float hx = imp->position_x;
+        float hy = imp->position_y;
+        float hx2 = hx + cos_a * (handle_norm * 1.4f);
+        float hy2 = hy + sin_a * (handle_norm * 1.4f);
+        float cx_px = 0.5f * (float)win_w;
+        float cy_px = 0.5f * (float)win_h;
+        int hx_px = (int)lroundf(cx_px + (hx - 0.5f) * scale_px);
+        int hy_px = (int)lroundf(cy_px + (hy - 0.5f) * scale_px);
+        int hx2_px = (int)lroundf(cx_px + (hx2 - 0.5f) * scale_px);
+        int hy2_px = (int)lroundf(cy_px + (hy2 - 0.5f) * scale_px);
+        SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
+        SDL_RenderDrawLine(renderer, hx_px, hy_px, hx2_px, hy2_px);
+        draw_circle(renderer, hx2_px, hy2_px, (int)lroundf(handle_px * 0.4f), col);
+    }
+}
+
 bool scene_editor_run_precision(const AppConfig *cfg,
                                 FluidScenePreset *working,
                                 int *selected_object,
+                                int *selected_import,
+                                const ShapeAssetLibrary *shape_library,
                                 TTF_Font *font_small,
                                 TTF_Font *font_main,
                                 bool *dirty_out) {
@@ -93,13 +198,19 @@ bool scene_editor_run_precision(const AppConfig *cfg,
 
     FluidScenePreset local = *working;
     FluidScenePreset original = *working;
-    int sel_obj = *selected_object;
+    int sel_obj = selected_object ? *selected_object : -1;
+    int sel_import = selected_import ? *selected_import : -1;
     int hover_object = -1;
+    int hover_import = -1;
     int pointer_x = -1;
     int pointer_y = -1;
     bool dragging_object = false;
+    bool dragging_import = false;
+    bool dragging_import_handle = false;
     bool dragging_handle = false;
     float drag_off_x = 0.0f, drag_off_y = 0.0f;
+    float import_handle_start_dist = 0.0f;
+    float import_handle_start_scale = 1.0f;
     float handle_ratio = 1.0f;
     float handle_initial = 0.0f;
     bool handle_started = false;
@@ -142,6 +253,11 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                         obj->size_y *= 1.1f;
                         clamp_object(obj);
                         dirty = true;
+                    } else if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
+                        ImportedShape *imp = &local.import_shapes[sel_import];
+                        imp->scale *= 1.1f;
+                        if (imp->scale < 0.01f) imp->scale = 0.01f;
+                        dirty = true;
                     }
                     break;
                 case SDLK_MINUS:
@@ -153,6 +269,11 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                         obj->size_y *= 0.9f;
                         clamp_object(obj);
                         dirty = true;
+                    } else if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
+                        ImportedShape *imp = &local.import_shapes[sel_import];
+                        imp->scale *= 0.9f;
+                        if (imp->scale < 0.01f) imp->scale = 0.01f;
+                        dirty = true;
                     }
                     break;
                 case SDLK_UP:
@@ -160,6 +281,10 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                         PresetObject *obj = &local.objects[sel_obj];
                         obj->position_y = clamp01(obj->position_y - 0.01f);
                         clamp_object(obj);
+                        dirty = true;
+                    } else if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
+                        ImportedShape *imp = &local.import_shapes[sel_import];
+                        imp->position_y = clamp01(imp->position_y - 0.01f);
                         dirty = true;
                     }
                     break;
@@ -169,6 +294,10 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                         obj->position_y = clamp01(obj->position_y + 0.01f);
                         clamp_object(obj);
                         dirty = true;
+                    } else if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
+                        ImportedShape *imp = &local.import_shapes[sel_import];
+                        imp->position_y = clamp01(imp->position_y + 0.01f);
+                        dirty = true;
                     }
                     break;
                 case SDLK_LEFT:
@@ -177,6 +306,10 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                         obj->position_x = clamp01(obj->position_x - 0.01f);
                         clamp_object(obj);
                         dirty = true;
+                    } else if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
+                        ImportedShape *imp = &local.import_shapes[sel_import];
+                        imp->position_x = clamp01(imp->position_x - 0.01f);
+                        dirty = true;
                     }
                     break;
                 case SDLK_RIGHT:
@@ -184,6 +317,10 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                         PresetObject *obj = &local.objects[sel_obj];
                         obj->position_x = clamp01(obj->position_x + 0.01f);
                         clamp_object(obj);
+                        dirty = true;
+                    } else if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
+                        ImportedShape *imp = &local.import_shapes[sel_import];
+                        imp->position_x = clamp01(imp->position_x + 0.01f);
                         dirty = true;
                     }
                     break;
@@ -197,6 +334,55 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                 int mx = ev.button.x;
                 int my = ev.button.y;
                 EditorDragMode mode = DRAG_NONE;
+                // Check imports first
+                int imp_hit = scene_editor_canvas_hit_import(&local,
+                                                             shape_library,
+                                                             0,
+                                                             0,
+                                                             win_w,
+                                                             win_h,
+                                                             mx,
+                                                             my);
+                // Handle hit first for rotate/scale
+                int handle_idx = -1;
+                int hx = 0, hy = 0;
+                float hit_radius_px = scene_editor_canvas_handle_size_px(win_w, win_h) * 0.6f;
+                for (int i = (int)local.import_shape_count - 1; i >= 0; --i) {
+                    const ImportedShape *imp = &local.import_shapes[i];
+                    if (!imp->enabled) continue;
+                    if (!scene_editor_canvas_import_handle_point(0, 0, win_w, win_h, imp, &hx, &hy)) continue;
+                    float dx = (float)mx - (float)hx;
+                    float dy = (float)my - (float)hy;
+                    if ((dx * dx + dy * dy) <= hit_radius_px * hit_radius_px) {
+                        handle_idx = i;
+                        break;
+                    }
+                }
+                if (handle_idx >= 0) {
+                    sel_import = handle_idx;
+                    sel_obj = -1;
+                    dragging_import_handle = true;
+                    const ImportedShape *imp = &local.import_shapes[handle_idx];
+                    float nx, ny;
+                    scene_editor_canvas_to_import_normalized(0, 0, win_w, win_h, mx, my, &nx, &ny);
+                    float dx = nx - imp->position_x;
+                    float dy = ny - imp->position_y;
+                    float dist = sqrtf(dx * dx + dy * dy);
+                    if (dist < 0.0001f) dist = 0.0001f;
+                    import_handle_start_dist = dist;
+                    import_handle_start_scale = imp->scale;
+                    break;
+                }
+                if (imp_hit >= 0) {
+                    sel_import = imp_hit;
+                    sel_obj = -1;
+                    dragging_import = true;
+                    float nx, ny;
+                    scene_editor_canvas_to_import_normalized(0, 0, win_w, win_h, mx, my, &nx, &ny);
+                    drag_off_x = nx - local.import_shapes[imp_hit].position_x;
+                    drag_off_y = ny - local.import_shapes[imp_hit].position_y;
+                    break;
+                }
                 int handle_hit = scene_editor_canvas_hit_object_handle(&local,
                                                                        0,
                                                                        0,
@@ -240,7 +426,9 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                                                              my);
                 if (obj_hit >= 0) {
                     sel_obj = obj_hit;
+                    sel_import = -1;
                     dragging_object = true;
+                    dragging_import = false;
                     dragging_handle = false;
                     handle_started = false;
                     PresetObject *obj = &local.objects[obj_hit];
@@ -258,15 +446,19 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                                                        win_h,
                                                        mx,
                                                        my,
-                                                       &mode);
+                                                       &mode,
+                                                       NULL);
                 if (hit >= 0) {
                     sel_obj = -1;
+                    sel_import = -1;
                 }
                 break;
             }
             case SDL_MOUSEBUTTONUP:
                 if (ev.button.button == SDL_BUTTON_LEFT) {
                     dragging_object = false;
+                    dragging_import = false;
+                    dragging_import_handle = false;
                     dragging_handle = false;
                     handle_started = false;
                 }
@@ -274,7 +466,57 @@ bool scene_editor_run_precision(const AppConfig *cfg,
             case SDL_MOUSEMOTION:
                 pointer_x = ev.motion.x;
                 pointer_y = ev.motion.y;
-                if (dragging_handle && sel_obj >= 0 &&
+                hover_import = scene_editor_canvas_hit_import(&local,
+                                                              shape_library,
+                                                              0,
+                                                              0,
+                                                              win_w,
+                                                              win_h,
+                                                              pointer_x,
+                                                              pointer_y);
+                if (dragging_import_handle && sel_import >= 0 &&
+                    sel_import < (int)local.import_shape_count) {
+                    ImportedShape *imp = &local.import_shapes[sel_import];
+                    float nx, ny;
+                    scene_editor_canvas_to_import_normalized(0, 0, win_w, win_h, ev.motion.x, ev.motion.y, &nx, &ny);
+                    float dx = nx - imp->position_x;
+                    float dy = ny - imp->position_y;
+                    float dist = sqrtf(dx * dx + dy * dy);
+                    if (dist < 0.0001f) dist = 0.0001f;
+                    float ratio = dist / import_handle_start_dist;
+                    imp->scale = import_handle_start_scale * ratio;
+                    if (imp->scale < 0.01f) imp->scale = 0.01f;
+                    imp->rotation_deg = atan2f(dy, dx) * 180.0f / (float)M_PI;
+                    dirty = true;
+                } else if (dragging_import && sel_import >= 0 &&
+                    sel_import < (int)local.import_shape_count) {
+                    ImportedShape *imp = &local.import_shapes[sel_import];
+                    float nx, ny;
+                    scene_editor_canvas_to_import_normalized(0, 0, win_w, win_h, ev.motion.x, ev.motion.y, &nx, &ny);
+                    imp->position_x = nx - drag_off_x;
+                    imp->position_y = ny - drag_off_y;
+                    float min_dim = (float)((win_w < win_h) ? win_w : win_h);
+                    float span_x = 0.5f * ((float)win_w / min_dim);
+                    float span_y = 0.5f * ((float)win_h / min_dim);
+                    float min_x = 0.5f - span_x;
+                    float max_x = 0.5f + span_x;
+                    float min_y = 0.5f - span_y;
+                    float max_y = 0.5f + span_y;
+                    if (imp->position_x < min_x) imp->position_x = min_x;
+                    if (imp->position_x > max_x) imp->position_x = max_x;
+                    if (imp->position_y < min_y) imp->position_y = min_y;
+                    if (imp->position_y > max_y) imp->position_y = max_y;
+                    dirty = true;
+                } else if (dragging_object && sel_obj >= 0 &&
+                           sel_obj < (int)local.object_count) {
+                    PresetObject *obj = &local.objects[sel_obj];
+                    float nx, ny;
+                    screen_to_normalized(win_w, win_h, ev.motion.x, ev.motion.y, &nx, &ny);
+                    obj->position_x = clamp01(nx - drag_off_x);
+                    obj->position_y = clamp01(ny - drag_off_y);
+                    clamp_object(obj);
+                    dirty = true;
+                } else if (dragging_handle && sel_obj >= 0 &&
                     sel_obj < (int)local.object_count) {
                     PresetObject *obj = &local.objects[sel_obj];
                     int cx = 0, cy = 0;
@@ -356,7 +598,7 @@ bool scene_editor_run_precision(const AppConfig *cfg,
         SDL_SetRenderDrawColor(renderer, 20, 22, 26, 255);
         SDL_RenderClear(renderer);
 
-        scene_editor_canvas_draw_background(renderer, 0, 0, win_w, win_h);
+        scene_editor_canvas_draw_background(renderer, 0, 0, win_w, win_h, false, 0.0f, 0.0f);
         scene_editor_canvas_draw_boundary_flows(renderer,
                                                 0,
                                                 0,
@@ -366,6 +608,16 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                                                 -1,
                                                 -1,
                                                 false);
+
+        // Draw imports (asset outlines)
+        for (int ii = 0; ii < (int)local.import_shape_count; ++ii) {
+            const ImportedShape *imp = &local.import_shapes[ii];
+            if (!imp->enabled) continue;
+            bool sel = (ii == sel_import);
+            bool hov = (ii == hover_import);
+            draw_import_outline(renderer, imp, shape_library, win_w, win_h, sel, hov);
+        }
+
         scene_editor_canvas_draw_emitters(renderer,
                                           0,
                                           0,
@@ -374,7 +626,8 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                                           &local,
                                           -1,
                                           -1,
-                                          font_small);
+                                          font_small,
+                                          NULL);
         scene_editor_canvas_draw_objects(renderer,
                                          0,
                                          0,
@@ -384,28 +637,42 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                                          sel_obj,
                                          hover_object);
 
-        if (hover_object >= 0 && hover_object < (int)local.object_count &&
-            pointer_x >= 0 && pointer_y >= 0 && font_small) {
-            const PresetObject *obj = &local.objects[hover_object];
-            const char *type = (obj->type == PRESET_OBJECT_BOX) ? "Box" : "Circle";
-            char buf1[64];
-            char buf2[64];
-            char buf3[64];
-            const char *lines[3] = {buf1, buf2, buf3};
-            snprintf(buf1, sizeof(buf1), "Object: %s", type);
-            if (obj->type == PRESET_OBJECT_BOX) {
-                snprintf(buf2, sizeof(buf2), "Size %.3f x %.3f", obj->size_x, obj->size_y);
-                snprintf(buf3, sizeof(buf3), "Pos %.3f, %.3f", obj->position_x, obj->position_y);
-            } else {
-                snprintf(buf2, sizeof(buf2), "Radius %.3f", obj->size_x);
-                snprintf(buf3, sizeof(buf3), "Pos %.3f, %.3f", obj->position_x, obj->position_y);
+        if (pointer_x >= 0 && pointer_y >= 0 && font_small) {
+            if (hover_object >= 0 && hover_object < (int)local.object_count) {
+                const PresetObject *obj = &local.objects[hover_object];
+                const char *type = (obj->type == PRESET_OBJECT_BOX) ? "Box" : "Circle";
+                char buf1[64];
+                char buf2[64];
+                char buf3[64];
+                const char *lines[3] = {buf1, buf2, buf3};
+                snprintf(buf1, sizeof(buf1), "Object: %s", type);
+                if (obj->type == PRESET_OBJECT_BOX) {
+                    snprintf(buf2, sizeof(buf2), "Size %.3f x %.3f", obj->size_x, obj->size_y);
+                    snprintf(buf3, sizeof(buf3), "Pos %.3f, %.3f", obj->position_x, obj->position_y);
+                } else {
+                    snprintf(buf2, sizeof(buf2), "Radius %.3f", obj->size_x);
+                    snprintf(buf3, sizeof(buf3), "Pos %.3f, %.3f", obj->position_x, obj->position_y);
+                }
+                scene_editor_canvas_draw_tooltip(renderer,
+                                                 font_small,
+                                                 pointer_x,
+                                                 pointer_y,
+                                                 lines,
+                                                 3);
+            } else if (hover_import >= 0 && hover_import < (int)local.import_shape_count) {
+                const ImportedShape *imp = &local.import_shapes[hover_import];
+                char buf1[96];
+                char buf2[64];
+                const char *lines[2] = {buf1, buf2};
+                snprintf(buf1, sizeof(buf1), "Import: %s", imp->path[0] ? imp->path : "(unnamed)");
+                snprintf(buf2, sizeof(buf2), "Pos %.3f, %.3f  Scale %.3f", imp->position_x, imp->position_y, imp->scale);
+                scene_editor_canvas_draw_tooltip(renderer,
+                                                 font_small,
+                                                 pointer_x,
+                                                 pointer_y,
+                                                 lines,
+                                                 2);
             }
-            scene_editor_canvas_draw_tooltip(renderer,
-                                             font_small,
-                                             pointer_x,
-                                             pointer_y,
-                                             lines,
-                                             3);
         }
 
         const char *hint = "Precision editor: drag objects/handles, +/- resize, arrows nudge, Enter apply, Esc cancel";
@@ -431,6 +698,7 @@ bool scene_editor_run_precision(const AppConfig *cfg,
     if (apply) {
         *working = local;
         *selected_object = sel_obj;
+        if (selected_import) *selected_import = sel_import;
         if (dirty && dirty_out) *dirty_out = true;
         return true;
     }

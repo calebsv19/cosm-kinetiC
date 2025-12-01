@@ -3,6 +3,7 @@
 
 #include "app/app_config.h"
 #include "app/scene_presets.h"
+#include "geo/shape_library.h"
 
 typedef struct HeadlessOptions {
     bool enabled;
@@ -18,6 +19,7 @@ typedef struct HeadlessOptions {
 // steps physics/rendering until the user quits.
 int scene_controller_run(const AppConfig *initial_cfg,
                          const FluidScenePreset *preset,
+                         const ShapeAssetLibrary *shape_library,
                          const char *snapshot_dir,
                          const HeadlessOptions *headless);
 

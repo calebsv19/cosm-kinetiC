@@ -31,7 +31,7 @@ SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
 WARN      := -Wall -Wextra -Wpedantic
 DEBUG     := -g
 
-CFLAGS    := $(CSTD) $(WARN) $(DEBUG) -I$(INC_DIR) -I$(SRC_DIR)
+CFLAGS    := $(CSTD) $(WARN) $(DEBUG) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools
 LDFLAGS   :=
 LIBS      :=
 
@@ -72,11 +72,27 @@ LIBS += -lm
 # =========================
 #  Source / object discovery
 # =========================
-# Find all .c files under src/
-SRCS := $(shell find $(SRC_DIR) -name '*.c')
+# Find all .c files under src/ excluding CLI tools
+SRCS := $(shell find $(SRC_DIR) -name '*.c' ! -path '$(SRC_DIR)/tools/cli/*')
 # Map src/foo/bar.c -> build/foo/bar.o
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 DEPS := $(OBJS:.o=.d)
+
+# CLI tool sources (explicit to avoid multiple mains)
+SHAPE_MASK_TOOL_SRC   := $(SRC_DIR)/tools/cli/shape_import_tool.c
+SHAPE_MASK_TOOL_OBJ   := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_MASK_TOOL_SRC))
+SHAPE_ASSET_TOOL_SRC  := $(SRC_DIR)/tools/cli/shape_asset_tool.c
+SHAPE_ASSET_TOOL_OBJ  := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_ASSET_TOOL_SRC))
+
+# Shared ShapeLib/import pieces reused by the CLI
+SHAPE_SHARED_SRCS := \
+	$(SRC_DIR)/tools/ShapeLib/shape_core.c \
+	$(SRC_DIR)/tools/ShapeLib/shape_flatten.c \
+	$(SRC_DIR)/tools/ShapeLib/shape_json.c \
+	$(SRC_DIR)/import/shape_import.c \
+	$(SRC_DIR)/geo/shape_asset.c \
+	$(SRC_DIR)/render/TimerHUD/external/cJSON.c
+SHAPE_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SHARED_SRCS))
 
 # =========================
 #  Top-level targets
@@ -108,8 +124,16 @@ video:
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)
 
+shape_mask_tool: $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
+
+shape_asset_tool: $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
+
+# legacy alias
+shape_import_tool: shape_mask_tool
+		
 # =========================
 #  Auto-generated deps
 # =========================
 -include $(DEPS)
-

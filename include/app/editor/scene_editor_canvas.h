@@ -6,6 +6,9 @@
 #include <stdbool.h>
 
 #include "app/scene_presets.h"
+#include "geo/shape_library.h"
+
+typedef struct SceneEditorState SceneEditorState;
 #include "ui/text_input.h"
 
 #define SCENE_EDITOR_SELECT_HIGHLIGHT_FACTOR 0.35f
@@ -20,6 +23,11 @@ typedef enum EditorDragMode {
     DRAG_POSITION,
     DRAG_DIRECTION
 } EditorDragMode;
+
+#ifndef SCENE_EDITOR_STATE_FWD
+#define SCENE_EDITOR_STATE_FWD
+struct SceneEditorState;
+#endif
 
 void scene_editor_canvas_project(int canvas_x,
                                  int canvas_y,
@@ -38,12 +46,27 @@ void scene_editor_canvas_to_normalized(int canvas_x,
                                        int sy,
                                        float *out_x,
                                        float *out_y);
+void scene_editor_canvas_to_import_normalized(int canvas_x,
+                                              int canvas_y,
+                                              int canvas_w,
+                                              int canvas_h,
+                                              int sx,
+                                              int sy,
+                                              float *out_x,
+                                              float *out_y);
 
 void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
                                          int canvas_x,
                                          int canvas_y,
                                          int canvas_w,
-                                         int canvas_h);
+                                         int canvas_h,
+                                         bool preview_active,
+                                         float preview_x_norm,
+                                         float preview_y_norm);
+
+// Draw polyline-based imported assets as outlines.
+void scene_editor_canvas_draw_imports(SDL_Renderer *renderer,
+                                      const SceneEditorState *state);
 
 int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
                                  int canvas_x,
@@ -52,7 +75,8 @@ int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
                                  int canvas_h,
                                  int px,
                                  int py,
-                                 EditorDragMode *mode);
+                                 EditorDragMode *mode,
+                                 const int *emitter_object_map);
 int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
                                    int canvas_x,
                                    int canvas_y,
@@ -67,6 +91,21 @@ int scene_editor_canvas_hit_object_handle(const FluidScenePreset *preset,
                                           int canvas_h,
                                           int px,
                                           int py);
+int scene_editor_canvas_hit_import(const FluidScenePreset *preset,
+                                   const ShapeAssetLibrary *lib,
+                                   int canvas_x,
+                                   int canvas_y,
+                                   int canvas_w,
+                                   int canvas_h,
+                                   int px,
+                                   int py);
+bool scene_editor_canvas_import_handle_point(int canvas_x,
+                                             int canvas_y,
+                                             int canvas_w,
+                                             int canvas_h,
+                                             const ImportedShape *imp,
+                                             int *out_x,
+                                             int *out_y);
 bool scene_editor_canvas_object_handle_point(const FluidScenePreset *preset,
                                              int canvas_x,
                                              int canvas_y,
@@ -84,6 +123,8 @@ void scene_editor_canvas_object_visual_half_sizes_px(const PresetObject *obj,
 float scene_editor_canvas_object_handle_length_px(const PresetObject *obj,
                                                   int canvas_w,
                                                   int canvas_h);
+float scene_editor_canvas_handle_size_px(int canvas_w, int canvas_h);
+float scene_editor_canvas_handle_size_norm(int canvas_w, int canvas_h);
 
 int scene_editor_canvas_hit_edge(int canvas_x,
                                  int canvas_y,
@@ -128,7 +169,8 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
                                        const FluidScenePreset *preset,
                                        int selected_emitter,
                                        int hover_emitter,
-                                       TTF_Font *font_small);
+                                       TTF_Font *font_small,
+                                       const int *emitter_object_map);
 void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
                                       int canvas_x,
                                       int canvas_y,

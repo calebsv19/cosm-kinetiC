@@ -10,7 +10,7 @@
 
 #define HUD_PADDING 6
 #define HUD_SPACING 4
-#define HUD_BG_ALPHA 180
+#define HUD_BG_ALPHA 40
 #define HUD_TEXT_COLOR (SDL_Color){255, 255, 255, 255}
 #define HUD_BG_COLOR (SDL_Color){0, 0, 0, HUD_BG_ALPHA}
 #define HUD_UPDATE_INTERVAL_MS 500

@@ -190,7 +190,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         .h = total_h + padding * 2
     };
 
-    SDL_SetRenderDrawColor(g_hud_renderer, 30, 35, 40, 30);
+    SDL_SetRenderDrawColor(g_hud_renderer, 30, 35, 40, 16);
     SDL_RenderFillRect(g_hud_renderer, &panel);
     SDL_SetRenderDrawColor(g_hud_renderer, 255, 255, 255, 60);
     SDL_RenderDrawRect(g_hud_renderer, &panel);

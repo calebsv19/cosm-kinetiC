@@ -58,6 +58,21 @@ typedef struct PresetObject {
 
 #define MAX_PRESET_OBJECTS 64
 
+typedef struct ImportedShape {
+    char  path[256];      // asset name or path to ShapeLib JSON
+    int   shape_id;       // resolved index into ShapeAsset library (-1 if unresolved)
+    float position_x;     // normalized 0..1
+    float position_y;     // normalized 0..1
+    float rotation_deg;   // degrees
+    float scale;          // uniform scale (1 = fit as-authored)
+    float density;        // physics density override
+    float friction;       // physics friction override
+    bool  is_static;      // merge into static mask
+    bool  enabled;
+} ImportedShape;
+
+#define MAX_IMPORTED_SHAPES 64
+
 typedef enum FluidSceneDomainType {
     SCENE_DOMAIN_BOX = 0,
     SCENE_DOMAIN_WIND_TUNNEL
@@ -70,6 +85,8 @@ typedef struct FluidScenePreset {
     FluidEmitter emitters[MAX_FLUID_EMITTERS];
     size_t object_count;
     PresetObject objects[MAX_PRESET_OBJECTS];
+    size_t import_shape_count;
+    ImportedShape import_shapes[MAX_IMPORTED_SHAPES];
     BoundaryFlow boundary_flows[BOUNDARY_EDGE_COUNT];
     FluidSceneDomainType domain;
     float domain_width;

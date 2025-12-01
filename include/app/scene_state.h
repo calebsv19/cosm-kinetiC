@@ -11,6 +11,7 @@
 #include "input/stroke_buffer.h"
 #include "app/scene_presets.h"
 #include "physics/objects/object_manager.h"
+#include "geo/shape_library.h"
 
 typedef struct SceneState {
     double time;
@@ -30,9 +31,18 @@ typedef struct SceneState {
     float   *obstacle_distance;
     bool     obstacle_mask_dirty;
     int      wind_ramp_steps;
+
+    // Imported ShapeLib assets baked into the static mask.
+    size_t import_shape_count;
+    ImportedShape import_shapes[MAX_IMPORTED_SHAPES];
+
+    // Shared ShapeAsset library (non-owning pointer).
+    const ShapeAssetLibrary *shape_library;
 } SceneState;
 
-SceneState scene_create(const AppConfig *cfg, const FluidScenePreset *preset);
+SceneState scene_create(const AppConfig *cfg,
+                        const FluidScenePreset *preset,
+                        const ShapeAssetLibrary *shape_library);
 void       scene_destroy(SceneState *scene);
 
 void scene_apply_input(SceneState *scene, const InputCommands *cmds);

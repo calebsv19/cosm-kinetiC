@@ -14,6 +14,7 @@
 #include "input/input.h"
 #include "ui/text_input.h"
 #include "ui/scrollbar.h"
+#include "geo/shape_library.h"
 
 #define MENU_WIDTH 820
 #define MENU_HEIGHT 660
@@ -38,6 +39,7 @@ typedef struct SceneMenuInteraction {
     size_t preset_count;
     SceneMenuSelection *selection;
     CustomPresetLibrary *library;
+    const ShapeAssetLibrary *shape_library;
     FluidScenePreset *preset_output;
     FluidScenePreset preview_preset;
     FluidScenePreset *active_preset;
@@ -170,7 +172,7 @@ static void run_headless_batch(SceneMenuInteraction *ctx) {
     CustomPresetSlot *slot = preset_library_get_slot(ctx->library,
                                                      ctx->selection->custom_slot_index);
     FluidScenePreset preset_copy = slot ? slot->preset : ctx->preview_preset;
-    int result = scene_controller_run(&cfg_copy, &preset_copy, output_dir, &opts);
+    int result = scene_controller_run(&cfg_copy, &preset_copy, ctx->shape_library, output_dir, &opts);
     if (result == 2) {
         set_status(ctx, "Headless run canceled.", true);
     } else {
@@ -976,6 +978,7 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
                              ctx->cfg,
                              target,
                              ctx->context_mgr,
+                             ctx->shape_library,
                              name_buffer,
                              name_capacity)) {
             slot->preset = *target;
@@ -1205,7 +1208,8 @@ static void menu_text_input(void *user, const char *text) {
 bool scene_menu_run(AppConfig *cfg,
                     FluidScenePreset *preset_state,
                     SceneMenuSelection *selection,
-                    CustomPresetLibrary *library) {
+                    CustomPresetLibrary *library,
+                    const ShapeAssetLibrary *shape_library) {
     if (!cfg || !preset_state || !selection || !library) return false;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -1312,6 +1316,7 @@ bool scene_menu_run(AppConfig *cfg,
         .preset_count = preset_count,
         .selection = &current_selection,
         .library = library,
+        .shape_library = shape_library,
         .preset_output = preset_state,
         .preview_preset = *preset_state,
         .active_preset = preset_state,
