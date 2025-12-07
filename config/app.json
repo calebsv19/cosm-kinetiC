@@ -29,12 +29,12 @@
     "solver_iterations": 12
   },
   "render": {
-    "blur_enabled": true,
+    "blur_enabled": false,
     "black_level": 50
   },
   "headless": {
     "enabled": false,
-    "frame_count": 10000,
+    "frame_count": 8000,
     "custom_slot_index": 0,
     "quality_index": -1,
     "skip_present": true

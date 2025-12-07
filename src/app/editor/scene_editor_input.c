@@ -137,6 +137,53 @@ static bool convert_import_to_asset(const char *import_path,
     return ok;
 }
 
+static bool add_import_from_picker(SceneEditorState *state, int row) {
+    if (!state || row < 0 || row >= state->import_file_count) return false;
+    const char *selected_path = state->import_files[row];
+    char asset_path[512] = {0};
+    const char *store_path = selected_path;
+    if (path_starts_with(selected_path, "import/")) {
+        if (convert_import_to_asset(selected_path, asset_path, sizeof(asset_path))) {
+            store_path = asset_path;
+            scene_editor_refresh_import_files(state);
+        }
+    }
+    bool exists = false;
+    for (size_t i = 0; i < state->working.import_shape_count; ++i) {
+        const char *existing = state->working.import_shapes[i].path;
+        if (strcmp(existing, store_path) == 0) {
+            exists = true;
+            state->selected_row = (int)i;
+            state->selection_kind = SELECTION_IMPORT;
+            fprintf(stderr, "[editor] Import already present, selecting row %zu: %s\n",
+                    i, existing);
+            break;
+        }
+    }
+    if (!exists && state->working.import_shape_count < MAX_IMPORTED_SHAPES) {
+        ImportedShape *imp = &state->working.import_shapes[state->working.import_shape_count++];
+        memset(imp, 0, sizeof(*imp));
+        snprintf(imp->path, sizeof(imp->path), "%s", store_path);
+        imp->shape_id = -1;
+        imp->position_x = 0.5f;
+        imp->position_y = 0.5f;
+        imp->scale = 1.0f;
+        imp->rotation_deg = 0.0f;
+        imp->density = 1.0f;
+        imp->friction = 0.2f;
+        imp->is_static = true;
+        imp->enabled = true;
+        state->selected_row = (int)state->working.import_shape_count - 1;
+        state->selection_kind = SELECTION_IMPORT;
+        fprintf(stderr, "[editor] Added import row %zu: %s\n",
+                state->working.import_shape_count - 1, store_path);
+        resolve_import_shape_id(state, imp);
+        set_dirty(state);
+    }
+    state->showing_import_picker = false;
+    return true;
+}
+
 void editor_pointer_down(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !ptr) return;
@@ -278,54 +325,7 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
             state->last_import_click = now;
             state->selected_import_row = row;
             if (double_click) {
-                const char *selected_path = state->import_files[row];
-                char asset_path[512] = {0};
-                const char *store_path = selected_path;
-                if (path_starts_with(selected_path, "import/")) {
-                    if (convert_import_to_asset(selected_path, asset_path, sizeof(asset_path))) {
-                        store_path = asset_path;
-                        scene_editor_refresh_import_files(state);
-                        fprintf(stderr, "[editor] Converted legacy import %s -> %s\n",
-                                selected_path, store_path);
-                    } else {
-                        store_path = selected_path; // fallback to raw
-                        fprintf(stderr, "[editor] Using raw import path (conversion failed): %s\n",
-                                selected_path);
-                    }
-                }
-                // If it already exists in the preset, just select it.
-                bool exists = false;
-                for (size_t i = 0; i < state->working.import_shape_count; ++i) {
-                    if (strcmp(state->working.import_shapes[i].path, store_path) == 0) {
-                        exists = true;
-                        state->selected_row = (int)i;
-                        state->selection_kind = SELECTION_IMPORT;
-                        fprintf(stderr, "[editor] Import already present, selecting row %zu: %s\n",
-                                i, store_path);
-                        break;
-                    }
-                }
-                if (!exists && state->working.import_shape_count < MAX_IMPORTED_SHAPES) {
-                    ImportedShape *imp = &state->working.import_shapes[state->working.import_shape_count++];
-                    memset(imp, 0, sizeof(*imp));
-                    snprintf(imp->path, sizeof(imp->path), "%s", store_path);
-                    imp->shape_id = -1;
-                    imp->position_x = 0.5f;
-                    imp->position_y = 0.5f;
-                    imp->scale = 1.0f;
-                    imp->rotation_deg = 0.0f;
-                    imp->density = 1.0f;
-                    imp->friction = 0.2f;
-                    imp->is_static = true;
-                    imp->enabled = true;
-                    state->selected_row = (int)state->working.import_shape_count - 1;
-                    state->selection_kind = SELECTION_IMPORT;
-                    fprintf(stderr, "[editor] Added import row %zu: %s\n",
-                            state->working.import_shape_count - 1, store_path);
-                    resolve_import_shape_id(state, imp);
-                    set_dirty(state);
-                }
-                state->showing_import_picker = false;
+                add_import_from_picker(state, row);
             } else {
                 state->dragging_import_new = true;
                 state->dragging_import_index = row;
@@ -980,7 +980,11 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     switch (key) {
     case SDLK_RETURN:
     case SDLK_KP_ENTER:
-        finish_and_apply(state);
+        if (state->showing_import_picker && state->selected_import_row >= 0) {
+            add_import_from_picker(state, state->selected_import_row);
+        } else {
+            finish_and_apply(state);
+        }
         break;
     case SDLK_ESCAPE:
         cancel_and_close(state);

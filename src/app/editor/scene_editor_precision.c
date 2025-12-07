@@ -276,6 +276,17 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                         dirty = true;
                     }
                     break;
+                case SDLK_DELETE:
+                case SDLK_BACKSPACE:
+                    if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
+                        for (int j = sel_import; j + 1 < (int)local.import_shape_count; ++j) {
+                            local.import_shapes[j] = local.import_shapes[j + 1];
+                        }
+                        local.import_shape_count--;
+                        sel_import = -1;
+                        dirty = true;
+                    }
+                    break;
                 case SDLK_UP:
                     if (sel_obj >= 0 && sel_obj < (int)local.object_count) {
                         PresetObject *obj = &local.objects[sel_obj];
