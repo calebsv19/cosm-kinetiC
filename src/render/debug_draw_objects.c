@@ -21,7 +21,8 @@ static float safe_scale(int target, int source) {
 static void draw_import_outlines(const SceneState *scene,
                                  SDL_Renderer *renderer,
                                  int window_w,
-                                 int window_h) {
+                                 int window_h,
+                                 const bool *skip_import) {
     if (!scene || !renderer || !scene->shape_library) return;
     if (scene->import_shape_count == 0) return;
     if (!scene->config) return;
@@ -33,6 +34,7 @@ static void draw_import_outlines(const SceneState *scene,
     for (size_t i = 0; i < scene->import_shape_count; ++i) {
         const ImportedShape *imp = &scene->import_shapes[i];
         if (!imp->enabled) continue;
+        if (skip_import && skip_import[i]) continue;
         const ShapeAsset *asset = shape_lookup_from_path(scene->shape_library, imp->path);
         if (!asset) continue;
         ShapeAssetBounds b;
@@ -142,13 +144,27 @@ void debug_draw_object_borders(const SceneState *scene,
     SDL_Color box_color    = {170, 120, 80, 255};
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    // Always draw import outlines, even if no physics objects are present.
-    draw_import_outlines(scene, renderer, window_w, window_h);
+    bool skip_imp[MAX_IMPORTED_SHAPES] = {0};
+    bool skip_obj[MAX_PRESET_OBJECTS] = {0};
+    if (scene && scene->preset) {
+        for (size_t ei = 0; ei < scene->preset->emitter_count && ei < MAX_FLUID_EMITTERS; ++ei) {
+            int ao = scene->preset->emitters[ei].attached_object;
+            int ai = scene->preset->emitters[ei].attached_import;
+            if (ao >= 0 && ao < (int)MAX_PRESET_OBJECTS) skip_obj[ao] = true;
+            if (ai >= 0 && ai < (int)MAX_IMPORTED_SHAPES) skip_imp[ai] = true;
+        }
+    }
+
+    // Always draw import outlines, even if no physics objects are present, unless they are emitters.
+    draw_import_outlines(scene, renderer, window_w, window_h, skip_imp);
 
     const int segments = 48;
     if (objects && objects->count > 0) {
         for (int i = 0; i < objects->count; ++i) {
             const SceneObject *obj = &objects->objects[i];
+            if (scene && scene->preset && i < (int)scene->preset->object_count && skip_obj[i]) {
+                continue; // skip drawing if this preset object is acting as an emitter
+            }
             int cx = (int)lroundf(obj->body.position.x * scale_x);
             int cy = (int)lroundf(obj->body.position.y * scale_y);
 

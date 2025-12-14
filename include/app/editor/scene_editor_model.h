@@ -25,8 +25,15 @@ void clear_boundary(SceneEditorState *state, int edge);
 
 void sync_emitter_to_object(SceneEditorState *state, int obj_index);
 int emitter_index_for_object(const SceneEditorState *state, int obj_index);
+int emitter_index_for_import(const SceneEditorState *state, int import_index);
+void sync_emitter_to_import(SceneEditorState *state, int import_index);
+void remove_emitter_at(SceneEditorState *state, int em_idx);
 int ensure_emitter_for_object(SceneEditorState *state,
                               int obj_index,
+                              FluidEmitterType type,
+                              bool toggle_clear);
+int ensure_emitter_for_import(SceneEditorState *state,
+                              int import_index,
                               FluidEmitterType type,
                               bool toggle_clear);
 void add_emitter(SceneEditorState *state, FluidEmitterType type);

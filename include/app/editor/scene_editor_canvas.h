@@ -15,7 +15,7 @@ typedef struct SceneEditorState SceneEditorState;
 #define SCENE_EDITOR_OBJECT_MIN_RADIUS_PX 6
 #define SCENE_EDITOR_OBJECT_MIN_HALF_PX 4
 #define SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX 10
-#define SCENE_EDITOR_OBJECT_HANDLE_HIT_RADIUS_PX 12
+#define SCENE_EDITOR_OBJECT_HANDLE_HIT_RADIUS_PX 16
 #define SCENE_EDITOR_BOUNDARY_HIT_MARGIN 16
 
 typedef enum EditorDragMode {
@@ -23,6 +23,23 @@ typedef enum EditorDragMode {
     DRAG_POSITION,
     DRAG_DIRECTION
 } EditorDragMode;
+
+typedef enum SceneEditorHitKind {
+    HIT_NONE = 0,
+    HIT_EMITTER,
+    HIT_OBJECT,
+    HIT_OBJECT_HANDLE,
+    HIT_IMPORT,
+    HIT_IMPORT_HANDLE,
+    HIT_BOUNDARY_EDGE
+} SceneEditorHitKind;
+
+typedef struct SceneEditorHit {
+    SceneEditorHitKind kind;
+    int index;
+    EditorDragMode drag_mode; // emitters and handles use this to signal drag style
+    int boundary_edge;        // valid when kind == HIT_BOUNDARY_EDGE
+} SceneEditorHit;
 
 #ifndef SCENE_EDITOR_STATE_FWD
 #define SCENE_EDITOR_STATE_FWD
@@ -76,7 +93,19 @@ int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
                                  int px,
                                  int py,
                                  EditorDragMode *mode,
-                                 const int *emitter_object_map);
+                                 const int *emitter_object_map,
+                                 const int *emitter_import_map);
+bool scene_editor_canvas_emitter_handle_point(const FluidScenePreset *preset,
+                                              int canvas_x,
+                                              int canvas_y,
+                                              int canvas_w,
+                                              int canvas_h,
+                                              int emitter_index,
+                                              const int *emitter_object_map,
+                                              const int *emitter_import_map,
+                                              int *out_x,
+                                              int *out_y,
+                                              float *out_hit_radius_px);
 int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
                                    int canvas_x,
                                    int canvas_y,
@@ -99,10 +128,23 @@ int scene_editor_canvas_hit_import(const FluidScenePreset *preset,
                                    int canvas_h,
                                    int px,
                                    int py);
+int scene_editor_canvas_collect_hits(const FluidScenePreset *preset,
+                                     const ShapeAssetLibrary *lib,
+                                     int canvas_x,
+                                     int canvas_y,
+                                     int canvas_w,
+                                     int canvas_h,
+                                     int px,
+                                     int py,
+                                     const int *emitter_object_map,
+                                     const int *emitter_import_map,
+                                     SceneEditorHit *out_hits,
+                                     int max_hits);
 bool scene_editor_canvas_import_handle_point(int canvas_x,
                                              int canvas_y,
                                              int canvas_w,
                                              int canvas_h,
+                                             const ShapeAssetLibrary *lib,
                                              const ImportedShape *imp,
                                              int *out_x,
                                              int *out_y);
@@ -170,7 +212,8 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
                                        int selected_emitter,
                                        int hover_emitter,
                                        TTF_Font *font_small,
-                                       const int *emitter_object_map);
+                                       const int *emitter_object_map,
+                                       const int *emitter_import_map);
 void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
                                       int canvas_x,
                                       int canvas_y,
@@ -178,6 +221,7 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
                                       int canvas_h,
                                       const FluidScenePreset *preset,
                                       int selected_object,
-                                      int hover_object);
+                                      int hover_object,
+                                      const int *emitter_object_map);
 
 #endif // SCENE_EDITOR_CANVAS_H

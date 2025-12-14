@@ -6,7 +6,7 @@
 #include <string.h>
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-    static const int PRESET_FILE_VERSION = 4;
+    static const int PRESET_FILE_VERSION = 6;
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     switch (domain) {
@@ -37,6 +37,8 @@ static void sanitize_emitter(FluidEmitter *em) {
     if (!isfinite(em->strength)) {
         em->strength = 0.0f;
     }
+    if (em->attached_object < 0 || em->attached_object >= MAX_PRESET_OBJECTS) em->attached_object = -1;
+    if (em->attached_import < 0 || em->attached_import >= MAX_IMPORTED_SHAPES) em->attached_import = -1;
 
     float dx = em->dir_x;
     float dy = em->dir_y;
@@ -368,15 +370,50 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         for (int e = 0; e < emitter_count; ++e) {
             FluidEmitter emitter = {0};
             int type = 0;
-            if (fscanf(f, "%d %f %f %f %f %f %f\n",
-                       &type,
-                       &emitter.position_x,
-                       &emitter.position_y,
-                       &emitter.radius,
-                       &emitter.strength,
-                       &emitter.dir_x,
-                       &emitter.dir_y) != 7) {
-                break;
+            int attached_obj = -1;
+            int attached_imp = -1;
+            if (file_version >= 6) {
+                if (fscanf(f, "%d %f %f %f %f %f %f %d %d\n",
+                           &type,
+                           &emitter.position_x,
+                           &emitter.position_y,
+                           &emitter.radius,
+                           &emitter.strength,
+                           &emitter.dir_x,
+                           &emitter.dir_y,
+                           &attached_obj,
+                           &attached_imp) != 9) {
+                    break;
+                }
+                emitter.attached_object = attached_obj;
+                emitter.attached_import = attached_imp;
+            } else if (file_version >= 5) {
+                if (fscanf(f, "%d %f %f %f %f %f %f %d\n",
+                           &type,
+                           &emitter.position_x,
+                           &emitter.position_y,
+                           &emitter.radius,
+                           &emitter.strength,
+                           &emitter.dir_x,
+                           &emitter.dir_y,
+                           &attached_obj) != 8) {
+                    break;
+                }
+                emitter.attached_object = attached_obj;
+                emitter.attached_import = -1;
+            } else {
+                if (fscanf(f, "%d %f %f %f %f %f %f\n",
+                           &type,
+                           &emitter.position_x,
+                           &emitter.position_y,
+                           &emitter.radius,
+                           &emitter.strength,
+                           &emitter.dir_x,
+                           &emitter.dir_y) != 7) {
+                    break;
+                }
+                emitter.attached_object = -1;
+                emitter.attached_import = -1;
             }
             emitter.type = (FluidEmitterType)type;
             sanitize_emitter(&emitter);
@@ -535,14 +572,16 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         fprintf(f, "%zu\n", slot->preset.emitter_count);
         for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
             const FluidEmitter *em = &slot->preset.emitters[e];
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f\n",
+            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %d %d\n",
                     em->type,
                     em->position_x,
                     em->position_y,
                     em->radius,
                     em->strength,
                     em->dir_x,
-                    em->dir_y);
+                    em->dir_y,
+                    em->attached_object,
+                    em->attached_import);
         }
         fprintf(f, "FLOW %d\n", BOUNDARY_EDGE_COUNT);
         for (int edge = 0; edge < BOUNDARY_EDGE_COUNT; ++edge) {

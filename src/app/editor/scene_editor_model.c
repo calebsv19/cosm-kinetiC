@@ -5,9 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/shape_lookup.h"
+#include "geo/shape_asset.h"
+
 static NumericField *current_field(SceneEditorState *state) {
     return state ? state->active_field : NULL;
 }
+
+static void normalize_direction(FluidEmitter *em);
 
 void adjust_emitter_radius(FluidEmitter *em, float scale) {
     if (!em) return;
@@ -90,6 +95,43 @@ void clear_boundary(SceneEditorState *state, int edge) {
     flow->strength = 0.0f;
     state->boundary_selected_edge = edge;
     set_dirty(state);
+}
+
+static float import_max_extent_norm(const SceneEditorState *state, int import_index) {
+    if (!state || !state->shape_library) return 0.08f;
+    if (import_index < 0 || import_index >= (int)state->working.import_shape_count) return 0.08f;
+    const ImportedShape *imp = &state->working.import_shapes[import_index];
+    const ShapeAsset *asset = shape_lookup_from_path(state->shape_library, imp->path);
+    if (!asset) return 0.08f;
+    ShapeAssetBounds b;
+    if (!shape_asset_bounds(asset, &b) || !b.valid) return 0.08f;
+    float size_x = b.max_x - b.min_x;
+    float size_y = b.max_y - b.min_y;
+    float max_dim = fmaxf(size_x, size_y);
+    if (max_dim <= 0.0001f) return 0.08f;
+    const float desired_fit = 0.25f;
+    float norm = (imp->scale * desired_fit) / max_dim;
+    float max_extent = fmaxf(size_x, size_y) * norm;
+    if (max_extent < 0.02f) max_extent = 0.02f;
+    if (max_extent > 0.6f) max_extent = 0.6f;
+    return max_extent;
+}
+
+void sync_emitter_to_import(SceneEditorState *state, int import_index) {
+    if (!state) return;
+    int em_idx = emitter_index_for_import(state, import_index);
+    if (em_idx < 0 || em_idx >= (int)state->working.emitter_count) return;
+    FluidEmitter *em = &state->working.emitters[em_idx];
+    const ImportedShape *imp = &state->working.import_shapes[import_index];
+    em->position_x = imp->position_x;
+    em->position_y = imp->position_y;
+    em->attached_object = -1;
+    em->attached_import = import_index;
+    state->emitter_object_map[em_idx] = -1;
+    state->emitter_import_map[em_idx] = import_index;
+    normalize_direction(em);
+    em->position_x = clamp01(em->position_x);
+    em->position_y = clamp01(em->position_y);
 }
 
 const char *boundary_mode_label(BoundaryFlowMode mode) {
@@ -187,6 +229,38 @@ bool field_handle_key(SceneEditorState *state, SDL_Keycode key) {
 
 void nudge_selected(SceneEditorState *state, float dx, float dy) {
     if (!state) return;
+    if (state->selection_kind == SELECTION_EMITTER &&
+        state->selected_emitter >= 0 &&
+        state->selected_emitter < (int)state->working.emitter_count) {
+        FluidEmitter *em = &state->working.emitters[state->selected_emitter];
+        int attached = em->attached_object;
+        if (state->emitter_object_map[state->selected_emitter] >= 0) {
+            attached = state->emitter_object_map[state->selected_emitter];
+        }
+        int attached_imp = em->attached_import;
+        if (state->emitter_import_map[state->selected_emitter] >= 0) {
+            attached_imp = state->emitter_import_map[state->selected_emitter];
+        }
+        if (attached >= 0 &&
+            attached < (int)state->working.object_count) {
+            PresetObject *obj = &state->working.objects[attached];
+            obj->position_x = clamp01(obj->position_x + dx);
+            obj->position_y = clamp01(obj->position_y + dy);
+            clamp_object(obj);
+            sync_emitter_to_object(state, attached);
+            set_dirty(state);
+            return;
+        } else if (attached_imp >= 0 &&
+                   attached_imp < (int)state->working.import_shape_count) {
+            ImportedShape *imp = &state->working.import_shapes[attached_imp];
+            imp->position_x = clamp01(imp->position_x + dx);
+            imp->position_y = clamp01(imp->position_y + dy);
+            em->position_x = imp->position_x;
+            em->position_y = imp->position_y;
+            set_dirty(state);
+            return;
+        }
+    }
     if (state->selection_kind == SELECTION_OBJECT &&
         state->selected_object >= 0 &&
         state->selected_object < (int)state->working.object_count) {
@@ -222,7 +296,25 @@ static void normalize_direction(FluidEmitter *em) {
 int emitter_index_for_object(const SceneEditorState *state, int obj_index) {
     if (!state || obj_index < 0 || obj_index >= (int)state->working.object_count) return -1;
     for (size_t i = 0; i < state->working.emitter_count; ++i) {
-        if (state->emitter_object_map[i] == obj_index) {
+        int attached = state->emitter_object_map[i];
+        if (attached < 0) {
+            attached = state->working.emitters[i].attached_object;
+        }
+        if (attached == obj_index) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+int emitter_index_for_import(const SceneEditorState *state, int import_index) {
+    if (!state || import_index < 0 || import_index >= (int)state->working.import_shape_count) return -1;
+    for (size_t i = 0; i < state->working.emitter_count; ++i) {
+        int attached = state->emitter_import_map[i];
+        if (attached < 0) {
+            attached = state->working.emitters[i].attached_import;
+        }
+        if (attached == import_index) {
             return (int)i;
         }
     }
@@ -252,6 +344,8 @@ static void apply_defaults_for_type(FluidEmitter *em, FluidEmitterType type) {
         break;
     }
     normalize_direction(em);
+    if (em->attached_object < 0) em->attached_object = -1;
+    if (em->attached_import < 0) em->attached_import = -1;
 }
 
 void sync_emitter_to_object(SceneEditorState *state, int obj_index) {
@@ -262,9 +356,15 @@ void sync_emitter_to_object(SceneEditorState *state, int obj_index) {
     const PresetObject *obj = &state->working.objects[obj_index];
     em->position_x = obj->position_x;
     em->position_y = obj->position_y;
-    float max_extent = fmaxf(obj->size_x, obj->size_y);
-    if (max_extent < 0.01f) max_extent = 0.01f;
-    em->radius = max_extent;
+    em->attached_object = obj_index;
+    em->attached_import = -1;
+    state->emitter_object_map[em_idx] = obj_index;
+    state->emitter_import_map[em_idx] = -1;
+    // Keep direction normalized in case callers mutated it.
+    normalize_direction(em);
+    // Also keep the emitter's position in range.
+    em->position_x = clamp01(em->position_x);
+    em->position_y = clamp01(em->position_y);
 }
 
 void remove_emitter_at(SceneEditorState *state, int em_idx) {
@@ -273,9 +373,11 @@ void remove_emitter_at(SceneEditorState *state, int em_idx) {
     for (size_t i = (size_t)em_idx; i + 1 < count; ++i) {
         state->working.emitters[i] = state->working.emitters[i + 1];
         state->emitter_object_map[i] = state->emitter_object_map[i + 1];
+        state->emitter_import_map[i] = state->emitter_import_map[i + 1];
     }
     state->working.emitter_count--;
     state->emitter_object_map[state->working.emitter_count] = -1;
+    state->emitter_import_map[state->working.emitter_count] = -1;
     if (state->selected_emitter >= em_idx) {
         state->selected_emitter--;
         if (state->selected_emitter < 0) state->selected_emitter = -1;
@@ -297,6 +399,9 @@ int ensure_emitter_for_object(SceneEditorState *state,
         }
         apply_defaults_for_type(em, type);
         state->emitter_object_map[existing] = obj_index;
+        state->emitter_import_map[existing] = -1;
+        em->attached_object = obj_index;
+        em->attached_import = -1;
         sync_emitter_to_object(state, obj_index);
         set_dirty(state);
         return existing;
@@ -307,15 +412,62 @@ int ensure_emitter_for_object(SceneEditorState *state,
         .type = type,
         .position_x = obj->position_x,
         .position_y = obj->position_y,
-        .radius = 0.08f,
+        .radius = fmaxf(obj->size_x, obj->size_y),
         .dir_x = 0.0f,
-        .dir_y = -1.0f
+        .dir_y = -1.0f,
+        .attached_object = obj_index,
+        .attached_import = -1
     };
     apply_defaults_for_type(&emitter, type);
     state->working.emitters[state->working.emitter_count] = emitter;
     state->emitter_object_map[state->working.emitter_count] = obj_index;
+    state->emitter_import_map[state->working.emitter_count] = -1;
     state->working.emitter_count++;
     sync_emitter_to_object(state, obj_index);
+    set_dirty(state);
+    return (int)state->working.emitter_count - 1;
+}
+
+int ensure_emitter_for_import(SceneEditorState *state,
+                              int import_index,
+                              FluidEmitterType type,
+                              bool toggle_clear) {
+    if (!state || import_index < 0 || import_index >= (int)state->working.import_shape_count) return -1;
+    int existing = emitter_index_for_import(state, import_index);
+    if (existing >= 0) {
+        FluidEmitter *em = &state->working.emitters[existing];
+        if (toggle_clear && em->type == type) {
+            remove_emitter_at(state, existing);
+            set_dirty(state);
+            return -1;
+        }
+        apply_defaults_for_type(em, type);
+        state->emitter_import_map[existing] = import_index;
+        state->emitter_object_map[existing] = -1;
+        em->attached_import = import_index;
+        em->attached_object = -1;
+        sync_emitter_to_import(state, import_index);
+        set_dirty(state);
+        return existing;
+    }
+    if (state->working.emitter_count >= MAX_FLUID_EMITTERS) return -1;
+    const ImportedShape *imp = &state->working.import_shapes[import_index];
+    FluidEmitter emitter = {
+        .type = type,
+        .position_x = imp->position_x,
+        .position_y = imp->position_y,
+        .radius = import_max_extent_norm(state, import_index),
+        .dir_x = 0.0f,
+        .dir_y = -1.0f,
+        .attached_object = -1,
+        .attached_import = import_index
+    };
+    apply_defaults_for_type(&emitter, type);
+    state->working.emitters[state->working.emitter_count] = emitter;
+    state->emitter_import_map[state->working.emitter_count] = import_index;
+    state->emitter_object_map[state->working.emitter_count] = -1;
+    state->working.emitter_count++;
+    sync_emitter_to_import(state, import_index);
     set_dirty(state);
     return (int)state->working.emitter_count - 1;
 }
@@ -329,7 +481,9 @@ void add_emitter(SceneEditorState *state, FluidEmitterType type) {
         .position_y = 0.5f,
         .radius = 0.08f,
         .dir_x = 0.0f,
-        .dir_y = -1.0f
+        .dir_y = -1.0f,
+        .attached_object = -1,
+        .attached_import = -1
     };
     switch (type) {
     case EMITTER_DENSITY_SOURCE:
@@ -345,6 +499,7 @@ void add_emitter(SceneEditorState *state, FluidEmitterType type) {
     state->working.emitters[state->working.emitter_count] = emitter;
     state->selected_emitter = (int)state->working.emitter_count;
     state->emitter_object_map[state->working.emitter_count] = -1;
+    state->emitter_import_map[state->working.emitter_count] = -1;
     state->working.emitter_count++;
     normalize_direction(&state->working.emitters[state->selected_emitter]);
     state->selection_kind = SELECTION_EMITTER;

@@ -18,6 +18,8 @@ typedef struct FluidEmitter {
     float strength;     // general scalar (density per second or velocity magnitude)
     float dir_x;        // for velocity jets / sinks
     float dir_y;
+    int   attached_object; // -1 if free; otherwise index into preset objects
+    int   attached_import; // -1 if free; otherwise index into imported shapes
 } FluidEmitter;
 
 #define MAX_FLUID_EMITTERS 32

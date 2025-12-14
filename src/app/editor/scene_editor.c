@@ -89,9 +89,20 @@ bool scene_editor_run(SDL_Window *window,
     state.import_drag_pos_y = 0.5f;
     for (int i = 0; i < MAX_FLUID_EMITTERS; ++i) {
         state.emitter_object_map[i] = -1;
+        state.emitter_import_map[i] = -1;
     }
-    for (int i = 0; i < MAX_FLUID_EMITTERS; ++i) {
-        state.emitter_object_map[i] = -1;
+    for (size_t i = 0; i < state.working.emitter_count && i < MAX_FLUID_EMITTERS; ++i) {
+        FluidEmitter *em = &state.working.emitters[i];
+        if (em->attached_object < 0 ||
+            em->attached_object >= (int)state.working.object_count) {
+            em->attached_object = -1;
+        }
+        if (em->attached_import < 0 ||
+            em->attached_import >= (int)state.working.import_shape_count) {
+            em->attached_import = -1;
+        }
+        state.emitter_object_map[i] = em->attached_object;
+        state.emitter_import_map[i] = em->attached_import;
     }
 
     InputContextManager local_mgr;
@@ -233,6 +244,11 @@ bool scene_editor_run(SDL_Window *window,
     }
 
     input_context_manager_pop(state.context_mgr);
+
+    // Flush pending mouse events so menu clicks don't immediately re-trigger after closing.
+    SDL_FlushEvent(SDL_MOUSEBUTTONDOWN);
+    SDL_FlushEvent(SDL_MOUSEBUTTONUP);
+    SDL_FlushEvent(SDL_MOUSEMOTION);
 
     if (state.owns_context_mgr) {
         // nothing extra to clean up beyond stack pop

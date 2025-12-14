@@ -38,6 +38,12 @@ typedef struct SceneState {
 
     // Shared ShapeAsset library (non-owning pointer).
     const ShapeAssetLibrary *shape_library;
+
+    // Rasterized emitter masks for emitters attached to imports (grid-sized masks).
+    struct {
+        uint8_t *mask;
+        int min_x, max_x, min_y, max_y;
+    } emitter_masks[MAX_FLUID_EMITTERS];
 } SceneState;
 
 SceneState scene_create(const AppConfig *cfg,

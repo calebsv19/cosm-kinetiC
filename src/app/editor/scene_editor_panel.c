@@ -101,6 +101,14 @@ static void draw_hover_tooltip(SceneEditorState *state) {
         lines[1] = buf2;
         lines[2] = buf3;
         count = 3;
+        int em_idx = emitter_index_for_object(state, state->hover_object);
+        if (em_idx >= 0 && em_idx < (int)state->working.emitter_count) {
+            const FluidEmitter *em = &state->working.emitters[em_idx];
+            snprintf(buf3, sizeof(buf3), "Emitter: %s (r=%.2f, s=%.1f)",
+                     emitter_type_name(em->type), em->radius, em->strength);
+            lines[2] = buf3;
+            count = 3;
+        }
     } else if (state->boundary_mode && state->boundary_hover_edge >= 0 &&
                state->boundary_hover_edge < BOUNDARY_EDGE_COUNT) {
         int edge = state->boundary_hover_edge;
@@ -280,7 +288,8 @@ void scene_editor_panel_draw(SceneEditorState *state) {
                                      state->canvas_height,
                                      &state->working,
                                      state->selected_object,
-                                     state->hover_object);
+                                     state->hover_object,
+                                     state->emitter_object_map);
 
     scene_editor_canvas_draw_emitters(renderer,
                                       state->canvas_x,
@@ -291,7 +300,8 @@ void scene_editor_panel_draw(SceneEditorState *state) {
                                       state->selected_emitter,
                                       state->hover_emitter,
                                       state->font_small,
-                                      state->emitter_object_map);
+                                      state->emitter_object_map,
+                                      state->emitter_import_map);
 
     SDL_RenderSetClipRect(renderer, NULL);
 

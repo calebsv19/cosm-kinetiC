@@ -66,6 +66,7 @@ typedef struct SceneEditorState {
     bool dragging;
     float drag_offset_x;
     float drag_offset_y;
+    float emitter_handle_offset_px;
     int   selected_object;
     int   hover_object;
     bool  dragging_object;
@@ -101,12 +102,16 @@ typedef struct SceneEditorState {
     int  selected_import_row;
     bool dragging_import_new;
     int  dragging_import_index;
+    bool dragging_import_body;
     bool dragging_import_handle;
+    float import_body_drag_off_x;
+    float import_body_drag_off_y;
     float import_handle_start_dist;
     float import_handle_start_scale;
     float import_drag_pos_x;
     float import_drag_pos_y;
     int   emitter_object_map[MAX_FLUID_EMITTERS];
+    int   emitter_import_map[MAX_FLUID_EMITTERS];
     SDL_Rect list_rect;
     SDL_Rect import_rect;
     char import_files[MAX_IMPORT_FILES][256];
@@ -119,6 +124,13 @@ typedef struct SceneEditorState {
 
     int pointer_x;
     int pointer_y;
+    int pointer_down_x;
+    int pointer_down_y;
+    bool pointer_down_in_canvas;
+    bool pointer_drag_started;
+    SceneEditorHit hit_stack[32];
+    int  hit_stack_count;
+    int  hit_stack_base;
 
     bool running;
     bool applied;

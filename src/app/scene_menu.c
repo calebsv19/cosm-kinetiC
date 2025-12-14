@@ -91,6 +91,7 @@ typedef struct SceneMenuInteraction {
     Uint32 last_viscosity_click_ticks;
     Uint32 last_inflow_click_ticks;
     SimulationMode active_mode;
+    bool suppress_pointer_until_up;
 } SceneMenuInteraction;
 
 static void begin_rename(SceneMenuInteraction *ctx, int slot_index);
@@ -867,6 +868,10 @@ static void finish_inflow_edit(SceneMenuInteraction *ctx, bool apply) {
 static void menu_pointer_up(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
+    if (ctx->suppress_pointer_until_up) {
+        ctx->suppress_pointer_until_up = false;
+        return;
+    }
     if (ctx->headless_running) return;
 
     if (ctx->scrollbar_dragging) {
@@ -986,6 +991,10 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
             slot->preset.is_custom = true;
             slot->occupied = true;
         }
+        SDL_FlushEvent(SDL_MOUSEBUTTONDOWN);
+        SDL_FlushEvent(SDL_MOUSEBUTTONUP);
+        SDL_FlushEvent(SDL_MOUSEMOTION);
+        ctx->suppress_pointer_until_up = true;
         return;
     }
 
@@ -1090,6 +1099,7 @@ static void menu_pointer_up(void *user, const InputPointerState *state) {
 static void menu_pointer_down(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
+    if (ctx->suppress_pointer_until_up) return;
     if (ctx->headless_running) return;
     if (ctx->status_wait_ack && ctx->status_visible) {
         clear_status(ctx);

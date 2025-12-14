@@ -13,7 +13,7 @@
 #define FLOW_MIN_LIFETIME        4.0f
 #define FLOW_MAX_LIFETIME        40.5f
 #define FLOW_FADE_FRAMES         60.0f  // fade duration in frame-equivalents (120 ~= 2s at 60fps)
-#define FLOW_TRAIL_MAX_POINTS    128
+#define FLOW_TRAIL_MAX_POINTS    48
 #define FLOW_FADE_CAPACITY       3000
 
 typedef struct FlowParticle {
@@ -365,9 +365,9 @@ void particle_overlay_draw(const SceneState *scene,
             float t = (float)j / (float)(pt->trail_count - 1);
             float strength = (0.2f + 0.8f * t) * (0.6f + 0.4f * life_ratio) * visibility;
             if (strength > 1.0f) strength = 1.0f;
-            Uint8 r = (Uint8)lroundf(30.0f * (1.0f - t));
+            Uint8 r = (Uint8)lroundf(50+100.0f * (1.0f - t));
             Uint8 g = (Uint8)lroundf(140.0f + 110.0f * t);
-            Uint8 b = (Uint8)lroundf(50.0f * (1.0f - t));
+            Uint8 b = (Uint8)lroundf(60+110.0f * (1.0f - t));
             Uint8 a = (Uint8)lroundf(255.0f * strength);
             if (a < 16) a = 16;
 
@@ -394,9 +394,9 @@ void particle_overlay_draw(const SceneState *scene,
                 float t = (float)j / (float)(ft->count - 1);
                 float strength = (0.2f + 0.8f * t) * ft->start_strength * visibility;
                 if (strength > 1.0f) strength = 1.0f;
-                Uint8 r = (Uint8)lroundf(30.0f * (1.0f - t));
+                Uint8 r = (Uint8)lroundf(50 + 100.0f * (1.0f - t));
                 Uint8 g = (Uint8)lroundf(140.0f + 110.0f * t);
-                Uint8 b = (Uint8)lroundf(50.0f * (1.0f - t));
+                Uint8 b = (Uint8)lroundf(60+ 110.0f * (1.0f - t));
                 Uint8 a = (Uint8)lroundf(255.0f * strength);
                 if (a < 16) a = 16;
 

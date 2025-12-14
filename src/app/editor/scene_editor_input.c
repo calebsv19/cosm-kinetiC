@@ -13,10 +13,55 @@
 #include <stdio.h>
 #include <string.h>
 
+static const int DRAG_THRESHOLD_PX = 4;
+static void clear_drag_flags(SceneEditorState *state);
+
 static bool point_in_rect(const SDL_Rect *rect, int x, int y) {
     if (!rect) return false;
     return x >= rect->x && x < rect->x + rect->w &&
            y >= rect->y && y < rect->y + rect->h;
+}
+
+// Helper to trace and choose which object/import (if any) should receive an emitter when
+// clicking Source/Jet/Sink. Logs selection state for debugging.
+static void pick_target_for_emitter(SceneEditorState *state, int *out_obj, int *out_imp) {
+    if (out_obj) *out_obj = -1;
+    if (out_imp) *out_imp = -1;
+    if (!state) return;
+
+    int target_obj = state->selected_object;
+    int target_imp = (state->selection_kind == SELECTION_IMPORT) ? state->selected_row : -1;
+    int attached_obj = -1;
+    int attached_imp = -1;
+    if (state->selected_emitter >= 0 &&
+        state->selected_emitter < (int)state->working.emitter_count) {
+        attached_obj = state->emitter_object_map[state->selected_emitter];
+        if (attached_obj < 0) attached_obj = state->working.emitters[state->selected_emitter].attached_object;
+        attached_imp = state->emitter_import_map[state->selected_emitter];
+        if (attached_imp < 0) attached_imp = state->working.emitters[state->selected_emitter].attached_import;
+        if (target_obj < 0 && attached_obj >= 0) target_obj = attached_obj;
+        if (target_imp < 0 && attached_imp >= 0) target_imp = attached_imp;
+    }
+    if (target_obj < 0) target_obj = state->hover_object;
+    if (target_imp < 0) target_imp = state->hover_import_row;
+    if (target_obj < 0 && state->working.object_count == 1) target_obj = 0;
+    if (target_imp < 0 && state->working.import_shape_count == 1) target_imp = 0;
+
+    SDL_Log("editor: emitter button target pick sel_kind=%d sel_obj=%d sel_em=%d attached_obj=%d attached_imp=%d hover_obj=%d hover_imp=%d obj_count=%zu imp_count=%zu -> target_obj=%d target_imp=%d",
+            state->selection_kind,
+            state->selected_object,
+            state->selected_emitter,
+            attached_obj,
+            attached_imp,
+            state->hover_object,
+            state->hover_import_row,
+            state->working.object_count,
+            state->working.import_shape_count,
+            target_obj,
+            target_imp);
+
+    if (out_obj) *out_obj = target_obj;
+    if (out_imp) *out_imp = target_imp;
 }
 
 static void finish_and_apply(SceneEditorState *state) {
@@ -40,12 +85,30 @@ static void cancel_and_close(SceneEditorState *state) {
     if (state->editing_height) {
         editor_finish_dimension_edit(state, false, false);
     }
+    clear_drag_flags(state);
+    state->pointer_down_in_canvas = false;
+    state->pointer_drag_started = false;
+    state->dirty = false;
     state->applied = false;
     state->running = false;
 }
 
 static void remove_import_at(SceneEditorState *state, int index) {
     if (!state || index < 0 || index >= (int)state->working.import_shape_count) return;
+    // Remove any emitter attached to this import.
+    int em_idx = emitter_index_for_import(state, index);
+    if (em_idx >= 0) {
+        remove_emitter_at(state, em_idx);
+    }
+    // Shift any mappings above the removed import.
+    for (size_t ei = 0; ei < state->working.emitter_count; ++ei) {
+        if (state->emitter_import_map[ei] > index) {
+            state->emitter_import_map[ei]--;
+        } else if (state->emitter_import_map[ei] == index) {
+            state->emitter_import_map[ei] = -1;
+            state->working.emitters[ei].attached_import = -1;
+        }
+    }
     for (int i = index; i + 1 < (int)state->working.import_shape_count; ++i) {
         state->working.import_shapes[i] = state->working.import_shapes[i + 1];
     }
@@ -148,19 +211,7 @@ static bool add_import_from_picker(SceneEditorState *state, int row) {
             scene_editor_refresh_import_files(state);
         }
     }
-    bool exists = false;
-    for (size_t i = 0; i < state->working.import_shape_count; ++i) {
-        const char *existing = state->working.import_shapes[i].path;
-        if (strcmp(existing, store_path) == 0) {
-            exists = true;
-            state->selected_row = (int)i;
-            state->selection_kind = SELECTION_IMPORT;
-            fprintf(stderr, "[editor] Import already present, selecting row %zu: %s\n",
-                    i, existing);
-            break;
-        }
-    }
-    if (!exists && state->working.import_shape_count < MAX_IMPORTED_SHAPES) {
+    if (state->working.import_shape_count < MAX_IMPORTED_SHAPES) {
         ImportedShape *imp = &state->working.import_shapes[state->working.import_shape_count++];
         memset(imp, 0, sizeof(*imp));
         snprintf(imp->path, sizeof(imp->path), "%s", store_path);
@@ -184,6 +235,277 @@ static bool add_import_from_picker(SceneEditorState *state, int row) {
     return true;
 }
 
+static bool hit_matches_selection(const SceneEditorState *state, const SceneEditorHit *hit) {
+    if (!state || !hit) return false;
+    switch (hit->kind) {
+    case HIT_EMITTER:
+        return state->selection_kind == SELECTION_EMITTER && state->selected_emitter == hit->index;
+    case HIT_OBJECT:
+    case HIT_OBJECT_HANDLE:
+        return state->selection_kind == SELECTION_OBJECT && state->selected_object == hit->index;
+    case HIT_IMPORT:
+    case HIT_IMPORT_HANDLE:
+        return state->selection_kind == SELECTION_IMPORT && state->selected_row == hit->index;
+    case HIT_BOUNDARY_EDGE:
+        return state->boundary_selected_edge == hit->boundary_edge;
+    default:
+        return false;
+    }
+}
+
+static void clear_drag_flags(SceneEditorState *state) {
+    if (!state) return;
+    state->dragging_import_handle = false;
+    state->dragging_import_body = false;
+    state->dragging = false;
+    state->drag_mode = DRAG_NONE;
+    state->dragging_object = false;
+    state->dragging_object_handle = false;
+    state->handle_resize_started = false;
+}
+
+static void select_from_hit(SceneEditorState *state, const SceneEditorHit *hit) {
+    if (!state || !hit) return;
+    switch (hit->kind) {
+    case HIT_EMITTER:
+        state->selection_kind = SELECTION_EMITTER;
+        state->selected_emitter = hit->index;
+        state->selected_object = -1;
+        state->selected_row = -1;
+        break;
+    case HIT_OBJECT:
+    case HIT_OBJECT_HANDLE:
+        state->selection_kind = SELECTION_OBJECT;
+        state->selected_object = hit->index;
+        state->selected_emitter = -1;
+        state->selected_row = -1;
+        break;
+    case HIT_IMPORT:
+    case HIT_IMPORT_HANDLE:
+        state->selection_kind = SELECTION_IMPORT;
+        state->selected_row = hit->index;
+        state->selected_object = -1;
+        state->selected_emitter = -1;
+        break;
+    case HIT_BOUNDARY_EDGE:
+        state->boundary_selected_edge = hit->boundary_edge;
+        break;
+    default:
+        state->selection_kind = SELECTION_NONE;
+        state->selected_emitter = -1;
+        state->selected_object = -1;
+        state->selected_row = -1;
+        break;
+    }
+}
+
+static void prepare_drag_for_hit(SceneEditorState *state, const SceneEditorHit *hit, int x, int y) {
+    if (!state || !hit) return;
+    clear_drag_flags(state);
+    switch (hit->kind) {
+    case HIT_IMPORT_HANDLE:
+        if (state->shape_library && hit->index >= 0 &&
+            hit->index < (int)state->working.import_shape_count) {
+            ImportedShape *imp = &state->working.import_shapes[hit->index];
+            float nx = 0.0f, ny = 0.0f;
+            scene_editor_canvas_to_import_normalized(state->canvas_x,
+                                                     state->canvas_y,
+                                                     state->canvas_width,
+                                                     state->canvas_height,
+                                                     x,
+                                                     y,
+                                                     &nx,
+                                                     &ny);
+            float dxn = nx - imp->position_x;
+            float dyn = ny - imp->position_y;
+            float dist = sqrtf(dxn * dxn + dyn * dyn);
+            if (dist < 0.0001f) dist = 0.0001f;
+            state->dragging_import_handle = true;
+            state->import_handle_start_dist = dist;
+            state->import_handle_start_scale = imp->scale;
+        }
+        break;
+    case HIT_IMPORT:
+        if (hit->index >= 0 &&
+            hit->index < (int)state->working.import_shape_count) {
+            state->dragging_import_body = true;
+            state->pointer_drag_started = true;
+            float nx = 0.0f, ny = 0.0f;
+            scene_editor_canvas_to_import_normalized(state->canvas_x,
+                                                     state->canvas_y,
+                                                     state->canvas_width,
+                                                     state->canvas_height,
+                                                     x,
+                                                     y,
+                                                     &nx,
+                                                     &ny);
+            ImportedShape *imp = &state->working.import_shapes[hit->index];
+            state->import_body_drag_off_x = nx - imp->position_x;
+            state->import_body_drag_off_y = ny - imp->position_y;
+        }
+        break;
+    case HIT_OBJECT_HANDLE:
+        if (hit->index >= 0 && hit->index < (int)state->working.object_count) {
+            state->dragging_object_handle = true;
+            state->pointer_drag_started = true;
+            PresetObject *obj = &state->working.objects[hit->index];
+            float half_w_px = 0.0f, half_h_px = 0.0f;
+            scene_editor_canvas_object_visual_half_sizes_px(obj,
+                                                            state->canvas_width,
+                                                            state->canvas_height,
+                                                            &half_w_px,
+                                                            &half_h_px);
+            if (obj->type == PRESET_OBJECT_CIRCLE) {
+                state->object_handle_ratio = 1.0f;
+            } else {
+                state->object_handle_ratio = (half_w_px > 0.0001f)
+                                                 ? (half_h_px / half_w_px)
+                                                 : 1.0f;
+                if (state->object_handle_ratio <= 0.0f) state->object_handle_ratio = 1.0f;
+            }
+            int cx = 0, cy = 0;
+            scene_editor_canvas_project(state->canvas_x,
+                                        state->canvas_y,
+                                        state->canvas_width,
+                                        state->canvas_height,
+                                        obj->position_x,
+                                        obj->position_y,
+                                        &cx,
+                                        &cy);
+            float dx_px = (float)x - (float)cx;
+            float dy_px = (float)y - (float)cy;
+            float len_px = sqrtf(dx_px * dx_px + dy_px * dy_px);
+            float min_len_px = (obj->type == PRESET_OBJECT_BOX)
+                                   ? (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX
+                                   : (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
+            float adjusted_px = len_px - (float)SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX;
+            if (adjusted_px < min_len_px) adjusted_px = min_len_px;
+            state->handle_initial_length = adjusted_px;
+            state->handle_resize_started = false;
+        }
+        break;
+    case HIT_OBJECT:
+        if (hit->index >= 0 && hit->index < (int)state->working.object_count) {
+            state->dragging_object = true;
+            state->pointer_drag_started = true;
+            state->dragging_object_handle = false;
+            state->handle_resize_started = false;
+            PresetObject *obj = &state->working.objects[hit->index];
+            float nx, ny;
+            scene_editor_canvas_to_normalized(state->canvas_x,
+                                              state->canvas_y,
+                                              state->canvas_width,
+                                              state->canvas_height,
+                                              x,
+                                              y,
+                                              &nx,
+                                              &ny);
+            state->object_drag_offset_x = nx - obj->position_x;
+            state->object_drag_offset_y = ny - obj->position_y;
+        }
+        break;
+    case HIT_EMITTER:
+        if (hit->index >= 0 && hit->index < (int)state->working.emitter_count) {
+            int attached_obj = state->emitter_object_map[hit->index];
+            int attached_imp = state->emitter_import_map[hit->index];
+            if (attached_obj < 0) attached_obj = state->working.emitters[hit->index].attached_object;
+            if (attached_imp < 0) attached_imp = state->working.emitters[hit->index].attached_import;
+            if (hit->drag_mode == DRAG_POSITION && attached_obj >= 0 &&
+                attached_obj < (int)state->working.object_count) {
+                // Dragging the body of an attached emitter moves the object (and keeps emitter in sync).
+                state->selected_object = attached_obj;
+                state->dragging_object = true;
+                state->pointer_drag_started = true;
+                PresetObject *obj = &state->working.objects[attached_obj];
+                float nx, ny;
+                scene_editor_canvas_to_normalized(state->canvas_x,
+                                                  state->canvas_y,
+                                                  state->canvas_width,
+                                                  state->canvas_height,
+                                                  x,
+                                                  y,
+                                                  &nx,
+                                                  &ny);
+                state->object_drag_offset_x = nx - obj->position_x;
+                state->object_drag_offset_y = ny - obj->position_y;
+                state->selected_emitter = hit->index;
+                state->selection_kind = SELECTION_EMITTER;
+            } else if (hit->drag_mode == DRAG_POSITION && attached_imp >= 0 &&
+                       attached_imp < (int)state->working.import_shape_count) {
+                state->selected_row = attached_imp;
+                state->selection_kind = SELECTION_IMPORT;
+                state->dragging_import_body = true;
+                state->pointer_drag_started = true;
+                float nx = 0.0f, ny = 0.0f;
+                scene_editor_canvas_to_import_normalized(state->canvas_x,
+                                                         state->canvas_y,
+                                                         state->canvas_width,
+                                                         state->canvas_height,
+                                                         x,
+                                                         y,
+                                                         &nx,
+                                                         &ny);
+                ImportedShape *imp = &state->working.import_shapes[attached_imp];
+                state->import_body_drag_off_x = nx - imp->position_x;
+                state->import_body_drag_off_y = ny - imp->position_y;
+                state->selected_emitter = hit->index;
+            } else {
+                state->drag_mode = hit->drag_mode;
+                state->dragging = true;
+                state->pointer_drag_started = true;
+                state->drag_offset_x = 0.0f;
+                state->drag_offset_y = 0.0f;
+                if (hit->drag_mode == DRAG_POSITION) {
+                    FluidEmitter *em = &state->working.emitters[hit->index];
+                    float nx, ny;
+                    scene_editor_canvas_to_normalized(state->canvas_x,
+                                                      state->canvas_y,
+                                                      state->canvas_width,
+                                                      state->canvas_height,
+                                                      x,
+                                                      y,
+                                                      &nx,
+                                                      &ny);
+                    state->drag_offset_x = nx - em->position_x;
+                    state->drag_offset_y = ny - em->position_y;
+                    state->emitter_handle_offset_px = 0.0f;
+                } else {
+                    // Capture handle grab offset so radius won't jump on initial drag.
+                    int cx = 0, cy = 0;
+                    FluidEmitter *em = &state->working.emitters[hit->index];
+                    scene_editor_canvas_project(state->canvas_x,
+                                                state->canvas_y,
+                                                state->canvas_width,
+                                                state->canvas_height,
+                                                em->position_x,
+                                                em->position_y,
+                                                &cx,
+                                                &cy);
+                    float dx = (float)x - (float)cx;
+                    float dy = (float)y - (float)cy;
+                    float len = sqrtf(dx * dx + dy * dy);
+                    float min_dim = (float)((state->canvas_width < state->canvas_height) ? state->canvas_width : state->canvas_height);
+                    float radius_px = (float)em->radius * min_dim;
+                    state->emitter_handle_offset_px = len - radius_px;
+                    if (state->emitter_handle_offset_px < 0.0f) state->emitter_handle_offset_px = 0.0f;
+                }
+            }
+        }
+        break;
+    case HIT_BOUNDARY_EDGE:
+        state->boundary_selected_edge = hit->boundary_edge;
+        if (state->boundary_mode &&
+            hit->boundary_edge >= 0 &&
+            hit->boundary_edge < BOUNDARY_EDGE_COUNT &&
+            state->working.boundary_flows[hit->boundary_edge].mode == BOUNDARY_FLOW_DISABLED) {
+            cycle_boundary_emitter(state, hit->boundary_edge);
+        }
+        break;
+    default:
+        break;
+    }
+}
+
 void editor_pointer_down(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !ptr) return;
@@ -194,6 +516,14 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
     state->pointer_y = y;
     SDL_Rect canvas_rect = {state->canvas_x, state->canvas_y, state->canvas_width, state->canvas_height};
     bool in_canvas = point_in_rect(&canvas_rect, x, y);
+    state->pointer_down_in_canvas = in_canvas;
+    state->pointer_drag_started = false;
+    state->hit_stack_count = 0;
+    state->hit_stack_base = 0;
+    if (in_canvas) {
+        state->pointer_down_x = x;
+        state->pointer_down_y = y;
+    }
 
     if (state->name_edit_ptr) {
         SDL_Rect name_rect = editor_name_rect(state);
@@ -263,23 +593,39 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
                 finish_and_apply(state);
             } else if (btn == &state->btn_cancel) {
                 cancel_and_close(state);
-            } else if (btn == &state->btn_add_source) {
-                if (state->selected_object >= 0) {
-                    state->selected_emitter = ensure_emitter_for_object(state, state->selected_object, EMITTER_DENSITY_SOURCE, true);
-                } else {
-                    add_emitter(state, EMITTER_DENSITY_SOURCE);
+            } else if (btn == &state->btn_add_source ||
+                       btn == &state->btn_add_jet ||
+                       btn == &state->btn_add_sink) {
+                int target_obj = -1;
+                int target_imp = -1;
+                pick_target_for_emitter(state, &target_obj, &target_imp);
+
+                FluidEmitterType type = EMITTER_DENSITY_SOURCE;
+                if (btn == &state->btn_add_jet) {
+                    type = EMITTER_VELOCITY_JET;
+                } else if (btn == &state->btn_add_sink) {
+                    type = EMITTER_SINK;
                 }
-            } else if (btn == &state->btn_add_jet) {
-                if (state->selected_object >= 0) {
-                    state->selected_emitter = ensure_emitter_for_object(state, state->selected_object, EMITTER_VELOCITY_JET, true);
+
+                if (target_obj >= 0 && target_obj < (int)state->working.object_count) {
+                    int em = ensure_emitter_for_object(state,
+                                                       target_obj,
+                                                       type,
+                                                       true);
+                    state->selected_emitter = em;
+                    state->selection_kind = (em >= 0) ? SELECTION_EMITTER : SELECTION_OBJECT;
+                    // Keep object selection so the user still sees the association.
+                    state->selected_object = target_obj;
+                } else if (target_imp >= 0 && target_imp < (int)state->working.import_shape_count) {
+                    int em = ensure_emitter_for_import(state,
+                                                       target_imp,
+                                                       type,
+                                                       true);
+                    state->selected_emitter = em;
+                    state->selection_kind = (em >= 0) ? SELECTION_EMITTER : SELECTION_IMPORT;
+                    state->selected_row = target_imp;
                 } else {
-                    add_emitter(state, EMITTER_VELOCITY_JET);
-                }
-            } else if (btn == &state->btn_add_sink) {
-                if (state->selected_object >= 0) {
-                    state->selected_emitter = ensure_emitter_for_object(state, state->selected_object, EMITTER_SINK, true);
-                } else {
-                    add_emitter(state, EMITTER_SINK);
+                    add_emitter(state, type);
                 }
             } else if (btn == &state->btn_add_import) {
                 scene_editor_refresh_import_files(state);
@@ -350,17 +696,7 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
             bool double_click = (now - state->last_import_click) <= DOUBLE_CLICK_MS;
             state->last_import_click = now;
             if (double_click) {
-                ImportedShape *imp = &state->working.import_shapes[row];
-                imp->enabled = true;
-                resolve_import_shape_id(state, imp);
-                // Snap to center if still at default to ensure visible.
-                if (imp->position_x == 0.0f && imp->position_y == 0.0f) {
-                    imp->position_x = 0.5f;
-                    imp->position_y = 0.5f;
-                }
-                fprintf(stderr, "[editor] Activated import row %d: %s (shape_id=%d)\n",
-                        row, imp->path, imp->shape_id);
-                set_dirty(state);
+                add_import_from_picker(state, row);
             }
             return;
         }
@@ -421,201 +757,58 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
     }
 
     if (!point_in_rect(&state->panel_rect, x, y)) {
-        // Hit test import handles first for rotate/scale.
-        if (state->shape_library) {
-            int handle_hit = -1;
-            int hx = 0, hy = 0;
-            float hit_radius_px = scene_editor_canvas_handle_size_px(state->canvas_width,
-                                                                     state->canvas_height) * 0.6f;
-            for (int i = (int)state->working.import_shape_count - 1; i >= 0; --i) {
-                const ImportedShape *imp = &state->working.import_shapes[i];
-                if (!imp->enabled) continue;
-                if (!scene_editor_canvas_import_handle_point(state->canvas_x,
-                                                             state->canvas_y,
-                                                             state->canvas_width,
-                                                             state->canvas_height,
-                                                             imp,
-                                                             &hx,
-                                                             &hy)) {
-                    continue;
-                }
-                float dx = (float)x - (float)hx;
-                float dy = (float)y - (float)hy;
-                if ((dx * dx + dy * dy) <= hit_radius_px * hit_radius_px) {
-                    handle_hit = i;
+        if (in_canvas) {
+            int max_hits = (int)(sizeof(state->hit_stack) / sizeof(state->hit_stack[0]));
+            state->hit_stack_count = scene_editor_canvas_collect_hits(&state->working,
+                                                                      state->shape_library,
+                                                                      state->canvas_x,
+                                                                      state->canvas_y,
+                                                                      state->canvas_width,
+                                                                      state->canvas_height,
+                                                                      x,
+                                                                      y,
+                                                                      state->emitter_object_map,
+                                                                      state->emitter_import_map,
+                                                                      state->hit_stack,
+                                                                      max_hits);
+            state->hit_stack_base = 0;
+            // Prefer the top-most hit (emitter handle first) unless we have no hit or a same-priority match.
+            for (int i = 0; i < state->hit_stack_count; ++i) {
+                if (hit_matches_selection(state, &state->hit_stack[i])) {
+                    // Only override the first entry if the first entry is not an emitter handle.
+                    if (!(state->hit_stack[0].kind == HIT_EMITTER &&
+                          state->hit_stack[0].drag_mode == DRAG_DIRECTION)) {
+                        state->hit_stack_base = i;
+                    }
                     break;
                 }
             }
-            if (handle_hit >= 0) {
-                state->selection_kind = SELECTION_IMPORT;
-                state->selected_row = handle_hit;
-                state->selected_object = -1;
-                state->selected_emitter = -1;
-                ImportedShape *imp = &state->working.import_shapes[handle_hit];
-                float nx = 0.0f, ny = 0.0f;
-                scene_editor_canvas_to_import_normalized(state->canvas_x,
-                                                         state->canvas_y,
-                                                         state->canvas_width,
-                                                         state->canvas_height,
-                                                         x,
-                                                         y,
-                                                         &nx,
-                                                         &ny);
-                float dxn = nx - imp->position_x;
-                float dyn = ny - imp->position_y;
-                float dist = sqrtf(dxn * dxn + dyn * dyn);
-                if (dist < 0.0001f) dist = 0.0001f;
-                state->dragging_import_handle = true;
-                state->import_handle_start_dist = dist;
-                state->import_handle_start_scale = imp->scale;
-                return;
-            }
-        }
-
-        // Hit test imports next so clicking them in-canvas selects them.
-        if (state->shape_library) {
-            int import_hit = scene_editor_canvas_hit_import(&state->working,
-                                                            state->shape_library,
-                                                            state->canvas_x,
-                                                            state->canvas_y,
-                                                            state->canvas_width,
-                                                            state->canvas_height,
-                                                            x,
-                                                            y);
-            if (import_hit >= 0) {
-                state->selection_kind = SELECTION_IMPORT;
-                state->selected_row = import_hit;
-                state->selected_object = -1;
-                state->selected_emitter = -1;
-                return;
-            }
-        }
-
-        int handle_hit = scene_editor_canvas_hit_object_handle(&state->working,
-                                                               state->canvas_x,
-                                                               state->canvas_y,
-                                                               state->canvas_width,
-                                                               state->canvas_height,
-                                                               x,
-                                                               y);
-        if (handle_hit >= 0) {
-            state->selected_object = handle_hit;
-            state->selected_emitter = -1;
-            state->selection_kind = SELECTION_OBJECT;
-            state->dragging_object_handle = true;
-            PresetObject *obj = &state->working.objects[handle_hit];
-            float half_w_px = 0.0f, half_h_px = 0.0f;
-            scene_editor_canvas_object_visual_half_sizes_px(obj,
-                                                            state->canvas_width,
-                                                            state->canvas_height,
-                                                            &half_w_px,
-                                                            &half_h_px);
-            if (obj->type == PRESET_OBJECT_CIRCLE) {
-                state->object_handle_ratio = 1.0f;
+            if (state->hit_stack_count > 0) {
+                SceneEditorHit anchor = state->hit_stack[state->hit_stack_base];
+                select_from_hit(state, &anchor);
+                prepare_drag_for_hit(state, &anchor, x, y);
             } else {
-                state->object_handle_ratio = (half_w_px > 0.0001f)
-                                                 ? (half_h_px / half_w_px)
-                                                 : 1.0f;
-                if (state->object_handle_ratio <= 0.0f) state->object_handle_ratio = 1.0f;
+                clear_drag_flags(state);
             }
-            int cx = 0, cy = 0;
-            scene_editor_canvas_project(state->canvas_x,
-                                        state->canvas_y,
-                                        state->canvas_width,
-                                        state->canvas_height,
-                                        obj->position_x,
-                                        obj->position_y,
-                                        &cx,
-                                        &cy);
-            float dx_px = (float)x - (float)cx;
-            float dy_px = (float)y - (float)cy;
-            float len_px = sqrtf(dx_px * dx_px + dy_px * dy_px);
-            float min_len_px = (obj->type == PRESET_OBJECT_BOX)
-                                   ? (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX
-                                   : (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
-            float adjusted_px = len_px - (float)SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX;
-            if (adjusted_px < min_len_px) adjusted_px = min_len_px;
-            state->handle_initial_length = adjusted_px;
-            state->handle_resize_started = false;
-            return;
-        }
-
-        EditorDragMode mode = DRAG_NONE;
-        int obj_hit = scene_editor_canvas_hit_object(&state->working,
-                                                     state->canvas_x,
-                                                     state->canvas_y,
-                                                     state->canvas_width,
-                                                     state->canvas_height,
-                                                     x,
-                                                     y);
-        if (obj_hit >= 0) {
-            state->selected_object = obj_hit;
-            state->selected_emitter = -1;
-            state->selection_kind = SELECTION_OBJECT;
-            state->dragging_object = true;
-            state->dragging_object_handle = false;
-            state->handle_resize_started = false;
-            PresetObject *obj = &state->working.objects[obj_hit];
-            float nx, ny;
-            scene_editor_canvas_to_normalized(state->canvas_x,
-                                              state->canvas_y,
-                                              state->canvas_width,
-                                              state->canvas_height,
-                                              x,
-                                              y,
-                                              &nx,
-                                              &ny);
-            state->object_drag_offset_x = nx - obj->position_x;
-            state->object_drag_offset_y = ny - obj->position_y;
-            return;
-        }
-
-        int hit = scene_editor_canvas_hit_test(&state->working,
-                                               state->canvas_x,
-                                               state->canvas_y,
-                                               state->canvas_width,
-                                               state->canvas_height,
-                                               x,
-                                               y,
-                                               &mode,
-                                               state->emitter_object_map);
-        state->hover_emitter = hit;
-        if (hit < 0) {
-            state->dragging = false;
-            state->drag_mode = DRAG_NONE;
-            state->selection_kind = SELECTION_IMPORT;
-            return;
-        }
-        state->selection_kind = SELECTION_EMITTER;
-        state->selected_emitter = hit;
-        state->selected_object = -1;
-        state->drag_mode = mode;
-        state->dragging = true;
-        state->dragging_object_handle = false;
-        state->handle_resize_started = false;
-        state->drag_offset_x = 0.0f;
-        state->drag_offset_y = 0.0f;
-        if (mode == DRAG_POSITION) {
-            FluidEmitter *em = &state->working.emitters[hit];
-            float nx, ny;
-            scene_editor_canvas_to_normalized(state->canvas_x,
-                                              state->canvas_y,
-                                              state->canvas_width,
-                                              state->canvas_height,
-                                              x,
-                                              y,
-                                              &nx,
-                                              &ny);
-            state->drag_offset_x = nx - em->position_x;
-            state->drag_offset_y = ny - em->position_y;
         }
     }
 }
 
 void editor_pointer_up(void *user, const InputPointerState *ptr) {
-    (void)ptr;
     SceneEditorState *state = (SceneEditorState *)user;
+    (void)ptr;
     if (!state) return;
+    bool cycle_selection = false;
+    SceneEditorHit next_hit = {0};
+    if (state->pointer_down_in_canvas &&
+        !state->pointer_drag_started &&
+        state->hit_stack_count > 1) {
+        int next = (state->hit_stack_base + 1) % state->hit_stack_count;
+        if (next != state->hit_stack_base) {
+            next_hit = state->hit_stack[next];
+            cycle_selection = true;
+        }
+    }
     if (state->dragging_import_new) {
         state->dragging_import_new = false;
         if (state->dragging_import_index >= 0 &&
@@ -666,7 +859,14 @@ void editor_pointer_up(void *user, const InputPointerState *ptr) {
     state->dragging_object = false;
     state->dragging_object_handle = false;
     state->handle_resize_started = false;
-
+    state->dragging_import_body = false;
+    if (cycle_selection) {
+        select_from_hit(state, &next_hit);
+    }
+    state->pointer_down_in_canvas = false;
+    state->pointer_drag_started = false;
+    state->hit_stack_count = 0;
+    state->hit_stack_base = 0;
 }
 
 void editor_pointer_move(void *user, const InputPointerState *ptr) {
@@ -674,6 +874,29 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
     if (!state || !ptr) return;
     state->pointer_x = ptr->x;
     state->pointer_y = ptr->y;
+    if (state->pointer_down_in_canvas && !state->pointer_drag_started) {
+        int dx = ptr->x - state->pointer_down_x;
+        int dy = ptr->y - state->pointer_down_y;
+        if ((dx * dx + dy * dy) > (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) {
+            state->pointer_drag_started = true;
+        }
+    }
+    bool allow_drag = (!state->pointer_down_in_canvas) || state->pointer_drag_started;
+    if (state->dragging && state->selected_emitter >= 0 &&
+        state->selected_emitter < (int)state->working.emitter_count) {
+        allow_drag = true; // emitters should respond immediately once drag flag is set
+    }
+    if (!allow_drag && state->pointer_down_in_canvas &&
+        (state->dragging_object || state->dragging_object_handle ||
+         state->dragging_import_handle || state->dragging_import_body ||
+         state->dragging_import_new || state->dragging)) {
+        int dx = ptr->x - state->pointer_down_x;
+        int dy = ptr->y - state->pointer_down_y;
+        if ((dx * dx + dy * dy) > (DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX)) {
+            state->pointer_drag_started = true;
+            allow_drag = true;
+        }
+    }
     if (state->showing_import_picker) {
         state->hover_import_row = editor_list_view_row_at(&state->import_view,
                                                           ptr->x, ptr->y,
@@ -686,6 +909,7 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
                                                    state->list_rect.w, state->list_rect.h);
     }
     if (state->dragging_object_handle &&
+        allow_drag &&
         state->selected_object >= 0 &&
         state->selected_object < (int)state->working.object_count) {
         PresetObject *obj = &state->working.objects[state->selected_object];
@@ -737,7 +961,7 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
         set_dirty(state);
         return;
     }
-    if (state->dragging_object && state->selected_object >= 0 &&
+    if (state->dragging_object && allow_drag && state->selected_object >= 0 &&
         state->selected_object < (int)state->working.object_count) {
         PresetObject *obj = &state->working.objects[state->selected_object];
         float nx = 0.0f, ny = 0.0f;
@@ -756,6 +980,7 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
         return;
     }
     if (state->dragging_import_handle &&
+        allow_drag &&
         state->selected_row >= 0 &&
         state->selected_row < (int)state->working.import_shape_count &&
         state->selection_kind == SELECTION_IMPORT) {
@@ -777,6 +1002,40 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
         imp->scale = state->import_handle_start_scale * ratio;
         if (imp->scale < 0.01f) imp->scale = 0.01f;
         imp->rotation_deg = atan2f(dy, dx) * 180.0f / (float)M_PI;
+        sync_emitter_to_import(state, state->selected_row);
+        set_dirty(state);
+        return;
+    }
+    if (state->dragging_import_body &&
+        allow_drag &&
+        state->selected_row >= 0 &&
+        state->selected_row < (int)state->working.import_shape_count &&
+        state->selection_kind == SELECTION_IMPORT) {
+        ImportedShape *imp = &state->working.import_shapes[state->selected_row];
+        float nx = 0.0f, ny = 0.0f;
+        scene_editor_canvas_to_import_normalized(state->canvas_x,
+                                                 state->canvas_y,
+                                                 state->canvas_width,
+                                                 state->canvas_height,
+                                                 ptr->x,
+                                                 ptr->y,
+                                                 &nx,
+                                                 &ny);
+        imp->position_x = nx - state->import_body_drag_off_x;
+        imp->position_y = ny - state->import_body_drag_off_y;
+        float min_dim = (float)((state->canvas_width < state->canvas_height) ? state->canvas_width : state->canvas_height);
+        float span_x = 0.5f * ((float)state->canvas_width / min_dim);
+        float span_y = 0.5f * ((float)state->canvas_height / min_dim);
+        float min_x = 0.5f - span_x;
+        float max_x = 0.5f + span_x;
+        float min_y = 0.5f - span_y;
+        float max_y = 0.5f + span_y;
+        if (imp->position_x < min_x) imp->position_x = min_x;
+        if (imp->position_x > max_x) imp->position_x = max_x;
+        if (imp->position_y < min_y) imp->position_y = min_y;
+        if (imp->position_y > max_y) imp->position_y = max_y;
+        // Keep attached emitter in sync.
+        sync_emitter_to_import(state, state->selected_row);
         set_dirty(state);
         return;
     }
@@ -789,7 +1048,7 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
             state->import_drag_pos_y = clamp01(ny);
         }
     }
-    if (state->dragging && state->selected_emitter >= 0 &&
+    if (state->dragging && allow_drag && state->selected_emitter >= 0 &&
         state->selected_emitter < (int)state->working.emitter_count) {
         FluidEmitter *em = &state->working.emitters[state->selected_emitter];
         if (state->drag_mode == DRAG_POSITION) {
@@ -823,6 +1082,17 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
             if (len > 0.0001f) {
                 em->dir_x = dx / len;
                 em->dir_y = dy / len;
+                float min_dim = (float)((state->canvas_width < state->canvas_height) ? state->canvas_width : state->canvas_height);
+                if (min_dim > 0.0f) {
+                    float adj_len = len - state->emitter_handle_offset_px;
+                    if (adj_len < 0.0f) adj_len = 0.0f;
+                    float new_radius = adj_len / min_dim;
+                    if (new_radius < 0.02f) new_radius = 0.02f;
+                    if (new_radius > 0.6f) new_radius = 0.6f;
+                    float ratio = (em->radius > 0.0001f) ? (new_radius / em->radius) : 1.0f;
+                    em->radius = new_radius;
+                    em->strength *= ratio;
+                }
                 set_dirty(state);
             }
         }
@@ -836,7 +1106,8 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
                                                             ptr->x,
                                                             ptr->y,
                                                             &mode,
-                                                            state->emitter_object_map);
+                                                            state->emitter_object_map,
+                                                            state->emitter_import_map);
     }
     state->hover_object = scene_editor_canvas_hit_object(&state->working,
                                                          state->canvas_x,

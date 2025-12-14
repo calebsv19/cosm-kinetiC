@@ -28,6 +28,19 @@ static SDL_Color emitter_color(const FluidEmitter *em) {
     }
 }
 
+static float emitter_visual_radius_norm(const FluidScenePreset *preset,
+                                        int emitter_index,
+                                        const int *emitter_object_map,
+                                        const int *emitter_import_map) {
+    if (!preset || emitter_index < 0 || emitter_index >= (int)preset->emitter_count) return 0.08f;
+    const FluidEmitter *em = &preset->emitters[emitter_index];
+    (void)emitter_object_map;
+    (void)emitter_import_map;
+    float radius_norm = em->radius;
+    if (radius_norm < 0.02f) radius_norm = 0.02f;
+    return radius_norm;
+}
+
 static SDL_Color lighten_color(SDL_Color color, float factor) {
     if (factor < 0.0f) factor = 0.0f;
     if (factor > 1.0f) factor = 1.0f;
@@ -182,18 +195,226 @@ int scene_editor_canvas_hit_import(const FluidScenePreset *preset,
     return -1;
 }
 
+static int push_hit(SceneEditorHit *out_hits, int max_hits, int count, SceneEditorHit hit) {
+    if (!out_hits || max_hits <= 0) return count;
+    if (count < max_hits) {
+        out_hits[count] = hit;
+    }
+    return (count < max_hits) ? count + 1 : count;
+}
+
+int scene_editor_canvas_collect_hits(const FluidScenePreset *preset,
+                                     const ShapeAssetLibrary *lib,
+                                     int canvas_x,
+                                     int canvas_y,
+                                     int canvas_w,
+                                     int canvas_h,
+                                     int px,
+                                     int py,
+                                     const int *emitter_object_map,
+                                     const int *emitter_import_map,
+                                     SceneEditorHit *out_hits,
+                                     int max_hits) {
+    if (!preset || !out_hits || max_hits <= 0) return 0;
+    int count = 0;
+
+    float nx = 0.0f, ny = 0.0f;
+    scene_editor_canvas_to_import_normalized(canvas_x,
+                                             canvas_y,
+                                             canvas_w,
+                                             canvas_h,
+                                             px,
+                                             py,
+                                             &nx,
+                                             &ny);
+
+    // Emitter handles first so they win overlaps.
+    for (int i = (int)preset->emitter_count - 1; i >= 0; --i) {
+        int hx = 0, hy = 0;
+        float hit_r = 0.0f;
+        if (scene_editor_canvas_emitter_handle_point(preset,
+                                                     canvas_x,
+                                                     canvas_y,
+                                                     canvas_w,
+                                                     canvas_h,
+                                                     i,
+                                                     emitter_object_map,
+                                                     emitter_import_map,
+                                                     &hx,
+                                                     &hy,
+                                                     &hit_r)) {
+            float adx = (float)px - (float)hx;
+            float ady = (float)py - (float)hy;
+            if ((adx * adx + ady * ady) <= hit_r * hit_r) {
+                SceneEditorHit h = {.kind = HIT_EMITTER, .index = i, .drag_mode = DRAG_DIRECTION, .boundary_edge = -1};
+                count = push_hit(out_hits, max_hits, count, h);
+            }
+        }
+    }
+
+    // Import handles (topmost first)
+    if (lib) {
+        float hit_radius_px = scene_editor_canvas_handle_size_px(canvas_w, canvas_h) * 0.6f;
+        float hit_r2 = hit_radius_px * hit_radius_px;
+        int hx = 0, hy = 0;
+        for (int i = (int)preset->import_shape_count - 1; i >= 0; --i) {
+            const ImportedShape *imp = &preset->import_shapes[i];
+            if (!imp->enabled) continue;
+            if (!scene_editor_canvas_import_handle_point(canvas_x,
+                                                         canvas_y,
+                                                         canvas_w,
+                                                         canvas_h,
+                                                         lib,
+                                                         imp,
+                                                         &hx,
+                                                         &hy)) {
+                continue;
+            }
+            float dx = (float)px - (float)hx;
+            float dy = (float)py - (float)hy;
+            if ((dx * dx + dy * dy) <= hit_r2) {
+                SceneEditorHit h = {.kind = HIT_IMPORT_HANDLE, .index = i, .drag_mode = DRAG_DIRECTION, .boundary_edge = -1};
+                count = push_hit(out_hits, max_hits, count, h);
+            }
+        }
+    }
+
+    // Imports (outline hit)
+    if (lib) {
+        float pad_norm = scene_editor_canvas_handle_size_norm(canvas_w, canvas_h);
+        for (int i = (int)preset->import_shape_count - 1; i >= 0; --i) {
+            const ImportedShape *imp = &preset->import_shapes[i];
+            if (!imp->enabled) continue;
+            const ShapeAsset *asset = shape_lookup_from_path(lib, imp->path);
+            if (!asset) continue;
+            ShapeAssetBounds b;
+            if (!shape_asset_bounds(asset, &b) || !b.valid) continue;
+            if (import_hit_oriented_box(imp, &b, nx, ny, pad_norm)) {
+                SceneEditorHit h = {.kind = HIT_IMPORT, .index = i, .drag_mode = DRAG_POSITION, .boundary_edge = -1};
+                count = push_hit(out_hits, max_hits, count, h);
+            }
+        }
+    }
+
+    // Object handles
+    const int handle_radius = SCENE_EDITOR_OBJECT_HANDLE_HIT_RADIUS_PX;
+    float handle_r2 = (float)(handle_radius * handle_radius);
+    for (int i = (int)preset->object_count - 1; i >= 0; --i) {
+        int hx = 0, hy = 0;
+        if (!scene_editor_canvas_object_handle_point(preset,
+                                                     canvas_x,
+                                                     canvas_y,
+                                                     canvas_w,
+                                                     canvas_h,
+                                                     i,
+                                                     &hx,
+                                                     &hy)) {
+            continue;
+        }
+        float dx = (float)px - (float)hx;
+        float dy = (float)py - (float)hy;
+        if ((dx * dx + dy * dy) <= handle_r2) {
+            SceneEditorHit h = {.kind = HIT_OBJECT_HANDLE, .index = i, .drag_mode = DRAG_DIRECTION, .boundary_edge = -1};
+            count = push_hit(out_hits, max_hits, count, h);
+        }
+    }
+
+    // Object bodies
+    for (int i = (int)preset->object_count - 1; i >= 0; --i) {
+        const PresetObject *obj = &preset->objects[i];
+        int cx, cy;
+        scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
+                                    obj->position_x, obj->position_y,
+                                    &cx, &cy);
+        if (obj->type == PRESET_OBJECT_CIRCLE) {
+            int radius = (int)lroundf(scene_editor_canvas_object_visual_radius_px(obj, canvas_w));
+            float dx = (float)px - (float)cx;
+            float dy = (float)py - (float)cy;
+            if (dx * dx + dy * dy <= (float)(radius * radius)) {
+                SceneEditorHit h = {.kind = HIT_OBJECT, .index = i, .drag_mode = DRAG_POSITION, .boundary_edge = -1};
+                count = push_hit(out_hits, max_hits, count, h);
+            }
+        } else {
+            float half_w = 0.0f, half_h = 0.0f;
+            scene_editor_canvas_object_visual_half_sizes_px(obj, canvas_w, canvas_h, &half_w, &half_h);
+            float dx = (float)px - (float)cx;
+            float dy = (float)py - (float)cy;
+            float cos_a = cosf(obj->angle);
+            float sin_a = sinf(obj->angle);
+            float local_x = dx * cos_a + dy * sin_a;
+            float local_y = -dx * sin_a + dy * cos_a;
+            if (fabsf(local_x) <= half_w && fabsf(local_y) <= half_h) {
+                SceneEditorHit h = {.kind = HIT_OBJECT, .index = i, .drag_mode = DRAG_POSITION, .boundary_edge = -1};
+                count = push_hit(out_hits, max_hits, count, h);
+            }
+        }
+    }
+
+    // Emitters (body)
+    for (int i = (int)preset->emitter_count - 1; i >= 0; --i) {
+        const FluidEmitter *em = &preset->emitters[i];
+        float radius_norm = emitter_visual_radius_norm(preset, i, emitter_object_map, emitter_import_map);
+        int cx, cy;
+        scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
+                                    em->position_x, em->position_y,
+                                    &cx, &cy);
+        int radius_px = (int)(radius_norm * (float)fmin(canvas_w, canvas_h));
+        if (radius_px < 4) radius_px = 4;
+        float dx = (float)px - (float)cx;
+        float dy = (float)py - (float)cy;
+        float dist = sqrtf(dx * dx + dy * dy);
+        if (dist <= (float)radius_px) {
+            SceneEditorHit h = {.kind = HIT_EMITTER, .index = i, .drag_mode = DRAG_POSITION, .boundary_edge = -1};
+            count = push_hit(out_hits, max_hits, count, h);
+        }
+    }
+
+    int edge = scene_editor_canvas_hit_edge(canvas_x,
+                                            canvas_y,
+                                            canvas_w,
+                                            canvas_h,
+                                            px,
+                                            py);
+    if (edge >= 0) {
+        SceneEditorHit h = {.kind = HIT_BOUNDARY_EDGE, .index = -1, .drag_mode = DRAG_NONE, .boundary_edge = edge};
+        count = push_hit(out_hits, max_hits, count, h);
+    }
+
+    return count;
+}
+
 bool scene_editor_canvas_import_handle_point(int canvas_x,
                                              int canvas_y,
                                              int canvas_w,
                                              int canvas_h,
+                                             const ShapeAssetLibrary *lib,
                                              const ImportedShape *imp,
                                              int *out_x,
                                              int *out_y) {
     if (!imp || !out_x || !out_y) return false;
-    float handle_px = scene_editor_canvas_handle_size_px(canvas_w, canvas_h);
     float scale_px = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
     if (scale_px <= 0.0f) return false;
-    float handle_norm = handle_px / scale_px;
+
+    // Base handle length scales with import size so the knob sits outside the shape.
+    float handle_norm = scene_editor_canvas_handle_size_norm(canvas_w, canvas_h);
+    if (lib) {
+        const ShapeAsset *asset = shape_lookup_from_path(lib, imp->path);
+        ShapeAssetBounds b;
+        if (asset && shape_asset_bounds(asset, &b) && b.valid) {
+            float size_x = b.max_x - b.min_x;
+            float size_y = b.max_y - b.min_y;
+            float max_dim = fmaxf(size_x, size_y);
+            if (max_dim > 0.0001f) {
+                const float desired_fit = 0.25f;
+                float norm = (imp->scale * desired_fit) / max_dim;
+                float half_w = 0.5f * size_x * norm;
+                float half_h = 0.5f * size_y * norm;
+                float extent = fmaxf(half_w, half_h);
+                float margin = scene_editor_canvas_handle_size_norm(canvas_w, canvas_h) * 0.6f;
+                handle_norm = extent + margin;
+            }
+        }
+    }
     float angle = imp->rotation_deg * (float)M_PI / 180.0f;
     float hx = imp->position_x + cosf(angle) * (handle_norm * 1.4f);
     float hy = imp->position_y + sinf(angle) * (handle_norm * 1.4f);
@@ -254,9 +475,13 @@ static void draw_asset_outline(SDL_Renderer *renderer,
     }
 
     // draw a visible handle arrow for imports
-    float handle_px = scene_editor_canvas_handle_size_px(canvas_w, canvas_h);
     float scale_px = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
-    float handle_norm = (scale_px > 0.0f) ? (handle_px / scale_px) : 0.0f;
+    float handle_norm = 0.0f;
+    if (scale_px > 0.0f) {
+        float extent_norm = fmaxf(0.5f * size_x * norm, 0.5f * size_y * norm);
+        float margin = scene_editor_canvas_handle_size_norm(canvas_w, canvas_h) * 0.6f;
+        handle_norm = extent_norm + margin;
+    }
     if (handle_norm > 0.0f) {
         float hx = pos_x;
         float hy = pos_y;
@@ -272,7 +497,9 @@ static void draw_asset_outline(SDL_Renderer *renderer,
         int hy2_px = (int)lroundf(cy_px + (hy2 - 0.5f) * scale_px);
         SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
         SDL_RenderDrawLine(renderer, hx_px, hy_px, hx2_px, hy2_px);
-        draw_circle(renderer, hx2_px, hy2_px, (int)lroundf(handle_px * 0.4f), col);
+        float knob_px = scene_editor_canvas_handle_size_px(canvas_w, canvas_h) * 0.4f;
+        if (knob_px < 4.0f) knob_px = 4.0f;
+        draw_circle(renderer, hx2_px, hy2_px, (int)lroundf(knob_px), col);
     }
 }
 
@@ -287,6 +514,15 @@ void scene_editor_canvas_draw_imports(SDL_Renderer *renderer,
         SDL_Color col = (state->selected_row == (int)i && state->selection_kind == SELECTION_IMPORT)
                             ? COLOR_SELECTED
                             : COLOR_TEXT_DIM;
+        // If an emitter is attached to this import, tint by emitter type.
+        for (size_t ei = 0; ei < state->working.emitter_count; ++ei) {
+            int attached_imp = state->emitter_import_map[ei];
+            if (attached_imp < 0) attached_imp = state->working.emitters[ei].attached_import;
+            if (attached_imp == (int)i) {
+                col = emitter_color(&state->working.emitters[ei]);
+                break;
+            }
+        }
         draw_asset_outline(renderer,
                            asset,
                            imp->position_x,
@@ -398,19 +634,38 @@ int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
                                  int px,
                                  int py,
                                  EditorDragMode *mode,
-                                 const int *emitter_object_map) {
+                                 const int *emitter_object_map,
+                                 const int *emitter_import_map) {
     if (!preset) return -1;
     int closest = -1;
     float best_dist = 1e9f;
 
     for (size_t i = 0; i < preset->emitter_count; ++i) {
-        const FluidEmitter *em = &preset->emitters[i];
-        int obj_idx = emitter_object_map ? emitter_object_map[i] : -1;
-        float radius_norm = em->radius;
-        if (obj_idx >= 0 && (size_t)obj_idx < preset->object_count) {
-            const PresetObject *obj = &preset->objects[obj_idx];
-            radius_norm = fmaxf(obj->size_x, obj->size_y);
+        int hx = 0, hy = 0;
+        float hit_r = 0.0f;
+        if (scene_editor_canvas_emitter_handle_point(preset,
+                                                     canvas_x,
+                                                     canvas_y,
+                                                     canvas_w,
+                                                     canvas_h,
+                                                     (int)i,
+                                                     emitter_object_map,
+                                                     emitter_import_map,
+                                                     &hx,
+                                                     &hy,
+                                                     &hit_r)) {
+            float adx = (float)px - (float)hx;
+            float ady = (float)py - (float)hy;
+            float adist = sqrtf(adx * adx + ady * ady);
+            if (adist <= hit_r && adist < best_dist) {
+                closest = (int)i;
+                best_dist = adist;
+                if (mode) *mode = DRAG_DIRECTION;
+            }
         }
+
+        const FluidEmitter *em = &preset->emitters[i];
+        float radius_norm = emitter_visual_radius_norm(preset, (int)i, emitter_object_map, emitter_import_map);
         int cx, cy;
         scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
                                     em->position_x, em->position_y,
@@ -420,24 +675,10 @@ int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
         float dx = (float)px - (float)cx;
         float dy = (float)py - (float)cy;
         float dist = sqrtf(dx * dx + dy * dy);
-        if (dist <= (float)radius_px) {
-            if (dist < best_dist) {
-                closest = (int)i;
-                best_dist = dist;
-                if (mode) *mode = DRAG_POSITION;
-            }
-        } else if (em->type != EMITTER_DENSITY_SOURCE) {
-            int arrow_len = radius_px + 40;
-            int hx = cx + (int)(em->dir_x * arrow_len);
-            int hy = cy + (int)(em->dir_y * arrow_len);
-            float adx = (float)px - (float)hx;
-            float ady = (float)py - (float)hy;
-            float adist = sqrtf(adx * adx + ady * ady);
-            if (adist <= 18.0f && adist < best_dist) {
-                closest = (int)i;
-                best_dist = adist;
-                if (mode) *mode = DRAG_DIRECTION;
-            }
+        if (dist <= (float)radius_px && dist < best_dist) {
+            closest = (int)i;
+            best_dist = dist;
+            if (mode) *mode = DRAG_POSITION;
         }
     }
     return closest;
@@ -468,13 +709,15 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
                                        int selected_emitter,
                                        int hover_emitter,
                                        TTF_Font *font_small,
-                                       const int *emitter_object_map) {
-    if (!renderer || !preset) return;
+                                       const int *emitter_object_map,
+                                       const int *emitter_import_map) {
     (void)font_small;
+    if (!renderer || !preset) return;
 
     for (size_t i = 0; i < preset->emitter_count; ++i) {
         const FluidEmitter *em = &preset->emitters[i];
         int obj_index = emitter_object_map ? emitter_object_map[i] : -1;
+        int imp_index = emitter_import_map ? emitter_import_map[i] : -1;
         SDL_Color color = emitter_color(em);
         SDL_Color overlay = color;
         if ((int)i == selected_emitter) {
@@ -488,6 +731,7 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
                                     em->position_x, em->position_y,
                                     &cx, &cy);
 
+        float radius_norm = emitter_visual_radius_norm(preset, (int)i, emitter_object_map, emitter_import_map);
         if (obj_index >= 0 && (size_t)obj_index < preset->object_count) {
             const PresetObject *obj = &preset->objects[obj_index];
             if (obj->type == PRESET_OBJECT_CIRCLE) {
@@ -516,17 +760,41 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
                 SDL_SetRenderDrawColor(renderer, overlay.r, overlay.g, overlay.b, 80);
                 SDL_RenderDrawLines(renderer, pts, 5);
             }
+        } else if (imp_index >= 0 && (size_t)imp_index < preset->import_shape_count) {
+            // For imports, rely on the import outline tint; skip drawing a circle.
+            SDL_SetRenderDrawColor(renderer, overlay.r, overlay.g, overlay.b, 70);
+            SDL_RenderDrawLine(renderer, cx - 6, cy - 6, cx + 6, cy + 6);
+            SDL_RenderDrawLine(renderer, cx - 6, cy + 6, cx + 6, cy - 6);
         } else {
-            int radius_px = (int)(em->radius * (float)fmin(canvas_w, canvas_h));
+            int radius_px = (int)(radius_norm * (float)fmin(canvas_w, canvas_h));
             if (radius_px < 4) radius_px = 4;
             draw_circle(renderer, cx, cy, radius_px, overlay);
         }
 
-        int arrow_len = 40 + (int)(em->strength * 0.5f);
-        int hx = cx + (int)(em->dir_x * arrow_len);
-        int hy = cy + (int)(em->dir_y * arrow_len);
-        draw_line(renderer, cx, cy, hx, hy, COLOR_SELECTED);
-        draw_circle(renderer, hx, hy, 5, COLOR_SELECTED);
+        int hx = 0, hy = 0;
+        float hit_r = 0.0f;
+        if (scene_editor_canvas_emitter_handle_point(preset,
+                                                     canvas_x,
+                                                     canvas_y,
+                                                     canvas_w,
+                                                     canvas_h,
+                                                     (int)i,
+                                                     emitter_object_map,
+                                                     emitter_import_map,
+                                                     &hx,
+                                                     &hy,
+                                                     &hit_r)) {
+            SDL_Color handle_col = color;
+            if ((int)i == selected_emitter) {
+                handle_col = lighten_color(color, 0.08f);
+            } else if ((int)i == hover_emitter) {
+                handle_col = lighten_color(color, 0.12f);
+            }
+            draw_line(renderer, cx, cy, hx, hy, handle_col);
+            int knob_r = (int)lroundf(hit_r);
+            if (knob_r < 4) knob_r = 4;
+            draw_circle(renderer, hx, hy, knob_r, handle_col);
+        }
     }
 }
 
@@ -653,8 +921,11 @@ bool scene_editor_canvas_object_handle_point(const FluidScenePreset *preset,
                                 obj->position_y,
                                 &cx,
                                 &cy);
-    float handle_len_px = scene_editor_canvas_object_handle_length_px(obj, canvas_w, canvas_h)
-                          + (float)SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX;
+    float base_len_px = scene_editor_canvas_object_handle_length_px(obj, canvas_w, canvas_h);
+    // Push the handle noticeably beyond the object footprint so it remains clickable at any zoom.
+    float handle_len_px = base_len_px * 1.6f
+                          + (float)SCENE_EDITOR_OBJECT_HANDLE_MARGIN_PX
+                          + scene_editor_canvas_handle_size_px(canvas_w, canvas_h) * 0.6f;
     float angle = obj->angle;
     *out_x = cx + (int)lroundf(cosf(angle) * handle_len_px);
     *out_y = cy + (int)lroundf(sinf(angle) * handle_len_px);
@@ -727,7 +998,8 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
                                       int canvas_h,
                                       const FluidScenePreset *preset,
                                       int selected_object,
-                                      int hover_object) {
+                                      int hover_object,
+                                      const int *emitter_object_map) {
     if (!renderer || !preset) return;
 
     for (size_t i = 0; i < preset->object_count; ++i) {
@@ -736,9 +1008,28 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
         scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
                                     obj->position_x, obj->position_y,
                                     &cx, &cy);
+        int em_idx = -1;
+        if (emitter_object_map) {
+            for (size_t ei = 0; ei < preset->emitter_count; ++ei) {
+                if (emitter_object_map[ei] == (int)i) {
+                    em_idx = (int)ei;
+                    break;
+                }
+            }
+        } else {
+            for (size_t ei = 0; ei < preset->emitter_count; ++ei) {
+                if (preset->emitters[ei].attached_object == (int)i) {
+                    em_idx = (int)ei;
+                    break;
+                }
+            }
+        }
         SDL_Color base = (obj->type == PRESET_OBJECT_BOX)
                              ? (SDL_Color){170, 120, 80, 255}
                              : (SDL_Color){255, 80, 80, 255};
+        if (em_idx >= 0) {
+            base = emitter_color(&preset->emitters[em_idx]);
+        }
         if ((int)i == selected_object) {
             base = lighten_color(base, SCENE_EDITOR_SELECT_HIGHLIGHT_FACTOR);
         } else if ((int)i == hover_object) {
@@ -769,13 +1060,12 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
                                                         (int)i,
                                                         &hx,
                                                         &hy)) {
-                SDL_SetRenderDrawColor(renderer,
-                                       COLOR_SELECTED.r,
-                                       COLOR_SELECTED.g,
-                                       COLOR_SELECTED.b,
-                                       255);
+                // Always draw object handle in pure white to distinguish from emitter handle.
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderDrawLine(renderer, cx, cy, hx, hy);
-                draw_circle(renderer, hx, hy, 6, COLOR_SELECTED);
+                float knob_px = scene_editor_canvas_handle_size_px(canvas_w, canvas_h) * 0.45f;
+                if (knob_px < 8.0f) knob_px = 8.0f;
+                draw_circle(renderer, hx, hy, (int)lroundf(knob_px), (SDL_Color){255, 255, 255, 255});
             }
         }
     }
@@ -944,4 +1234,40 @@ void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
         }
     }
     (void)font_small;
+}
+bool scene_editor_canvas_emitter_handle_point(const FluidScenePreset *preset,
+                                              int canvas_x,
+                                              int canvas_y,
+                                              int canvas_w,
+                                              int canvas_h,
+                                              int emitter_index,
+                                              const int *emitter_object_map,
+                                              const int *emitter_import_map,
+                                              int *out_x,
+                                              int *out_y,
+                                              float *out_hit_radius_px) {
+    if (!preset || emitter_index < 0 || emitter_index >= (int)preset->emitter_count) return false;
+    if (!out_x || !out_y) return false;
+    const FluidEmitter *em = &preset->emitters[emitter_index];
+    float radius_norm = emitter_visual_radius_norm(preset, emitter_index, emitter_object_map, emitter_import_map);
+    int cx, cy;
+    scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
+                                em->position_x, em->position_y,
+                                &cx, &cy);
+    float min_dim = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
+    int base_px = (int)(radius_norm * min_dim);
+    // Keep a minimum visible reach even for tiny radii, but do not scale with object/import size
+    // so emitter handle remains independent from the object handle.
+    int min_handle_px = (int)lroundf(scene_editor_canvas_handle_size_px(canvas_w, canvas_h));
+    if (base_px < min_handle_px) base_px = min_handle_px;
+
+    int arrow_len = base_px + 30;
+    int hx = cx + (int)(em->dir_x * arrow_len);
+    int hy = cy + (int)(em->dir_y * arrow_len);
+    float hit_r = scene_editor_canvas_handle_size_px(canvas_w, canvas_h) * 0.4f;
+    if (hit_r < 6.0f) hit_r = 6.0f;
+    *out_x = hx;
+    *out_y = hy;
+    if (out_hit_radius_px) *out_hit_radius_px = hit_r;
+    return true;
 }
