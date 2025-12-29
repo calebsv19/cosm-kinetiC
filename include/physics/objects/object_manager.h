@@ -41,7 +41,8 @@ SceneObject *object_manager_get(ObjectManager *mgr, int id);
 bool         object_manager_remove(ObjectManager *mgr, int id);
 void         object_manager_step(ObjectManager *mgr,
                                  double dt,
-                                 const AppConfig *cfg);
+                                 const AppConfig *cfg,
+                                 bool gravity_enabled);
 int          object_manager_count(const ObjectManager *mgr);
 SceneObject *object_manager_objects(ObjectManager *mgr);
 

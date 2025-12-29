@@ -74,8 +74,8 @@ static bool thumb_hit(const EditorScroll *s, int mx, int my) {
 
 bool editor_scroll_handle_wheel(EditorScroll *s, int mx, int my, float wheel_y) {
     if (!s) return false;
-    if (mx < s->track.x - 8 || mx > s->track.x + s->track.w + 8 ||
-        my < s->track.y || my > s->track.y + s->track.h) {
+    (void)mx;
+    if (my < s->track.y || my > s->track.y + s->track.h) {
         return false;
     }
     float step = s->view_height * 0.25f;
@@ -98,6 +98,7 @@ bool editor_scroll_handle_pointer_down(EditorScroll *s, int mx, int my) {
 
 void editor_scroll_handle_pointer_move(EditorScroll *s, int mx, int my) {
     if (!s) return;
+    (void)mx;
     float travel = (float)s->track.h - s->thumb_height;
     if (travel <= 1e-4f) return;
     float rel = (float)(my - s->track.y);

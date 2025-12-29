@@ -314,6 +314,33 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                         dirty = true;
                     }
                     break;
+                case SDLK_g:
+                    if (sel_obj >= 0 && sel_obj < (int)local.object_count) {
+                        int em_idx = local_emitter_index_for_object(&local, sel_obj);
+                        if (em_idx < 0) { // skip objects tied to emitters
+                            PresetObject *obj = &local.objects[sel_obj];
+                            obj->gravity_enabled = !obj->gravity_enabled;
+                            fprintf(stderr, "[precision] G pressed: toggled gravity on obj %d -> %d\n",
+                                    sel_obj, obj->gravity_enabled ? 1 : 0);
+                            dirty = true;
+                        } else {
+                            fprintf(stderr, "[precision] G on emitter-bound obj %d (ignored)\n", sel_obj);
+                        }
+                    } else if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
+                        int em_idx = local_emitter_index_for_import(&local, sel_import);
+                        if (em_idx < 0) {
+                            ImportedShape *imp = &local.import_shapes[sel_import];
+                            imp->gravity_enabled = !imp->gravity_enabled;
+                            fprintf(stderr, "[precision] G pressed: toggled gravity on import %d -> %d\n",
+                                    sel_import, imp->gravity_enabled ? 1 : 0);
+                            dirty = true;
+                        } else {
+                            fprintf(stderr, "[precision] G on emitter-bound import %d (ignored)\n", sel_import);
+                        }
+                    } else {
+                        fprintf(stderr, "[precision] G pressed with no object selection (obj=%d)\n", sel_obj);
+                    }
+                    break;
                 case SDLK_DELETE:
                 case SDLK_BACKSPACE:
                     if (sel_import >= 0 && sel_import < (int)local.import_shape_count) {
@@ -903,6 +930,10 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                     has_tint = true;
                     break;
                 }
+            }
+            if (!has_tint && imp->gravity_enabled) {
+                tint = (SDL_Color){90, 220, 120, 255};
+                has_tint = true;
             }
             draw_import_outline(renderer,
                                 imp,

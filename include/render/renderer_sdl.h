@@ -22,6 +22,7 @@ typedef struct RendererHudInfo {
     bool        velocity_overlay_enabled;
     bool        particle_overlay_enabled;
     bool        velocity_fixed_length;
+    bool        objects_gravity_enabled;
     const char *quality_name;
     int         solver_iterations;
     int         physics_substeps;

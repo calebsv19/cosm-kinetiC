@@ -13,7 +13,7 @@
 #include "render/import_project.h"
 
 // Global multiplier to tune emitter output power without touching preset strengths.
-static const float EMITTER_POWER_BOOST = 24.0f;
+static const float EMITTER_POWER_BOOST = .15f;
 
 // simple mapping from window coords to grid coords
 static void window_to_grid(const SceneState *scene, int win_x, int win_y,
@@ -182,7 +182,7 @@ static void static_mask_apply_imports(SceneState *scene) {
     for (size_t i = 0; i < scene->import_shape_count; ++i) {
         ImportedShape *imp = &scene->import_shapes[i];
         if (!imp->enabled || imp->path[0] == '\0') continue;
-        if (!imp->is_static) continue; // skip dynamic shapes for now
+        if (!imp->is_static || imp->gravity_enabled) continue; // skip dynamic shapes for now
 
         float pos_x_unit = import_pos_to_unit(imp->position_x, span_x);
         float pos_y_unit = import_pos_to_unit(imp->position_y, span_y);
@@ -374,6 +374,45 @@ static bool rasterize_import_to_mask(SceneState *scene,
     }
 
     return raster_ok;
+}
+
+static bool import_mask_bounds(SceneState *scene,
+                               const ImportedShape *imp,
+                               int *out_min_x,
+                               int *out_max_x,
+                               int *out_min_y,
+                               int *out_max_y) {
+    if (!scene || !imp || !scene->config) return false;
+    int w = scene->config->grid_w;
+    int h = scene->config->grid_h;
+    size_t count = (size_t)w * (size_t)h;
+    if (w <= 1 || h <= 1 || count == 0) return false;
+    uint8_t *mask = (uint8_t *)calloc(count, sizeof(uint8_t));
+    if (!mask) return false;
+    bool ok = rasterize_import_to_mask(scene, imp, mask, count);
+    if (!ok) {
+        free(mask);
+        return false;
+    }
+    int min_x = w, min_y = h, max_x = -1, max_y = -1;
+    for (int y = 0; y < h; ++y) {
+        size_t row = (size_t)y * (size_t)w;
+        for (int x = 0; x < w; ++x) {
+            if (mask[row + (size_t)x]) {
+                if (x < min_x) min_x = x;
+                if (x > max_x) max_x = x;
+                if (y < min_y) min_y = y;
+                if (y > max_y) max_y = y;
+            }
+        }
+    }
+    free(mask);
+    if (max_x < min_x || max_y < min_y) return false;
+    if (out_min_x) *out_min_x = min_x;
+    if (out_max_x) *out_max_x = max_x;
+    if (out_min_y) *out_min_y = min_y;
+    if (out_max_y) *out_max_y = max_y;
+    return true;
 }
 
 // Manage emitter masks (for emitters attached to imported shapes).
@@ -761,6 +800,7 @@ SceneState scene_create(const AppConfig *cfg,
     s.config = cfg;
     s.preset = preset;
     s.wind_ramp_steps = 0;
+    s.objects_gravity_enabled = true;
 
     s.smoke = fluid2d_create(cfg->grid_w, cfg->grid_h);
     if (!s.smoke) {
@@ -809,14 +849,18 @@ SceneState scene_create(const AppConfig *cfg,
             const PresetObject *po = &preset->objects[i];
             Vec2 position = vec2(po->position_x * (float)cfg->window_w,
                                  po->position_y * (float)cfg->window_h);
+            bool dynamic = po->gravity_enabled;
+            bool make_static = po->is_static && !dynamic;
             if (po->type == PRESET_OBJECT_CIRCLE) {
                 float radius = po->size_x * (float)cfg->window_w;
                 SceneObject *obj = object_manager_add_circle(&s.objects,
                                                              position,
                                                              radius,
-                                                             po->is_static);
+                                                             make_static);
                 if (obj) {
                     obj->body.angle = po->angle;
+                    obj->body.gravity_enabled = po->gravity_enabled ? 1 : 0;
+                    obj->body.locked = make_static ? 1 : 0;
                 }
             } else {
                 Vec2 half_extents = vec2(po->size_x * (float)cfg->window_w,
@@ -824,12 +868,14 @@ SceneState scene_create(const AppConfig *cfg,
                 SceneObject *obj = object_manager_add_box(&s.objects,
                                                           position,
                                                           half_extents,
-                                                          po->is_static);
+                                                          make_static);
                 if (obj) {
                     obj->body.angle = po->angle;
+                    obj->body.gravity_enabled = po->gravity_enabled ? 1 : 0;
+                    obj->body.locked = make_static ? 1 : 0;
                 }
             }
-            if (!emitter_on_obj[i]) {
+            if (!emitter_on_obj[i] && !po->gravity_enabled) {
                 static_mask_apply_preset(&s, po);
             }
         }
@@ -838,6 +884,9 @@ SceneState scene_create(const AppConfig *cfg,
                                 : MAX_IMPORTED_SHAPES;
         for (size_t i = 0; i < copy_count; ++i) {
             s.import_shapes[s.import_shape_count] = preset->import_shapes[i];
+            if (s.import_shapes[s.import_shape_count].gravity_enabled) {
+                s.import_shapes[s.import_shape_count].is_static = false;
+            }
             if (emitter_on_imp[i]) {
                 s.import_shapes[s.import_shape_count].is_static = false; // emitter imports shouldn't be obstacles
             }
@@ -846,6 +895,56 @@ SceneState scene_create(const AppConfig *cfg,
         resolve_import_shapes(&s);
         static_mask_apply_imports(&s);
         build_emitter_masks(&s);
+    }
+
+    // Convert gravity-enabled imports into dynamic objects (approx as circles).
+    if (s.import_shape_count > 0) {
+        bool imp_is_emitter[MAX_IMPORTED_SHAPES] = {0};
+        if (preset) {
+            for (size_t ei = 0; ei < preset->emitter_count && ei < MAX_FLUID_EMITTERS; ++ei) {
+                int ai = preset->emitters[ei].attached_import;
+                if (ai >= 0 && ai < (int)MAX_IMPORTED_SHAPES) {
+                    imp_is_emitter[ai] = true;
+                }
+            }
+        }
+        for (size_t i = 0; i < s.import_shape_count; ++i) {
+            ImportedShape *imp = &s.import_shapes[i];
+            if (!imp->enabled || imp->path[0] == '\0') continue;
+            if (imp_is_emitter[i]) continue;
+            if (!imp->gravity_enabled) continue;
+
+            int min_x = 0, max_x = 0, min_y = 0, max_y = 0;
+            if (!import_mask_bounds(&s, imp, &min_x, &max_x, &min_y, &max_y)) {
+                continue;
+            }
+            int w = s.config->grid_w > 1 ? s.config->grid_w : 1;
+            int h = s.config->grid_h > 1 ? s.config->grid_h : 1;
+            float world_w = (float)(s.config->window_w > 0 ? s.config->window_w : w);
+            float world_h = (float)(s.config->window_h > 0 ? s.config->window_h : h);
+
+            float cx_grid = 0.5f * ((float)min_x + (float)max_x);
+            float cy_grid = 0.5f * ((float)min_y + (float)max_y);
+            float half_w_grid = 0.5f * ((float)(max_x - min_x + 1));
+            float half_h_grid = 0.5f * ((float)(max_y - min_y + 1));
+
+            float cx_world = (cx_grid / (float)(w - 1)) * world_w;
+            float cy_world = (cy_grid / (float)(h - 1)) * world_h;
+            float half_w_world = (half_w_grid / (float)(w - 1)) * world_w;
+            float half_h_world = (half_h_grid / (float)(h - 1)) * world_h;
+            float radius = fmaxf(half_w_world, half_h_world);
+            if (radius < 2.0f) radius = 2.0f;
+
+            SceneObject *obj = object_manager_add_circle(&s.objects,
+                                                         vec2(cx_world, cy_world),
+                                                         radius,
+                                                         false);
+            if (obj) {
+                obj->body.gravity_enabled = 1;
+                obj->body.locked = 0;
+                obj->body.restitution = 0.8f;
+            }
+        }
     }
     return s;
 }
@@ -903,6 +1002,9 @@ bool scene_handle_command(SceneState *scene, const Command *cmd) {
             return true;
         }
         return false;
+    case COMMAND_TOGGLE_OBJECT_GRAVITY:
+        scene->objects_gravity_enabled = !scene->objects_gravity_enabled;
+        return true;
     default:
         return false;
     }

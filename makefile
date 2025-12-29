@@ -83,6 +83,8 @@ SHAPE_MASK_TOOL_SRC   := $(SRC_DIR)/tools/cli/shape_import_tool.c
 SHAPE_MASK_TOOL_OBJ   := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_MASK_TOOL_SRC))
 SHAPE_ASSET_TOOL_SRC  := $(SRC_DIR)/tools/cli/shape_asset_tool.c
 SHAPE_ASSET_TOOL_OBJ  := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_ASSET_TOOL_SRC))
+SHAPE_SANITY_TOOL_SRC := $(SRC_DIR)/tools/cli/shape_sanity_tool.c
+SHAPE_SANITY_TOOL_OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SANITY_TOOL_SRC))
 
 # Shared ShapeLib/import pieces reused by the CLI
 SHAPE_SHARED_SRCS := \
@@ -103,6 +105,10 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+
+shape_sanity_tool: $(SHAPE_SANITY_TOOL_OBJ)
+	@mkdir -p $(dir $(SHAPE_SANITY_TOOL_OBJ))
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # =========================
 #  Compile rule (with depgen)

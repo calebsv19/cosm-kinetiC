@@ -17,6 +17,8 @@ typedef struct RigidBody2D {
     Vec2  velocity;
     float angle;
     float angular_velocity;
+    int   gravity_enabled; // 0 = ignore gravity
+    int   locked;          // 1 = kinematic/locked (no integration)
 
     float mass;
     float inv_mass;

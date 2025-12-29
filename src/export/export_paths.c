@@ -14,7 +14,6 @@ static bool s_initialized = false;
 static char s_volume_dir[256] = {0};
 static char s_render_dir[256] = {0};
 static char s_render_video_dir[256] = {0};
-
 static bool ensure_dir(const char *path) {
     if (!path || !*path) return false;
     int result = 0;
@@ -77,4 +76,14 @@ const char *export_render_dir(void) {
 
 const char *export_render_video_dir(void) {
     return s_render_video_dir[0] ? s_render_video_dir : NULL;
+}
+
+bool export_paths_volume_run(const char *run_name, char *out_dir, size_t out_size) {
+    if (!run_name || !run_name[0] || !out_dir || out_size == 0) return false;
+    const char *base = export_volume_dir();
+    if (!base) return false;
+    int n = snprintf(out_dir, out_size, "%s/%s", base, run_name);
+    if (n <= 0 || (size_t)n >= out_size) return false;
+    if (!ensure_dir(out_dir)) return false;
+    return true;
 }

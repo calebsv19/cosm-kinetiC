@@ -56,6 +56,7 @@ typedef struct PresetObject {
     float size_y;
     float angle;
     bool  is_static;
+    bool  gravity_enabled;
 } PresetObject;
 
 #define MAX_PRESET_OBJECTS 64
@@ -71,6 +72,7 @@ typedef struct ImportedShape {
     float friction;       // physics friction override
     bool  is_static;      // merge into static mask
     bool  enabled;
+    bool  gravity_enabled;
 } ImportedShape;
 
 #define MAX_IMPORTED_SHAPES 64

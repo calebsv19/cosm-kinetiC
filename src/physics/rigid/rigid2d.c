@@ -53,7 +53,7 @@ int rigid2d_add_body(Rigid2DWorld *w, const RigidBody2D *body) {
 
 // Simple ground plane at y = ground_y in "world units"
 static void resolve_ground_collision(RigidBody2D *b, float ground_y) {
-    if (b->is_static) return;
+    if (b->is_static || b->locked) return;
 
     if (b->position.y > ground_y) {
         b->position.y = ground_y;
@@ -118,19 +118,24 @@ static void resolve_circle_circle(RigidBody2D *a, RigidBody2D *b) {
 }
 
 void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg) {
-    (void)cfg;
     if (!w) return;
 
     float fdt = (float)dt;
-    float ground_y = 0.0f; // you can change this to your world origin
+    float ground_y = (cfg && cfg->window_h > 0) ? (float)(cfg->window_h - 1) : 0.0f;
+    float gravity_mag = (cfg && cfg->window_h > 0)
+                            ? (float)cfg->window_h * 2.0f // ~2 screen-heights/s^2
+                            : 980.0f;
+    Vec2 gravity_vec = vec2(0.0f, gravity_mag);
 
     // Integrate
     for (int i = 0; i < w->count; ++i) {
         RigidBody2D *b = &w->bodies[i];
-        if (b->is_static || b->inv_mass <= 0.0f) continue;
+        if (b->is_static || b->inv_mass <= 0.0f || b->locked) continue;
 
         // apply gravity
-        b->velocity = vec2_add(b->velocity, vec2_scale(w->gravity, fdt));
+        if (b->gravity_enabled) {
+            b->velocity = vec2_add(b->velocity, vec2_scale(gravity_vec, fdt));
+        }
 
         // integrate
         b->position = vec2_add(b->position, vec2_scale(b->velocity, fdt));

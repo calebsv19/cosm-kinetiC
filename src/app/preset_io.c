@@ -6,7 +6,7 @@
 #include <string.h>
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-    static const int PRESET_FILE_VERSION = 6;
+    static const int PRESET_FILE_VERSION = 8;
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     switch (domain) {
@@ -65,6 +65,7 @@ static void sanitize_preset_object(PresetObject *obj) {
     obj->size_y = clampf(isfinite(obj->size_y) ? obj->size_y : obj->size_x, 0.005f, 1.0f);
     if (!isfinite(obj->angle)) obj->angle = 0.0f;
     obj->is_static = obj->is_static ? true : false;
+    obj->gravity_enabled = obj->gravity_enabled ? true : false;
     if (obj->type != PRESET_OBJECT_CIRCLE && obj->type != PRESET_OBJECT_BOX) {
         obj->type = PRESET_OBJECT_CIRCLE;
     }
@@ -88,6 +89,7 @@ static void sanitize_import_shape(ImportedShape *imp) {
     if (!isfinite(imp->friction) || imp->friction < 0.0f) imp->friction = 0.2f;
     imp->is_static = imp->is_static ? true : false;
     imp->enabled = imp->enabled && imp->path[0] != '\0';
+    imp->gravity_enabled = imp->gravity_enabled ? true : false;
 }
 
 static void boundary_flows_reset(BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
@@ -463,7 +465,20 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 int type = 0;
                 int is_static = 0;
                 PresetObject obj = {0};
-                if (fscanf(f, "%d %f %f %f %f %f %d\n",
+                int gravity_flag = 1;
+                if (file_version >= 7) {
+                    if (fscanf(f, "%d %f %f %f %f %f %d %d\n",
+                               &type,
+                               &obj.position_x,
+                               &obj.position_y,
+                               &obj.size_x,
+                               &obj.size_y,
+                               &obj.angle,
+                               &is_static,
+                               &gravity_flag) != 8) {
+                        break;
+                    }
+                } else if (fscanf(f, "%d %f %f %f %f %f %d\n",
                            &type,
                            &obj.position_x,
                            &obj.position_y,
@@ -475,6 +490,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 }
                 obj.type = (type == PRESET_OBJECT_BOX) ? PRESET_OBJECT_BOX : PRESET_OBJECT_CIRCLE;
                 obj.is_static = (is_static != 0);
+                obj.gravity_enabled = (gravity_flag != 0);
                 sanitize_preset_object(&obj);
                 slot.preset.objects[slot.preset.object_count++] = obj;
             }
@@ -500,7 +516,8 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                     int enabled = 1;
                     if (file_version >= 4) {
                         int static_int = 0;
-                        if (fscanf(f, "%f %f %f %f %d %f %f %d\n",
+                        int gravity_int = 0;
+                        if (fscanf(f, "%f %f %f %f %d %f %f %d %d\n",
                                    &imp.position_x,
                                    &imp.position_y,
                                    &imp.scale,
@@ -508,10 +525,12 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                    &enabled,
                                    &imp.density,
                                    &imp.friction,
-                                   &static_int) < 5) {
+                                   &static_int,
+                                   &gravity_int) < 5) {
                             break;
                         }
                         imp.is_static = static_int != 0;
+                        imp.gravity_enabled = gravity_int != 0;
                     } else {
                         if (fscanf(f, "%f %f %f %f %d\n",
                                    &imp.position_x,
@@ -524,6 +543,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                         imp.density = 1.0f;
                         imp.friction = 0.2f;
                         imp.is_static = true;
+                        imp.gravity_enabled = false;
                     }
                     imp.enabled = enabled != 0;
                     imp.shape_id = -1;
@@ -594,14 +614,15 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         fprintf(f, "OBJ %zu\n", slot->preset.object_count);
         for (size_t o = 0; o < slot->preset.object_count; ++o) {
             const PresetObject *obj = &slot->preset.objects[o];
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %d\n",
+            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %d %d\n",
                     obj->type,
                     obj->position_x,
                     obj->position_y,
                     obj->size_x,
                     obj->size_y,
                     obj->angle,
-                    obj->is_static ? 1 : 0);
+                    obj->is_static ? 1 : 0,
+                    obj->gravity_enabled ? 1 : 0);
         }
         size_t shape_count = slot->preset.import_shape_count;
         if (shape_count > MAX_IMPORTED_SHAPES) shape_count = MAX_IMPORTED_SHAPES;
@@ -610,7 +631,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
             ImportedShape imp = slot->preset.import_shapes[s];
             sanitize_import_shape(&imp);
             fprintf(f, "%s\n", imp.path);
-            fprintf(f, "%.6f %.6f %.6f %.6f %d %.6f %.6f %d\n",
+            fprintf(f, "%.6f %.6f %.6f %.6f %d %.6f %.6f %d %d\n",
                     imp.position_x,
                     imp.position_y,
                     imp.scale,
@@ -618,7 +639,8 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
                     imp.enabled ? 1 : 0,
                     imp.density,
                     imp.friction,
-                    imp.is_static ? 1 : 0);
+                    imp.is_static ? 1 : 0,
+                    imp.gravity_enabled ? 1 : 0);
         }
     }
 

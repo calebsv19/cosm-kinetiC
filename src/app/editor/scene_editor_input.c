@@ -138,6 +138,31 @@ static void resolve_import_shape_id(SceneEditorState *state, ImportedShape *imp)
     imp->shape_id = -1;
 }
 
+static bool ensure_shape_loaded(SceneEditorState *state, const char *asset_path) {
+    if (!state || !asset_path || !state->shape_library) return false;
+    if (shape_lookup_from_path(state->shape_library, asset_path)) {
+        return true;
+    }
+    // Append into the shared library so the newly converted asset is available immediately.
+    ShapeAsset asset = {0};
+    if (!shape_asset_load_file(asset_path, &asset)) {
+        fprintf(stderr, "[editor] Failed to load asset %s\n", asset_path);
+        return false;
+    }
+    ShapeAssetLibrary *lib = (ShapeAssetLibrary *)state->shape_library; // safe: editor owns the lifetime
+    ShapeAsset *tmp = (ShapeAsset *)realloc(lib->assets, (lib->count + 1) * sizeof(ShapeAsset));
+    if (!tmp) {
+        shape_asset_free(&asset);
+        fprintf(stderr, "[editor] Failed to grow shape library for %s\n", asset_path);
+        return false;
+    }
+    lib->assets = tmp;
+    lib->assets[lib->count] = asset;
+    lib->count += 1;
+    fprintf(stderr, "[editor] Appended asset to library: %s (count=%zu)\n", asset_path, lib->count);
+    return true;
+}
+
 static bool path_starts_with(const char *s, const char *prefix) {
     if (!s || !prefix) return false;
     size_t len = strlen(prefix);
@@ -211,6 +236,7 @@ static bool add_import_from_picker(SceneEditorState *state, int row) {
             scene_editor_refresh_import_files(state);
         }
     }
+    ensure_shape_loaded(state, store_path);
     if (state->working.import_shape_count < MAX_IMPORTED_SHAPES) {
         ImportedShape *imp = &state->working.import_shapes[state->working.import_shape_count++];
         memset(imp, 0, sizeof(*imp));
@@ -233,6 +259,37 @@ static bool add_import_from_picker(SceneEditorState *state, int row) {
     }
     state->showing_import_picker = false;
     return true;
+}
+
+static bool add_import_from_existing(SceneEditorState *state, int row) {
+    if (!state || row < 0 || row >= (int)state->working.import_shape_count) return false;
+    if (state->working.import_shape_count >= MAX_IMPORTED_SHAPES) return false;
+    const ImportedShape *src = &state->working.import_shapes[row];
+    ImportedShape *imp = &state->working.import_shapes[state->working.import_shape_count++];
+    memset(imp, 0, sizeof(*imp));
+    snprintf(imp->path, sizeof(imp->path), "%s", src->path);
+    ensure_shape_loaded(state, imp->path);
+    imp->shape_id = -1;
+    imp->position_x = 0.5f;
+    imp->position_y = 0.5f;
+    imp->scale = 1.0f;
+    imp->rotation_deg = 0.0f;
+    imp->density = 1.0f;
+    imp->friction = 0.2f;
+    imp->is_static = true;
+    imp->enabled = true;
+    state->selected_row = (int)state->working.import_shape_count - 1;
+    state->selection_kind = SELECTION_IMPORT;
+    fprintf(stderr, "[editor] Duplicated import %d -> %d: %s\n",
+            row, state->selected_row, imp->path);
+    resolve_import_shape_id(state, imp);
+    set_dirty(state);
+    return true;
+}
+
+__attribute__((unused))
+static void scene_editor_input_keep_helpers(void) {
+    (void)add_import_from_existing;
 }
 
 static bool hit_matches_selection(const SceneEditorState *state, const SceneEditorHit *hit) {
@@ -682,24 +739,17 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
 
     if (!state->showing_import_picker &&
         point_in_rect(&state->list_rect, x, y)) {
-        state->selection_kind = SELECTION_NONE;
-        state->selected_object = -1;
+        state->selection_kind = SELECTION_OBJECT;
         state->selected_emitter = -1;
         int row = editor_list_view_row_at(&state->list_view,
                                           x, y,
                                           state->list_rect.x, state->list_rect.y,
                                           state->list_rect.w, state->list_rect.h);
-        if (row >= 0 && row < (int)state->working.import_shape_count) {
-            state->selected_row = row;
-            state->selection_kind = SELECTION_IMPORT;
-            Uint32 now = SDL_GetTicks();
-            bool double_click = (now - state->last_import_click) <= DOUBLE_CLICK_MS;
-            state->last_import_click = now;
-            if (double_click) {
-                add_import_from_picker(state, row);
-            }
-            return;
+        if (row >= 0 && row < (int)state->working.object_count) {
+            state->selected_object = row;
+            state->hover_object = row;
         }
+        return;
     }
 
     NumericField *fields[] = {&state->radius_field, &state->strength_field};
@@ -907,6 +957,7 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
                                                    ptr->x, ptr->y,
                                                    state->list_rect.x, state->list_rect.y,
                                                    state->list_rect.w, state->list_rect.h);
+        state->hover_object = state->hover_row;
     }
     if (state->dragging_object_handle &&
         allow_drag &&
@@ -1333,6 +1384,40 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         break;
     case SDLK_RIGHT:
         nudge_selected(state, 0.01f, 0.0f);
+        break;
+    case SDLK_g:
+        if (state->selection_kind == SELECTION_OBJECT &&
+            state->selected_object >= 0 &&
+            state->selected_object < (int)state->working.object_count) {
+            int em_idx = emitter_index_for_object(state, state->selected_object);
+            if (em_idx < 0) { // do not toggle gravity on emitter-bound objects
+                PresetObject *obj = &state->working.objects[state->selected_object];
+                obj->gravity_enabled = !obj->gravity_enabled;
+                fprintf(stderr, "[editor] G pressed: toggled gravity on obj %d -> %d\n",
+                        state->selected_object, obj->gravity_enabled ? 1 : 0);
+                set_dirty(state);
+            } else {
+                fprintf(stderr, "[editor] G pressed on emitter-bound obj %d (ignored)\n",
+                        state->selected_object);
+            }
+        } else if (state->selection_kind == SELECTION_IMPORT &&
+                   state->selected_row >= 0 &&
+                   state->selected_row < (int)state->working.import_shape_count) {
+            int imp_idx = state->selected_row;
+            int em_idx = emitter_index_for_import(state, imp_idx);
+            if (em_idx < 0) {
+                ImportedShape *imp = &state->working.import_shapes[imp_idx];
+                imp->gravity_enabled = !imp->gravity_enabled;
+                fprintf(stderr, "[editor] G pressed: toggled gravity on import %d -> %d\n",
+                        imp_idx, imp->gravity_enabled ? 1 : 0);
+                set_dirty(state);
+            } else {
+                fprintf(stderr, "[editor] G on emitter-bound import %d (ignored)\n", imp_idx);
+            }
+        } else {
+            fprintf(stderr, "[editor] G pressed with no object selection (kind=%d, obj=%d)\n",
+                    state->selection_kind, state->selected_object);
+        }
         break;
     default:
         break;

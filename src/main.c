@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "app/app_config.h"
 #include "app/scene_controller.h"
@@ -30,8 +31,13 @@ int main(int argc, char **argv) {
 
     ts_init();
 
+    const char *shape_dir = getenv("SHAPE_ASSET_DIR");
+    if (!shape_dir || shape_dir[0] == '\0') {
+        shape_dir = "config/objects";
+    }
+
     ShapeAssetLibrary shape_lib;
-    bool loaded_shapes = shape_library_load_dir("config/objects", &shape_lib);
+    bool loaded_shapes = shape_library_load_dir(shape_dir, &shape_lib);
     if (!loaded_shapes) {
         fprintf(stderr, "[shape] No ShapeAssets loaded from config/objects\n");
         memset(&shape_lib, 0, sizeof(shape_lib));

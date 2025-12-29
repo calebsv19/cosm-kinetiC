@@ -86,12 +86,14 @@ static SceneObject *object_manager_emplace(ObjectManager *mgr) {
 }
 
 static void setup_body_common(RigidBody2D *body, bool is_static) {
+    body->gravity_enabled = 1;
+    body->locked = is_static ? 1 : 0;
     body->mass = is_static ? 0.0f : 1.0f;
     body->inv_mass = (body->mass > 0.0f) ? 1.0f / body->mass : 0.0f;
     body->inertia = (body->mass > 0.0f) ? body->mass * 0.5f : 0.0f;
     body->inv_inertia = (body->inertia > 0.0f) ? 1.0f / body->inertia : 0.0f;
-    body->restitution = 0.1f;
-    body->friction = 0.2f;
+    body->restitution = 1.0f; // perfect bounce on ground by default
+    body->friction = 0.0f;
     body->is_static = is_static ? 1 : 0;
     body->velocity = vec2(0.0f, 0.0f);
     body->angular_velocity = 0.0f;
@@ -163,12 +165,15 @@ SceneObject *object_manager_objects(ObjectManager *mgr) {
 
 void object_manager_step(ObjectManager *mgr,
                          double dt,
-                         const AppConfig *cfg) {
+                         const AppConfig *cfg,
+                         bool gravity_enabled) {
     if (!mgr || !mgr->world || mgr->count == 0) return;
     if (!ensure_world_capacity(mgr, mgr->count)) return;
 
     for (int i = 0; i < mgr->count; ++i) {
         mgr->world->bodies[i] = mgr->objects[i].body;
+        mgr->world->bodies[i].gravity_enabled =
+            gravity_enabled ? mgr->objects[i].body.gravity_enabled : 0;
     }
     mgr->world->count = mgr->count;
 

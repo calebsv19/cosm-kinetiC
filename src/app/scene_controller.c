@@ -177,6 +177,34 @@ static void stroke_sampler_apply(StrokeSampler *sampler,
     }
 }
 
+static void inject_object_motion_into_fluid(SceneState *scene) {
+    if (!scene || !scene->smoke || !scene->config) return;
+    const AppConfig *cfg = scene->config;
+    if (cfg->window_w <= 0 || cfg->window_h <= 0 || cfg->grid_w <= 0 || cfg->grid_h <= 0) return;
+
+    const float vel_scale = 0.01f; // small coupling to fluid
+    for (int i = 0; i < scene->objects.count; ++i) {
+        SceneObject *obj = &scene->objects.objects[i];
+        if (!obj) continue;
+        if (obj->body.is_static || obj->body.locked) continue;
+
+        float sx = obj->body.position.x / (float)cfg->window_w;
+        float sy = obj->body.position.y / (float)cfg->window_h;
+        int gx = (int)lroundf(sx * (float)cfg->grid_w);
+        int gy = (int)lroundf(sy * (float)cfg->grid_h);
+        if (gx < 0) gx = 0;
+        if (gx >= cfg->grid_w) gx = cfg->grid_w - 1;
+        if (gy < 0) gy = 0;
+        if (gy >= cfg->grid_h) gy = cfg->grid_h - 1;
+
+        fluid2d_add_velocity(scene->smoke,
+                             gx,
+                             gy,
+                             obj->body.velocity.x * vel_scale,
+                             obj->body.velocity.y * vel_scale);
+    }
+}
+
 int scene_controller_run(const AppConfig *initial_cfg,
                         const FluidScenePreset *preset,
                         const ShapeAssetLibrary *shape_library,
@@ -317,7 +345,8 @@ int scene_controller_run(const AppConfig *initial_cfg,
                     mode_hooks->post_substep(&scene, sub_dt);
                 }
 
-                object_manager_step(&scene.objects, sub_dt, &cfg);
+                object_manager_step(&scene.objects, sub_dt, &cfg, scene.objects_gravity_enabled);
+                inject_object_motion_into_fluid(&scene);
                 scene.obstacle_mask_dirty = true;
                 scene.time += sub_dt;
             }
@@ -352,6 +381,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
             .velocity_overlay_enabled = renderer_sdl_velocity_vectors_enabled(),
             .particle_overlay_enabled = renderer_sdl_flow_particles_enabled(),
             .velocity_fixed_length = renderer_sdl_velocity_mode_fixed(),
+            .objects_gravity_enabled = scene.objects_gravity_enabled,
             .quality_name = quality_label ? quality_label : "Custom",
             .solver_iterations = cfg.fluid_solver_iterations,
             .physics_substeps = cfg.physics_substeps

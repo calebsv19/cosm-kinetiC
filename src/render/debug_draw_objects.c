@@ -142,6 +142,7 @@ void debug_draw_object_borders(const SceneState *scene,
 
     SDL_Color circle_color = {255, 80, 80, 255};
     SDL_Color box_color    = {170, 120, 80, 255};
+    SDL_Color gravity_color = {90, 220, 120, 255};
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     bool skip_imp[MAX_IMPORTED_SHAPES] = {0};
@@ -168,16 +169,19 @@ void debug_draw_object_borders(const SceneState *scene,
             int cx = (int)lroundf(obj->body.position.x * scale_x);
             int cy = (int)lroundf(obj->body.position.y * scale_y);
 
+            SDL_Color base_color = (obj->body.gravity_enabled)
+                                       ? gravity_color
+                                       : (obj->type == SCENE_OBJECT_CIRCLE ? circle_color : box_color);
             if (obj->type == SCENE_OBJECT_CIRCLE) {
                 float radius_scale = (scale_x + scale_y) * 0.5f;
                 if (radius_scale <= 0.0f) radius_scale = scale_x > 0.0f ? scale_x : 1.0f;
                 int radius = (int)lroundf(obj->body.radius * radius_scale);
                 if (radius < 2) radius = 2;
                 SDL_SetRenderDrawColor(renderer,
-                                       circle_color.r,
-                                       circle_color.g,
-                                       circle_color.b,
-                                       circle_color.a);
+                                       base_color.r,
+                                       base_color.g,
+                                       base_color.b,
+                                       base_color.a);
                 for (int t = 0; t < OBJECT_BORDER_THICKNESS; ++t) {
                     int r = radius - t;
                     if (r <= 0) break;
@@ -197,7 +201,7 @@ void debug_draw_object_borders(const SceneState *scene,
                     }
                 }
             } else if (obj->type == SCENE_OBJECT_BOX) {
-                draw_rotated_box_outline(obj, scale_x, scale_y, renderer, box_color);
+                draw_rotated_box_outline(obj, scale_x, scale_y, renderer, base_color);
             }
         }
     }

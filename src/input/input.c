@@ -74,6 +74,12 @@ bool input_poll_events(InputCommands *out,
                     command_bus_push(bus, &cmd);
                 }
                 break;
+            case SDLK_g:
+                if (bus) {
+                    Command cmd = {.type = COMMAND_TOGGLE_OBJECT_GRAVITY};
+                    command_bus_push(bus, &cmd);
+                }
+                break;
             case SDLK_1:
                 s_brush_mode = BRUSH_MODE_DENSITY;
                 out->brush_mode = s_brush_mode;

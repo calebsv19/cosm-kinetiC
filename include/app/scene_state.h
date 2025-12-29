@@ -24,6 +24,7 @@ typedef struct SceneState {
 
     const AppConfig *config; // non-owning pointer
     ObjectManager objects;
+    bool objects_gravity_enabled;
     uint8_t *static_mask;
     uint8_t *obstacle_mask;
     float   *obstacle_velX;

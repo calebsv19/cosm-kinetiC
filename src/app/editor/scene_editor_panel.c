@@ -39,15 +39,15 @@ static void draw_object_list(SceneEditorState *state) {
     int x = state->list_rect.x + 6;
     int y_start = state->list_rect.y - (int)editor_list_view_offset(&state->list_view);
     SDL_Color text = COLOR_TEXT;
-    int total_rows = (int)state->working.import_shape_count;
+    int total_rows = (int)state->working.object_count;
     editor_list_view_set_rows(&state->list_view, total_rows);
     for (int i = 0; i < total_rows; ++i) {
         int y = y_start + i * row_h;
         if (y + row_h < state->list_rect.y || y > state->list_rect.y + state->list_rect.h) continue;
         SDL_Color bg = {0, 0, 0, 0};
-        if (i == state->selected_row) {
+        if (i == state->selected_object) {
             bg = (SDL_Color){70, 120, 200, 80};
-        } else if (i == state->hover_row) {
+        } else if (i == state->hover_object) {
             bg = (SDL_Color){90, 100, 120, 60};
         }
         if (bg.a > 0) {
@@ -55,15 +55,16 @@ static void draw_object_list(SceneEditorState *state) {
             SDL_SetRenderDrawColor(state->renderer, bg.r, bg.g, bg.b, bg.a);
             SDL_RenderFillRect(state->renderer, &r);
         }
-        const ImportedShape *imp = &state->working.import_shapes[i];
-        const char *label = imp->path[0] ? imp->path : "Unnamed";
-        // Display basename for readability.
-        const char *slash = strrchr(label, '/');
-        if (slash && *(slash + 1)) {
-            label = slash + 1;
-        }
-        SDL_Color col = imp->enabled ? text : COLOR_TEXT_DIM;
-        draw_text(state->renderer, state->font_small, label, x, y + 6, col);
+        const PresetObject *obj = &state->working.objects[i];
+        const char *label = (obj->type == PRESET_OBJECT_BOX) ? "Box" : "Circle";
+        int em_idx = emitter_index_for_object(state, i);
+        SDL_Color col = text;
+        char line[64];
+        snprintf(line, sizeof(line), "%s %s%s",
+                 label,
+                 obj->gravity_enabled ? "[G]" : "[ ]",
+                 (em_idx >= 0) ? " (Emitter)" : "");
+        draw_text(state->renderer, state->font_small, line, x, y + 6, col);
     }
     SDL_Color track = {20, 20, 22, 180};
     SDL_Color thumb = {90, 170, 255, 220};

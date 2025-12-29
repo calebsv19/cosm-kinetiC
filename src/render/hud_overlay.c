@@ -124,6 +124,10 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     snprintf(particles_line, sizeof(particles_line),
              "Particles (L): %s",
              hud->particle_overlay_enabled ? "On" : "Off");
+    char gravity_line[64];
+    snprintf(gravity_line, sizeof(gravity_line),
+             "Gravity (G): %s",
+             hud->objects_gravity_enabled ? "On" : "Off");
     char status_line[32];
     snprintf(status_line, sizeof(status_line),
              "Status: %s", hud->paused ? "Paused" : "Running");
@@ -143,6 +147,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     lines[line_count++] = pressure_line;
     lines[line_count++] = velocity_line;
     lines[line_count++] = particles_line;
+    lines[line_count++] = gravity_line;
     lines[line_count++] = status_line;
     lines[line_count++] = hint_line;
 

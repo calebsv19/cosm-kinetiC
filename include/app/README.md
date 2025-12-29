@@ -7,5 +7,6 @@ Interfaces that describe global configuration and scene orchestration.
 - `scene_presets.h` – declares the emitter structs and accessors for built-in fluid presets (hotspots, jets, sinks).
 - `scene_state.h` – defines the `SceneState` struct and its lifecycle helpers. It exposes functions to create/destroy the scene, apply `InputCommands`, respond to queued commands, manage brush samples/emitters, and export `.ps2d` snapshots.
 - `scene_controller.h` – declares the orchestration entry point that main calls to run the full SDL loop.
+- `editor/` – scene editor interfaces split across canvas rendering (`scene_editor_canvas.h`), geometry/handle helpers (`scene_editor_canvas_geom.c` implementation), hit testing (`scene_editor_canvas_hit.c` implementation), input/panel wiring, and model helpers. Include these from this subdirectory when adding editor features.
 
 Implementation lives under `src/app/`. Any new high-level system that needs to persist across frames should have its struct declared here and be owned by `SceneState`.

@@ -8,20 +8,24 @@
 #include "physics/fluid2d/fluid2d.h"
 #include "physics/math/math2d.h"
 
-#define FLOW_PARTICLE_CAPACITY   2400
-#define FLOW_SPAWN_RATE_PER_SEC  800.0f
-#define FLOW_MIN_LIFETIME        4.0f
-#define FLOW_MAX_LIFETIME        40.5f
-#define FLOW_FADE_FRAMES         60.0f  // fade duration in frame-equivalents (120 ~= 2s at 60fps)
-#define FLOW_TRAIL_MAX_POINTS    48
-#define FLOW_FADE_CAPACITY       3000
+// Tunables: adjust these to change how the flow trails look/behave.
+static const float FLOW_COLOR_MIX        = 0.3f; // 0 = white, 1 = bright green
+static const float FLOW_ALPHA            = 0.1f; // 0 = invisible, 1 = fully opaque
+static const float FLOW_SPAWN_RATE_PER_SEC = 600.0f;
+static const float FLOW_MIN_LIFETIME     = 4.0f;
+static const float FLOW_MAX_LIFETIME     = 50.0f;
+static const float FLOW_LIFE_JITTER      = 0.25f; // +/- jitter around chosen lifetime
+static const float FLOW_FADE_FRAMES      = 90.0f; // frame-equivalents for fade-out
+static const int   FLOW_TRAIL_MAX_POINTS = 32;
+static const int   FLOW_PARTICLE_CAPACITY = 2400;
+static const int   FLOW_FADE_CAPACITY     = 3000;
 
 typedef struct FlowParticle {
     float x;
     float y;
     float life;
     float max_life;
-    float fade;
+    float fade_frames_left;
     float trail_x[FLOW_TRAIL_MAX_POINTS];
     float trail_y[FLOW_TRAIL_MAX_POINTS];
     int   trail_count;
@@ -33,6 +37,7 @@ static int g_grid_w              = 0;
 static int g_grid_h              = 0;
 static float g_spawn_accumulator = 0.0f;
 static int g_next_slot           = 0;
+static float g_flow_alpha        = FLOW_ALPHA; // 0-1 opacity multiplier
 
 typedef struct FlowFadeTrail {
     float frames_left;
@@ -44,6 +49,8 @@ typedef struct FlowFadeTrail {
 
 static FlowFadeTrail *g_fade_trails = NULL;
 static int g_fade_capacity          = 0;
+static SDL_Color g_color_base       = {255, 255, 255, 255};
+static SDL_Color g_color_mix        = {80, 255, 120, 255};
 
 static float randf01(void) {
     return (float)rand() / (float)RAND_MAX;
@@ -53,6 +60,17 @@ static inline int clamp_index(int v, int lo, int hi) {
     if (v < lo) return lo;
     if (v > hi) return hi;
     return v;
+}
+
+static SDL_Color mix_color(SDL_Color a, SDL_Color b, float t) {
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    SDL_Color out;
+    out.r = (Uint8)lroundf((1.0f - t) * (float)a.r + t * (float)b.r);
+    out.g = (Uint8)lroundf((1.0f - t) * (float)a.g + t * (float)b.g);
+    out.b = (Uint8)lroundf((1.0f - t) * (float)a.b + t * (float)b.b);
+    out.a = 255;
+    return out;
 }
 
 static bool point_in_solid(const SceneState *scene, float x, float y) {
@@ -122,8 +140,17 @@ bool particle_overlay_init(int grid_w, int grid_h) {
     g_grid_h = grid_h;
     g_spawn_accumulator = 0.0f;
     g_next_slot = 0;
+    g_flow_alpha = FLOW_ALPHA;
     srand((unsigned int)time(NULL));
+    g_color_base = (SDL_Color){255, 255, 255, 255};
+    g_color_mix  = (SDL_Color){80, 255, 120, 255};
     return true;
+}
+
+void particle_overlay_set_alpha(float alpha) {
+    if (alpha < 0.0f) alpha = 0.0f;
+    if (alpha > 1.0f) alpha = 1.0f;
+    g_flow_alpha = alpha;
 }
 
 void particle_overlay_shutdown(void) {
@@ -146,6 +173,7 @@ void particle_overlay_reset(void) {
     }
     g_spawn_accumulator = 0.0f;
     g_next_slot = 0;
+    g_flow_alpha = FLOW_ALPHA;
 }
 
 static void flow_particle_reset_trail(FlowParticle *pt, float x, float y) {
@@ -194,7 +222,7 @@ static void capture_fade_trail(const FlowParticle *pt) {
     FlowFadeTrail *fade = &g_fade_trails[slot];
     fade->frames_left = FLOW_FADE_FRAMES;
     float life_ratio = (pt->max_life > 0.0f) ? fmaxf(pt->life / pt->max_life, 0.0f) : 1.0f;
-    fade->start_strength = 0.6f + 0.4f * life_ratio;
+    fade->start_strength = (0.6f + 0.4f * life_ratio);
     int count = pt->trail_count;
     if (count < 2) count = 2;
     if (count > FLOW_TRAIL_MAX_POINTS) count = FLOW_TRAIL_MAX_POINTS;
@@ -213,7 +241,7 @@ static void spawn_particle(const SceneState *scene) {
     for (int i = 0; i < g_capacity; ++i) {
         int idx = (g_next_slot + i) % g_capacity;
         FlowParticle *candidate = &g_particles[idx];
-        if (candidate->life <= 0.0f && candidate->fade <= 0.0f) {
+        if (candidate->life <= 0.0f && candidate->fade_frames_left <= 0.0f) {
             slot = idx;
             break;
         }
@@ -236,13 +264,16 @@ static void spawn_particle(const SceneState *scene) {
             return;
         }
     }
-    float life = FLOW_MIN_LIFETIME +
-                 randf01() * (FLOW_MAX_LIFETIME - FLOW_MIN_LIFETIME);
+    float base_life = FLOW_MIN_LIFETIME +
+                      randf01() * (FLOW_MAX_LIFETIME - FLOW_MIN_LIFETIME);
+    float jitter = 1.0f + FLOW_LIFE_JITTER * (randf01() * 2.0f - 1.0f);
+    if (jitter < 0.2f) jitter = 0.2f;
+    float life = base_life * jitter;
     pt->x = x;
     pt->y = y;
     pt->life = life;
     pt->max_life = life;
-    pt->fade = 0.0f;
+    pt->fade_frames_left = 0.0f;
     flow_particle_reset_trail(pt, x, y);
 }
 
@@ -256,13 +287,13 @@ static void update_particle(FlowParticle *pt,
         pt->life -= dt_seconds;
         if (pt->life <= 0.0f) {
             pt->life = 0.0f;
-            pt->fade = FLOW_FADE_FRAMES;
+            pt->fade_frames_left = FLOW_FADE_FRAMES;
             capture_fade_trail(pt);
             return;
         }
-    } else if (pt->fade > 0.0f) {
-        pt->fade -= frame_equiv;
-        if (pt->fade < 0.0f) pt->fade = 0.0f;
+    } else if (pt->fade_frames_left > 0.0f) {
+        pt->fade_frames_left -= frame_equiv;
+        if (pt->fade_frames_left < 0.0f) pt->fade_frames_left = 0.0f;
         return;
     } else {
         return;
@@ -271,7 +302,7 @@ static void update_particle(FlowParticle *pt,
     Vec2 vel = vec2(0.0f, 0.0f);
     if (!sample_velocity_safe(scene, pt->x, pt->y, &vel)) {
         pt->life = 0.0f;
-        pt->fade = FLOW_FADE_FRAMES;
+        pt->fade_frames_left = FLOW_FADE_FRAMES;
         capture_fade_trail(pt);
         return;
     }
@@ -282,14 +313,14 @@ static void update_particle(FlowParticle *pt,
     if (new_x < 0.0f || new_x >= (float)g_grid_w ||
         new_y < 0.0f || new_y >= (float)g_grid_h) {
         pt->life = 0.0f;
-        pt->fade = FLOW_FADE_FRAMES;
+        pt->fade_frames_left = FLOW_FADE_FRAMES;
         capture_fade_trail(pt);
         return;
     }
 
     if (point_in_solid(scene, new_x, new_y)) {
         pt->life = 0.0f;
-        pt->fade = FLOW_FADE_FRAMES;
+        pt->fade_frames_left = FLOW_FADE_FRAMES;
         capture_fade_trail(pt);
         return;
     }
@@ -349,34 +380,40 @@ void particle_overlay_draw(const SceneState *scene,
 
     for (int i = 0; i < g_capacity; ++i) {
         FlowParticle *pt = &g_particles[i];
-        if (pt->life <= 0.0f && pt->fade <= 0.0f) continue;
+        if (pt->life <= 0.0f && pt->fade_frames_left <= 0.0f) continue;
         if (pt->trail_count < 2) continue;
 
         float visibility = 0.0f;
+        bool fading = false;
         if (pt->life > 0.0f && pt->max_life > 0.0f) {
             visibility = pt->life / pt->max_life;
-        } else if (pt->fade > 0.0f) {
-            visibility = pt->fade / FLOW_FADE_FRAMES;
+        } else if (pt->fade_frames_left > 0.0f) {
+            visibility = pt->fade_frames_left / FLOW_FADE_FRAMES;
+            fading = true;
         }
         if (visibility <= 0.0f) continue;
 
-        float life_ratio = (pt->max_life > 0.0f) ? (pt->life / pt->max_life) : 0.0f;
+        float life_ratio = (pt->max_life > 0.0f) ? fmaxf(pt->life / pt->max_life, 0.0f) : 0.0f;
+        SDL_Color base_col = mix_color(g_color_base, g_color_mix, FLOW_COLOR_MIX);
+        SDL_Color tip_col  = mix_color(base_col, g_color_base, 0.35f); // soften toward the tail
         for (int j = 1; j < pt->trail_count; ++j) {
             float t = (float)j / (float)(pt->trail_count - 1);
-            float strength = (0.2f + 0.8f * t) * (0.6f + 0.4f * life_ratio) * visibility;
+            float strength = (0.2f + 0.8f * t) * (0.6f + 0.4f * life_ratio) * visibility * g_flow_alpha;
+            if (fading) {
+                strength *= 0.8f; // keep fades subtle
+            }
             if (strength > 1.0f) strength = 1.0f;
-            Uint8 r = (Uint8)lroundf(50+100.0f * (1.0f - t));
-            Uint8 g = (Uint8)lroundf(140.0f + 110.0f * t);
-            Uint8 b = (Uint8)lroundf(60+110.0f * (1.0f - t));
+
+            SDL_Color col = mix_color(tip_col, base_col, t);
             Uint8 a = (Uint8)lroundf(255.0f * strength);
-            if (a < 16) a = 16;
+            if (a == 0) continue;
 
             float x0 = pt->trail_x[j - 1] * scale_x;
             float y0 = pt->trail_y[j - 1] * scale_y;
             float x1 = pt->trail_x[j] * scale_x;
             float y1 = pt->trail_y[j] * scale_y;
 
-            SDL_SetRenderDrawColor(renderer, r, g, b, a);
+            SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, a);
             SDL_RenderDrawLine(renderer,
                                (int)lroundf(x0),
                                (int)lroundf(y0),
@@ -392,20 +429,20 @@ void particle_overlay_draw(const SceneState *scene,
             float visibility = ft->frames_left / FLOW_FADE_FRAMES;
             for (int j = 1; j < ft->count; ++j) {
                 float t = (float)j / (float)(ft->count - 1);
-                float strength = (0.2f + 0.8f * t) * ft->start_strength * visibility;
+                float strength = (0.2f + 0.8f * t) * ft->start_strength * visibility * g_flow_alpha;
                 if (strength > 1.0f) strength = 1.0f;
-                Uint8 r = (Uint8)lroundf(50 + 100.0f * (1.0f - t));
-                Uint8 g = (Uint8)lroundf(140.0f + 110.0f * t);
-                Uint8 b = (Uint8)lroundf(60+ 110.0f * (1.0f - t));
+                SDL_Color base_col = mix_color(g_color_base, g_color_mix, FLOW_COLOR_MIX);
+                SDL_Color tip_col  = mix_color(base_col, g_color_base, 0.35f);
+                SDL_Color col = mix_color(tip_col, base_col, t);
                 Uint8 a = (Uint8)lroundf(255.0f * strength);
-                if (a < 16) a = 16;
+                if (a == 0) continue;
 
                 float x0 = ft->xs[j - 1] * scale_x;
                 float y0 = ft->ys[j - 1] * scale_y;
                 float x1 = ft->xs[j] * scale_x;
                 float y1 = ft->ys[j] * scale_y;
 
-                SDL_SetRenderDrawColor(renderer, r, g, b, a);
+                SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, a);
                 SDL_RenderDrawLine(renderer,
                                    (int)lroundf(x0),
                                    (int)lroundf(y0),

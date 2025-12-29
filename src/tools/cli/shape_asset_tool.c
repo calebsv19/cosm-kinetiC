@@ -39,12 +39,22 @@ static int parse_float(const char *s, float *out) {
 
 static const char *default_out_path(const char *input) {
     if (!input) return NULL;
-    const char *dot = strrchr(input, '.');
-    size_t len = dot ? (size_t)(dot - input) : strlen(input);
-    char *buf = (char *)malloc(len + strlen(".asset.json") + 1);
+    const char *slash = strrchr(input, '/');
+    const char *base = slash ? slash + 1 : input;
+    const char *dot = strrchr(base, '.');
+    size_t base_len = dot ? (size_t)(dot - base) : strlen(base);
+    const char *prefix = getenv("SHAPE_ASSET_DIR");
+    if (!prefix || prefix[0] == '\0') {
+        prefix = "config/objects";
+    }
+    size_t prefix_len = strlen(prefix);
+    size_t total = prefix_len + 1 + base_len + strlen(".asset.json") + 1;
+    char *buf = (char *)malloc(total);
     if (!buf) return NULL;
-    memcpy(buf, input, len);
-    memcpy(buf + len, ".asset.json", strlen(".asset.json") + 1);
+    memcpy(buf, prefix, prefix_len);
+    buf[prefix_len] = '/';
+    memcpy(buf + prefix_len + 1, base, base_len);
+    memcpy(buf + prefix_len + 1 + base_len, ".asset.json", strlen(".asset.json") + 1);
     return buf;
 }
 

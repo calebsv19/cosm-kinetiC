@@ -9,6 +9,27 @@
 
 #include "render/render_common.h"
 
+typedef struct PressureVizProfile {
+    float clamp_pos;   // maximum positive pressure delta visualized
+    float clamp_neg;   // maximum negative pressure delta visualized
+    float gamma;       // curve applied to normalized magnitude
+    float alpha_scale; // scales final alpha
+} PressureVizProfile;
+
+static const PressureVizProfile PRESSURE_PROFILE_TUNNEL = {
+    .clamp_pos = 6.0f,
+    .clamp_neg = 6.0f,
+    .gamma = 1.4f,
+    .alpha_scale = 1.0f
+};
+
+static const PressureVizProfile PRESSURE_PROFILE_BOX = {
+    .clamp_pos = 2.5f,
+    .clamp_neg = 2.5f,
+    .gamma = 1.2f,
+    .alpha_scale = 0.8f
+};
+
 static float *g_vorticity_tmp   = NULL;
 static float *g_vorticity_blur  = NULL;
 static size_t g_vorticity_cap   = 0;
@@ -221,6 +242,11 @@ static void apply_pressure_overlay(const SceneState *scene,
     size_t cell_count = (size_t)w * (size_t)h;
     if (!ensure_pressure_buffers(cell_count)) return;
 
+    SimulationMode mode = (scene->config) ? scene->config->sim_mode : SIM_MODE_BOX;
+    const PressureVizProfile *profile = (mode == SIM_MODE_WIND_TUNNEL)
+                                            ? &PRESSURE_PROFILE_TUNNEL
+                                            : &PRESSURE_PROFILE_BOX;
+
     float ref_sum = 0.0f;
     int ref_count = 0;
     int ref_band = (int)fmaxf(1.0f, (float)w * 0.05f);
@@ -243,6 +269,9 @@ static void apply_pressure_overlay(const SceneState *scene,
             continue;
         }
         float p_prime = p - p_ref;
+        // Clamp based on profile to keep colors tame in box mode.
+        if (p_prime > profile->clamp_pos) p_prime = profile->clamp_pos;
+        if (p_prime < -profile->clamp_neg) p_prime = -profile->clamp_neg;
         g_pressure_tmp[i] = p_prime;
         if (p_prime > 0.0f) {
             if (p_prime > max_pos) max_pos = p_prime;
@@ -253,9 +282,8 @@ static void apply_pressure_overlay(const SceneState *scene,
     }
     if (max_pos <= FLT_EPSILON) max_pos = 1.0f;
     if (max_neg <= FLT_EPSILON) max_neg = 1.0f;
-    const float intensity_boost = 0.3f; // smaller scale => stronger color
-    float pos_scale = fmaxf(max_pos * intensity_boost, 1e-3f);
-    float neg_scale = fmaxf(max_neg * intensity_boost * 2, 1e-3f);
+    float pos_scale = fmaxf(max_pos, 1e-3f);
+    float neg_scale = fmaxf(max_neg, 1e-3f);
 
     bool blur_enabled = (scene->config && scene->config->enable_render_blur);
 #if RENDERER_ENABLE_SMOOTHING
@@ -320,7 +348,7 @@ static void apply_pressure_overlay(const SceneState *scene,
 
             float falloff = solid_alpha_falloff(scene, id);
             float alpha_factor = 0.25f + 0.75f * falloff;
-            magnitude = powf(magnitude, 0.9f);
+            magnitude = powf(magnitude, profile->gamma);
 
             Uint8 overlay_r = base_gray;
             Uint8 overlay_g = base_gray;
@@ -334,7 +362,7 @@ static void apply_pressure_overlay(const SceneState *scene,
                 overlay_r = (Uint8)lroundf(base_gray * (1.0f - magnitude));
                 overlay_g = overlay_r;
             }
-            Uint8 alpha = (Uint8)lroundf(180.0f * magnitude * alpha_factor);
+            Uint8 alpha = (Uint8)lroundf(180.0f * magnitude * alpha_factor * profile->alpha_scale);
             if (alpha == 0) continue;
             blend_pixel(&row[x], format, overlay_r, overlay_g, overlay_b, alpha);
         }
