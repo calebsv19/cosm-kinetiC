@@ -2,6 +2,7 @@
 #define SCENE_PRESETS_H
 
 #include <stdbool.h>
+#include "physics/math/math2d.h"
 #include <stddef.h>
 
 typedef enum FluidEmitterType {
@@ -73,6 +74,12 @@ typedef struct ImportedShape {
     bool  is_static;      // merge into static mask
     bool  enabled;
     bool  gravity_enabled;
+    int   collider_vert_count;      // legacy single collider verts (fallback)
+    Vec2  collider_verts[32];       // legacy
+    int   collider_part_count;
+    int   collider_part_offsets[8]; // start index into collider_parts_verts
+    int   collider_part_counts[8];  // vert count per part
+    Vec2  collider_parts_verts[64]; // pooled verts for parts (cap total)
 } ImportedShape;
 
 #define MAX_IMPORTED_SHAPES 64

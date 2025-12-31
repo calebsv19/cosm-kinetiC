@@ -50,5 +50,14 @@ AppConfig app_config_default(void) {
     cfg.tunnel_inflow_density = 15.0f;
     cfg.tunnel_viscosity_scale = 0.5f;
 
+    // Collider fidelity defaults
+    cfg.collider_max_loops = 16;
+    cfg.collider_max_loop_vertices = 256;
+    cfg.collider_max_parts = 8;
+    cfg.collider_max_part_vertices = 32;
+    cfg.collider_simplify_epsilon = 1.5f;
+    cfg.collider_curve_sample_rate = 24.0f; // samples per 100 px of path length
+    cfg.collider_raster_padding = 0.5f;
+
     return cfg;
 }

@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 static void object_manager_reset(ObjectManager *mgr) {
     if (!mgr) return;
@@ -30,6 +31,21 @@ void object_manager_init(ObjectManager *mgr, int capacity) {
 
 void object_manager_shutdown(ObjectManager *mgr) {
     if (!mgr) return;
+    if (mgr->world && mgr->world->bodies) {
+        // World bodies borrow the same poly pointers; null them so rigid2d_destroy
+        // does not double-free after we release the object-owned memory.
+        for (int i = 0; i < mgr->world->count; ++i) {
+            mgr->world->bodies[i].poly.verts = NULL;
+            mgr->world->bodies[i].poly.count = 0;
+        }
+    }
+    if (mgr->objects) {
+        for (int i = 0; i < mgr->count; ++i) {
+            free(mgr->objects[i].body.poly.verts);
+            mgr->objects[i].body.poly.verts = NULL;
+            mgr->objects[i].body.poly.count = 0;
+        }
+    }
     free(mgr->objects);
     mgr->objects = NULL;
     mgr->count = 0;
@@ -82,6 +98,7 @@ static SceneObject *object_manager_emplace(ObjectManager *mgr) {
     SceneObject *obj = &mgr->objects[mgr->count++];
     memset(obj, 0, sizeof(*obj));
     obj->id = mgr->next_id++;
+    obj->source_import = -1;
     return obj;
 }
 
@@ -126,6 +143,31 @@ SceneObject *object_manager_add_box(ObjectManager *mgr,
     obj->body.position = position;
     obj->body.half_extents = half_extents;
     setup_body_common(&obj->body, is_static);
+    return obj;
+}
+
+SceneObject *object_manager_add_poly(ObjectManager *mgr,
+                                     Vec2 position,
+                                     const Vec2 *verts,
+                                     int vert_count,
+                                     bool is_static) {
+    if (!mgr || !verts || vert_count < 3) return NULL;
+    if (vert_count > 32) vert_count = 32;
+    SceneObject *obj = object_manager_emplace(mgr);
+    if (!obj) return NULL;
+    obj->type = SCENE_OBJECT_POLY;
+    obj->body.shape = RIGID2D_SHAPE_POLY;
+    obj->body.position = position;
+    setup_body_common(&obj->body, is_static);
+    obj->body.poly.verts = (Vec2 *)malloc((size_t)vert_count * sizeof(Vec2));
+    if (!obj->body.poly.verts) {
+        mgr->count--;
+        return NULL;
+    }
+    memcpy(obj->body.poly.verts, verts, (size_t)vert_count * sizeof(Vec2));
+    obj->body.poly.count = vert_count;
+    obj->body.poly.aabb_min_x = obj->body.poly.aabb_min_y = 0.0f;
+    obj->body.poly.aabb_max_x = obj->body.poly.aabb_max_y = 0.0f;
     return obj;
 }
 
@@ -181,5 +223,14 @@ void object_manager_step(ObjectManager *mgr,
 
     for (int i = 0; i < mgr->count; ++i) {
         mgr->objects[i].body = mgr->world->bodies[i];
+    }
+}
+
+void object_manager_remove_by_source_import(ObjectManager *mgr, int source_import) {
+    if (!mgr || !mgr->objects) return;
+    for (int i = mgr->count - 1; i >= 0; --i) {
+        if (mgr->objects[i].source_import == source_import) {
+            object_manager_remove(mgr, mgr->objects[i].id);
+        }
     }
 }

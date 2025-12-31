@@ -285,6 +285,34 @@ static void apply_headless_settings(const char *json, AppConfig *cfg) {
     }
 }
 
+static void apply_collider_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "collider", &block)) return;
+
+    double val;
+    if (json_block_number(&block, "max_loops", &val)) {
+        cfg->collider_max_loops = (int)val;
+    }
+    if (json_block_number(&block, "max_loop_vertices", &val)) {
+        cfg->collider_max_loop_vertices = (int)val;
+    }
+    if (json_block_number(&block, "max_parts", &val)) {
+        cfg->collider_max_parts = (int)val;
+    }
+    if (json_block_number(&block, "max_part_vertices", &val)) {
+        cfg->collider_max_part_vertices = (int)val;
+    }
+    if (json_block_number(&block, "simplify_epsilon", &val)) {
+        cfg->collider_simplify_epsilon = (float)val;
+    }
+    if (json_block_number(&block, "curve_sample_rate", &val)) {
+        cfg->collider_curve_sample_rate = (float)val;
+    }
+    if (json_block_number(&block, "raster_padding", &val)) {
+        cfg->collider_raster_padding = (float)val;
+    }
+}
+
 static void apply_export_settings(const char *json, AppConfig *cfg) {
     JsonBlock block;
     if (!json_find_object(json, "exports", &block)) return;
@@ -331,6 +359,7 @@ static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_input_settings(json, cfg);
     apply_emitter_settings(json, cfg);
     apply_render_settings(json, cfg);
+    apply_collider_settings(json, cfg);
     apply_headless_settings(json, cfg);
     apply_export_settings(json, cfg);
 }
@@ -403,6 +432,15 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "  \"render\": {\n");
     fprintf(f, "    \"blur_enabled\": %s,\n", cfg->enable_render_blur ? "true" : "false");
     fprintf(f, "    \"black_level\": %d\n", cfg->render_black_level);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"collider\": {\n");
+    fprintf(f, "    \"max_loops\": %d,\n", cfg->collider_max_loops);
+    fprintf(f, "    \"max_loop_vertices\": %d,\n", cfg->collider_max_loop_vertices);
+    fprintf(f, "    \"max_parts\": %d,\n", cfg->collider_max_parts);
+    fprintf(f, "    \"max_part_vertices\": %d,\n", cfg->collider_max_part_vertices);
+    fprintf(f, "    \"simplify_epsilon\": %.6f,\n", cfg->collider_simplify_epsilon);
+    fprintf(f, "    \"curve_sample_rate\": %.6f,\n", cfg->collider_curve_sample_rate);
+    fprintf(f, "    \"raster_padding\": %.6f\n", cfg->collider_raster_padding);
     fprintf(f, "  },\n");
     fprintf(f, "  \"headless\": {\n");
     fprintf(f, "    \"enabled\": %s,\n", cfg->headless_enabled ? "true" : "false");

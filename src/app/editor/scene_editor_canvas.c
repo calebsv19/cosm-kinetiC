@@ -3,6 +3,8 @@
 #include "app/editor/scene_editor.h"
 #include "geo/shape_asset.h"
 #include "app/shape_lookup.h"
+#include "render/import_project.h"
+#include "physics/math/math2d.h"
 
 #include <math.h>
 #include <string.h>
@@ -18,6 +20,15 @@ static SDL_Color COLOR_GRID_LINE = {32, 36, 40, 255};
 static SDL_Color COLOR_BOUNDARY_DISABLED = {45, 50, 58, 180};
 
 static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_Color color);
+
+static inline float import_pos_to_unit_canvas(float pos, float span) {
+    float min = 0.5f - span;
+    float max = 0.5f + span;
+    float t = (pos - min) / (max - min);
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    return t;
+}
 
 static SDL_Color emitter_color(const FluidEmitter *em) {
     switch (em->type) {
@@ -129,14 +140,63 @@ static void draw_asset_outline(SDL_Renderer *renderer,
     }
 }
 
+// Draw collider-derived outline (all parts) for a gravity-enabled import.
+static void draw_import_collider_outline(SDL_Renderer *renderer,
+                                         const SceneEditorState *state,
+                                         const ImportedShape *imp,
+                                         SDL_Color col) {
+    if (!renderer || !state || !imp) return;
+    if (!imp->gravity_enabled) return;
+    if (imp->collider_part_count <= 0) return;
+
+    float span_x = 1.0f, span_y = 1.0f;
+    import_compute_span_from_window(state->cfg.window_w, state->cfg.window_h, &span_x, &span_y);
+    float cx_unit = import_pos_to_unit_canvas(imp->position_x, span_x);
+    float cy_unit = import_pos_to_unit_canvas(imp->position_y, span_y);
+    float cx_win = cx_unit * (float)state->cfg.window_w;
+    float cy_win = cy_unit * (float)state->cfg.window_h;
+
+    SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
+    for (int pi = 0; pi < imp->collider_part_count && pi < 8; ++pi) {
+        int offset = imp->collider_part_offsets[pi];
+        int count = imp->collider_part_counts[pi];
+        if (count < 3) continue;
+        SDL_Point pts[40];
+        int npts = 0;
+        for (int vi = 0; vi < count && vi < 32; ++vi) {
+            int idx = offset + vi;
+            if (idx < 0 || idx >= 64) break;
+            Vec2 v = imp->collider_parts_verts[idx];
+            float wx = cx_win + v.x;
+            float wy = cy_win + v.y;
+            float norm_x = (state->cfg.window_w > 0) ? (wx / (float)state->cfg.window_w) : 0.0f;
+            float norm_y = (state->cfg.window_h > 0) ? (wy / (float)state->cfg.window_h) : 0.0f;
+            int sx, sy;
+            scene_editor_canvas_project(state->canvas_x,
+                                        state->canvas_y,
+                                        state->canvas_width,
+                                        state->canvas_height,
+                                        norm_x,
+                                        norm_y,
+                                        &sx,
+                                        &sy);
+            pts[npts].x = sx;
+            pts[npts].y = sy;
+            npts++;
+        }
+        if (npts >= 3) {
+            pts[npts] = pts[0];
+            SDL_RenderDrawLines(renderer, pts, npts + 1);
+        }
+    }
+}
+
 void scene_editor_canvas_draw_imports(SDL_Renderer *renderer,
                                       const SceneEditorState *state) {
     if (!renderer || !state || !state->shape_library) return;
     for (size_t i = 0; i < state->working.import_shape_count; ++i) {
         const ImportedShape *imp = &state->working.import_shapes[i];
         if (!imp->enabled) continue;
-        const ShapeAsset *asset = shape_lookup_from_path(state->shape_library, imp->path);
-        if (!asset) continue;
         SDL_Color col = (state->selected_row == (int)i && state->selection_kind == SELECTION_IMPORT)
                             ? COLOR_SELECTED
                             : COLOR_TEXT_DIM;
@@ -154,17 +214,24 @@ void scene_editor_canvas_draw_imports(SDL_Renderer *renderer,
         if (!has_emitter && imp->gravity_enabled) {
             col = (SDL_Color){90, 220, 120, 255};
         }
-        draw_asset_outline(renderer,
-                           asset,
-                           imp->position_x,
-                           imp->position_y,
-                           imp->scale,
-                           imp->rotation_deg * (float)M_PI / 180.0f,
-                           state->canvas_x,
-                           state->canvas_y,
-                           state->canvas_width,
-                           state->canvas_height,
-                           col);
+        // Always draw the authoring outline; if gravity is on, overlay the collider outline.
+        const ShapeAsset *asset = shape_lookup_from_path(state->shape_library, imp->path);
+        if (asset) {
+            draw_asset_outline(renderer,
+                               asset,
+                               imp->position_x,
+                               imp->position_y,
+                               imp->scale,
+                               imp->rotation_deg * (float)M_PI / 180.0f,
+                               state->canvas_x,
+                               state->canvas_y,
+                               state->canvas_width,
+                               state->canvas_height,
+                               col);
+        }
+        if (imp->gravity_enabled) {
+            draw_import_collider_outline(renderer, state, imp, col);
+        }
     }
 }
 

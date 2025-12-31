@@ -6,7 +6,7 @@
 #include <string.h>
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-    static const int PRESET_FILE_VERSION = 8;
+    static const int PRESET_FILE_VERSION = 10;
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     switch (domain) {
@@ -90,6 +90,14 @@ static void sanitize_import_shape(ImportedShape *imp) {
     imp->is_static = imp->is_static ? true : false;
     imp->enabled = imp->enabled && imp->path[0] != '\0';
     imp->gravity_enabled = imp->gravity_enabled ? true : false;
+    if (imp->collider_vert_count < 0) imp->collider_vert_count = 0;
+    if (imp->collider_vert_count > 32) imp->collider_vert_count = 32;
+    if (imp->collider_part_count < 0) imp->collider_part_count = 0;
+    if (imp->collider_part_count > 8) imp->collider_part_count = 8;
+    for (int i = 0; i < imp->collider_part_count; ++i) {
+        if (imp->collider_part_counts[i] < 0) imp->collider_part_counts[i] = 0;
+        if (imp->collider_part_counts[i] > 16) imp->collider_part_counts[i] = 16;
+    }
 }
 
 static void boundary_flows_reset(BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
@@ -499,12 +507,12 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         }
 
         long shape_marker_pos = ftell(f);
-        if (file_version >= 3) {
-            char shape_marker[6] = {0};
-            if (fscanf(f, "%5s", shape_marker) == 1 && strcmp(shape_marker, "SHAPE") == 0) {
-                int shape_count = 0;
-                if (fscanf(f, "%d\n", &shape_count) != 1) {
-                    shape_count = 0;
+            if (file_version >= 3) {
+                char shape_marker[6] = {0};
+                if (fscanf(f, "%5s", shape_marker) == 1 && strcmp(shape_marker, "SHAPE") == 0) {
+                    int shape_count = 0;
+                    if (fscanf(f, "%d\n", &shape_count) != 1) {
+                        shape_count = 0;
                 }
                 if (shape_count < 0) shape_count = 0;
                 if (shape_count > (int)MAX_IMPORTED_SHAPES) shape_count = (int)MAX_IMPORTED_SHAPES;
@@ -517,7 +525,9 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                     if (file_version >= 4) {
                         int static_int = 0;
                         int gravity_int = 0;
-                        if (fscanf(f, "%f %f %f %f %d %f %f %d %d\n",
+                        int vert_count = 0;
+                        int part_count = 0;
+                        if (fscanf(f, "%f %f %f %f %d %f %f %d %d %d %d\n",
                                    &imp.position_x,
                                    &imp.position_y,
                                    &imp.scale,
@@ -526,11 +536,50 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                    &imp.density,
                                    &imp.friction,
                                    &static_int,
-                                   &gravity_int) < 5) {
+                                   &gravity_int,
+                                   &vert_count,
+                                   &part_count) < 5) {
                             break;
                         }
                         imp.is_static = static_int != 0;
                         imp.gravity_enabled = gravity_int != 0;
+                        imp.collider_vert_count = vert_count;
+                        if (imp.collider_vert_count < 0) imp.collider_vert_count = 0;
+                        if (imp.collider_vert_count > 32) imp.collider_vert_count = 32;
+                        for (int vi = 0; vi < imp.collider_vert_count; ++vi) {
+                            if (fscanf(f, "%f %f\n", &imp.collider_verts[vi].x, &imp.collider_verts[vi].y) != 2) {
+                                imp.collider_vert_count = vi;
+                                break;
+                            }
+                        }
+                        imp.collider_part_count = part_count;
+                        if (imp.collider_part_count < 0) imp.collider_part_count = 0;
+                        if (imp.collider_part_count > 8) imp.collider_part_count = 8;
+                        for (int pi = 0; pi < imp.collider_part_count; ++pi) {
+                            int offset = 0;
+                            int pcount = 0;
+                            if (fscanf(f, "%d %d\n", &offset, &pcount) != 2) {
+                                imp.collider_part_count = pi;
+                                break;
+                            }
+                            imp.collider_part_offsets[pi] = offset;
+                            imp.collider_part_counts[pi] = pcount;
+                            if (imp.collider_part_counts[pi] < 0) imp.collider_part_counts[pi] = 0;
+                            if (imp.collider_part_counts[pi] > 16) imp.collider_part_counts[pi] = 16;
+                            for (int vi = 0; vi < imp.collider_part_counts[pi]; ++vi) {
+                                int idx = offset + vi;
+                                if (idx < 0 || idx >= 64) {
+                                    imp.collider_part_counts[pi] = vi;
+                                    break;
+                                }
+                                if (fscanf(f, "%f %f\n",
+                                           &imp.collider_parts_verts[idx].x,
+                                           &imp.collider_parts_verts[idx].y) != 2) {
+                                    imp.collider_part_counts[pi] = vi;
+                                    break;
+                                }
+                            }
+                        }
                     } else {
                         if (fscanf(f, "%f %f %f %f %d\n",
                                    &imp.position_x,
@@ -544,6 +593,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                         imp.friction = 0.2f;
                         imp.is_static = true;
                         imp.gravity_enabled = false;
+                        imp.collider_vert_count = 0;
                     }
                     imp.enabled = enabled != 0;
                     imp.shape_id = -1;
@@ -631,7 +681,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
             ImportedShape imp = slot->preset.import_shapes[s];
             sanitize_import_shape(&imp);
             fprintf(f, "%s\n", imp.path);
-            fprintf(f, "%.6f %.6f %.6f %.6f %d %.6f %.6f %d %d\n",
+            fprintf(f, "%.6f %.6f %.6f %.6f %d %.6f %.6f %d %d %d %d\n",
                     imp.position_x,
                     imp.position_y,
                     imp.scale,
@@ -640,7 +690,23 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
                     imp.density,
                     imp.friction,
                     imp.is_static ? 1 : 0,
-                    imp.gravity_enabled ? 1 : 0);
+                    imp.gravity_enabled ? 1 : 0,
+                    imp.collider_vert_count,
+                    imp.collider_part_count);
+            for (int vi = 0; vi < imp.collider_vert_count; ++vi) {
+                fprintf(f, "%.6f %.6f\n", imp.collider_verts[vi].x, imp.collider_verts[vi].y);
+            }
+            for (int pi = 0; pi < imp.collider_part_count; ++pi) {
+                fprintf(f, "%d %d\n", imp.collider_part_offsets[pi], imp.collider_part_counts[pi]);
+                int offset = imp.collider_part_offsets[pi];
+                for (int vi = 0; vi < imp.collider_part_counts[pi]; ++vi) {
+                    int idx = offset + vi;
+                    if (idx < 0 || idx >= 64) break;
+                    fprintf(f, "%.6f %.6f\n",
+                            imp.collider_parts_verts[idx].x,
+                            imp.collider_parts_verts[idx].y);
+                }
+            }
         }
     }
 

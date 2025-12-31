@@ -57,6 +57,15 @@ typedef struct AppConfig {
     float  tunnel_inflow_speed;
     float  tunnel_inflow_density;
     float  tunnel_viscosity_scale;
+
+    // Collider generation / fidelity controls (authoring -> physics).
+    int    collider_max_loops;           // max closed paths consumed per shape
+    int    collider_max_loop_vertices;   // max vertices per extracted loop (after sampling)
+    int    collider_max_parts;           // max convex parts per collider
+    int    collider_max_part_vertices;   // max vertices per convex part
+    float  collider_simplify_epsilon;    // simplification tolerance in grid space
+    float  collider_curve_sample_rate;   // samples per 100 px of curve length
+    float  collider_raster_padding;      // cells of padding when rasterizing dynamic bodies
 } AppConfig;
 
 AppConfig app_config_default(void);

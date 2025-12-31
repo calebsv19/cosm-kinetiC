@@ -4,8 +4,8 @@
     "height": 772
   },
   "grid": {
-    "width": 96,
-    "height": 96
+    "width": 480,
+    "height": 480
   },
   "simulation": {
     "mode": 0,
@@ -16,7 +16,7 @@
   "timing": {
     "min_dt": 0.006060606,
     "max_dt": 0.033333333,
-    "substeps": 1
+    "substeps": 3
   },
   "commands": {
     "max_per_frame": 256
@@ -26,15 +26,24 @@
     "viscosity": 0.000008,
     "density_decay": 0.050000,
     "buoyancy": 1.500000,
-    "solver_iterations": 12
+    "solver_iterations": 24
   },
   "render": {
     "blur_enabled": true,
     "black_level": 50
   },
+  "collider": {
+    "max_loops": 16,
+    "max_loop_vertices": 256,
+    "max_parts": 8,
+    "max_part_vertices": 32,
+    "simplify_epsilon": 1.500000,
+    "curve_sample_rate": 24.000000,
+    "raster_padding": 0.500000
+  },
   "headless": {
     "enabled": false,
-    "frame_count": 14000,
+    "frame_count": 10000,
     "custom_slot_index": 0,
     "quality_index": -1,
     "skip_present": true

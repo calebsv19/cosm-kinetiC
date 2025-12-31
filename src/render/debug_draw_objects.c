@@ -18,6 +18,29 @@ static float safe_scale(int target, int source) {
     return (float)target / (float)source;
 }
 
+static void draw_poly_outline(const SceneObject *obj,
+                              float scale_x,
+                              float scale_y,
+                              SDL_Renderer *renderer,
+                              SDL_Color color) {
+    if (!obj || !renderer) return;
+    const RigidPoly *poly = &obj->body.poly;
+    if (!poly->verts || poly->count < 3) return;
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_Point *pts = (SDL_Point *)alloca((size_t)(poly->count + 1) * sizeof(SDL_Point));
+    for (int i = 0; i < poly->count; ++i) {
+        Vec2 v = poly->verts[i];
+        float rx = v.x * cosf(obj->body.angle) - v.y * sinf(obj->body.angle);
+        float ry = v.x * sinf(obj->body.angle) + v.y * cosf(obj->body.angle);
+        float wx = obj->body.position.x + rx;
+        float wy = obj->body.position.y + ry;
+        pts[i].x = (int)lroundf(wx * scale_x);
+        pts[i].y = (int)lroundf(wy * scale_y);
+    }
+    pts[poly->count] = pts[0];
+    SDL_RenderDrawLines(renderer, pts, poly->count + 1);
+}
+
 static void draw_import_outlines(const SceneState *scene,
                                  SDL_Renderer *renderer,
                                  int window_w,
@@ -47,6 +70,7 @@ static void draw_import_outlines(const SceneState *scene,
         float norm = (imp->scale * desired_fit) / max_dim;
         float cx = 0.5f * (b.min_x + b.max_x);
         float cy = 0.5f * (b.min_y + b.max_y);
+        SDL_Color use_col = imp->gravity_enabled ? (SDL_Color){120, 240, 120, 180} : col;
         for (size_t pi = 0; pi < asset->path_count; ++pi) {
             const ShapeAssetPath *path = &asset->paths[pi];
             if (!path || path->point_count < 2) continue;
@@ -77,7 +101,7 @@ static void draw_import_outlines(const SceneState *scene,
                 int ay = (int)lroundf(pa.screen_y);
                 int bx = (int)lroundf(pb.screen_x);
                 int by = (int)lroundf(pb.screen_y);
-                SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
+                SDL_SetRenderDrawColor(renderer, use_col.r, use_col.g, use_col.b, use_col.a);
                 SDL_RenderDrawLine(renderer, ax, ay, bx, by);
             }
         }
@@ -202,6 +226,8 @@ void debug_draw_object_borders(const SceneState *scene,
                 }
             } else if (obj->type == SCENE_OBJECT_BOX) {
                 draw_rotated_box_outline(obj, scale_x, scale_y, renderer, base_color);
+            } else if (obj->type == SCENE_OBJECT_POLY) {
+                draw_poly_outline(obj, scale_x, scale_y, renderer, base_color);
             }
         }
     }

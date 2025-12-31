@@ -16,7 +16,7 @@ static const float FLOW_MIN_LIFETIME     = 4.0f;
 static const float FLOW_MAX_LIFETIME     = 50.0f;
 static const float FLOW_LIFE_JITTER      = 0.25f; // +/- jitter around chosen lifetime
 static const float FLOW_FADE_FRAMES      = 90.0f; // frame-equivalents for fade-out
-static const int   FLOW_TRAIL_MAX_POINTS = 32;
+static const int   FLOW_TRAIL_MAX_POINTS = 16;
 static const int   FLOW_PARTICLE_CAPACITY = 2400;
 static const int   FLOW_FADE_CAPACITY     = 3000;
 

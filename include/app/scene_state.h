@@ -25,6 +25,7 @@ typedef struct SceneState {
     const AppConfig *config; // non-owning pointer
     ObjectManager objects;
     bool objects_gravity_enabled;
+    bool objects_elastic;
     uint8_t *static_mask;
     uint8_t *obstacle_mask;
     float   *obstacle_velX;
@@ -36,6 +37,7 @@ typedef struct SceneState {
     // Imported ShapeLib assets baked into the static mask.
     size_t import_shape_count;
     ImportedShape import_shapes[MAX_IMPORTED_SHAPES];
+    int import_body_map[MAX_IMPORTED_SHAPES]; // index into objects, -1 if none
 
     // Shared ShapeAsset library (non-owning pointer).
     const ShapeAssetLibrary *shape_library;
@@ -45,6 +47,12 @@ typedef struct SceneState {
         uint8_t *mask;
         int min_x, max_x, min_y, max_y;
     } emitter_masks[MAX_FLUID_EMITTERS];
+    bool emitter_masks_dirty;
+
+    // Stored initial transforms for imports (normalized positions, degrees rotation).
+    float import_start_pos_x[MAX_IMPORTED_SHAPES];
+    float import_start_pos_y[MAX_IMPORTED_SHAPES];
+    float import_start_rot_deg[MAX_IMPORTED_SHAPES];
 } SceneState;
 
 SceneState scene_create(const AppConfig *cfg,
@@ -60,6 +68,7 @@ void scene_apply_boundary_flows(SceneState *scene, double dt);
 void scene_enforce_boundary_flows(SceneState *scene);
 void scene_set_emitters_enabled(SceneState *scene, bool enabled);
 void scene_enforce_obstacles(SceneState *scene);
+void scene_rasterize_dynamic_obstacles(SceneState *scene);
 
 // Snapshot export (Phase 1 basic implementation)
 bool scene_export_snapshot(const SceneState *scene, const char *path);

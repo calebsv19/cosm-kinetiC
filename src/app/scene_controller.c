@@ -346,6 +346,16 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 }
 
                 object_manager_step(&scene.objects, sub_dt, &cfg, scene.objects_gravity_enabled);
+                // Sync import positions/angles to their dynamic bodies so rendering tracks physics.
+                for (size_t ii = 0; ii < scene.import_shape_count; ++ii) {
+                    int body_idx = scene.import_body_map[ii];
+                    if (body_idx < 0 || body_idx >= scene.objects.count) continue;
+                    RigidBody2D *b = &scene.objects.objects[body_idx].body;
+                    scene.import_shapes[ii].position_x = b->position.x / (float)cfg.window_w;
+                    scene.import_shapes[ii].position_y = b->position.y / (float)cfg.window_h;
+                    scene.import_shapes[ii].rotation_deg = b->angle * 180.0f / (float)M_PI;
+                }
+                scene_rasterize_dynamic_obstacles(&scene);
                 inject_object_motion_into_fluid(&scene);
                 scene.obstacle_mask_dirty = true;
                 scene.time += sub_dt;

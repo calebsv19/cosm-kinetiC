@@ -9,8 +9,18 @@
 
 typedef enum {
     RIGID2D_SHAPE_CIRCLE,
-    RIGID2D_SHAPE_AABB
+    RIGID2D_SHAPE_AABB,
+    RIGID2D_SHAPE_POLY
 } Rigid2DShape;
+
+typedef struct {
+    Vec2   *verts;      // local-space vertices (counter-clockwise)
+    int     count;      // number of vertices
+    float   aabb_min_x; // world-space AABB (cached)
+    float   aabb_min_y;
+    float   aabb_max_x;
+    float   aabb_max_y;
+} RigidPoly;
 
 typedef struct RigidBody2D {
     Vec2  position;
@@ -29,6 +39,7 @@ typedef struct RigidBody2D {
     Rigid2DShape shape;
     float radius;      // for circles
     Vec2  half_extents; // for AABB
+    RigidPoly poly;    // for polygons
 
     int   is_static;   // static bodies are immovable
     float restitution; // bounciness [0,1]

@@ -7,10 +7,21 @@
 #include "app/editor/scene_editor_model.h"
 #include "app/shape_lookup.h"
 #include "geo/shape_asset.h"
+#include "render/import_project.h"
+#include "physics/math/math2d.h"
 
 static const int DRAG_THRESHOLD_PX = 4;
 
 static SDL_Color precision_emitter_color(const FluidEmitter *em);
+
+static inline float import_pos_to_unit_local(float pos, float span) {
+    float min = 0.5f - span;
+    float max = 0.5f + span;
+    float t = (pos - min) / (max - min);
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    return t;
+}
 
 static int local_emitter_index_for_object(const FluidScenePreset *preset, int obj_index) {
     if (!preset || obj_index < 0 || obj_index >= (int)preset->object_count) return -1;
@@ -77,49 +88,85 @@ static void draw_import_outline(SDL_Renderer *renderer,
                                 bool hovered,
                                 const SDL_Color *tint_override) {
     if (!renderer || !imp || !lib) return;
-    const ShapeAsset *asset = shape_lookup_from_path(lib, imp->path);
-    if (!asset) return;
-    ShapeAssetBounds b;
-    if (!shape_asset_bounds(asset, &b) || !b.valid) return;
-    float size_x = b.max_x - b.min_x;
-    float size_y = b.max_y - b.min_y;
-    float max_dim = fmaxf(size_x, size_y);
-    if (max_dim <= 0.0001f) return;
-    const float desired_fit = 0.25f;
-    float norm = (imp->scale * desired_fit) / max_dim;
-    float cx = 0.5f * (b.min_x + b.max_x);
-    float cy = 0.5f * (b.min_y + b.max_y);
-    float cos_a = cosf(imp->rotation_deg * (float)M_PI / 180.0f);
-    float sin_a = sinf(imp->rotation_deg * (float)M_PI / 180.0f);
+    float span_x = 1.0f, span_y = 1.0f;
+    import_compute_span_from_window(win_w, win_h, &span_x, &span_y);
+    float cx_unit = import_pos_to_unit_local(imp->position_x, span_x);
+    float cy_unit = import_pos_to_unit_local(imp->position_y, span_y);
+    float cx_win = cx_unit * (float)win_w;
+    float cy_win = cy_unit * (float)win_h;
+
     SDL_Color col = selected ? (SDL_Color){255, 255, 200, 255}
                              : (hovered ? (SDL_Color){180, 220, 255, 220}
                                         : (SDL_Color){180, 186, 195, 200});
     if (tint_override) {
         col = *tint_override;
     }
-    for (size_t pi = 0; pi < asset->path_count; ++pi) {
-        const ShapeAssetPath *path = &asset->paths[pi];
-        if (!path || path->point_count < 2) continue;
-        for (size_t i = 1; i < path->point_count; ++i) {
-            ShapeAssetPoint a = path->points[i - 1];
-            ShapeAssetPoint bpt = path->points[i];
-            float axn = (a.x - cx) * norm;
-            float ayn = (a.y - cy) * norm;
-            float bxn = (bpt.x - cx) * norm;
-            float byn = (bpt.y - cy) * norm;
-            float ra_x = axn * cos_a - ayn * sin_a + imp->position_x;
-            float ra_y = axn * sin_a + ayn * cos_a + imp->position_y;
-            float rb_x = bxn * cos_a - byn * sin_a + imp->position_x;
-            float rb_y = bxn * sin_a + byn * cos_a + imp->position_y;
-            float scale_px = (float)((win_w < win_h) ? win_w : win_h);
-            float cx_px = 0.5f * (float)win_w;
-            float cy_px = 0.5f * (float)win_h;
-            int ax = (int)lroundf(cx_px + (ra_x - 0.5f) * scale_px);
-            int ay = (int)lroundf(cy_px + (ra_y - 0.5f) * scale_px);
-            int bx = (int)lroundf(cx_px + (rb_x - 0.5f) * scale_px);
-            int by = (int)lroundf(cy_px + (rb_y - 0.5f) * scale_px);
-            SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
-            SDL_RenderDrawLine(renderer, ax, ay, bx, by);
+
+    float cos_a = cosf(imp->rotation_deg * (float)M_PI / 180.0f);
+    float sin_a = sinf(imp->rotation_deg * (float)M_PI / 180.0f);
+
+    if (imp->gravity_enabled && imp->collider_part_count > 0) {
+        SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
+        for (int pi = 0; pi < imp->collider_part_count && pi < 8; ++pi) {
+            int offset = imp->collider_part_offsets[pi];
+            int count = imp->collider_part_counts[pi];
+            if (count < 3) continue;
+            SDL_Point pts[40];
+            int npts = 0;
+            for (int vi = 0; vi < count && vi < 32; ++vi) {
+                int idx = offset + vi;
+                if (idx < 0 || idx >= 64) break;
+                Vec2 v = imp->collider_parts_verts[idx];
+                float wx = cx_win + v.x;
+                float wy = cy_win + v.y;
+                int sx = (int)lroundf(wx);
+                int sy = (int)lroundf(wy);
+                pts[npts++] = (SDL_Point){sx, sy};
+            }
+            if (npts >= 3) {
+                pts[npts] = pts[0];
+                SDL_RenderDrawLines(renderer, pts, npts + 1);
+            }
+        }
+    } else {
+        const ShapeAsset *asset = shape_lookup_from_path(lib, imp->path);
+        if (!asset) return;
+        ShapeAssetBounds b;
+        if (!shape_asset_bounds(asset, &b) || !b.valid) return;
+        float size_x = b.max_x - b.min_x;
+        float size_y = b.max_y - b.min_y;
+        float max_dim = fmaxf(size_x, size_y);
+        if (max_dim <= 0.0001f) return;
+        const float desired_fit = 0.25f;
+        float norm = (imp->scale * desired_fit) / max_dim;
+        float cx = 0.5f * (b.min_x + b.max_x);
+        float cy = 0.5f * (b.min_y + b.max_y);
+        float cos_a = cosf(imp->rotation_deg * (float)M_PI / 180.0f);
+        float sin_a = sinf(imp->rotation_deg * (float)M_PI / 180.0f);
+        for (size_t pi = 0; pi < asset->path_count; ++pi) {
+            const ShapeAssetPath *path = &asset->paths[pi];
+            if (!path || path->point_count < 2) continue;
+            for (size_t i = 1; i < path->point_count; ++i) {
+                ShapeAssetPoint a = path->points[i - 1];
+                ShapeAssetPoint bpt = path->points[i];
+                float axn = (a.x - cx) * norm;
+                float ayn = (a.y - cy) * norm;
+                float bxn = (bpt.x - cx) * norm;
+                float byn = (bpt.y - cy) * norm;
+                float ra_x = axn * cos_a - ayn * sin_a + imp->position_x;
+                float ra_y = axn * sin_a + ayn * cos_a + imp->position_y;
+                float rb_x = bxn * cos_a - byn * sin_a + imp->position_x;
+                float rb_y = bxn * sin_a + byn * cos_a + imp->position_y;
+                float scale_px = (float)((win_w < win_h) ? win_w : win_h);
+                float cx_px = 0.5f * (float)win_w;
+                float cy_px = 0.5f * (float)win_h;
+                int ax = (int)lroundf(cx_px + (ra_x - 0.5f) * scale_px);
+                int ay = (int)lroundf(cy_px + (ra_y - 0.5f) * scale_px);
+                int bx = (int)lroundf(cx_px + (rb_x - 0.5f) * scale_px);
+                int by = (int)lroundf(cy_px + (rb_y - 0.5f) * scale_px);
+                SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
+                SDL_RenderDrawLine(renderer, ax, ay, bx, by);
+            }
         }
     }
     // draw a larger handle arrow scaled with canvas size for readability
