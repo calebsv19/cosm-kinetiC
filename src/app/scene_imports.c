@@ -1,8 +1,9 @@
 #include "app/scene_imports.h"
 
 #include <string.h>
+#include <stdio.h>
 #include "app/shape_lookup.h"
-#include "physics/rigid2d/collider_builder.h"
+#include "physics/rigid/collider_builder.h"
 #include "app/scene_masks.h"
 
 void scene_import_reset_collider(ImportedShape *imp) {
@@ -72,6 +73,9 @@ static void add_import_body(SceneState *scene, size_t imp_index) {
 
 void scene_imports_rebuild_bodies(SceneState *scene) {
     if (!scene || !scene->config || !scene->shape_library) return;
+    if (scene->config->collider_debug_logs) {
+        fprintf(stderr, "[collider] rebuild bodies (imports=%zu)\n", scene->import_shape_count);
+    }
     // Clear existing bodies for imports
     for (size_t i = 0; i < scene->import_shape_count; ++i) {
         if (scene->import_body_map[i] >= 0) {

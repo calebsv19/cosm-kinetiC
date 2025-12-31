@@ -162,6 +162,22 @@ typedef struct {
     int   b;
 } Pair;
 
+static void body_aabb(const RigidBody2D *b,
+                      float *minx, float *maxx,
+                      float *miny, float *maxy) {
+    if (b->shape == RIGID2D_SHAPE_CIRCLE) {
+        *minx = b->position.x - b->radius;
+        *maxx = b->position.x + b->radius;
+        *miny = b->position.y - b->radius;
+        *maxy = b->position.y + b->radius;
+    } else {
+        *minx = b->poly.aabb_min_x;
+        *maxx = b->poly.aabb_max_x;
+        *miny = b->poly.aabb_min_y;
+        *maxy = b->poly.aabb_max_y;
+    }
+}
+
 static int aabb_overlap(const RigidBody2D *a, const RigidBody2D *b) {
     if (!a || !b) return 0;
     float aminx = (a->shape == RIGID2D_SHAPE_CIRCLE)
@@ -192,6 +208,88 @@ static int aabb_overlap(const RigidBody2D *a, const RigidBody2D *b) {
 
     return (amaxx >= bminx && bmaxx >= aminx &&
             amaxy >= bminy && bmaxy >= aminy);
+}
+
+// Build broad-phase candidate pairs using a coarse grid. Falls back to O(n^2) if disabled or too many bodies.
+static int broadphase_pairs_grid(Rigid2DWorld *w,
+                                 const AppConfig *cfg,
+                                 Pair *pairs,
+                                 int max_pairs) {
+    if (!w || !cfg || !cfg->physics_broadphase_enabled || w->count <= 1 || max_pairs <= 0) return 0;
+    const int n = w->count;
+    if (n > 128) return 0; // fallback to brute force for large counts
+
+    float cell_size = (cfg->physics_broadphase_cell_size > 0.0f) ? cfg->physics_broadphase_cell_size : 128.0f;
+    float world_w = (cfg->window_w > 0) ? (float)cfg->window_w : 512.0f;
+    float world_h = (cfg->window_h > 0) ? (float)cfg->window_h : 512.0f;
+    int cols = (int)ceilf(world_w / cell_size);
+    int rows = (int)ceilf(world_h / cell_size);
+    if (cols < 1) cols = 1;
+    if (rows < 1) rows = 1;
+    if (cols > 256) cols = 256;
+    if (rows > 256) rows = 256;
+    int cell_cap = cols * rows;
+    if (cell_cap <= 0 || cell_cap > 65536) return 0;
+
+    int *cell_counts = (int *)calloc((size_t)cell_cap, sizeof(int));
+    int *cell_indices = (int *)calloc((size_t)cell_cap * (size_t)n, sizeof(int));
+    if (!cell_counts || !cell_indices) {
+        free(cell_counts);
+        free(cell_indices);
+        return 0;
+    }
+
+    // Map bodies to cells
+    for (int bi = 0; bi < n; ++bi) {
+        float minx, maxx, miny, maxy;
+        body_aabb(&w->bodies[bi], &minx, &maxx, &miny, &maxy);
+        int cx0 = (int)floorf(minx / cell_size);
+        int cx1 = (int)floorf(maxx / cell_size);
+        int cy0 = (int)floorf(miny / cell_size);
+        int cy1 = (int)floorf(maxy / cell_size);
+        if (cx0 < 0) cx0 = 0;
+        if (cy0 < 0) cy0 = 0;
+        if (cx1 >= cols) cx1 = cols - 1;
+        if (cy1 >= rows) cy1 = rows - 1;
+        for (int cy = cy0; cy <= cy1; ++cy) {
+            for (int cx = cx0; cx <= cx1; ++cx) {
+                int cell = cy * cols + cx;
+                int idx = cell_counts[cell];
+                if (idx < n) {
+                    cell_indices[cell * n + idx] = bi;
+                    cell_counts[cell] = idx + 1;
+                }
+            }
+        }
+    }
+
+    // Visit cells and emit unique pairs
+    int pair_count = 0;
+    char seen[128 * 128] = {0}; // n <= 128 guard above
+    for (int cell = 0; cell < cell_cap && pair_count < max_pairs; ++cell) {
+        int cnt = cell_counts[cell];
+        if (cnt < 2) continue;
+        int *indices = &cell_indices[cell * n];
+        for (int i = 0; i < cnt; ++i) {
+            for (int j = i + 1; j < cnt; ++j) {
+                int a = indices[i];
+                int b = indices[j];
+                if (a > b) { int t = a; a = b; b = t; }
+                int key = a * n + b;
+                if (seen[key]) continue;
+                seen[key] = 1;
+                pairs[pair_count].a = a;
+                pairs[pair_count].b = b;
+                pair_count++;
+                if (pair_count >= max_pairs) break;
+            }
+            if (pair_count >= max_pairs) break;
+        }
+    }
+
+    free(cell_counts);
+    free(cell_indices);
+    return pair_count;
 }
 
 // --- Narrow-phase helpers (SAT) ---
@@ -400,35 +498,49 @@ void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg) {
     }
 
     // Broad-phase and narrow-phase
-    for (int i = 0; i < w->count; ++i) {
-        for (int j = i + 1; j < w->count; ++j) {
-            RigidBody2D *a = rigid2d_get_body(w, i);
-            RigidBody2D *b = rigid2d_get_body(w, j);
-            if (!a || !b) continue;
-            if (a->is_static && b->is_static) continue;
-
-            if (!aabb_overlap(a, b)) continue;
-
-            Contact contact = {.hit = 0};
-            if (a->shape == RIGID2D_SHAPE_CIRCLE && b->shape == RIGID2D_SHAPE_CIRCLE) {
-                // reuse old circle-circle
-                resolve_circle_circle(a, b);
-                continue;
-            } else if (a->shape == RIGID2D_SHAPE_CIRCLE && b->shape == RIGID2D_SHAPE_POLY) {
-                contact = sat_circle_poly(a, b);
-            } else if (a->shape == RIGID2D_SHAPE_POLY && b->shape == RIGID2D_SHAPE_CIRCLE) {
-                contact = sat_circle_poly(b, a);
-                contact.normal = vec2_scale(contact.normal, -1.0f); // flip
-            } else if (a->shape == RIGID2D_SHAPE_POLY && b->shape == RIGID2D_SHAPE_POLY) {
-                contact = sat_poly_poly(a, b);
-            } else {
-                continue;
+    Pair candidates[4096];
+    int pair_count = 0;
+    if (cfg && cfg->physics_broadphase_enabled) {
+        pair_count = broadphase_pairs_grid(w, cfg, candidates, 4096);
+    }
+    if (pair_count == 0) {
+        // fallback to brute-force if disabled or no pairs
+        for (int i = 0; i < w->count && pair_count < 4096; ++i) {
+            for (int j = i + 1; j < w->count && pair_count < 4096; ++j) {
+                candidates[pair_count++] = (Pair){i, j};
             }
+        }
+    }
 
-            if (contact.hit && contact.penetration > 0.0f) {
-                positional_correction(a, b, contact.normal, contact.penetration);
-                resolve_impulse(a, b, contact.normal);
-            }
+    for (int p = 0; p < pair_count; ++p) {
+        int i = candidates[p].a;
+        int j = candidates[p].b;
+        RigidBody2D *a = rigid2d_get_body(w, i);
+        RigidBody2D *b = rigid2d_get_body(w, j);
+        if (!a || !b) continue;
+        if (a->is_static && b->is_static) continue;
+
+        if (!aabb_overlap(a, b)) continue;
+
+        Contact contact = {.hit = 0};
+        if (a->shape == RIGID2D_SHAPE_CIRCLE && b->shape == RIGID2D_SHAPE_CIRCLE) {
+            // reuse old circle-circle
+            resolve_circle_circle(a, b);
+            continue;
+        } else if (a->shape == RIGID2D_SHAPE_CIRCLE && b->shape == RIGID2D_SHAPE_POLY) {
+            contact = sat_circle_poly(a, b);
+        } else if (a->shape == RIGID2D_SHAPE_POLY && b->shape == RIGID2D_SHAPE_CIRCLE) {
+            contact = sat_circle_poly(b, a);
+            contact.normal = vec2_scale(contact.normal, -1.0f); // flip
+        } else if (a->shape == RIGID2D_SHAPE_POLY && b->shape == RIGID2D_SHAPE_POLY) {
+            contact = sat_poly_poly(a, b);
+        } else {
+            continue;
+        }
+
+        if (contact.hit && contact.penetration > 0.0f) {
+            positional_correction(a, b, contact.normal, contact.penetration);
+            resolve_impulse(a, b, contact.normal);
         }
     }
 }

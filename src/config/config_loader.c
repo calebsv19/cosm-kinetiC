@@ -311,6 +311,54 @@ static void apply_collider_settings(const char *json, AppConfig *cfg) {
     if (json_block_number(&block, "raster_padding", &val)) {
         cfg->collider_raster_padding = (float)val;
     }
+    if (json_block_number(&block, "primitives_enabled", &val)) {
+        cfg->collider_primitives_enabled = (val != 0.0);
+    }
+    if (json_block_number(&block, "corner_angle_deg", &val)) {
+        cfg->collider_corner_angle_deg = (float)val;
+    }
+    if (json_block_number(&block, "corner_simplify_eps", &val)) {
+        cfg->collider_corner_simplify_eps = (float)val;
+    }
+    if (json_block_number(&block, "max_primitives", &val)) {
+        cfg->collider_max_primitives = (int)val;
+    }
+    if (json_block_number(&block, "max_hull_vertices", &val)) {
+        cfg->collider_max_hull_vertices = (int)val;
+    }
+    if (json_block_number(&block, "capsule_max_len_ratio", &val)) {
+        cfg->collider_capsule_max_len_ratio = (float)val;
+    }
+    if (json_block_number(&block, "region_grid_res", &val)) {
+        cfg->collider_region_grid_res = (int)val;
+    }
+    if (json_block_number(&block, "region_min_cells", &val)) {
+        cfg->collider_region_min_cells = (int)val;
+    }
+    if (json_block_number(&block, "region_offset_eps", &val)) {
+        cfg->collider_region_offset_eps = (float)val;
+    }
+}
+
+static void apply_broadphase_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "broadphase", &block)) return;
+    double val;
+    if (json_block_number(&block, "enabled", &val)) {
+        cfg->physics_broadphase_enabled = (val != 0.0);
+    }
+    if (json_block_number(&block, "cell_size", &val)) {
+        cfg->physics_broadphase_cell_size = (float)val;
+    }
+}
+
+static void apply_debug_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "debug", &block)) return;
+    double val;
+    if (json_block_number(&block, "collider_logs", &val)) {
+        cfg->collider_debug_logs = (val != 0.0);
+    }
 }
 
 static void apply_export_settings(const char *json, AppConfig *cfg) {
@@ -360,6 +408,8 @@ static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_emitter_settings(json, cfg);
     apply_render_settings(json, cfg);
     apply_collider_settings(json, cfg);
+    apply_broadphase_settings(json, cfg);
+    apply_debug_settings(json, cfg);
     apply_headless_settings(json, cfg);
     apply_export_settings(json, cfg);
 }
@@ -440,7 +490,23 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "    \"max_part_vertices\": %d,\n", cfg->collider_max_part_vertices);
     fprintf(f, "    \"simplify_epsilon\": %.6f,\n", cfg->collider_simplify_epsilon);
     fprintf(f, "    \"curve_sample_rate\": %.6f,\n", cfg->collider_curve_sample_rate);
-    fprintf(f, "    \"raster_padding\": %.6f\n", cfg->collider_raster_padding);
+    fprintf(f, "    \"raster_padding\": %.6f,\n", cfg->collider_raster_padding);
+    fprintf(f, "    \"primitives_enabled\": %s,\n", cfg->collider_primitives_enabled ? "true" : "false");
+    fprintf(f, "    \"corner_angle_deg\": %.6f,\n", cfg->collider_corner_angle_deg);
+    fprintf(f, "    \"corner_simplify_eps\": %.6f,\n", cfg->collider_corner_simplify_eps);
+    fprintf(f, "    \"max_primitives\": %d,\n", cfg->collider_max_primitives);
+    fprintf(f, "    \"max_hull_vertices\": %d,\n", cfg->collider_max_hull_vertices);
+    fprintf(f, "    \"capsule_max_len_ratio\": %.6f,\n", cfg->collider_capsule_max_len_ratio);
+    fprintf(f, "    \"region_grid_res\": %d,\n", cfg->collider_region_grid_res);
+    fprintf(f, "    \"region_min_cells\": %d,\n", cfg->collider_region_min_cells);
+    fprintf(f, "    \"region_offset_eps\": %.6f\n", cfg->collider_region_offset_eps);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"broadphase\": {\n");
+    fprintf(f, "    \"enabled\": %s,\n", cfg->physics_broadphase_enabled ? "true" : "false");
+    fprintf(f, "    \"cell_size\": %.6f\n", cfg->physics_broadphase_cell_size);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"debug\": {\n");
+    fprintf(f, "    \"collider_logs\": %d\n", cfg->collider_debug_logs ? 1 : 0);
     fprintf(f, "  },\n");
     fprintf(f, "  \"headless\": {\n");
     fprintf(f, "    \"enabled\": %s,\n", cfg->headless_enabled ? "true" : "false");

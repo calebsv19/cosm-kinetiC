@@ -66,6 +66,24 @@ typedef struct AppConfig {
     float  collider_simplify_epsilon;    // simplification tolerance in grid space
     float  collider_curve_sample_rate;   // samples per 100 px of curve length
     float  collider_raster_padding;      // cells of padding when rasterizing dynamic bodies
+
+    // Next-gen collider primitives (feature-aware pipeline).
+    bool   collider_primitives_enabled;   // gate the new primitive-based path (stubbed initially)
+    float  collider_corner_angle_deg;     // angle threshold (deg) to tag a corner
+    float  collider_corner_simplify_eps;  // epsilon used when simplifying between corners
+    int    collider_max_primitives;       // cap on fitted primitives per body
+    int    collider_max_hull_vertices;    // cap on vertices for small hull primitives
+    float  collider_capsule_max_len_ratio;// max capsule length relative to its radius (to split long runs)
+    int    collider_region_grid_res;      // coarse grid resolution for region flood-fill
+    int    collider_region_min_cells;     // minimum cells to keep a region
+    float  collider_region_offset_eps;    // outward offset for region-facing tests
+
+    // Physics broad-phase (coarse grid)
+    bool   physics_broadphase_enabled;
+    float  physics_broadphase_cell_size; // world units; 0 => auto
+
+    // Debug/logging
+    bool   collider_debug_logs;          // verbose collider logging
 } AppConfig;
 
 AppConfig app_config_default(void);

@@ -59,5 +59,26 @@ AppConfig app_config_default(void) {
     cfg.collider_curve_sample_rate = 24.0f; // samples per 100 px of path length
     cfg.collider_raster_padding = 0.5f;
 
+    // Primitive collider defaults (can be tuned later).
+    cfg.collider_primitives_enabled   = false; // start disabled until the pipeline is ready
+    cfg.collider_corner_angle_deg     = 22.5f;
+    cfg.collider_corner_simplify_eps  = 0.75f;
+    cfg.collider_max_primitives       = 16;
+    cfg.collider_max_hull_vertices    = 8;
+    cfg.collider_capsule_max_len_ratio = 6.0f;
+    cfg.collider_region_grid_res      = 64;
+    cfg.collider_region_min_cells     = 4;
+    cfg.collider_region_offset_eps    = 0.5f;
+
+    // Broad-phase defaults
+    cfg.physics_broadphase_enabled = true;
+    cfg.physics_broadphase_cell_size = 128.0f; // pixels/world units; auto if <=0
+
+    // Enable primitive colliders by default for testing; can be disabled in config.
+    cfg.collider_primitives_enabled = true;
+
+    // Debug/logging
+    cfg.collider_debug_logs = false;
+
     return cfg;
 }
