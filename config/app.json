@@ -35,20 +35,10 @@
   "collider": {
     "max_loops": 16,
     "max_loop_vertices": 256,
-    "max_parts": 8,
+    "max_parts": 16,
     "max_part_vertices": 32,
     "simplify_epsilon": 1.500000,
-    "curve_sample_rate": 24.000000,
-    "raster_padding": 0.500000,
-    "primitives_enabled": true,
-    "corner_angle_deg": 22.500000,
-    "corner_simplify_eps": 0.750000,
-    "max_primitives": 16,
-    "max_hull_vertices": 8,
-    "capsule_max_len_ratio": 6.000000,
-    "region_grid_res": 64,
-    "region_min_cells": 4,
-    "region_offset_eps": 0.500000
+    "raster_padding": 0.500000
   },
   "broadphase": {
     "enabled": true,

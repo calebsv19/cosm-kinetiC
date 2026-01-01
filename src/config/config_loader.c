@@ -290,54 +290,13 @@ static void apply_collider_settings(const char *json, AppConfig *cfg) {
     if (!json_find_object(json, "collider", &block)) return;
 
     double val;
-    if (json_block_number(&block, "max_loops", &val)) {
-        cfg->collider_max_loops = (int)val;
-    }
-    if (json_block_number(&block, "max_loop_vertices", &val)) {
-        cfg->collider_max_loop_vertices = (int)val;
-    }
-    if (json_block_number(&block, "max_parts", &val)) {
-        cfg->collider_max_parts = (int)val;
-    }
-    if (json_block_number(&block, "max_part_vertices", &val)) {
-        cfg->collider_max_part_vertices = (int)val;
-    }
-    if (json_block_number(&block, "simplify_epsilon", &val)) {
-        cfg->collider_simplify_epsilon = (float)val;
-    }
-    if (json_block_number(&block, "curve_sample_rate", &val)) {
-        cfg->collider_curve_sample_rate = (float)val;
-    }
-    if (json_block_number(&block, "raster_padding", &val)) {
-        cfg->collider_raster_padding = (float)val;
-    }
-    if (json_block_number(&block, "primitives_enabled", &val)) {
-        cfg->collider_primitives_enabled = (val != 0.0);
-    }
-    if (json_block_number(&block, "corner_angle_deg", &val)) {
-        cfg->collider_corner_angle_deg = (float)val;
-    }
-    if (json_block_number(&block, "corner_simplify_eps", &val)) {
-        cfg->collider_corner_simplify_eps = (float)val;
-    }
-    if (json_block_number(&block, "max_primitives", &val)) {
-        cfg->collider_max_primitives = (int)val;
-    }
-    if (json_block_number(&block, "max_hull_vertices", &val)) {
-        cfg->collider_max_hull_vertices = (int)val;
-    }
-    if (json_block_number(&block, "capsule_max_len_ratio", &val)) {
-        cfg->collider_capsule_max_len_ratio = (float)val;
-    }
-    if (json_block_number(&block, "region_grid_res", &val)) {
-        cfg->collider_region_grid_res = (int)val;
-    }
-    if (json_block_number(&block, "region_min_cells", &val)) {
-        cfg->collider_region_min_cells = (int)val;
-    }
-    if (json_block_number(&block, "region_offset_eps", &val)) {
-        cfg->collider_region_offset_eps = (float)val;
-    }
+    if (json_block_number(&block, "max_loops", &val)) cfg->collider_max_loops = (int)val;
+    if (json_block_number(&block, "max_loop_vertices", &val)) cfg->collider_max_loop_vertices = (int)val;
+    if (json_block_number(&block, "max_parts", &val)) cfg->collider_max_parts = (int)val;
+    if (json_block_number(&block, "max_part_vertices", &val)) cfg->collider_max_part_vertices = (int)val;
+    if (json_block_number(&block, "simplify_epsilon", &val)) cfg->collider_simplify_epsilon = (float)val;
+    if (json_block_number(&block, "raster_padding", &val)) cfg->collider_raster_padding = (float)val;
+    if (json_block_number(&block, "collider_logs", &val)) cfg->collider_debug_logs = (val != 0.0);
 }
 
 static void apply_broadphase_settings(const char *json, AppConfig *cfg) {
@@ -489,17 +448,7 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "    \"max_parts\": %d,\n", cfg->collider_max_parts);
     fprintf(f, "    \"max_part_vertices\": %d,\n", cfg->collider_max_part_vertices);
     fprintf(f, "    \"simplify_epsilon\": %.6f,\n", cfg->collider_simplify_epsilon);
-    fprintf(f, "    \"curve_sample_rate\": %.6f,\n", cfg->collider_curve_sample_rate);
-    fprintf(f, "    \"raster_padding\": %.6f,\n", cfg->collider_raster_padding);
-    fprintf(f, "    \"primitives_enabled\": %s,\n", cfg->collider_primitives_enabled ? "true" : "false");
-    fprintf(f, "    \"corner_angle_deg\": %.6f,\n", cfg->collider_corner_angle_deg);
-    fprintf(f, "    \"corner_simplify_eps\": %.6f,\n", cfg->collider_corner_simplify_eps);
-    fprintf(f, "    \"max_primitives\": %d,\n", cfg->collider_max_primitives);
-    fprintf(f, "    \"max_hull_vertices\": %d,\n", cfg->collider_max_hull_vertices);
-    fprintf(f, "    \"capsule_max_len_ratio\": %.6f,\n", cfg->collider_capsule_max_len_ratio);
-    fprintf(f, "    \"region_grid_res\": %d,\n", cfg->collider_region_grid_res);
-    fprintf(f, "    \"region_min_cells\": %d,\n", cfg->collider_region_min_cells);
-    fprintf(f, "    \"region_offset_eps\": %.6f\n", cfg->collider_region_offset_eps);
+    fprintf(f, "    \"raster_padding\": %.6f\n", cfg->collider_raster_padding);
     fprintf(f, "  },\n");
     fprintf(f, "  \"broadphase\": {\n");
     fprintf(f, "    \"enabled\": %s,\n", cfg->physics_broadphase_enabled ? "true" : "false");

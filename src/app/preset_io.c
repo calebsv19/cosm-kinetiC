@@ -93,7 +93,7 @@ static void sanitize_import_shape(ImportedShape *imp) {
     if (imp->collider_vert_count < 0) imp->collider_vert_count = 0;
     if (imp->collider_vert_count > 32) imp->collider_vert_count = 32;
     if (imp->collider_part_count < 0) imp->collider_part_count = 0;
-    if (imp->collider_part_count > 8) imp->collider_part_count = 8;
+    if (imp->collider_part_count > 16) imp->collider_part_count = 16;
     for (int i = 0; i < imp->collider_part_count; ++i) {
         if (imp->collider_part_counts[i] < 0) imp->collider_part_counts[i] = 0;
         if (imp->collider_part_counts[i] > 16) imp->collider_part_counts[i] = 16;
@@ -554,7 +554,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                         }
                         imp.collider_part_count = part_count;
                         if (imp.collider_part_count < 0) imp.collider_part_count = 0;
-                        if (imp.collider_part_count > 8) imp.collider_part_count = 8;
+                        if (imp.collider_part_count > 16) imp.collider_part_count = 16;
                         for (int pi = 0; pi < imp.collider_part_count; ++pi) {
                             int offset = 0;
                             int pcount = 0;
@@ -568,7 +568,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                             if (imp.collider_part_counts[pi] > 16) imp.collider_part_counts[pi] = 16;
                             for (int vi = 0; vi < imp.collider_part_counts[pi]; ++vi) {
                                 int idx = offset + vi;
-                                if (idx < 0 || idx >= 64) {
+                                if (idx < 0 || idx >= 128) {
                                     imp.collider_part_counts[pi] = vi;
                                     break;
                                 }
@@ -701,7 +701,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
                 int offset = imp.collider_part_offsets[pi];
                 for (int vi = 0; vi < imp.collider_part_counts[pi]; ++vi) {
                     int idx = offset + vi;
-                    if (idx < 0 || idx >= 64) break;
+                    if (idx < 0 || idx >= 128) break;
                     fprintf(f, "%.6f %.6f\n",
                             imp.collider_parts_verts[idx].x,
                             imp.collider_parts_verts[idx].y);

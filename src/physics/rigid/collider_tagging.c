@@ -192,7 +192,8 @@ int collider_collapse_collinear(const HullPoint *in, int in_count, HullPoint *ou
         HullPoint curr = in[i];
         HullPoint next = in[(i + 1) % in_count];
         float cx = (next.x - curr.x) * (curr.y - prev.y) - (next.y - curr.y) * (curr.x - prev.x);
-        if (fabsf(cx) < 1e-5f && out_count > 0) continue;
+        // Keep a much tighter tolerance so we do not accidentally collapse real corners.
+        if (fabsf(cx) < 1e-7f && out_count > 0) continue;
         if (out_count < max_out) {
             out[out_count++] = curr;
         }

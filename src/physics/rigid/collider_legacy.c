@@ -84,6 +84,8 @@ int collider_resample_path(const ShapeAssetPath *path,
     if (target < 3) target = 3;
     if (target > max_out) target = max_out;
 
+    if (target < pc) target = pc;
+    if (target < 8) target = 8;
     float step = total / (float)target;
     float dist = 0.0f;
     int out_count = 0;
@@ -138,8 +140,10 @@ static bool polygons_share_edge(const HullPoint *a, int na, const HullPoint *b, 
 }
 
 static int merge_polygons(HullPoint polys[][32], int *counts, int poly_count, int max_count, int vert_cap) {
+    if (poly_count <= 1) return poly_count;
+
     bool merged = true;
-    while (merged && poly_count > 1) {
+    while (merged) {
         merged = false;
         for (int i = 0; i < poly_count && !merged; ++i) {
             for (int j = i + 1; j < poly_count && !merged; ++j) {
@@ -167,8 +171,74 @@ static int merge_polygons(HullPoint polys[][32], int *counts, int poly_count, in
                 merged = true;
             }
         }
+        if (poly_count <= max_count) break;
     }
-    if (poly_count > max_count) poly_count = max_count;
+
+    if (poly_count > max_count) {
+        // Try to reduce count by merging smallest polys with neighbors first.
+        int guard = 0;
+        while (poly_count > max_count && guard < 256) {
+            guard++;
+            // Find smallest polygon by area.
+            int smallest = 0;
+            float smallest_area = fabsf(polygon_area(polys[0], counts[0]));
+            for (int i = 1; i < poly_count; ++i) {
+                float a = fabsf(polygon_area(polys[i], counts[i]));
+                if (a < smallest_area) {
+                    smallest_area = a;
+                    smallest = i;
+                }
+            }
+            bool merged_one = false;
+            for (int j = 0; j < poly_count && !merged_one; ++j) {
+                if (j == smallest) continue;
+                int ai = 0, bi = 0;
+                if (!polygons_share_edge(polys[smallest], counts[smallest], polys[j], counts[j], &ai, &bi)) continue;
+                HullPoint merged_pts[32];
+                int mcount = 0;
+                int a_next = (ai + 1) % counts[smallest];
+                for (int k = a_next; k != ai; k = (k + 1) % counts[smallest]) {
+                    if (mcount < vert_cap) merged_pts[mcount++] = polys[smallest][k];
+                }
+                int b_next = (bi + 1) % counts[j];
+                for (int k = b_next; k != bi; k = (k + 1) % counts[j]) {
+                    if (mcount < vert_cap) merged_pts[mcount++] = polys[j][k];
+                }
+                if (mcount < 3 || mcount > vert_cap) continue;
+                if (!polygon_convex(merged_pts, mcount)) continue;
+                // Commit merge into smallest slot.
+                counts[smallest] = mcount;
+                for (int k = 0; k < mcount; ++k) polys[smallest][k] = merged_pts[k];
+                for (int k = j; k < poly_count - 1; ++k) {
+                    counts[k] = counts[k + 1];
+                    for (int v = 0; v < vert_cap; ++v) polys[k][v] = polys[k + 1][v];
+                }
+                poly_count--;
+                merged_one = true;
+            }
+            if (!merged_one) break; // cannot reduce further
+        }
+        // If still too many, keep the largest by area.
+        if (poly_count > max_count) {
+            float areas[128];
+            for (int i = 0; i < poly_count; ++i) {
+                areas[i] = fabsf(polygon_area(polys[i], counts[i]));
+            }
+            for (int i = 0; i < poly_count - 1; ++i) {
+                for (int j = i + 1; j < poly_count; ++j) {
+                    if (areas[j] > areas[i]) {
+                        float ta = areas[i]; areas[i] = areas[j]; areas[j] = ta;
+                        int tc = counts[i]; counts[i] = counts[j]; counts[j] = tc;
+                        HullPoint tmp[32];
+                        memcpy(tmp, polys[i], sizeof(tmp));
+                        memcpy(polys[i], polys[j], sizeof(tmp));
+                        memcpy(polys[j], tmp, sizeof(tmp));
+                    }
+                }
+            }
+            poly_count = max_count;
+        }
+    }
     return poly_count;
 }
 

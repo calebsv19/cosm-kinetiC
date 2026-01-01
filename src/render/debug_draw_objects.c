@@ -167,7 +167,6 @@ void debug_draw_object_borders(const SceneState *scene,
     SDL_Color circle_color = {255, 80, 80, 255};
     SDL_Color box_color    = {170, 120, 80, 255};
     SDL_Color gravity_color = {90, 220, 120, 255};
-    SDL_Color collider_color = {255, 180, 60, 255};
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     bool skip_imp[MAX_IMPORTED_SHAPES] = {0};
@@ -228,11 +227,10 @@ void debug_draw_object_borders(const SceneState *scene,
             } else if (obj->type == SCENE_OBJECT_BOX) {
                 draw_rotated_box_outline(obj, scale_x, scale_y, renderer, base_color);
             } else if (obj->type == SCENE_OBJECT_POLY) {
+                SDL_Color collider_color = (SDL_Color){255, 180, 60, 255};
                 draw_poly_outline(obj, scale_x, scale_y, renderer, base_color);
-                if (scene->config && scene->config->collider_primitives_enabled) {
-                    // Overlay collider outline for visualizing the fitted primitive poly.
-                    draw_poly_outline(obj, scale_x, scale_y, renderer, collider_color);
-                }
+                // Overlay collider outline to make colliders stand out from base shape
+                draw_poly_outline(obj, scale_x, scale_y, renderer, collider_color);
             }
         }
     }
