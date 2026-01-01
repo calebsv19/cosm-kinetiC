@@ -7,11 +7,71 @@
 #include "physics/rigid/collider_geom.h"
 #include "physics/rigid/collider_tagging.h"
 
+static void build_current_poly(const HullPoint *pts,
+                               const int *idx,
+                               int vert_count,
+                               HullPoint *out) {
+    for (int k = 0; k < vert_count; ++k) out[k] = pts[idx[k]];
+}
+
+static float segment_distance(HullPoint a, HullPoint b, HullPoint p) {
+    float vx = b.x - a.x, vy = b.y - a.y;
+    float wx = p.x - a.x, wy = p.y - a.y;
+    float len2 = vx * vx + vy * vy;
+    float t = (len2 > 1e-8f) ? (wx * vx + wy * vy) / len2 : 0.0f;
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+    float px = a.x + t * vx;
+    float py = a.y + t * vy;
+    float dx = p.x - px, dy = p.y - py;
+    return sqrtf(dx * dx + dy * dy);
+}
+
+static bool diagonal_valid(const HullPoint *pts,
+                           const int *idx,
+                           int vert_count,
+                           HullPoint a,
+                           HullPoint c,
+                           float dev_tol) {
+    HullPoint cur_poly[128];
+    if (vert_count > 128) vert_count = 128;
+    build_current_poly(pts, idx, vert_count, cur_poly);
+    HullPoint mids[3] = {
+        {(a.x + c.x) * 0.5f, (a.y + c.y) * 0.5f},
+        {(2.0f * a.x + c.x) / 3.0f, (2.0f * a.y + c.y) / 3.0f},
+        {(a.x + 2.0f * c.x) / 3.0f, (a.y + 2.0f * c.y) / 3.0f},
+    };
+    for (int m = 0; m < 3; ++m) {
+        HullPoint p = mids[m];
+        if (!point_in_polygon(cur_poly, vert_count, p)) return false;
+        float best = 1e9f;
+        for (int e = 0; e < vert_count; ++e) {
+            HullPoint p0 = cur_poly[e];
+            HullPoint p1 = cur_poly[(e + 1) % vert_count];
+            float d = segment_distance(p0, p1, p);
+            if (d < best) best = d;
+        }
+        if (best > dev_tol) return false;
+    }
+    return true;
+}
+
 static int ear_clip_triangles(const HullPoint *poly, int n, HullPoint tris[][3], int max_tris) {
     if (!poly || n < 3 || max_tris <= 0) return 0;
     HullPoint tmp[128];
     if (n > 128) n = 128;
     for (int i = 0; i < n; ++i) tmp[i] = poly[i];
+    // Bounding box to set deviation tolerance.
+    float minx = tmp[0].x, maxx = tmp[0].x, miny = tmp[0].y, maxy = tmp[0].y;
+    for (int i = 1; i < n; ++i) {
+        if (tmp[i].x < minx) minx = tmp[i].x;
+        if (tmp[i].x > maxx) maxx = tmp[i].x;
+        if (tmp[i].y < miny) miny = tmp[i].y;
+        if (tmp[i].y > maxy) maxy = tmp[i].y;
+    }
+    float span = fmaxf(maxx - minx, maxy - miny);
+    float dev_tol = fmaxf(1.5f, span * 0.02f);
+
     int idx[128];
     for (int i = 0; i < n; ++i) idx[i] = i;
     int vert_count = n;
@@ -27,6 +87,8 @@ static int ear_clip_triangles(const HullPoint *poly, int n, HullPoint tris[][3],
             HullPoint a = tmp[i0], b = tmp[i1], c = tmp[i2];
             float z = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
             if (z <= 0.0f) continue; // reflex for CCW
+            // Boundary-aware diagonal validity.
+            if (!diagonal_valid(tmp, idx, vert_count, a, c, dev_tol)) continue;
             bool contains = false;
             for (int j = 0; j < vert_count; ++j) {
                 int ij = idx[j];

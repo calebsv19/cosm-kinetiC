@@ -13,6 +13,12 @@
 #include "physics/rigid/collider_tagging.h"
 #include "physics/rigid/collider_legacy.h"
 
+// Heuristics for intent-driven simplification.
+static const float kMinAngleDeg = 6.0f;      // drop points that bend less than this
+static const float kMinEdgeLen  = 0.25f;     // drop points that are too close (grid units)
+static const float kCoverageMin = 0.85f;     // minimum area coverage to accept collider
+static const float kDupEps2     = 1e-6f;     // reject near-duplicate points (squared)
+
 static inline float import_pos_to_unit(float pos, float span) {
     float min = 0.5f - span;
     float max = 0.5f + span;
@@ -137,15 +143,43 @@ bool collider_build_import(const AppConfig *cfg,
         fprintf(stderr, "[collider] loops=%d best=%d area=%.3f\n", loop_total, best_idx, best_area);
     }
 
-    HullPoint outer[256];
+    HullPoint outer_raw[256];
     int outer_count = loop_counts[best_idx];
     if (outer_count > 256) outer_count = 256;
-    memcpy(outer, loops[best_idx], (size_t)outer_count * sizeof(HullPoint));
+    memcpy(outer_raw, loops[best_idx], (size_t)outer_count * sizeof(HullPoint));
 
-    // Normalize: collapse collinear, ensure CCW.
+    // Remove duplicates/zero-length edges while preserving order.
+    HullPoint outer[256];
+    int dedup_count = 0;
+    for (int i = 0; i < outer_count; ++i) {
+        HullPoint p = outer_raw[i];
+        if (dedup_count > 0) {
+            float dx = p.x - outer[dedup_count - 1].x;
+            float dy = p.y - outer[dedup_count - 1].y;
+            if ((dx * dx + dy * dy) < kDupEps2) continue;
+        }
+        outer[dedup_count++] = p;
+    }
+    // Ensure closure if last != first.
+    if (dedup_count >= 3) {
+        HullPoint first = outer[0];
+        HullPoint last  = outer[dedup_count - 1];
+        float dx = first.x - last.x;
+        float dy = first.y - last.y;
+        if ((dx * dx + dy * dy) >= kDupEps2 && dedup_count < 256) {
+            outer[dedup_count++] = first;
+        }
+    }
+    outer_count = dedup_count;
+
+    // Try accepting the raw (clean) loop first.
     HullPoint cleaned[256];
     int cleaned_count = outer_count < 256 ? outer_count : 256;
     memcpy(cleaned, outer, (size_t)cleaned_count * sizeof(HullPoint));
+    // Drop duplicate closing vertex if present.
+    if (cleaned_count >= 2 && collider_nearly_equal(cleaned[0], cleaned[cleaned_count - 1], 1e-6f)) {
+        cleaned_count--;
+    }
     if (cfg->collider_debug_logs) {
         fprintf(stderr, "[collider] before_collapse=%d after_collapse=%d\n", outer_count, cleaned_count);
         int dump = cleaned_count < 16 ? cleaned_count : 16;
@@ -169,6 +203,65 @@ bool collider_build_import(const AppConfig *cfg,
                 cleaned_count, signed_area, polygon_convex(cleaned, cleaned_count) ? 1 : 0);
     }
 
+    bool is_convex_raw = polygon_convex(cleaned, cleaned_count);
+    // ------------------------------------------------------------
+    // Convex fast-path: accept untouched if within vertex cap.
+    if (is_convex_raw && cleaned_count <= part_vert_cap) {
+        int vc = cleaned_count;
+        if (vc > 128) vc = 128;
+        imp->collider_part_offsets[0] = 0;
+        imp->collider_part_counts[0] = vc;
+        int vcur = 0;
+        for (int i = 0; i < vc; ++i) {
+            float wx = (cleaned[i].x / (float)(w - 1)) * ww;
+            float wy = (cleaned[i].y / (float)(h - 1)) * wh;
+            float cxw = (center_grid_x / (float)(w - 1)) * ww;
+            float cyw = (center_grid_y / (float)(h - 1)) * wh;
+            imp->collider_parts_verts[vcur++] = vec2(wx - cxw, wy - cyw);
+        }
+        imp->collider_part_count = 1;
+        imp->collider_vert_count = (vc < 32) ? vc : 32;
+        for (int i = 0; i < imp->collider_vert_count; ++i) {
+            float wx = (cleaned[i].x / (float)(w - 1)) * ww;
+            float wy = (cleaned[i].y / (float)(h - 1)) * wh;
+            float cxw = (center_grid_x / (float)(w - 1)) * ww;
+            float cyw = (center_grid_y / (float)(h - 1)) * wh;
+            imp->collider_verts[i] = vec2(wx - cxw, wy - cyw);
+        }
+        if (cfg->collider_debug_logs) {
+            fprintf(stderr, "[collider] convex passthrough verts=%d\n", cleaned_count);
+        }
+        return true;
+    }
+
+    // Intent simplification only if concave.
+    if (!is_convex_raw) {
+        HullPoint simplified_intent[256];
+        int simplified_count = collider_simplify_intent(cleaned,
+                                                        cleaned_count,
+                                                        simplified_intent,
+                                                        256,
+                                                        kMinAngleDeg,
+                                                        kMinEdgeLen);
+        if (simplified_count >= 3) {
+            memcpy(cleaned, simplified_intent, (size_t)simplified_count * sizeof(HullPoint));
+            cleaned_count = simplified_count;
+            signed_area = polygon_area_signed(cleaned, cleaned_count);
+            if (signed_area < 0.0f) {
+                for (int i = 0; i < cleaned_count / 2; ++i) {
+                    HullPoint tmp = cleaned[i];
+                    cleaned[i] = cleaned[cleaned_count - 1 - i];
+                    cleaned[cleaned_count - 1 - i] = tmp;
+                }
+                signed_area = -signed_area;
+            }
+            if (cfg->collider_debug_logs) {
+                fprintf(stderr, "[collider] intent_simplified=%d area=%.3f convex=%d\n",
+                        cleaned_count, signed_area, polygon_convex(cleaned, cleaned_count) ? 1 : 0);
+            }
+        }
+    }
+
     // Debug outline (non-physics): lightly simplify for render/debug overlay.
     HullPoint dbg_loop[32];
     int dbg_count = collider_simplify_poly(cleaned, cleaned_count, dbg_loop, 32, simplify_eps);
@@ -187,15 +280,59 @@ bool collider_build_import(const AppConfig *cfg,
 
     // ------------------------------------------------------------
     // 2) Convex decomposition (ear clip + merge)
-    HullPoint part_polys[8][32];
-    int part_counts[8] = {0};
+    HullPoint part_polys[16][32];
+    int part_counts[16] = {0};
     int part_count = 0;
 
-    if (polygon_convex(cleaned, cleaned_count)) {
-        part_count = 1;
-        int vc = (cleaned_count > part_vert_cap) ? part_vert_cap : cleaned_count;
-        part_counts[0] = vc;
-        for (int i = 0; i < vc; ++i) part_polys[0][i] = cleaned[i];
+    bool is_convex = polygon_convex(cleaned, cleaned_count);
+    if (is_convex) {
+        int n = cleaned_count;
+        // Remove duplicate last if present for partitioning.
+        if (n >= 2 && collider_nearly_equal(cleaned[0], cleaned[n - 1], 1e-6f)) n--;
+        if (n <= part_vert_cap) {
+            part_count = 1;
+            part_counts[0] = n;
+            for (int i = 0; i < n; ++i) part_polys[0][i] = cleaned[i];
+        } else {
+            // Split convex polygon into multiple convex fans anchored at centroid.
+            HullPoint centroid = polygon_centroid(cleaned, n);
+            int chunk = part_vert_cap - 1; // boundary verts per part
+            if (chunk < 2) chunk = 2;
+            int needed = (int)ceilf((float)n / (float)chunk);
+            if (needed > part_cap) {
+                chunk = (int)ceilf((float)n / (float)part_cap);
+                if (chunk < 2) chunk = 2;
+                needed = (int)ceilf((float)n / (float)chunk);
+            }
+            if (needed > part_cap) needed = part_cap;
+            part_count = 0;
+            int start = 0;
+            for (int p = 0; p < needed && start < n; ++p) {
+                int take = chunk;
+                if (start + take > n) take = n - start;
+                int count = 1 + take;
+                if (start + take >= n && count < part_vert_cap && !collider_nearly_equal(cleaned[0], cleaned[start + take - 1], 1e-6f)) {
+                    // Add v0 to cover final edge back to start of loop.
+                    count++;
+                }
+                if (count > part_vert_cap) count = part_vert_cap;
+                part_counts[part_count] = count;
+                part_polys[part_count][0] = centroid;
+                int idx = 1;
+                for (int k = 0; k < take && idx < count; ++k) {
+                    part_polys[part_count][idx++] = cleaned[start + k];
+                }
+                // If this is the final slice, ensure we include vertex 0 to seal the loop.
+                if (start + take >= n && idx < count) {
+                    part_polys[part_count][idx++] = cleaned[0];
+                }
+                if (idx >= 3) {
+                    part_counts[part_count] = idx;
+                    part_count++;
+                }
+                start += take;
+            }
+        }
     } else {
         part_count = collider_decompose_to_convex(cleaned,
                                                   cleaned_count,
@@ -244,12 +381,43 @@ bool collider_build_import(const AppConfig *cfg,
         written_parts++;
         emitted_area += area;
     }
+    float outer_area = fabsf(polygon_area(cleaned, cleaned_count));
+    float coverage = (outer_area > 1e-5f) ? emitted_area / outer_area : 0.0f;
     if (cfg->collider_debug_logs) {
-        float outer_area = fabsf(polygon_area(cleaned, cleaned_count));
         fprintf(stderr, "[collider] emitted=%d total_area=%.2f cover=%.2f\n",
-                written_parts, emitted_area, outer_area > 1e-5f ? emitted_area / outer_area : 0.0f);
+                written_parts, emitted_area, coverage);
     }
 
     imp->collider_part_count = written_parts;
+
+    // Coverage guard: for concave shapes, ensure enough area or fall back to hull.
+    if (!is_convex && (coverage < kCoverageMin || written_parts <= 0)) {
+        HullPoint hull[64];
+        int hc = collider_compute_convex_hull(cleaned, cleaned_count, hull, 64);
+        if (hc >= 3) {
+            int vc = (hc > part_vert_cap) ? part_vert_cap : hc;
+            if (vc > 128) vc = 128;
+            imp->collider_part_offsets[0] = 0;
+            imp->collider_part_counts[0] = vc;
+            int vcur = 0;
+            for (int i = 0; i < vc; ++i) {
+                float wx = (hull[i].x / (float)(w - 1)) * ww;
+                float wy = (hull[i].y / (float)(h - 1)) * wh;
+                float cxw = (center_grid_x / (float)(w - 1)) * ww;
+                float cyw = (center_grid_y / (float)(h - 1)) * wh;
+                imp->collider_parts_verts[vcur++] = vec2(wx - cxw, wy - cyw);
+            }
+            imp->collider_part_count = 1;
+            if (cfg->collider_debug_logs) {
+                fprintf(stderr, "[collider] coverage low (%.2f) -> hull fallback\n", coverage);
+            }
+            return true;
+        }
+        if (cfg->collider_debug_logs) {
+            fprintf(stderr, "[collider] coverage low (%.2f) and no hull fallback; rejecting\n", coverage);
+        }
+        return false;
+    }
+
     return written_parts > 0;
 }

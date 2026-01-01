@@ -291,3 +291,59 @@ int collider_simplify_poly(const HullPoint *pts, int n, HullPoint *out, int max_
     free(keep);
     return out_count;
 }
+
+int collider_simplify_intent(const HullPoint *pts,
+                             int n,
+                             HullPoint *out,
+                             int max_out,
+                             float min_angle_deg,
+                             float min_edge_len) {
+    if (!pts || !out || n < 3 || max_out <= 0) return 0;
+    float min_edge2 = min_edge_len * min_edge_len;
+    float cos_thresh = cosf(min_angle_deg * (float)M_PI / 180.0f);
+    if (cos_thresh < -1.0f) cos_thresh = -1.0f;
+    if (cos_thresh > 1.0f) cos_thresh = 1.0f;
+
+    int out_count = 0;
+    for (int i = 0; i < n; ++i) {
+        int ip = (i + n - 1) % n;
+        int inext = (i + 1) % n;
+        HullPoint p0 = pts[ip];
+        HullPoint p1 = pts[i];
+        HullPoint p2 = pts[inext];
+
+        float v1x = p1.x - p0.x;
+        float v1y = p1.y - p0.y;
+        float v2x = p2.x - p1.x;
+        float v2y = p2.y - p1.y;
+        float len1 = v1x * v1x + v1y * v1y;
+        float len2 = v2x * v2x + v2y * v2y;
+
+        // Keep if edge too short check fails (we keep endpoints), or angle is meaningful.
+        bool keep = false;
+        if (len1 < min_edge2 || len2 < min_edge2) {
+            keep = true;
+        } else {
+            float inv1 = 1.0f / sqrtf(len1);
+            float inv2 = 1.0f / sqrtf(len2);
+            float dot = (v1x * v2x + v1y * v2y) * inv1 * inv2;
+            if (dot < cos_thresh) keep = true; // significant turn
+        }
+
+        if (keep && out_count < max_out) {
+            out[out_count++] = p1;
+        }
+    }
+
+    // Ensure closed loop by repeating first if needed.
+    if (out_count >= 3) {
+        HullPoint first = out[0];
+        HullPoint last = out[out_count - 1];
+        if (fabsf(first.x - last.x) > 1e-4f || fabsf(first.y - last.y) > 1e-4f) {
+            if (out_count < max_out) {
+                out[out_count++] = first;
+            }
+        }
+    }
+    return out_count;
+}

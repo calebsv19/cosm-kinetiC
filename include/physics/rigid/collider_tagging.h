@@ -37,5 +37,11 @@ int collider_project_simplified_to_grid(const HullPoint *in,
 int collider_collapse_collinear(const HullPoint *in, int in_count, HullPoint *out, int max_out);
 int collider_simplify_poly(const HullPoint *pts, int n, HullPoint *out, int max_out, float epsilon);
 int collider_compute_convex_hull(const HullPoint *pts, int count, HullPoint *out, int max_out);
+int collider_simplify_intent(const HullPoint *pts,
+                             int n,
+                             HullPoint *out,
+                             int max_out,
+                             float min_angle_deg,
+                             float min_edge_len);
 
 #endif // COLLIDER_TAGGING_H
