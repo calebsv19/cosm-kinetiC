@@ -349,7 +349,13 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 // Sync import positions/angles to their dynamic bodies so rendering tracks physics.
                 for (size_t ii = 0; ii < scene.import_shape_count; ++ii) {
                     int body_idx = scene.import_body_map[ii];
-                    if (body_idx < 0 || body_idx >= scene.objects.count) continue;
+                    if (body_idx < 0 || body_idx >= scene.objects.count) {
+                        if (scene.config && scene.config->collider_debug_logs && body_idx >= 0) {
+                            fprintf(stderr, "[dynmask] map invalid imp=%zu body=%d count=%d\n",
+                                    ii, body_idx, scene.objects.count);
+                        }
+                        continue;
+                    }
                     RigidBody2D *b = &scene.objects.objects[body_idx].body;
                     scene.import_shapes[ii].position_x = b->position.x / (float)cfg.window_w;
                     scene.import_shapes[ii].position_y = b->position.y / (float)cfg.window_h;

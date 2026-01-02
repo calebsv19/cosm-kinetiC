@@ -1,6 +1,7 @@
 #include "app/scene_imports.h"
 
 #include <string.h>
+#include <math.h>
 #include <stdio.h>
 #include "app/shape_lookup.h"
 #include "physics/rigid/collider_builder.h"
@@ -51,7 +52,17 @@ static void add_import_body(SceneState *scene, size_t imp_index) {
         if (offset < 0 || offset + count > 64) continue;
         Vec2 verts[32];
         if (count > 32) count = 32;
-        memcpy(verts, &imp->collider_parts_verts[offset], (size_t)count * sizeof(Vec2));
+        float rot_rad = imp->rotation_deg * (float)M_PI / 180.0f;
+        float cos_r = cosf(rot_rad);
+        float sin_r = sinf(rot_rad);
+        // collider_parts_verts are stored in world space offsets with the import's rotation already applied.
+        // Un-rotate them back to local-space so the rigid body angle applies the rotation exactly once.
+        for (int vi = 0; vi < count; ++vi) {
+            Vec2 r = imp->collider_parts_verts[offset + vi];
+            float lx =  r.x * cos_r + r.y * sin_r;
+            float ly = -r.x * sin_r + r.y * cos_r;
+            verts[vi] = vec2(lx, ly);
+        }
         SceneObject *obj = object_manager_add_poly(&scene->objects,
                                                    vec2(imp->position_x * (float)scene->config->window_w,
                                                         imp->position_y * (float)scene->config->window_h),
@@ -59,12 +70,19 @@ static void add_import_body(SceneState *scene, size_t imp_index) {
                                                    count,
                                                    false);
         if (obj) {
+            obj->body.angle = imp->rotation_deg * (float)M_PI / 180.0f;
             obj->body.gravity_enabled = 1;
             obj->body.locked = 0;
             obj->body.restitution = scene->objects_elastic ? 1.0f : 0.4f;
             obj->source_import = (int)imp_index;
             if (scene->import_body_map[imp_index] < 0) {
                 scene->import_body_map[imp_index] = scene->objects.count - 1;
+            }
+            if (scene->config && scene->config->collider_debug_logs) {
+                fprintf(stderr, "[dynbody] imp=%zu body=%d angle_init=%.2f deg\n",
+                        imp_index,
+                        scene->objects.count - 1,
+                        imp->rotation_deg);
             }
         }
     }

@@ -106,6 +106,25 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
+# Collider test harness (headless)
+COLLIDER_TEST_SRC := tests/collider_test.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/shape_lookup.c \
+	$(SRC_DIR)/render/import_project.c \
+	$(SRC_DIR)/geo/shape_library.c \
+	$(SHAPE_SHARED_SRCS) \
+	$(SRC_DIR)/physics/rigid/collider_builder.c \
+	$(SRC_DIR)/physics/rigid/collider_geom.c \
+	$(SRC_DIR)/physics/rigid/collider_legacy.c \
+	$(SRC_DIR)/physics/rigid/collider_tagging.c
+
+collider-test: $(COLLIDER_TEST_SRC)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -Isrc -Iinclude -o $(BUILD_DIR)/collider_test $(COLLIDER_TEST_SRC) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
+
+collider-tests: collider-test
+	$(BUILD_DIR)/collider_test
+
 shape_sanity_tool: $(SHAPE_SANITY_TOOL_OBJ)
 	@mkdir -p $(dir $(SHAPE_SANITY_TOOL_OBJ))
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)

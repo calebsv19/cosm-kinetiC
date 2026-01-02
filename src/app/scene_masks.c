@@ -588,8 +588,15 @@ void scene_masks_rasterize_dynamic(SceneState *scene) {
         // Compute AABB in grid space.
         float gx_min = 0.0f, gx_max = 0.0f, gy_min = 0.0f, gy_max = 0.0f;
         const ImportedShape *imp = NULL;
+        ImportedShape temp_imp = {0};
         if (obj->source_import >= 0 && obj->source_import < (int)scene->import_shape_count) {
             imp = &scene->import_shapes[obj->source_import];
+            // Override with current body pose so raster reflects runtime transform.
+            temp_imp = *imp;
+            temp_imp.position_x = b->position.x / (float)scene->config->window_w;
+            temp_imp.position_y = b->position.y / (float)scene->config->window_h;
+            temp_imp.rotation_deg = b->angle * 180.0f / (float)M_PI;
+            imp = &temp_imp;
         }
 
         // Compute AABB in grid space using either collider verts or asset bounds if available.
@@ -665,8 +672,22 @@ void scene_masks_rasterize_dynamic(SceneState *scene) {
             size_t mask_count = (size_t)w * (size_t)h;
             uint8_t *tmp = (uint8_t *)calloc(mask_count, sizeof(uint8_t));
             if (tmp) {
-                // Use same raster method as emitter mask to avoid code duplication
-                if (rasterize_import_to_mask(scene, imp, tmp, mask_count)) {
+                // Use same raster method as emitter mask to avoid code duplication, but with live pose.
+                ImportedShape imp_pose = *imp;
+                imp_pose.position_x = b->position.x / (float)scene->config->window_w;
+                imp_pose.position_y = b->position.y / (float)scene->config->window_h;
+                imp_pose.rotation_deg = b->angle * 180.0f / (float)M_PI;
+                bool ok = rasterize_import_to_mask(scene, &imp_pose, tmp, mask_count);
+                if (scene->config && scene->config->collider_debug_logs) {
+                    fprintf(stderr,
+                            "[dynmask] imp=%d body=%d angle=%.2f rot_deg=%.2f raster=%d\n",
+                            obj->source_import,
+                            i,
+                            b->angle * 180.0f / (float)M_PI,
+                            imp_pose.rotation_deg,
+                            ok ? 1 : 0);
+                }
+                if (ok) {
                     int bminx = w, bmaxx = -1, bminy = h, bmaxy = -1;
                     for (int y = 0; y < h; ++y) {
                         for (int x = 0; x < w; ++x) {
@@ -702,6 +723,9 @@ void scene_masks_rasterize_dynamic(SceneState *scene) {
             float cy = b->position.y * sy;
             float rr = b->radius * ((sx + sy) * 0.5f);
             float r2 = rr * rr;
+            if (scene->config && scene->config->collider_debug_logs) {
+                fprintf(stderr, "[dynmask] imp=%d body=%d fallback=circle\n", obj->source_import, i);
+            }
             for (int y = min_y; y <= max_y; ++y) {
                 for (int x = min_x; x <= max_x; ++x) {
                     float dx = (float)x - cx;
@@ -717,9 +741,24 @@ void scene_masks_rasterize_dynamic(SceneState *scene) {
             Vec2 verts_scaled[32];
             int vc = b->poly.count;
             if (vc > 32) vc = 32;
+            float cos_a = cosf(b->angle);
+            float sin_a = sinf(b->angle);
             for (int v = 0; v < vc; ++v) {
-                verts_scaled[v].x = b->poly.verts[v].x * sx;
-                verts_scaled[v].y = b->poly.verts[v].y * sy;
+                // Transform body-local verts into world, then to grid units.
+                float lx = b->poly.verts[v].x;
+                float ly = b->poly.verts[v].y;
+                float rx = lx * cos_a - ly * sin_a;
+                float ry = lx * sin_a + ly * cos_a;
+                float wx = b->position.x + rx;
+                float wy = b->position.y + ry;
+                verts_scaled[v].x = wx * sx;
+                verts_scaled[v].y = wy * sy;
+            }
+            if (scene->config && scene->config->collider_debug_logs) {
+                fprintf(stderr, "[dynmask] imp=%d body=%d fallback=poly rot_deg=%.2f\n",
+                        obj->source_import,
+                        i,
+                        b->angle * 180.0f / (float)M_PI);
             }
             // Point-in-polygon raster: transform verts are already in world units.
             // Use winding test per cell center.

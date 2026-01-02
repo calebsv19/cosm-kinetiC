@@ -19,6 +19,7 @@ int collider_decompose_to_convex(const HullPoint *pts,
                                  HullPoint parts[][32],
                                  int *counts,
                                  int max_parts,
-                                 int vert_cap);
+                                 int vert_cap,
+                                 float dev_scale);
 
 #endif // COLLIDER_LEGACY_H

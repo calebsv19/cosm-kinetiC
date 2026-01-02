@@ -10,9 +10,6 @@ void scene_objects_shutdown(SceneState *scene);
 // Add preset objects (circles/boxes) and apply static mask contributions.
 void scene_objects_add_presets(SceneState *scene);
 
-// Rebuild dynamic bodies for gravity-enabled imports (uses already-built colliders).
-void scene_objects_rebuild_import_bodies(SceneState *scene);
-
 // Toggle gravity for all objects.
 void scene_objects_set_gravity(SceneState *scene, bool enabled);
 

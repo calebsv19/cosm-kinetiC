@@ -102,9 +102,6 @@ static void draw_import_outline(SDL_Renderer *renderer,
         col = *tint_override;
     }
 
-    float cos_a = cosf(imp->rotation_deg * (float)M_PI / 180.0f);
-    float sin_a = sinf(imp->rotation_deg * (float)M_PI / 180.0f);
-
     if (imp->gravity_enabled && imp->collider_part_count > 0) {
         SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, col.a);
         for (int pi = 0; pi < imp->collider_part_count && pi < 8; ++pi) {
@@ -176,6 +173,8 @@ static void draw_import_outline(SDL_Renderer *renderer,
     if (handle_norm > 0.0f) {
         float hx = imp->position_x;
         float hy = imp->position_y;
+        float cos_a = cosf(imp->rotation_deg * (float)M_PI / 180.0f);
+        float sin_a = sinf(imp->rotation_deg * (float)M_PI / 180.0f);
         float hx2 = hx + cos_a * (handle_norm * 1.4f);
         float hy2 = hy + sin_a * (handle_norm * 1.4f);
         float cx_px = 0.5f * (float)win_w;
