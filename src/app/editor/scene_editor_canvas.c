@@ -5,6 +5,7 @@
 #include "app/shape_lookup.h"
 #include "render/import_project.h"
 #include "physics/math/math2d.h"
+#include "vk_renderer.h"
 
 #include <math.h>
 #include <string.h>
@@ -20,6 +21,7 @@ static SDL_Color COLOR_GRID_LINE = {32, 36, 40, 255};
 static SDL_Color COLOR_BOUNDARY_DISABLED = {45, 50, 58, 180};
 
 static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_Color color);
+static void draw_polyline(SDL_Renderer *renderer, const SDL_Point *pts, int count);
 
 static inline float import_pos_to_unit_canvas(float pos, float span) {
     float min = 0.5f - span;
@@ -186,7 +188,7 @@ static void draw_import_collider_outline(SDL_Renderer *renderer,
         }
         if (npts >= 3) {
             pts[npts] = pts[0];
-            SDL_RenderDrawLines(renderer, pts, npts + 1);
+            draw_polyline(renderer, pts, npts + 1);
         }
     }
 }
@@ -297,7 +299,8 @@ static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_
     for (int dy = -radius; dy <= radius; ++dy) {
         for (int dx = -radius; dx <= radius; ++dx) {
             if (dx * dx + dy * dy <= radius * radius) {
-                SDL_RenderDrawPoint(renderer, cx + dx, cy + dy);
+                SDL_Rect dot = {cx + dx, cy + dy, 1, 1};
+                SDL_RenderFillRect(renderer, &dot);
             }
         }
     }
@@ -306,6 +309,15 @@ static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_
 static void draw_line(SDL_Renderer *renderer, int x0, int y0, int x1, int y1, SDL_Color color) {
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     SDL_RenderDrawLine(renderer, x0, y0, x1, y1);
+}
+
+static void draw_polyline(SDL_Renderer *renderer, const SDL_Point *pts, int count) {
+    if (!renderer || !pts || count < 2) return;
+    for (int i = 1; i < count; ++i) {
+        SDL_RenderDrawLine(renderer,
+                           pts[i - 1].x, pts[i - 1].y,
+                           pts[i].x, pts[i].y);
+    }
 }
 
 void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
@@ -366,7 +378,7 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
                 }
                 pts[4] = pts[0];
                 SDL_SetRenderDrawColor(renderer, overlay.r, overlay.g, overlay.b, 80);
-                SDL_RenderDrawLines(renderer, pts, 5);
+                draw_polyline(renderer, pts, 5);
             }
         } else if (imp_index >= 0 && (size_t)imp_index < preset->import_shape_count) {
             // For imports, rely on the import outline tint; skip drawing a circle.
@@ -432,7 +444,8 @@ static void draw_filled_triangle(SDL_Renderer *renderer,
             bool all_positive = (w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f);
             bool all_negative = (w0 <= 0.0f && w1 <= 0.0f && w2 <= 0.0f);
             if (all_positive || all_negative) {
-                SDL_RenderDrawPoint(renderer, x, y);
+                SDL_Rect dot = {x, y, 1, 1};
+                SDL_RenderFillRect(renderer, &dot);
             }
         }
     }
@@ -607,7 +620,6 @@ void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
     int padding = 6;
     int max_w = 0;
     int total_h = 0;
-    SDL_Texture *textures[8] = {0};
     SDL_Surface *surfaces[8] = {0};
     if (line_count > 8) line_count = 8;
 
@@ -615,19 +627,12 @@ void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
         if (!lines[i]) continue;
         SDL_Surface *surf = TTF_RenderUTF8_Blended(font, lines[i], text);
         if (!surf) continue;
-        SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
-        if (!tex) {
-            SDL_FreeSurface(surf);
-            continue;
-        }
-        textures[i] = tex;
         surfaces[i] = surf;
         if (surf->w > max_w) max_w = surf->w;
         total_h += surf->h;
     }
     if (max_w == 0 || total_h == 0) {
         for (int i = 0; i < line_count; ++i) {
-            if (textures[i]) SDL_DestroyTexture(textures[i]);
             if (surfaces[i]) SDL_FreeSurface(surfaces[i]);
         }
         return;
@@ -649,16 +654,21 @@ void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
 
     int y_cursor = rect.y + padding;
     for (int i = 0; i < line_count; ++i) {
-        SDL_Texture *tex = textures[i];
         SDL_Surface *surf = surfaces[i];
-        if (!tex || !surf) continue;
+        if (!surf) continue;
         SDL_Rect dst = {rect.x + padding, y_cursor, surf->w, surf->h};
-        SDL_RenderCopy(renderer, tex, NULL, &dst);
+        VkRendererTexture tex = {0};
+        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                       surf,
+                                                       &tex,
+                                                       VK_FILTER_LINEAR) == VK_SUCCESS) {
+            vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
+            vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
+        }
         y_cursor += surf->h + spacing;
     }
 
     for (int i = 0; i < line_count; ++i) {
-        if (textures[i]) SDL_DestroyTexture(textures[i]);
         if (surfaces[i]) SDL_FreeSurface(surfaces[i]);
     }
 }
@@ -692,12 +702,17 @@ void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
         SDL_Surface *surf = TTF_RenderUTF8_Blended(font_main, text, COLOR_TEXT);
         int text_w = 0;
         if (surf) {
-            SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
             text_w = surf->w;
             SDL_Rect dst = {rect.x + 8, rect.y + rect.h / 2 - surf->h / 2,
                             surf->w, surf->h};
-            SDL_RenderCopy(renderer, tex, NULL, &dst);
-            SDL_DestroyTexture(tex);
+            VkRendererTexture tex = {0};
+            if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                           surf,
+                                                           &tex,
+                                                           VK_FILTER_LINEAR) == VK_SUCCESS) {
+                vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
+                vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
+            }
             SDL_FreeSurface(surf);
         }
         if (input->caret_visible) {
@@ -710,10 +725,15 @@ void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
         const char *title = (name && name[0]) ? name : "Untitled Preset";
         SDL_Surface *surf = TTF_RenderUTF8_Blended(font_main, title, COLOR_TEXT);
         if (surf) {
-            SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
             SDL_Rect dst = {rect.x, rect.y, surf->w, surf->h};
-            SDL_RenderCopy(renderer, tex, NULL, &dst);
-            SDL_DestroyTexture(tex);
+            VkRendererTexture tex = {0};
+            if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                           surf,
+                                                           &tex,
+                                                           VK_FILTER_LINEAR) == VK_SUCCESS) {
+                vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
+                vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
+            }
             SDL_FreeSurface(surf);
         }
     }

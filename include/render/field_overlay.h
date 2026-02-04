@@ -2,7 +2,7 @@
 #define FIELD_OVERLAY_H
 
 #include <stdbool.h>
-#include <SDL2/SDL.h>
+#include <stdint.h>
 
 #include "app/scene_state.h"
 
@@ -20,8 +20,8 @@ void field_overlay_shutdown(void);
 // Applies vorticity / pressure overlays directly onto the fluid texture.
 // Safe to call every frame; no-op if config disables both overlays.
 void field_overlay_apply(const SceneState *scene,
-                         SDL_Texture *texture,
-                         SDL_PixelFormat *format,
+                         uint8_t *pixels,
+                         int pitch,
                          const FieldOverlayConfig *cfg);
 
 #endif // FIELD_OVERLAY_H

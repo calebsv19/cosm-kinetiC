@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "render/TimerHUD/external/cJSON.h"
+#include "cJSON.h"
 
 typedef struct VolumeFrameHeaderV2 {
     uint32_t magic;

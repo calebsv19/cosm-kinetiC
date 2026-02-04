@@ -37,6 +37,7 @@ bool renderer_sdl_capture_pixels(uint8_t **out_rgba, int *out_pitch);
 void renderer_sdl_free_capture(uint8_t *pixels);
 int renderer_sdl_output_width(void);
 int renderer_sdl_output_height(void);
+bool renderer_sdl_device_lost(void);
 bool renderer_sdl_toggle_vorticity(void);
 bool renderer_sdl_vorticity_enabled(void);
 bool renderer_sdl_toggle_pressure(void);

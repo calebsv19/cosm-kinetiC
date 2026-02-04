@@ -2,8 +2,9 @@
 
 #include <SDL2/SDL_ttf.h>
 
+#include "vk_renderer.h"
+
 static SDL_Color COLOR_PANEL     = {32, 36, 40, 255};
-static SDL_Color COLOR_PANEL_ACC = {45, 50, 58, 255};
 static SDL_Color COLOR_TEXT      = {245, 247, 250, 255};
 static SDL_Color COLOR_TEXT_DIM  = {190, 198, 209, 255};
 
@@ -19,15 +20,20 @@ void scene_editor_draw_button(SDL_Renderer *renderer,
     SDL_Color text = button->enabled ? COLOR_TEXT : COLOR_TEXT_DIM;
     SDL_Surface *surf = TTF_RenderUTF8_Blended(font, button->label, text);
     if (!surf) return;
-    SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
     SDL_Rect dst = {
         .x = button->rect.x + 12,
         .y = button->rect.y + (button->rect.h / 2) - surf->h / 2,
         .w = surf->w,
         .h = surf->h
     };
-    SDL_RenderCopy(renderer, tex, NULL, &dst);
-    SDL_DestroyTexture(tex);
+    VkRendererTexture tex = {0};
+    if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                   surf,
+                                                   &tex,
+                                                   VK_FILTER_LINEAR) == VK_SUCCESS) {
+        vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
+        vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
+    }
     SDL_FreeSurface(surf);
 }
 
@@ -42,10 +48,15 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
     SDL_RenderDrawRect(renderer, &field->rect);
     SDL_Surface *label = TTF_RenderUTF8_Blended(font, field->label, COLOR_TEXT_DIM);
     if (label) {
-        SDL_Texture *label_tex = SDL_CreateTextureFromSurface(renderer, label);
         SDL_Rect dst = {field->rect.x, field->rect.y - 20, label->w, label->h};
-        SDL_RenderCopy(renderer, label_tex, NULL, &dst);
-        SDL_DestroyTexture(label_tex);
+        VkRendererTexture label_tex = {0};
+        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                       label,
+                                                       &label_tex,
+                                                       VK_FILTER_LINEAR) == VK_SUCCESS) {
+            vk_renderer_draw_texture((VkRenderer *)renderer, &label_tex, NULL, &dst);
+            vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &label_tex);
+        }
         SDL_FreeSurface(label);
     }
 
@@ -60,10 +71,15 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
     }
     SDL_Surface *value = TTF_RenderUTF8_Blended(font, display, COLOR_TEXT);
     if (value) {
-        SDL_Texture *value_tex = SDL_CreateTextureFromSurface(renderer, value);
         SDL_Rect dst = {field->rect.x + 8, field->rect.y + 8, value->w, value->h};
-        SDL_RenderCopy(renderer, value_tex, NULL, &dst);
-        SDL_DestroyTexture(value_tex);
+        VkRendererTexture value_tex = {0};
+        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                       value,
+                                                       &value_tex,
+                                                       VK_FILTER_LINEAR) == VK_SUCCESS) {
+            vk_renderer_draw_texture((VkRenderer *)renderer, &value_tex, NULL, &dst);
+            vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &value_tex);
+        }
         SDL_FreeSurface(value);
     }
 }

@@ -13,6 +13,7 @@ SRC_DIR   := src
 INC_DIR   := include
 BUILD_DIR := build
 TARGET    := physics_sim
+VK_RENDERER_DIR := ../shared/vk_renderer
 
 # =========================
 #  Diagnostics
@@ -24,6 +25,8 @@ $(info USING MAKEFILE AT: $(abspath $(lastword $(MAKEFILE_LIST))))
 # =========================
 SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
 SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
+VULKAN_CFLAGS :=
+VULKAN_LIBS :=
 
 # =========================
 #  Base flags
@@ -54,6 +57,13 @@ ifeq ($(UNAME_S),Linux)
 
     # Linux needs librt for clock_gettime
     LIBS += -lrt
+
+    VULKAN_CFLAGS := $(shell pkg-config --cflags vulkan 2>/dev/null)
+    VULKAN_LIBS := $(shell pkg-config --libs vulkan 2>/dev/null)
+    ifeq ($(strip $(VULKAN_CFLAGS)$(VULKAN_LIBS)),)
+        VULKAN_CFLAGS := -I/usr/include
+        VULKAN_LIBS := -lvulkan
+    endif
 endif
 
 ifeq ($(UNAME_S),Darwin)
@@ -63,6 +73,15 @@ ifeq ($(UNAME_S),Darwin)
     CFLAGS  += -D_POSIX_C_SOURCE=200809L -I/opt/homebrew/include -D_THREAD_SAFE
     LDFLAGS += -L/opt/homebrew/lib
     LIBS    += -lSDL2 -lSDL2_ttf
+
+    VULKAN_CFLAGS := $(shell pkg-config --cflags vulkan 2>/dev/null)
+    VULKAN_LIBS := $(shell pkg-config --libs vulkan 2>/dev/null)
+    ifeq ($(strip $(VULKAN_CFLAGS)$(VULKAN_LIBS)),)
+        VULKAN_CFLAGS := -I/opt/homebrew/include
+        VULKAN_LIBS := -L/opt/homebrew/lib -lvulkan
+    endif
+    VULKAN_LIBS += -framework Metal -framework QuartzCore -framework Cocoa -framework IOKit -framework CoreVideo
+    CFLAGS += -DVK_USE_PLATFORM_METAL_EXT
 endif
 
 
@@ -73,9 +92,29 @@ LIBS += -lm
 #  Source / object discovery
 # =========================
 # Find all .c files under src/ excluding CLI tools
-SRCS := $(shell find $(SRC_DIR) -name '*.c' ! -path '$(SRC_DIR)/tools/cli/*')
+TIMER_HUD_DIR := ../shared/timer_hud
+TIMER_HUD_INCLUDE := -I$(TIMER_HUD_DIR)/include -I$(TIMER_HUD_DIR)/external
+
+CFLAGS += $(TIMER_HUD_INCLUDE) -I$(VK_RENDERER_DIR)/include $(VULKAN_CFLAGS) \
+	-DUSE_VULKAN=1 -DVK_RENDERER_SHADER_ROOT=\"$(abspath $(VK_RENDERER_DIR))\" \
+	-include $(VK_RENDERER_DIR)/include/vk_renderer_sdl.h
+LIBS += $(VULKAN_LIBS)
+
+SRCS := $(shell find $(SRC_DIR) -name '*.c' \
+	! -path '$(SRC_DIR)/tools/cli/*' \
+	! -path '$(SRC_DIR)/render/TimerHUD/*' \
+	! -path '$(SRC_DIR)/render/TimerHUD_legacy_backup/*')
+VK_RENDERER_SRCS := $(shell find $(VK_RENDERER_DIR)/src -name '*.c')
+TIMER_HUD_SRCS := $(shell find $(TIMER_HUD_DIR)/src -name '*.c')
+TIMER_HUD_EXTERNAL_SRCS := $(TIMER_HUD_DIR)/external/cJSON.c
+
 # Map src/foo/bar.c -> build/foo/bar.o
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
+OBJS += $(patsubst $(VK_RENDERER_DIR)/src/%.c,$(BUILD_DIR)/vk_renderer/%.o,$(VK_RENDERER_SRCS))
+TIMER_HUD_OBJS := $(patsubst $(TIMER_HUD_DIR)/src/%.c,$(BUILD_DIR)/timer_hud/%.o,$(TIMER_HUD_SRCS))
+TIMER_HUD_EXTERNAL_OBJS := $(patsubst $(TIMER_HUD_DIR)/external/%.c,$(BUILD_DIR)/timer_hud_external/%.o,$(TIMER_HUD_EXTERNAL_SRCS))
+
+OBJS := $(OBJS) $(TIMER_HUD_OBJS) $(TIMER_HUD_EXTERNAL_OBJS)
 DEPS := $(OBJS:.o=.d)
 
 # CLI tool sources (explicit to avoid multiple mains)
@@ -133,6 +172,18 @@ shape_sanity_tool: $(SHAPE_SANITY_TOOL_OBJ)
 #  Compile rule (with depgen)
 # =========================
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/timer_hud/%.o: $(TIMER_HUD_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/timer_hud_external/%.o: $(TIMER_HUD_DIR)/external/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/vk_renderer/%.o: $(VK_RENDERER_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 

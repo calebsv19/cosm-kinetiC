@@ -16,10 +16,11 @@
 #include "input/stroke_buffer.h"
 #include "physics/fluid2d/fluid2d.h"
 #include "render/renderer_sdl.h"
+#include "render/vk_shared_device.h"
 #include "export/volume_frames.h"
 #include "export/render_frames.h"
 #include "timing.h"
-#include "render/TimerHUD/src/api/time_scope.h"
+#include "timer_hud/time_scope.h"
 
 typedef struct CommandDispatchContext {
     SceneState *scene;
@@ -215,14 +216,14 @@ int scene_controller_run(const AppConfig *initial_cfg,
         return 1;
     }
 
-    bool preserve_sdl = (headless && headless->preserve_sdl_state);
     bool sdl_initialized = false;
-
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
-        fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
-        return 1;
+    if (SDL_WasInit(SDL_INIT_VIDEO) == 0) {
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+            fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
+            return 1;
+        }
+        sdl_initialized = true;
     }
-    sdl_initialized = true;
 
     AppConfig cfg = *initial_cfg;
     const FluidScenePreset *preset_fallback = preset ? preset : scene_presets_get_default();
@@ -233,7 +234,9 @@ int scene_controller_run(const AppConfig *initial_cfg,
     }
 
     if (!renderer_sdl_init(cfg.window_w, cfg.window_h, cfg.grid_w, cfg.grid_h)) {
-        SDL_Quit();
+        if (sdl_initialized) {
+            SDL_Quit();
+        }
         return 1;
     }
 
@@ -349,18 +352,13 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 // Sync import positions/angles to their dynamic bodies so rendering tracks physics.
                 for (size_t ii = 0; ii < scene.import_shape_count; ++ii) {
                     int body_idx = scene.import_body_map[ii];
-                    if (body_idx < 0 || body_idx >= scene.objects.count) {
-                        if (scene.config && scene.config->collider_debug_logs && body_idx >= 0) {
-                            fprintf(stderr, "[dynmask] map invalid imp=%zu body=%d count=%d\n",
-                                    ii, body_idx, scene.objects.count);
-                        }
-                        continue;
-                    }
+                    if (body_idx < 0 || body_idx >= scene.objects.count) continue;
                     RigidBody2D *b = &scene.objects.objects[body_idx].body;
                     scene.import_shapes[ii].position_x = b->position.x / (float)cfg.window_w;
                     scene.import_shapes[ii].position_y = b->position.y / (float)cfg.window_h;
                     scene.import_shapes[ii].rotation_deg = b->angle * 180.0f / (float)M_PI;
                 }
+                // Rasterize using the latest physics-resolved poses.
                 scene_rasterize_dynamic_obstacles(&scene);
                 inject_object_motion_into_fluid(&scene);
                 scene.obstacle_mask_dirty = true;
@@ -426,6 +424,11 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 renderer_sdl_present_with_hud(&hud);
             }
         }
+        if (renderer_sdl_device_lost()) {
+            fprintf(stderr, "[scene] Vulkan device lost; stopping simulation.\n");
+            aborted = true;
+            running = false;
+        }
 
 
         frame_index++;
@@ -445,8 +448,5 @@ int scene_controller_run(const AppConfig *initial_cfg,
     stroke_sampler_shutdown(&sampler);
     command_bus_shutdown(&bus);
     renderer_sdl_shutdown();
-    if (!preserve_sdl && sdl_initialized) {
-        SDL_Quit();
-    }
     return aborted ? 2 : 0;
 }

@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "name": "bar_tension",
+      "scene_path": "config/structural_test_bar_tension.txt",
+      "notes": "Single bar fixed at left, load pulls to the right.",
+      "expected": {
+        "edge_ids": [1],
+        "axial_force_sign": "tension"
+      }
+    },
+    {
+      "name": "triangle_support",
+      "scene_path": "config/structural_test_triangle_support.txt",
+      "notes": "Two base supports with a top downward load.",
+      "expected": {
+        "edge_ids": [2, 3],
+        "axial_force_sign": "compression"
+      }
+    }
+  ]
+}

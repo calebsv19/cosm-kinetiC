@@ -1,7 +1,7 @@
 #include "physics/fluid2d/fluid2d.h"
 #include "physics/objects/object_manager.h"
 
-#include "render/TimerHUD/src/api/time_scope.h"
+#include "timer_hud/time_scope.h"
 
 #include <math.h>
 #include <stdlib.h>

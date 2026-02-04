@@ -1,10 +1,14 @@
 #include "physics/rigid/rigid2d.h"
+#include "physics/rigid/rigid2d_collision.h"
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 // Helpers
 static const int R2D_MAX_POLY_VERTS = 32;
+#define R2D_MAX_MANIFOLDS 4096
+#define R2D_IMPULSE_ITERS 12
 #define R2D_GRAVITY_Y 9.8f
 
 static void rigid2d_free_poly(RigidBody2D *b);
@@ -14,6 +18,16 @@ static RigidBody2D *rigid2d_get_body(Rigid2DWorld *w, int index) {
     if (!w) return NULL;
     if (index < 0 || index >= w->count) return NULL;
     return &w->bodies[index];
+}
+
+void rigid2d_set_mass(RigidBody2D *b, float mass, float inertia) {
+    if (!b) return;
+    if (mass < 0.0f) mass = 0.0f;
+    if (inertia < 0.0f) inertia = 0.0f;
+    b->mass = mass;
+    b->inv_mass = (mass > 0.0f) ? 1.0f / mass : 0.0f;
+    b->inertia = inertia;
+    b->inv_inertia = (inertia > 0.0f) ? 1.0f / inertia : 0.0f;
 }
 
 Rigid2DWorld *rigid2d_create(int capacity) {
@@ -61,6 +75,8 @@ int rigid2d_add_body(Rigid2DWorld *w, const RigidBody2D *body) {
     w->bodies[w->count] = *body;
     // deep-copy polygon if present
     rigid2d_copy_poly(&w->bodies[w->count].poly, &body->poly);
+    w->bodies[w->count].force_accum = vec2(0.0f, 0.0f);
+    w->bodies[w->count].torque_accum = 0.0f;
     return w->count++;
 }
 
@@ -162,54 +178,6 @@ typedef struct {
     int   b;
 } Pair;
 
-static void body_aabb(const RigidBody2D *b,
-                      float *minx, float *maxx,
-                      float *miny, float *maxy) {
-    if (b->shape == RIGID2D_SHAPE_CIRCLE) {
-        *minx = b->position.x - b->radius;
-        *maxx = b->position.x + b->radius;
-        *miny = b->position.y - b->radius;
-        *maxy = b->position.y + b->radius;
-    } else {
-        *minx = b->poly.aabb_min_x;
-        *maxx = b->poly.aabb_max_x;
-        *miny = b->poly.aabb_min_y;
-        *maxy = b->poly.aabb_max_y;
-    }
-}
-
-static int aabb_overlap(const RigidBody2D *a, const RigidBody2D *b) {
-    if (!a || !b) return 0;
-    float aminx = (a->shape == RIGID2D_SHAPE_CIRCLE)
-                      ? (a->position.x - a->radius)
-                      : a->poly.aabb_min_x;
-    float amaxx = (a->shape == RIGID2D_SHAPE_CIRCLE)
-                      ? (a->position.x + a->radius)
-                      : a->poly.aabb_max_x;
-    float aminy = (a->shape == RIGID2D_SHAPE_CIRCLE)
-                      ? (a->position.y - a->radius)
-                      : a->poly.aabb_min_y;
-    float amaxy = (a->shape == RIGID2D_SHAPE_CIRCLE)
-                      ? (a->position.y + a->radius)
-                      : a->poly.aabb_max_y;
-
-    float bminx = (b->shape == RIGID2D_SHAPE_CIRCLE)
-                      ? (b->position.x - b->radius)
-                      : b->poly.aabb_min_x;
-    float bmaxx = (b->shape == RIGID2D_SHAPE_CIRCLE)
-                      ? (b->position.x + b->radius)
-                      : b->poly.aabb_max_x;
-    float bminy = (b->shape == RIGID2D_SHAPE_CIRCLE)
-                      ? (b->position.y - b->radius)
-                      : b->poly.aabb_min_y;
-    float bmaxy = (b->shape == RIGID2D_SHAPE_CIRCLE)
-                      ? (b->position.y + b->radius)
-                      : b->poly.aabb_max_y;
-
-    return (amaxx >= bminx && bmaxx >= aminx &&
-            amaxy >= bminy && bmaxy >= aminy);
-}
-
 // Build broad-phase candidate pairs using a coarse grid. Falls back to O(n^2) if disabled or too many bodies.
 static int broadphase_pairs_grid(Rigid2DWorld *w,
                                  const AppConfig *cfg,
@@ -241,8 +209,10 @@ static int broadphase_pairs_grid(Rigid2DWorld *w,
 
     // Map bodies to cells
     for (int bi = 0; bi < n; ++bi) {
-        float minx, maxx, miny, maxy;
-        body_aabb(&w->bodies[bi], &minx, &maxx, &miny, &maxy);
+        float minx = w->bodies[bi].poly.aabb_min_x;
+        float maxx = w->bodies[bi].poly.aabb_max_x;
+        float miny = w->bodies[bi].poly.aabb_min_y;
+        float maxy = w->bodies[bi].poly.aabb_max_y;
         int cx0 = (int)floorf(minx / cell_size);
         int cx1 = (int)floorf(maxx / cell_size);
         int cy0 = (int)floorf(miny / cell_size);
@@ -292,171 +262,6 @@ static int broadphase_pairs_grid(Rigid2DWorld *w,
     return pair_count;
 }
 
-// --- Narrow-phase helpers (SAT) ---
-typedef struct {
-    Vec2 normal;
-    float penetration;
-    int  hit;
-} Contact;
-
-static Vec2 rotate_vec(Vec2 v, float angle) {
-    float c = cosf(angle);
-    float s = sinf(angle);
-    return vec2(v.x * c - v.y * s, v.x * s + v.y * c);
-}
-
-static void compute_poly_aabb(RigidBody2D *b) {
-    if (!b || b->shape != RIGID2D_SHAPE_POLY || !b->poly.verts || b->poly.count <= 0) return;
-    float minx = 1e9f, miny = 1e9f, maxx = -1e9f, maxy = -1e9f;
-    for (int i = 0; i < b->poly.count; ++i) {
-        Vec2 v = rotate_vec(b->poly.verts[i], b->angle);
-        v = vec2_add(v, b->position);
-        if (v.x < minx) minx = v.x;
-        if (v.x > maxx) maxx = v.x;
-        if (v.y < miny) miny = v.y;
-        if (v.y > maxy) maxy = v.y;
-    }
-    b->poly.aabb_min_x = minx;
-    b->poly.aabb_min_y = miny;
-    b->poly.aabb_max_x = maxx;
-    b->poly.aabb_max_y = maxy;
-}
-
-static Contact sat_poly_poly(const RigidBody2D *a, const RigidBody2D *b) {
-    Contact c = {.hit = 0, .penetration = 0.0f, .normal = vec2(0.0f, 0.0f)};
-    if (!a || !b || a->poly.count <= 0 || b->poly.count <= 0) return c;
-
-    const RigidBody2D *polys[2] = {a, b};
-    float min_pen = 1e9f;
-    Vec2 best_normal = vec2(0.0f, 0.0f);
-
-    for (int idx = 0; idx < 2; ++idx) {
-        const RigidBody2D *p = polys[idx];
-        for (int i = 0; i < p->poly.count; ++i) {
-            Vec2 v0 = rotate_vec(p->poly.verts[i], p->angle);
-            Vec2 v1 = rotate_vec(p->poly.verts[(i + 1) % p->poly.count], p->angle);
-            v0 = vec2_add(v0, p->position);
-            v1 = vec2_add(v1, p->position);
-            Vec2 edge = vec2_sub(v1, v0);
-            Vec2 axis = vec2(-edge.y, edge.x);
-            float len = vec2_len(axis);
-            if (len < 1e-6f) continue;
-            axis = vec2_scale(axis, 1.0f / len);
-
-            float minA = 1e9f, maxA = -1e9f;
-            for (int va = 0; va < a->poly.count; ++va) {
-                Vec2 wp = vec2_add(rotate_vec(a->poly.verts[va], a->angle), a->position);
-                float proj = vec2_dot(wp, axis);
-                if (proj < minA) minA = proj;
-                if (proj > maxA) maxA = proj;
-            }
-            float minB = 1e9f, maxB = -1e9f;
-            for (int vb = 0; vb < b->poly.count; ++vb) {
-                Vec2 wp = vec2_add(rotate_vec(b->poly.verts[vb], b->angle), b->position);
-                float proj = vec2_dot(wp, axis);
-                if (proj < minB) minB = proj;
-                if (proj > maxB) maxB = proj;
-            }
-            float overlap = fminf(maxA, maxB) - fmaxf(minA, minB);
-            if (overlap <= 0.0f) {
-                return c; // separating axis found
-            }
-            if (overlap < min_pen) {
-                min_pen = overlap;
-                best_normal = axis;
-                // ensure normal points from a to b
-                Vec2 delta = vec2_sub(b->position, a->position);
-                if (vec2_dot(delta, best_normal) < 0.0f) {
-                    best_normal = vec2_scale(best_normal, -1.0f);
-                }
-            }
-        }
-    }
-
-    c.hit = 1;
-    c.penetration = min_pen;
-    c.normal = best_normal;
-    return c;
-}
-
-static Contact sat_circle_poly(const RigidBody2D *circle, const RigidBody2D *poly) {
-    Contact c = {.hit = 0, .penetration = 0.0f, .normal = vec2(0.0f, 0.0f)};
-    if (!circle || !poly || poly->poly.count <= 0) return c;
-    Vec2 center = circle->position;
-    float radius = circle->radius;
-
-    float min_pen = 1e9f;
-    Vec2 best_normal = vec2(0.0f, 0.0f);
-    int hit = 0;
-
-    // Test polygon edges
-    for (int i = 0; i < poly->poly.count; ++i) {
-        Vec2 v0 = vec2_add(rotate_vec(poly->poly.verts[i], poly->angle), poly->position);
-        Vec2 v1 = vec2_add(rotate_vec(poly->poly.verts[(i + 1) % poly->poly.count], poly->angle), poly->position);
-        Vec2 edge = vec2_sub(v1, v0);
-        Vec2 axis = vec2(-edge.y, edge.x);
-        float len = vec2_len(axis);
-        if (len < 1e-6f) continue;
-        axis = vec2_scale(axis, 1.0f / len);
-
-        float minP = 1e9f, maxP = -1e9f;
-        for (int vp = 0; vp < poly->poly.count; ++vp) {
-            Vec2 wp = vec2_add(rotate_vec(poly->poly.verts[vp], poly->angle), poly->position);
-            float proj = vec2_dot(wp, axis);
-            if (proj < minP) minP = proj;
-            if (proj > maxP) maxP = proj;
-        }
-        float projC = vec2_dot(center, axis);
-        float minC = projC - radius;
-        float maxC = projC + radius;
-        float overlap = fminf(maxP, maxC) - fmaxf(minP, minC);
-        if (overlap <= 0.0f) {
-            return c; // separating axis
-        }
-        if (overlap < min_pen) {
-            min_pen = overlap;
-            best_normal = axis;
-            Vec2 delta = vec2_sub(center, poly->position);
-            if (vec2_dot(delta, best_normal) < 0.0f) {
-                best_normal = vec2_scale(best_normal, -1.0f);
-            }
-        }
-        hit = 1;
-    }
-
-    if (!hit) return c;
-    c.hit = 1;
-    c.penetration = min_pen;
-    c.normal = best_normal;
-    return c;
-}
-
-static void positional_correction(RigidBody2D *a, RigidBody2D *b, Vec2 normal, float penetration) {
-    const float percent = 0.8f; // correction factor
-    const float slop = 0.01f;
-    float inv_mass_sum = a->inv_mass + b->inv_mass;
-    if (inv_mass_sum <= 0.0f) return;
-    float corr_mag = fmaxf(penetration - slop, 0.0f) * percent / inv_mass_sum;
-    Vec2 correction = vec2_scale(normal, corr_mag);
-    if (!a->is_static) a->position = vec2_sub(a->position, vec2_scale(correction, a->inv_mass));
-    if (!b->is_static) b->position = vec2_add(b->position, vec2_scale(correction, b->inv_mass));
-}
-
-static void resolve_impulse(RigidBody2D *a, RigidBody2D *b, Vec2 normal) {
-    if (!a || !b) return;
-    Vec2 rv = vec2_sub(b->velocity, a->velocity);
-    float vel_along_normal = vec2_dot(rv, normal);
-    if (vel_along_normal > 0.0f) return;
-    float inv_mass_sum = a->inv_mass + b->inv_mass;
-    if (inv_mass_sum <= 0.0f) return;
-    float e = 0.5f * (a->restitution + b->restitution);
-    float j = -(1.0f + e) * vel_along_normal;
-    j /= inv_mass_sum;
-    Vec2 impulse = vec2_scale(normal, j);
-    if (!a->is_static) a->velocity = vec2_sub(a->velocity, vec2_scale(impulse, a->inv_mass));
-    if (!b->is_static) b->velocity = vec2_add(b->velocity, vec2_scale(impulse, b->inv_mass));
-}
-
 void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg) {
     if (!w) return;
 
@@ -469,37 +274,41 @@ void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg) {
         RigidBody2D *b = &w->bodies[i];
         if (b->is_static || b->inv_mass <= 0.0f || b->locked) continue;
 
-        // apply gravity
+        // accumulate acceleration from forces + gravity
+        Vec2 accel = vec2(0.0f, 0.0f);
+        if (b->inv_mass > 0.0f) {
+            accel = vec2_add(accel, vec2_scale(b->force_accum, b->inv_mass));
+        }
         if (b->gravity_enabled) {
-            b->velocity = vec2_add(b->velocity, vec2_scale(gravity_vec, fdt));
+            accel = vec2_add(accel, gravity_vec);
+        }
+        b->velocity = vec2_add(b->velocity, vec2_scale(accel, fdt));
+        if (b->inv_inertia > 0.0f) {
+            b->angular_velocity += b->torque_accum * b->inv_inertia * fdt;
         }
 
-        // integrate
+        // integrate pose
         b->position = vec2_add(b->position, vec2_scale(b->velocity, fdt));
         b->angle   += b->angular_velocity * fdt;
+
+        // clear force/torque accumulators
+        b->force_accum = vec2(0.0f, 0.0f);
+        b->torque_accum = 0.0f;
 
         // floor collision
         resolve_ground_collision(b, ground_y);
     }
 
-    // Update AABBs for polygons
+    // Update AABBs for all bodies
     for (int i = 0; i < w->count; ++i) {
-        if (w->bodies[i].shape == RIGID2D_SHAPE_POLY) {
-            compute_poly_aabb(&w->bodies[i]);
-        } else if (w->bodies[i].shape == RIGID2D_SHAPE_AABB) {
-            // treat as box polygon for aabb
-            float hx = w->bodies[i].half_extents.x;
-            float hy = w->bodies[i].half_extents.y;
-            w->bodies[i].poly.aabb_min_x = w->bodies[i].position.x - hx;
-            w->bodies[i].poly.aabb_max_x = w->bodies[i].position.x + hx;
-            w->bodies[i].poly.aabb_min_y = w->bodies[i].position.y - hy;
-            w->bodies[i].poly.aabb_max_y = w->bodies[i].position.y + hy;
-        }
+        rigid2d_update_body_aabb(&w->bodies[i]);
     }
 
     // Broad-phase and narrow-phase
     Pair candidates[4096];
     int pair_count = 0;
+    int sat_hits = 0;
+    const int log_sat = 0; // set to 1 to re-enable SAT debug prints
     if (cfg && cfg->physics_broadphase_enabled) {
         pair_count = broadphase_pairs_grid(w, cfg, candidates, 4096);
     }
@@ -512,6 +321,9 @@ void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg) {
         }
     }
 
+    RigidManifold manifolds[R2D_MAX_MANIFOLDS];
+    int manifold_count = 0;
+
     for (int p = 0; p < pair_count; ++p) {
         int i = candidates[p].a;
         int j = candidates[p].b;
@@ -520,27 +332,139 @@ void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg) {
         if (!a || !b) continue;
         if (a->is_static && b->is_static) continue;
 
-        if (!aabb_overlap(a, b)) continue;
+        if (!rigid2d_aabb_overlap(a, b)) {
+            if (log_sat && cfg && cfg->collider_debug_logs) {
+                fprintf(stderr,
+                        "[sat] skip AABB pair=(%d,%d) "
+                        "A:[%.1f,%.1f]-[%.1f,%.1f] B:[%.1f,%.1f]-[%.1f,%.1f]\n",
+                        i,
+                        j,
+                        a->poly.aabb_min_x,
+                        a->poly.aabb_min_y,
+                        a->poly.aabb_max_x,
+                        a->poly.aabb_max_y,
+                        b->poly.aabb_min_x,
+                        b->poly.aabb_min_y,
+                        b->poly.aabb_max_x,
+                        b->poly.aabb_max_y);
+            }
+            continue;
+        }
 
-        Contact contact = {.hit = 0};
         if (a->shape == RIGID2D_SHAPE_CIRCLE && b->shape == RIGID2D_SHAPE_CIRCLE) {
-            // reuse old circle-circle
             resolve_circle_circle(a, b);
             continue;
-        } else if (a->shape == RIGID2D_SHAPE_CIRCLE && b->shape == RIGID2D_SHAPE_POLY) {
-            contact = sat_circle_poly(a, b);
-        } else if (a->shape == RIGID2D_SHAPE_POLY && b->shape == RIGID2D_SHAPE_CIRCLE) {
-            contact = sat_circle_poly(b, a);
-            contact.normal = vec2_scale(contact.normal, -1.0f); // flip
-        } else if (a->shape == RIGID2D_SHAPE_POLY && b->shape == RIGID2D_SHAPE_POLY) {
-            contact = sat_poly_poly(a, b);
-        } else {
-            continue;
         }
 
-        if (contact.hit && contact.penetration > 0.0f) {
-            positional_correction(a, b, contact.normal, contact.penetration);
-            resolve_impulse(a, b, contact.normal);
+        if (manifold_count >= R2D_MAX_MANIFOLDS) continue;
+
+        int hit = rigid2d_collision_manifold(a, b, &manifolds[manifold_count]);
+        if (hit && manifolds[manifold_count].contact_count > 0) {
+            sat_hits++;
+            manifolds[manifold_count].body_a = i;
+            manifolds[manifold_count].body_b = j;
+            if (log_sat && cfg && cfg->collider_debug_logs) {
+                fprintf(stderr,
+                        "[sat] pair=(%d,%d) contacts=%d depth=%.3f n=(%.2f,%.2f)\n",
+                        i,
+                        j,
+                        manifolds[manifold_count].contact_count,
+                        manifolds[manifold_count].depth,
+                        manifolds[manifold_count].normal.x,
+                        manifolds[manifold_count].normal.y);
+                for (int ci = 0; ci < manifolds[manifold_count].contact_count; ++ci) {
+                    Vec2 p = manifolds[manifold_count].contacts[ci].position;
+                    fprintf(stderr, "  pt%d: %.2f %.2f depth=%.3f\n",
+                            ci, p.x, p.y, manifolds[manifold_count].contacts[ci].penetration);
+                }
+            }
+            manifold_count++;
+        } else if (log_sat && cfg && cfg->collider_debug_logs) {
+            // Log the world-space vertices for failed SAT to debug scaling/position issues.
+            Vec2 va[8], vb[8];
+            int ca = 0, cb = 0;
+            if (a->shape == RIGID2D_SHAPE_POLY) ca = rigid2d_poly_world(a, va, 8);
+            if (b->shape == RIGID2D_SHAPE_POLY) cb = rigid2d_poly_world(b, vb, 8);
+            fprintf(stderr, "[sat] miss pair=(%d,%d) vertsA=%d vertsB=%d\n", i, j, ca, cb);
+            for (int vi = 0; vi < ca; ++vi) {
+                fprintf(stderr, "  A v%d: %.2f %.2f\n", vi, va[vi].x, va[vi].y);
+            }
+            for (int vi = 0; vi < cb; ++vi) {
+                fprintf(stderr, "  B v%d: %.2f %.2f\n", vi, vb[vi].x, vb[vi].y);
+            }
+            if (ca == 0 && a->shape == RIGID2D_SHAPE_AABB) {
+                fprintf(stderr, "  A is AABB half=(%.2f,%.2f) pos=(%.2f,%.2f)\n",
+                        a->half_extents.x, a->half_extents.y, a->position.x, a->position.y);
+            }
+            if (cb == 0 && b->shape == RIGID2D_SHAPE_AABB) {
+                fprintf(stderr, "  B is AABB half=(%.2f,%.2f) pos=(%.2f,%.2f)\n",
+                        b->half_extents.x, b->half_extents.y, b->position.x, b->position.y);
+            }
+            // Diagnose first separating axis using world verts we already computed.
+            if (ca > 0 && cb > 0) {
+                Vec2 axes[16];
+                int axis_count = 0;
+                for (int vi = 0; vi < ca && axis_count < 16; ++vi) {
+                    Vec2 e = vec2_sub(va[(vi + 1) % ca], va[vi]);
+                    Vec2 ax = vec2(-e.y, e.x);
+                    float len = vec2_len(ax);
+                    if (len > 1e-6f) {
+                        ax = vec2_scale(ax, 1.0f / len);
+                        axes[axis_count++] = ax;
+                    }
+                }
+                for (int vi = 0; vi < cb && axis_count < 16; ++vi) {
+                    Vec2 e = vec2_sub(vb[(vi + 1) % cb], vb[vi]);
+                    Vec2 ax = vec2(-e.y, e.x);
+                    float len = vec2_len(ax);
+                    if (len > 1e-6f) {
+                        ax = vec2_scale(ax, 1.0f / len);
+                        axes[axis_count++] = ax;
+                    }
+                }
+                for (int ai = 0; ai < axis_count; ++ai) {
+                    Vec2 ax = axes[ai];
+                    float minA = 1e9f, maxA = -1e9f;
+                    float minB = 1e9f, maxB = -1e9f;
+                    for (int va_i = 0; va_i < ca; ++va_i) {
+                        float p = vec2_dot(va[va_i], ax);
+                        if (p < minA) minA = p;
+                        if (p > maxA) maxA = p;
+                    }
+                    for (int vb_i = 0; vb_i < cb; ++vb_i) {
+                        float p = vec2_dot(vb[vb_i], ax);
+                        if (p < minB) minB = p;
+                        if (p > maxB) maxB = p;
+                    }
+                    float overlap = fminf(maxA, maxB) - fmaxf(minA, minB);
+                    fprintf(stderr, "  axis %d n=(%.3f,%.3f) overlap=%.3f A[%.3f,%.3f] B[%.3f,%.3f]\n",
+                            ai, ax.x, ax.y, overlap, minA, maxA, minB, maxB);
+                }
+            }
         }
+    }
+
+    // Iterative impulse solve
+    for (int iter = 0; iter < R2D_IMPULSE_ITERS; ++iter) {
+        for (int mi = 0; mi < manifold_count; ++mi) {
+            RigidManifold *m = &manifolds[mi];
+            RigidBody2D *a = rigid2d_get_body(w, m->body_a);
+            RigidBody2D *b = rigid2d_get_body(w, m->body_b);
+            if (!a || !b) continue;
+            rigid2d_resolve_impulse_basic(a, b, m, fdt);
+        }
+    }
+
+    // Positional correction (gentle) after velocity solve
+    for (int mi = 0; mi < manifold_count; ++mi) {
+        RigidManifold *m = &manifolds[mi];
+        RigidBody2D *a = rigid2d_get_body(w, m->body_a);
+        RigidBody2D *b = rigid2d_get_body(w, m->body_b);
+        if (!a || !b) continue;
+        rigid2d_positional_correction(a, b, m);
+    }
+
+    if (log_sat && cfg && cfg->collider_debug_logs && pair_count > 0) {
+        fprintf(stderr, "[sat] pairs=%d hits=%d\n", pair_count, sat_hits);
     }
 }

@@ -18,6 +18,15 @@ static float safe_scale(int target, int source) {
     return (float)target / (float)source;
 }
 
+static void draw_polyline(SDL_Renderer *renderer, const SDL_Point *pts, int count) {
+    if (!renderer || !pts || count < 2) return;
+    for (int i = 1; i < count; ++i) {
+        SDL_RenderDrawLine(renderer,
+                           pts[i - 1].x, pts[i - 1].y,
+                           pts[i].x, pts[i].y);
+    }
+}
+
 static void draw_poly_outline(const SceneObject *obj,
                               float scale_x,
                               float scale_y,
@@ -38,7 +47,7 @@ static void draw_poly_outline(const SceneObject *obj,
         pts[i].y = (int)lroundf(wy * scale_y);
     }
     pts[poly->count] = pts[0];
-    SDL_RenderDrawLines(renderer, pts, poly->count + 1);
+    draw_polyline(renderer, pts, poly->count + 1);
 }
 
 static void draw_import_outlines(const SceneState *scene,
@@ -143,8 +152,8 @@ static void draw_rotated_box_outline(const SceneObject *obj,
             pts[i].y = (int)lroundf(world_y * scale_y);
         }
         pts[4] = pts[0];
-        SDL_RenderDrawLines(renderer, pts, 5);
-    }
+    draw_polyline(renderer, pts, 5);
+}
 }
 
 void debug_draw_object_borders(const SceneState *scene,
@@ -167,7 +176,9 @@ void debug_draw_object_borders(const SceneState *scene,
     SDL_Color circle_color = {255, 80, 80, 255};
     SDL_Color box_color    = {170, 120, 80, 255};
     SDL_Color gravity_color = {90, 220, 120, 255};
+#if !USE_VULKAN
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+#endif
 
     bool skip_imp[MAX_IMPORTED_SHAPES] = {0};
     bool skip_obj[MAX_PRESET_OBJECTS] = {0};

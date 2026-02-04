@@ -27,6 +27,8 @@ typedef struct RigidBody2D {
     Vec2  velocity;
     float angle;
     float angular_velocity;
+    Vec2  force_accum;
+    float torque_accum;
     int   gravity_enabled; // 0 = ignore gravity
     int   locked;          // 1 = kinematic/locked (no integration)
 
@@ -46,6 +48,25 @@ typedef struct RigidBody2D {
     float friction;    // simple friction [0,1]
 } RigidBody2D;
 
+typedef struct {
+    Vec2  position;
+    float penetration;
+    float normal_impulse;
+    float tangent_impulse;
+} RigidContactPoint;
+
+typedef struct {
+    int   body_a;
+    int   body_b;
+    Vec2  normal;
+    float depth;
+    Vec2  tangent;
+    RigidContactPoint contacts[2];
+    int   contact_count;
+    float restitution;
+    float friction;
+} RigidManifold;
+
 typedef struct Rigid2DWorld {
     RigidBody2D *bodies;
     int count;
@@ -57,6 +78,7 @@ Rigid2DWorld *rigid2d_create(int capacity);
 void          rigid2d_destroy(Rigid2DWorld *w);
 
 int rigid2d_add_body(Rigid2DWorld *w, const RigidBody2D *body);
+void rigid2d_set_mass(RigidBody2D *b, float mass, float inertia);
 
 // Integrate motion, handle simple circle-circle and circle-floor collisions.
 void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg);

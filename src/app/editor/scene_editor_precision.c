@@ -3,16 +3,28 @@
 #include <math.h>
 #include <stdio.h>
 
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_vulkan.h>
+
 #include "app/editor/scene_editor_canvas.h"
 #include "app/editor/scene_editor_model.h"
 #include "app/shape_lookup.h"
 #include "geo/shape_asset.h"
 #include "render/import_project.h"
 #include "physics/math/math2d.h"
+#include "vk_renderer.h"
+#include "render/vk_shared_device.h"
 
 static const int DRAG_THRESHOLD_PX = 4;
 
 static SDL_Color precision_emitter_color(const FluidEmitter *em);
+
+static SDL_Window *g_precision_window = NULL;
+static VkRenderer g_precision_renderer_storage;
+static SDL_Renderer *g_precision_renderer = NULL;
+static bool g_precision_initialized = false;
+static bool g_precision_use_shared_device = false;
 
 static inline float import_pos_to_unit_local(float pos, float span) {
     float min = 0.5f - span;
@@ -52,14 +64,22 @@ static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_
     int dy = 1;
     int err = dx - (radius << 1);
     while (x >= y) {
-        SDL_RenderDrawPoint(renderer, cx + x, cy + y);
-        SDL_RenderDrawPoint(renderer, cx + y, cy + x);
-        SDL_RenderDrawPoint(renderer, cx - y, cy + x);
-        SDL_RenderDrawPoint(renderer, cx - x, cy + y);
-        SDL_RenderDrawPoint(renderer, cx - x, cy - y);
-        SDL_RenderDrawPoint(renderer, cx - y, cy - x);
-        SDL_RenderDrawPoint(renderer, cx + y, cy - x);
-        SDL_RenderDrawPoint(renderer, cx + x, cy - y);
+        SDL_Rect dot0 = {cx + x, cy + y, 1, 1};
+        SDL_Rect dot1 = {cx + y, cy + x, 1, 1};
+        SDL_Rect dot2 = {cx - y, cy + x, 1, 1};
+        SDL_Rect dot3 = {cx - x, cy + y, 1, 1};
+        SDL_Rect dot4 = {cx - x, cy - y, 1, 1};
+        SDL_Rect dot5 = {cx - y, cy - x, 1, 1};
+        SDL_Rect dot6 = {cx + y, cy - x, 1, 1};
+        SDL_Rect dot7 = {cx + x, cy - y, 1, 1};
+        SDL_RenderFillRect(renderer, &dot0);
+        SDL_RenderFillRect(renderer, &dot1);
+        SDL_RenderFillRect(renderer, &dot2);
+        SDL_RenderFillRect(renderer, &dot3);
+        SDL_RenderFillRect(renderer, &dot4);
+        SDL_RenderFillRect(renderer, &dot5);
+        SDL_RenderFillRect(renderer, &dot6);
+        SDL_RenderFillRect(renderer, &dot7);
         if (err <= 0) {
             y++;
             err += dy;
@@ -70,6 +90,15 @@ static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_
             dx += 2;
             err += dx - (radius << 1);
         }
+    }
+}
+
+static void draw_polyline(SDL_Renderer *renderer, const SDL_Point *pts, int count) {
+    if (!renderer || !pts || count < 2) return;
+    for (int i = 1; i < count; ++i) {
+        SDL_RenderDrawLine(renderer,
+                           pts[i - 1].x, pts[i - 1].y,
+                           pts[i].x, pts[i].y);
     }
 }
 
@@ -122,7 +151,7 @@ static void draw_import_outline(SDL_Renderer *renderer,
             }
             if (npts >= 3) {
                 pts[npts] = pts[0];
-                SDL_RenderDrawLines(renderer, pts, npts + 1);
+                draw_polyline(renderer, pts, npts + 1);
             }
         }
     } else {
@@ -240,20 +269,79 @@ bool scene_editor_run_precision(const AppConfig *cfg,
     int win_w = target_w;
     int win_h = target_h;
 
-    SDL_Window *win = SDL_CreateWindow("Precision Editor",
-                                       SDL_WINDOWPOS_CENTERED,
-                                       SDL_WINDOWPOS_CENTERED,
-                                       win_w,
-                                       win_h,
-                                       SDL_WINDOW_SHOWN);
-    if (!win) return false;
-    SDL_Renderer *renderer = SDL_CreateRenderer(win,
-                                                -1,
-                                                SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!renderer) {
-        SDL_DestroyWindow(win);
-        return false;
+    SDL_Window *win = g_precision_window;
+    SDL_Renderer *renderer = g_precision_renderer;
+    bool use_shared_device = g_precision_use_shared_device;
+    if (!g_precision_initialized) {
+        win = SDL_CreateWindow("Precision Editor",
+                               SDL_WINDOWPOS_CENTERED,
+                               SDL_WINDOWPOS_CENTERED,
+                               win_w,
+                               win_h,
+                               SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
+        if (!win) return false;
+
+        g_precision_window = win;
+        g_precision_renderer = (SDL_Renderer *)&g_precision_renderer_storage;
+        renderer = g_precision_renderer;
+
+        VkRendererConfig vk_cfg;
+        vk_renderer_config_set_defaults(&vk_cfg);
+        vk_cfg.enable_validation = SDL_FALSE;
+        vk_cfg.clear_color[0] = 0.0f;
+        vk_cfg.clear_color[1] = 0.0f;
+        vk_cfg.clear_color[2] = 0.0f;
+        vk_cfg.clear_color[3] = 1.0f;
+#if defined(__APPLE__)
+        vk_cfg.frames_in_flight = 1;
+#endif
+#if defined(__APPLE__)
+        use_shared_device = true;
+#else
+        use_shared_device = true;
+#endif
+        g_precision_use_shared_device = use_shared_device;
+
+        if (use_shared_device) {
+            if (!vk_shared_device_init(win, &vk_cfg)) {
+                fprintf(stderr, "[precision] Failed to init shared Vulkan device.\n");
+                SDL_DestroyWindow(win);
+                g_precision_window = NULL;
+                g_precision_renderer = NULL;
+                return false;
+            }
+
+            VkRendererDevice* shared_device = vk_shared_device_get();
+            if (!shared_device) {
+                fprintf(stderr, "[precision] Failed to access shared Vulkan device.\n");
+                SDL_DestroyWindow(win);
+                g_precision_window = NULL;
+                g_precision_renderer = NULL;
+                return false;
+            }
+
+            if (vk_renderer_init_with_device((VkRenderer *)renderer, shared_device, win, &vk_cfg) != VK_SUCCESS) {
+                SDL_DestroyWindow(win);
+                g_precision_window = NULL;
+                g_precision_renderer = NULL;
+                return false;
+            }
+            vk_shared_device_acquire();
+        } else {
+            if (vk_renderer_init((VkRenderer *)renderer, win, &vk_cfg) != VK_SUCCESS) {
+                SDL_DestroyWindow(win);
+                g_precision_window = NULL;
+                g_precision_renderer = NULL;
+                return false;
+            }
+        }
+        g_precision_initialized = true;
+    } else {
+        SDL_SetWindowSize(win, win_w, win_h);
+        SDL_ShowWindow(win);
     }
+    SDL_RaiseWindow(win);
+    vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
 
     FluidScenePreset local = *working;
     FluidScenePreset original = *working;
@@ -291,6 +379,7 @@ bool scene_editor_run_precision(const AppConfig *cfg,
     bool running = true;
     bool apply = true;
     bool dirty = false;
+    bool device_lost = false;
 
     while (running) {
         int local_obj_map[MAX_FLUID_EMITTERS];
@@ -947,8 +1036,51 @@ bool scene_editor_run_precision(const AppConfig *cfg,
             }
         }
 
+        SDL_GetWindowSize(win, &win_w, &win_h);
+        int drawable_w = win_w;
+        int drawable_h = win_h;
+        SDL_Vulkan_GetDrawableSize(win, &drawable_w, &drawable_h);
+        if (drawable_w <= 0 || drawable_h <= 0) {
+            SDL_Delay(16);
+            continue;
+        }
+        VkExtent2D swap_extent = ((VkRenderer *)renderer)->context.swapchain.extent;
+        if ((uint32_t)drawable_w != swap_extent.width ||
+            (uint32_t)drawable_h != swap_extent.height) {
+            vk_renderer_recreate_swapchain((VkRenderer *)renderer, win);
+            vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
+            continue;
+        }
+
+        VkCommandBuffer cmd = VK_NULL_HANDLE;
+        VkFramebuffer fb = VK_NULL_HANDLE;
+        VkExtent2D extent = {0};
+        VkResult frame = vk_renderer_begin_frame((VkRenderer *)renderer, &cmd, &fb, &extent);
+        if (frame == VK_ERROR_OUT_OF_DATE_KHR || frame == VK_SUBOPTIMAL_KHR) {
+            vk_renderer_recreate_swapchain((VkRenderer *)renderer, win);
+            vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
+            continue;
+        } else if (frame == VK_ERROR_DEVICE_LOST) {
+            static int logged_device_lost = 0;
+            if (!logged_device_lost) {
+                fprintf(stderr, "[precision] Vulkan device lost; closing precision editor.\n");
+                logged_device_lost = 1;
+            }
+            if (use_shared_device) {
+                vk_shared_device_mark_lost();
+            }
+            device_lost = true;
+            apply = false;
+            break;
+        } else if (frame != VK_SUCCESS) {
+            fprintf(stderr, "[precision] vk_renderer_begin_frame failed: %d\n", frame);
+            continue;
+        }
+        vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
+
         SDL_SetRenderDrawColor(renderer, 20, 22, 26, 255);
-        SDL_RenderClear(renderer);
+        SDL_Rect clear_rect = {0, 0, win_w, win_h};
+        SDL_RenderFillRect(renderer, &clear_rect);
 
         scene_editor_canvas_draw_background(renderer, 0, 0, win_w, win_h, false, 0.0f, 0.0f);
         scene_editor_canvas_draw_boundary_flows(renderer,
@@ -1092,21 +1224,60 @@ bool scene_editor_run_precision(const AppConfig *cfg,
         if (font_small) {
             SDL_Surface *surf = TTF_RenderUTF8_Blended(font_small, hint, (SDL_Color){190, 198, 209, 255});
             if (surf) {
-                SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
-                if (tex) {
+                VkRendererTexture tex = {0};
+                if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                               surf,
+                                                               &tex,
+                                                               VK_FILTER_LINEAR) == VK_SUCCESS) {
                     SDL_Rect dst = {12, win_h - surf->h - 12, surf->w, surf->h};
-                    SDL_RenderCopy(renderer, tex, NULL, &dst);
-                    SDL_DestroyTexture(tex);
+                    vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
+                    vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
                 }
                 SDL_FreeSurface(surf);
             }
         }
 
-        SDL_RenderPresent(renderer);
+        VkResult end = vk_renderer_end_frame((VkRenderer *)renderer, cmd);
+        if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {
+            vk_renderer_recreate_swapchain((VkRenderer *)renderer, win);
+            vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
+        } else if (end == VK_ERROR_DEVICE_LOST) {
+            static int logged_device_lost_end = 0;
+            if (!logged_device_lost_end) {
+                fprintf(stderr, "[precision] Vulkan device lost at end; closing precision editor.\n");
+                logged_device_lost_end = 1;
+            }
+            if (use_shared_device) {
+                vk_shared_device_mark_lost();
+            }
+            device_lost = true;
+            apply = false;
+            break;
+        } else if (end != VK_SUCCESS) {
+            fprintf(stderr, "[precision] vk_renderer_end_frame failed: %d\n", end);
+        }
+#if defined(__APPLE__)
+        if (end == VK_SUCCESS) {
+            vk_renderer_wait_idle((VkRenderer *)renderer);
+        }
+#endif
     }
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(win);
+    vk_renderer_wait_idle((VkRenderer *)renderer);
+    if (device_lost) {
+        if (use_shared_device) {
+            vk_renderer_shutdown_surface((VkRenderer *)renderer);
+            vk_shared_device_release();
+        } else {
+            vk_renderer_shutdown((VkRenderer *)renderer);
+        }
+        SDL_DestroyWindow(win);
+        g_precision_window = NULL;
+        g_precision_renderer = NULL;
+        g_precision_initialized = false;
+    } else {
+        SDL_HideWindow(win);
+    }
 
     if (apply) {
         *working = local;

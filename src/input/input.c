@@ -23,6 +23,11 @@ bool input_poll_events(InputCommands *out,
         case SDL_QUIT:
             out->quit = true;
             break;
+        case SDL_WINDOWEVENT:
+            if (e.window.event == SDL_WINDOWEVENT_CLOSE) {
+                out->quit = true;
+            }
+            break;
         case SDL_KEYDOWN: {
             SDL_Keymod mod = SDL_GetModState();
             switch (e.key.keysym.sym) {
@@ -118,17 +123,18 @@ bool input_poll_events(InputCommands *out,
                 out->mouse_down = down;
                 out->mouse_x = e.button.x;
                 out->mouse_y = e.button.y;
-                InputPointerState state = {
-                    .x = e.button.x,
-                    .y = e.button.y,
-                    .down = down
-                };
-                if (ctx) {
-                    if (down && ctx->on_pointer_down) {
-                        ctx->on_pointer_down(ctx->user_data, &state);
-                    } else if (!down && ctx->on_pointer_up) {
-                        ctx->on_pointer_up(ctx->user_data, &state);
-                    }
+            }
+            InputPointerState state = {
+                .x = e.button.x,
+                .y = e.button.y,
+                .down = down,
+                .button = e.button.button
+            };
+            if (ctx) {
+                if (down && ctx->on_pointer_down) {
+                    ctx->on_pointer_down(ctx->user_data, &state);
+                } else if (!down && ctx->on_pointer_up) {
+                    ctx->on_pointer_up(ctx->user_data, &state);
                 }
             }
             break;
@@ -142,7 +148,8 @@ bool input_poll_events(InputCommands *out,
             InputPointerState state = {
                 .x = e.motion.x,
                 .y = e.motion.y,
-                .down = (e.motion.state & SDL_BUTTON_LMASK) != 0
+                .down = (e.motion.state & SDL_BUTTON_LMASK) != 0,
+                .button = 0
             };
             if (ctx && ctx->on_pointer_move) {
                 ctx->on_pointer_move(ctx->user_data, &state);

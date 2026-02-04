@@ -376,7 +376,9 @@ void particle_overlay_draw(const SceneState *scene,
     float scale_x = (float)window_w / (float)grid->w;
     float scale_y = (float)window_h / (float)grid->h;
 
+#if !USE_VULKAN
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+#endif
 
     for (int i = 0; i < g_capacity; ++i) {
         FlowParticle *pt = &g_particles[i];

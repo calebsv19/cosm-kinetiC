@@ -9,7 +9,7 @@ void scene_objects_init(SceneState *scene) {
     if (!scene) return;
     object_manager_init(&scene->objects, 256);
     scene->objects_gravity_enabled = true;
-    scene->objects_elastic = false;
+    scene->objects_elastic = true; // default: elastic collisions
     for (size_t i = 0; i < MAX_IMPORTED_SHAPES; ++i) {
         scene->import_body_map[i] = -1;
     }

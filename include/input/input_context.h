@@ -8,6 +8,7 @@ typedef struct InputPointerState {
     int x;
     int y;
     bool down;
+    int button;
 } InputPointerState;
 
 typedef struct InputWheelState {

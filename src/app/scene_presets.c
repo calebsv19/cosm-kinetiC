@@ -117,6 +117,19 @@ static const FluidScenePreset g_presets[] = {
     },
 };
 
+static const FluidScenePreset g_structural_default = {
+    .name = "Structural",
+    .emitter_count = 0,
+    .is_custom = false,
+    .object_count = 0,
+    .import_shape_count = 0,
+    .boundary_flows = {0},
+    .domain = SCENE_DOMAIN_STRUCTURAL,
+    .domain_width = 1.0f,
+    .domain_height = 1.0f,
+    .structural_scene_path = ""
+};
+
 const FluidScenePreset *scene_presets_get_all(size_t *count) {
     if (count) {
         *count = sizeof(g_presets) / sizeof(g_presets[0]);
@@ -129,6 +142,9 @@ const FluidScenePreset *scene_presets_get_default(void) {
 }
 
 const FluidScenePreset *scene_presets_get_default_for_domain(FluidSceneDomainType domain) {
+    if (domain == SCENE_DOMAIN_STRUCTURAL) {
+        return &g_structural_default;
+    }
     size_t preset_count = sizeof(g_presets) / sizeof(g_presets[0]);
     for (size_t i = 0; i < preset_count; ++i) {
         if (g_presets[i].domain == domain) {

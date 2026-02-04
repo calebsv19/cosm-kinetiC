@@ -1,11 +1,11 @@
 #include "render/field_overlay.h"
 
-#include <SDL2/SDL.h>
 #include <math.h>
 #include <float.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "render/render_common.h"
 
@@ -37,10 +37,10 @@ static float *g_pressure_tmp    = NULL;
 static float *g_pressure_blur   = NULL;
 static size_t g_pressure_cap    = 0;
 
-static inline Uint8 clamp_u8(int v) {
+static inline uint8_t clamp_u8(int v) {
     if (v < 0) return 0;
     if (v > 255) return 255;
-    return (Uint8)v;
+    return (uint8_t)v;
 }
 
 static inline float solid_alpha_falloff(const SceneState *scene, size_t id) {
@@ -78,19 +78,19 @@ static inline float lerp(float a, float b, float t) {
     return a + (b - a) * t;
 }
 
-static inline void blend_pixel(Uint32 *dst,
-                               SDL_PixelFormat *format,
-                               Uint8 r,
-                               Uint8 g,
-                               Uint8 b,
-                               Uint8 alpha) {
-    if (!dst || !format || alpha == 0) return;
-    Uint8 base_r = 0, base_g = 0, base_b = 0, base_a = 0;
-    SDL_GetRGBA(*dst, format, &base_r, &base_g, &base_b, &base_a);
-    base_r = (Uint8)((r * alpha + base_r * (255 - alpha)) / 255);
-    base_g = (Uint8)((g * alpha + base_g * (255 - alpha)) / 255);
-    base_b = (Uint8)((b * alpha + base_b * (255 - alpha)) / 255);
-    *dst = SDL_MapRGBA(format, base_r, base_g, base_b, base_a ? base_a : 255);
+static inline void blend_pixel(uint8_t *dst,
+                               uint8_t r,
+                               uint8_t g,
+                               uint8_t b,
+                               uint8_t alpha) {
+    if (!dst || alpha == 0) return;
+    uint8_t base_r = dst[0];
+    uint8_t base_g = dst[1];
+    uint8_t base_b = dst[2];
+    dst[0] = (uint8_t)((r * alpha + base_r * (255 - alpha)) / 255);
+    dst[1] = (uint8_t)((g * alpha + base_g * (255 - alpha)) / 255);
+    dst[2] = (uint8_t)((b * alpha + base_b * (255 - alpha)) / 255);
+    dst[3] = 255;
 }
 
 bool field_overlay_init(void) {
@@ -113,9 +113,8 @@ void field_overlay_shutdown(void) {
 }
 
 static void apply_vorticity_overlay(const SceneState *scene,
-                                    Uint8 *pixels,
-                                    int pitch,
-                                    SDL_PixelFormat *format) {
+                                    uint8_t *pixels,
+                                    int pitch) {
     if (!scene || !scene->smoke || !pixels) return;
     const Fluid2D *grid = scene->smoke;
     int w = grid->w;
@@ -199,7 +198,7 @@ static void apply_vorticity_overlay(const SceneState *scene,
 
     // 4) Overlay as color map (red for positive, blue for negative)
     for (int y = 0; y < h; ++y) {
-        Uint32 *row = (Uint32 *)(pixels + y * pitch);
+        uint8_t *row = pixels + y * pitch;
         for (int x = 0; x < w; ++x) {
             size_t id = (size_t)y * (size_t)w + (size_t)x;
             float v = g_vorticity_tmp[id] / max_vort;
@@ -211,28 +210,27 @@ static void apply_vorticity_overlay(const SceneState *scene,
             if (normalized > 1.0f) normalized = 1.0f;
             float intensity = powf(normalized, 1.4f);
 
-            Uint8 r = 0, g = 0, b = 0;
+            uint8_t r = 0, g = 0, b = 0;
             if (v > 0.0f) {
-                r = (Uint8)lroundf(lerp(150.0f, 255.0f, intensity));
-                g = (Uint8)lroundf(lerp(50.0f, 130.0f, intensity));
-                b = (Uint8)lroundf(lerp(15.0f, 60.0f, 1.0f - intensity));
+                r = (uint8_t)lroundf(lerp(150.0f, 255.0f, intensity));
+                g = (uint8_t)lroundf(lerp(50.0f, 130.0f, intensity));
+                b = (uint8_t)lroundf(lerp(15.0f, 60.0f, 1.0f - intensity));
             } else if (v < 0.0f) {
-                b = (Uint8)lroundf(lerp(150.0f, 255.0f, intensity));
-                r = (Uint8)lroundf(lerp(35.0f, 105.0f, intensity));
-                g = (Uint8)lroundf(lerp(25.0f, 85.0f, intensity));
+                b = (uint8_t)lroundf(lerp(150.0f, 255.0f, intensity));
+                r = (uint8_t)lroundf(lerp(35.0f, 105.0f, intensity));
+                g = (uint8_t)lroundf(lerp(25.0f, 85.0f, intensity));
             }
 
-            Uint8 alpha = (Uint8)lroundf(30.0f + 110.0f * intensity);
+            uint8_t alpha = (uint8_t)lroundf(30.0f + 110.0f * intensity);
             if (alpha == 0) continue;
-            blend_pixel(&row[x], format, r, g, b, alpha);
+            blend_pixel(&row[x * 4], r, g, b, alpha);
         }
     }
 }
 
 static void apply_pressure_overlay(const SceneState *scene,
-                                   Uint8 *pixels,
-                                   int pitch,
-                                   SDL_PixelFormat *format) {
+                                   uint8_t *pixels,
+                                   int pitch) {
     if (!scene || !scene->smoke || !pixels) return;
     const Fluid2D *grid = scene->smoke;
     int w = grid->w;
@@ -324,10 +322,10 @@ static void apply_pressure_overlay(const SceneState *scene,
 #endif
 
     const AppConfig *cfg = scene->config;
-    Uint8 base_black = cfg ? clamp_u8(cfg->render_black_level) : 0;
-    Uint8 base_gray = (Uint8)lroundf((float)base_black + (200.0f - (float)base_black) * 0.6f);
+    uint8_t base_black = cfg ? clamp_u8(cfg->render_black_level) : 0;
+    uint8_t base_gray = (uint8_t)lroundf((float)base_black + (200.0f - (float)base_black) * 0.6f);
     for (int y = 0; y < h; ++y) {
-        Uint32 *row = (Uint32 *)(pixels + y * pitch);
+        uint8_t *row = pixels + y * pitch;
         for (int x = 0; x < w; ++x) {
             size_t id = (size_t)y * (size_t)w + (size_t)x;
             float value = g_pressure_tmp[id];
@@ -350,47 +348,36 @@ static void apply_pressure_overlay(const SceneState *scene,
             float alpha_factor = 0.25f + 0.75f * falloff;
             magnitude = powf(magnitude, profile->gamma);
 
-            Uint8 overlay_r = base_gray;
-            Uint8 overlay_g = base_gray;
-            Uint8 overlay_b = base_gray;
+            uint8_t overlay_r = base_gray;
+            uint8_t overlay_g = base_gray;
+            uint8_t overlay_b = base_gray;
             if (positive) {
-                overlay_r = (Uint8)lroundf(base_gray + (255.0f - base_gray) * magnitude);
-                overlay_g = (Uint8)lroundf(base_gray * (1.0f - magnitude));
+                overlay_r = (uint8_t)lroundf(base_gray + (255.0f - base_gray) * magnitude);
+                overlay_g = (uint8_t)lroundf(base_gray * (1.0f - magnitude));
                 overlay_b = overlay_g;
             } else {
-                overlay_b = (Uint8)lroundf(base_gray + (255.0f - base_gray) * magnitude);
-                overlay_r = (Uint8)lroundf(base_gray * (1.0f - magnitude));
+                overlay_b = (uint8_t)lroundf(base_gray + (255.0f - base_gray) * magnitude);
+                overlay_r = (uint8_t)lroundf(base_gray * (1.0f - magnitude));
                 overlay_g = overlay_r;
             }
-            Uint8 alpha = (Uint8)lroundf(180.0f * magnitude * alpha_factor * profile->alpha_scale);
+            uint8_t alpha = (uint8_t)lroundf(180.0f * magnitude * alpha_factor * profile->alpha_scale);
             if (alpha == 0) continue;
-            blend_pixel(&row[x], format, overlay_r, overlay_g, overlay_b, alpha);
+            blend_pixel(&row[x * 4], overlay_r, overlay_g, overlay_b, alpha);
         }
     }
 }
 
 void field_overlay_apply(const SceneState *scene,
-                         SDL_Texture *texture,
-                         SDL_PixelFormat *format,
+                         uint8_t *pixels,
+                         int pitch,
                          const FieldOverlayConfig *cfg) {
-    if (!scene || !scene->smoke || !texture || !cfg) return;
+    if (!scene || !scene->smoke || !pixels || !cfg) return;
     if (!cfg->draw_pressure && !cfg->draw_vorticity) return;
 
-    void *pixels = NULL;
-    int pitch = 0;
-    if (SDL_LockTexture(texture, NULL, &pixels, &pitch) != 0) {
-        fprintf(stderr, "[field_overlay] Failed to lock scene texture: %s\n",
-                SDL_GetError());
-        return;
-    }
-
-    Uint8 *base = (Uint8 *)pixels;
     if (cfg->draw_pressure) {
-        apply_pressure_overlay(scene, base, pitch, format);
+        apply_pressure_overlay(scene, pixels, pitch);
     }
     if (cfg->draw_vorticity) {
-        apply_vorticity_overlay(scene, base, pitch, format);
+        apply_vorticity_overlay(scene, pixels, pitch);
     }
-
-    SDL_UnlockTexture(texture);
 }

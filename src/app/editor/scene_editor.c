@@ -8,6 +8,8 @@
 #include "input/input.h"
 #include <stdio.h>
 
+#include "vk_renderer.h"
+
 bool scene_editor_run(SDL_Window *window,
                       SDL_Renderer *renderer,
                       TTF_Font *font_main,
@@ -239,8 +241,36 @@ bool scene_editor_run(SDL_Window *window,
                                           (state.selected_row >= 0) &&
                                           (state.selected_row < (int)state.working.import_shape_count);
 
+        int win_w = 0;
+        int win_h = 0;
+        SDL_GetWindowSize(window, &win_w, &win_h);
+        if (win_w <= 0 || win_h <= 0) {
+            win_w = state.panel_rect.x + state.panel_rect.w;
+            win_h = state.panel_rect.y + state.panel_rect.h;
+        }
+
+        VkCommandBuffer cmd = VK_NULL_HANDLE;
+        VkFramebuffer fb = VK_NULL_HANDLE;
+        VkExtent2D extent = {0};
+        VkResult frame = vk_renderer_begin_frame((VkRenderer *)renderer, &cmd, &fb, &extent);
+        if (frame == VK_ERROR_OUT_OF_DATE_KHR || frame == VK_SUBOPTIMAL_KHR) {
+            vk_renderer_recreate_swapchain((VkRenderer *)renderer, window);
+            vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
+            continue;
+        } else if (frame != VK_SUCCESS) {
+            fprintf(stderr, "[editor] vk_renderer_begin_frame failed: %d\n", frame);
+            continue;
+        }
+
+        vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
         scene_editor_panel_draw(&state);
-        SDL_RenderPresent(renderer);
+        VkResult end = vk_renderer_end_frame((VkRenderer *)renderer, cmd);
+        if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {
+            vk_renderer_recreate_swapchain((VkRenderer *)renderer, window);
+            vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
+        } else if (end != VK_SUCCESS) {
+            fprintf(stderr, "[editor] vk_renderer_end_frame failed: %d\n", end);
+        }
     }
 
     input_context_manager_pop(state.context_mgr);

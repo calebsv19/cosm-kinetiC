@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "vk_renderer.h"
+
 static SDL_Color COLOR_BG        = {20, 22, 26, 255};
 static SDL_Color COLOR_PANEL     = {32, 36, 40, 255};
 static SDL_Color COLOR_TEXT      = {245, 247, 250, 255};
@@ -22,14 +24,15 @@ static void draw_text(SDL_Renderer *renderer,
     if (!font || !text) return;
     SDL_Surface *surf = TTF_RenderUTF8_Blended(font, text, color);
     if (!surf) return;
-    SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
-    if (!tex) {
-        SDL_FreeSurface(surf);
-        return;
-    }
     SDL_Rect dst = {x, y, surf->w, surf->h};
-    SDL_RenderCopy(renderer, tex, NULL, &dst);
-    SDL_DestroyTexture(tex);
+    VkRendererTexture tex = {0};
+    if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                   surf,
+                                                   &tex,
+                                                   VK_FILTER_LINEAR) == VK_SUCCESS) {
+        vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
+        vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
+    }
     SDL_FreeSurface(surf);
 }
 
@@ -197,14 +200,17 @@ static void draw_dimension_field(SceneEditorState *state,
     int text_w = 0;
     int text_h = 0;
     if (surf) {
-        SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, surf);
-        if (tex) {
-            text_w = surf->w;
-            text_h = surf->h;
-            int text_y = rect->y + rect->h / 2 - text_h / 2 + 2;
-            SDL_Rect dst = {rect->x + 6, text_y, surf->w, surf->h};
-            SDL_RenderCopy(renderer, tex, NULL, &dst);
-            SDL_DestroyTexture(tex);
+        text_w = surf->w;
+        text_h = surf->h;
+        int text_y = rect->y + rect->h / 2 - text_h / 2 + 2;
+        SDL_Rect dst = {rect->x + 6, text_y, surf->w, surf->h};
+        VkRendererTexture vk_tex = {0};
+        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
+                                                       surf,
+                                                       &vk_tex,
+                                                       VK_FILTER_LINEAR) == VK_SUCCESS) {
+            vk_renderer_draw_texture((VkRenderer *)renderer, &vk_tex, NULL, &dst);
+            vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &vk_tex);
         }
         SDL_FreeSurface(surf);
     }
@@ -237,7 +243,17 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     if (!state || !state->renderer) return;
     SDL_Renderer *renderer = state->renderer;
     SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
-    SDL_RenderClear(renderer);
+    int win_w = 0;
+    int win_h = 0;
+    if (state->window) {
+        SDL_GetWindowSize(state->window, &win_w, &win_h);
+    }
+    if (win_w <= 0 || win_h <= 0) {
+        win_w = state->panel_rect.x + state->panel_rect.w;
+        win_h = state->panel_rect.y + state->panel_rect.h;
+    }
+    SDL_Rect clear_rect = {0, 0, win_w, win_h};
+    SDL_RenderFillRect(renderer, &clear_rect);
 
     scene_editor_canvas_draw_background(renderer,
                                         state->canvas_x,
@@ -262,6 +278,7 @@ void scene_editor_panel_draw(SceneEditorState *state) {
                                   state->renaming_name,
                                   &state->name_input);
 
+#if !USE_VULKAN
     SDL_Rect canvas_rect = {
         .x = state->canvas_x,
         .y = state->canvas_y,
@@ -269,6 +286,7 @@ void scene_editor_panel_draw(SceneEditorState *state) {
         .h = state->canvas_height
     };
     SDL_RenderSetClipRect(renderer, &canvas_rect);
+#endif
 
     scene_editor_canvas_draw_boundary_flows(renderer,
                                             state->canvas_x,
@@ -304,7 +322,9 @@ void scene_editor_panel_draw(SceneEditorState *state) {
                                       state->emitter_object_map,
                                       state->emitter_import_map);
 
+#if !USE_VULKAN
     SDL_RenderSetClipRect(renderer, NULL);
+#endif
 
     draw_hover_tooltip(state);
 

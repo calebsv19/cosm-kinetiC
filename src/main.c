@@ -8,10 +8,15 @@
 #include "app/preset_io.h"
 #include "app/scene_menu.h"
 #include "app/scene_presets.h"
+#include "app/structural/structural_controller.h"
 #include "app/quality_profiles.h"
 #include "config/config_loader.h"
 #include "geo/shape_library.h"
-#include "render/TimerHUD/src/api/time_scope.h"
+#include "render/timer_hud_adapter.h"
+#include "timer_hud/time_scope.h"
+#include "render/vk_shared_device.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 
 int main(int argc, char **argv) {
     (void)argc;
@@ -29,6 +34,7 @@ int main(int argc, char **argv) {
     }
     const char *config_path = opts.path ? opts.path : "config/app.json";
 
+    timer_hud_register_backend();
     ts_init();
 
     const char *shape_dir = getenv("SHAPE_ASSET_DIR");
@@ -75,7 +81,13 @@ int main(int argc, char **argv) {
     }
 
     if (cfg.headless_enabled) {
+        if (cfg.sim_mode == SIM_MODE_STRUCTURAL) {
+            fprintf(stderr, "[main] Structural mode ignores headless config.\n");
+            cfg.headless_enabled = false;
+        }
+    }
 
+    if (cfg.headless_enabled) {
         if (cfg.headless_quality_index >= 0) {
             quality_profile_apply(&cfg, cfg.headless_quality_index);
         }
@@ -103,13 +115,27 @@ int main(int argc, char **argv) {
         shape_library_free(&shape_lib);
         preset_library_shutdown(&library);
         ts_shutdown();
+        vk_shared_device_shutdown();
+        if (TTF_WasInit()) {
+            TTF_Quit();
+        }
+        if (SDL_WasInit(SDL_INIT_VIDEO)) {
+            SDL_Quit();
+        }
         return 0;
     }
 
     while (scene_menu_run(&cfg, &preset_state, &selection, &library, &shape_lib)) {
         CustomPresetSlot *slot = preset_library_get_slot(&library, selection.custom_slot_index);
         FluidScenePreset *preset_to_run = slot ? &slot->preset : &preset_state;
-        scene_controller_run(&cfg, preset_to_run, &shape_lib, "data/snapshots", NULL);
+        if (selection.sim_mode == SIM_MODE_STRUCTURAL) {
+            const char *preset_path = (preset_to_run && preset_to_run->structural_scene_path[0])
+                                          ? preset_to_run->structural_scene_path
+                                          : NULL;
+            structural_controller_run(&cfg, &shape_lib, preset_path);
+        } else {
+            scene_controller_run(&cfg, preset_to_run, &shape_lib, "data/snapshots", NULL);
+        }
         cfg.quality_index = selection.quality_index;
         cfg.headless_frame_count = selection.headless_frame_count;
         cfg.sim_mode = selection.sim_mode;
@@ -121,6 +147,13 @@ int main(int argc, char **argv) {
     preset_library_shutdown(&library);
 
     ts_shutdown();
+    vk_shared_device_shutdown();
+    if (TTF_WasInit()) {
+        TTF_Quit();
+    }
+    if (SDL_WasInit(SDL_INIT_VIDEO)) {
+        SDL_Quit();
+    }
 
     return 0;
 }

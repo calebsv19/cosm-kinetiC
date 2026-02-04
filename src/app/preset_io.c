@@ -6,12 +6,14 @@
 #include <string.h>
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-    static const int PRESET_FILE_VERSION = 10;
+static const int PRESET_FILE_VERSION = 11;
+static const char *STRUCTURAL_SCENE_DEFAULT = "config/structural_scene.txt";
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     switch (domain) {
     case SCENE_DOMAIN_BOX:
     case SCENE_DOMAIN_WIND_TUNNEL:
+    case SCENE_DOMAIN_STRUCTURAL:
         return domain;
     default:
         return SCENE_DOMAIN_BOX;
@@ -152,6 +154,7 @@ static void preset_slot_reset(CustomPresetSlot *slot, int index) {
     slot->preset.domain = SCENE_DOMAIN_BOX;
     slot->preset.domain_width = 1.0f;
     slot->preset.domain_height = 1.0f;
+    slot->preset.structural_scene_path[0] = '\0';
 }
 
 static bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
@@ -259,6 +262,7 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
         slot->preset.domain = SCENE_DOMAIN_BOX;
         slot->preset.domain_width = 1.0f;
         slot->preset.domain_height = 1.0f;
+        slot->preset.structural_scene_path[0] = '\0';
     }
     slot->preset.name = slot->name;
     slot->occupied = true;
@@ -329,6 +333,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         return false;
     }
 
+    int structural_default_claimed = 0;
     for (int i = 0; i < stored_slots; ++i) {
         int occupied = 0;
         int domain_raw = SCENE_DOMAIN_BOX;
@@ -356,6 +361,12 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         if (!read_line(f, name_buf, sizeof(name_buf))) {
             break;
         }
+        char structural_path_buf[256] = {0};
+        if (file_version >= 11) {
+            if (!read_line(f, structural_path_buf, sizeof(structural_path_buf))) {
+                break;
+            }
+        }
         int emitter_count = 0;
         if (fscanf(f, "%d\n", &emitter_count) != 1) {
             break;
@@ -373,6 +384,30 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         slot.preset.domain = domain;
         slot.preset.domain_width = sanitize_dimension_value(domain_width);
         slot.preset.domain_height = sanitize_dimension_value(domain_height);
+        if (structural_path_buf[0] != '\0') {
+            snprintf(slot.preset.structural_scene_path,
+                     sizeof(slot.preset.structural_scene_path),
+                     "%s",
+                     structural_path_buf);
+        } else {
+            slot.preset.structural_scene_path[0] = '\0';
+        }
+        if (domain == SCENE_DOMAIN_STRUCTURAL) {
+            int wants_default = (slot.preset.structural_scene_path[0] == '\0') ||
+                                strcmp(slot.preset.structural_scene_path, STRUCTURAL_SCENE_DEFAULT) == 0;
+            if (wants_default && !structural_default_claimed) {
+                snprintf(slot.preset.structural_scene_path,
+                         sizeof(slot.preset.structural_scene_path),
+                         "%s",
+                         STRUCTURAL_SCENE_DEFAULT);
+                structural_default_claimed = 1;
+            } else if (wants_default) {
+                snprintf(slot.preset.structural_scene_path,
+                         sizeof(slot.preset.structural_scene_path),
+                         "config/structural_preset_%02d.txt",
+                         i + 1);
+            }
+        }
 
         emitter_count = (emitter_count < 0) ? 0 :
                         (emitter_count > (int)MAX_FLUID_EMITTERS ? (int)MAX_FLUID_EMITTERS : emitter_count);
@@ -639,6 +674,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         fprintf(f, "%.6f %.6f\n", domain_w, domain_h);
         const char *name = (slot->name[0] != '\0') ? slot->name : DEFAULT_SLOT_LABEL;
         fprintf(f, "%s\n", name);
+        fprintf(f, "%s\n", slot->preset.structural_scene_path);
         fprintf(f, "%zu\n", slot->preset.emitter_count);
         for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
             const FluidEmitter *em = &slot->preset.emitters[e];

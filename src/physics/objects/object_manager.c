@@ -105,15 +105,14 @@ static SceneObject *object_manager_emplace(ObjectManager *mgr) {
 static void setup_body_common(RigidBody2D *body, bool is_static) {
     body->gravity_enabled = 1;
     body->locked = is_static ? 1 : 0;
-    body->mass = is_static ? 0.0f : 1.0f;
-    body->inv_mass = (body->mass > 0.0f) ? 1.0f / body->mass : 0.0f;
-    body->inertia = (body->mass > 0.0f) ? body->mass * 0.5f : 0.0f;
-    body->inv_inertia = (body->inertia > 0.0f) ? 1.0f / body->inertia : 0.0f;
-    body->restitution = 1.0f; // perfect bounce on ground by default
+    rigid2d_set_mass(body, is_static ? 0.0f : 1.0f, is_static ? 0.0f : 0.5f);
+    body->restitution = 1.0f; // default: elastic
     body->friction = 0.0f;
     body->is_static = is_static ? 1 : 0;
     body->velocity = vec2(0.0f, 0.0f);
     body->angular_velocity = 0.0f;
+    body->force_accum = vec2(0.0f, 0.0f);
+    body->torque_accum = 0.0f;
 }
 
 SceneObject *object_manager_add_circle(ObjectManager *mgr,

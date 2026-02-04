@@ -7,7 +7,7 @@
 #include "app/shape_lookup.h"
 #include "import/shape_import.h"
 #include "geo/shape_asset.h"
-
+#include "vk_renderer.h"
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -566,6 +566,7 @@ static void prepare_drag_for_hit(SceneEditorState *state, const SceneEditorHit *
 void editor_pointer_down(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !ptr) return;
+    if (ptr->button != SDL_BUTTON_LEFT) return;
     int x = ptr->x;
     int y = ptr->y;
 
@@ -784,6 +785,14 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
             bool precision_dirty = false;
             int selected_obj = state->selected_object;
             int selected_imp = (state->selection_kind == SELECTION_IMPORT) ? state->selected_row : -1;
+#if defined(__APPLE__)
+            if (state->renderer) {
+                vk_renderer_wait_idle((VkRenderer *)state->renderer);
+            }
+            SDL_HideWindow(state->window);
+            SDL_PumpEvents();
+            SDL_Delay(80);
+#endif
             if (scene_editor_run_precision(&state->cfg,
                                            &state->working,
                                            &selected_obj,
@@ -802,6 +811,10 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
                 if (precision_dirty) set_dirty(state);
                 editor_update_canvas_layout(state);
             }
+#if defined(__APPLE__)
+            SDL_ShowWindow(state->window);
+            SDL_RaiseWindow(state->window);
+#endif
             return;
         }
     }
@@ -846,8 +859,8 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
 
 void editor_pointer_up(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
-    (void)ptr;
-    if (!state) return;
+    if (!state || !ptr) return;
+    if (ptr->button != SDL_BUTTON_LEFT) return;
     bool cycle_selection = false;
     SceneEditorHit next_hit = {0};
     if (state->pointer_down_in_canvas &&

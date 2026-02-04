@@ -86,7 +86,8 @@ typedef struct ImportedShape {
 
 typedef enum FluidSceneDomainType {
     SCENE_DOMAIN_BOX = 0,
-    SCENE_DOMAIN_WIND_TUNNEL
+    SCENE_DOMAIN_WIND_TUNNEL,
+    SCENE_DOMAIN_STRUCTURAL
 } FluidSceneDomainType;
 
 typedef struct FluidScenePreset {
@@ -102,6 +103,7 @@ typedef struct FluidScenePreset {
     FluidSceneDomainType domain;
     float domain_width;
     float domain_height;
+    char  structural_scene_path[256];
 } FluidScenePreset;
 
 const FluidScenePreset *scene_presets_get_all(size_t *count);

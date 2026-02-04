@@ -6,10 +6,11 @@
 
 typedef enum SimulationMode {
     SIM_MODE_BOX = 0,
-    SIM_MODE_WIND_TUNNEL
+    SIM_MODE_WIND_TUNNEL,
+    SIM_MODE_STRUCTURAL
 } SimulationMode;
 
-#define SIMULATION_MODE_COUNT 2
+#define SIMULATION_MODE_COUNT 3
 
 typedef struct AppConfig {
     int window_w;

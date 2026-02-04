@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "font_paths.h"
+#include "vk_renderer.h"
 
 static SDL_Renderer *g_hud_renderer = NULL;
 static TTF_Font     *g_hud_font     = NULL;
@@ -47,13 +48,11 @@ void hud_overlay_shutdown(void) {
 }
 
 static void render_hud_text_line(const char *text,
-                                 SDL_Texture **texture,
                                  SDL_Surface **surface,
                                  int *w,
                                  int *h) {
-    if (!text || !texture || !surface || !w || !h) return;
+    if (!text || !surface || !w || !h) return;
     if (!g_hud_font || !g_hud_renderer) {
-        *texture = NULL;
         *surface = NULL;
         *w = *h = 0;
         return;
@@ -61,14 +60,6 @@ static void render_hud_text_line(const char *text,
     SDL_Color color = {240, 240, 240, 255};
     *surface = TTF_RenderUTF8_Blended(g_hud_font, text, color);
     if (!*surface) {
-        *texture = NULL;
-        *w = *h = 0;
-        return;
-    }
-    *texture = SDL_CreateTextureFromSurface(g_hud_renderer, *surface);
-    if (!*texture) {
-        SDL_FreeSurface(*surface);
-        *surface = NULL;
         *w = *h = 0;
         return;
     }
@@ -96,6 +87,8 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         snprintf(mode_line, sizeof(mode_line),
                  "Mode: Wind (inflow %.1f)",
                  hud->tunnel_inflow_speed);
+    } else if (hud->sim_mode == SIM_MODE_STRUCTURAL) {
+        snprintf(mode_line, sizeof(mode_line), "Mode: Structural");
     } else {
         snprintf(mode_line, sizeof(mode_line), "Mode: Box");
     }
@@ -152,12 +145,10 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     lines[line_count++] = hint_line;
 
     SDL_Surface *surfaces[MAX_HUD_LINES];
-    SDL_Texture *textures[MAX_HUD_LINES];
     int widths[MAX_HUD_LINES];
     int heights[MAX_HUD_LINES];
     for (int i = 0; i < MAX_HUD_LINES; ++i) {
         surfaces[i] = NULL;
-        textures[i] = NULL;
         widths[i] = 0;
         heights[i] = 0;
     }
@@ -166,12 +157,10 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     int total_h = 0;
 
     for (size_t i = 0; i < line_count; ++i) {
-        SDL_Texture *tex = NULL;
         SDL_Surface *surf = NULL;
         int w = 0, h = 0;
-        render_hud_text_line(lines[i], &tex, &surf, &w, &h);
-        if (!tex || !surf) continue;
-        textures[count] = tex;
+        render_hud_text_line(lines[i], &surf, &w, &h);
+        if (!surf) continue;
         surfaces[count] = surf;
         widths[count] = w;
         heights[count] = h;
@@ -203,12 +192,18 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     int y = panel.y + padding;
     for (int i = 0; i < count; ++i) {
         SDL_Rect dst = {panel.x + padding, y, widths[i], heights[i]};
-        SDL_RenderCopy(g_hud_renderer, textures[i], NULL, &dst);
+        VkRendererTexture texture = {0};
+        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer*)g_hud_renderer,
+                                                       surfaces[i],
+                                                       &texture,
+                                                       VK_FILTER_LINEAR) == VK_SUCCESS) {
+            vk_renderer_draw_texture((VkRenderer*)g_hud_renderer, &texture, NULL, &dst);
+            vk_renderer_queue_texture_destroy((VkRenderer*)g_hud_renderer, &texture);
+        }
         y += heights[i] + spacing;
     }
 
     for (int i = 0; i < count; ++i) {
-        if (textures[i]) SDL_DestroyTexture(textures[i]);
         if (surfaces[i]) SDL_FreeSurface(surfaces[i]);
     }
 }

@@ -37,7 +37,9 @@ void velocity_overlay_draw(const SceneState *scene,
     float scale_x = safe_scale(window_w, grid->w);
     float scale_y = safe_scale(window_h, grid->h);
 
+#if !USE_VULKAN
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+#endif
 
     for (int gy = stride / 2; gy < grid->h; gy += stride) {
         for (int gx = stride / 2; gx < grid->w; gx += stride) {

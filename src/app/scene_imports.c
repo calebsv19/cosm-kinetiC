@@ -78,12 +78,6 @@ static void add_import_body(SceneState *scene, size_t imp_index) {
             if (scene->import_body_map[imp_index] < 0) {
                 scene->import_body_map[imp_index] = scene->objects.count - 1;
             }
-            if (scene->config && scene->config->collider_debug_logs) {
-                fprintf(stderr, "[dynbody] imp=%zu body=%d angle_init=%.2f deg\n",
-                        imp_index,
-                        scene->objects.count - 1,
-                        imp->rotation_deg);
-            }
         }
     }
     (void)vert_cursor;

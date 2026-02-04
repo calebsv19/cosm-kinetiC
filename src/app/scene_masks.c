@@ -678,15 +678,6 @@ void scene_masks_rasterize_dynamic(SceneState *scene) {
                 imp_pose.position_y = b->position.y / (float)scene->config->window_h;
                 imp_pose.rotation_deg = b->angle * 180.0f / (float)M_PI;
                 bool ok = rasterize_import_to_mask(scene, &imp_pose, tmp, mask_count);
-                if (scene->config && scene->config->collider_debug_logs) {
-                    fprintf(stderr,
-                            "[dynmask] imp=%d body=%d angle=%.2f rot_deg=%.2f raster=%d\n",
-                            obj->source_import,
-                            i,
-                            b->angle * 180.0f / (float)M_PI,
-                            imp_pose.rotation_deg,
-                            ok ? 1 : 0);
-                }
                 if (ok) {
                     int bminx = w, bmaxx = -1, bminy = h, bmaxy = -1;
                     for (int y = 0; y < h; ++y) {
@@ -723,9 +714,6 @@ void scene_masks_rasterize_dynamic(SceneState *scene) {
             float cy = b->position.y * sy;
             float rr = b->radius * ((sx + sy) * 0.5f);
             float r2 = rr * rr;
-            if (scene->config && scene->config->collider_debug_logs) {
-                fprintf(stderr, "[dynmask] imp=%d body=%d fallback=circle\n", obj->source_import, i);
-            }
             for (int y = min_y; y <= max_y; ++y) {
                 for (int x = min_x; x <= max_x; ++x) {
                     float dx = (float)x - cx;
@@ -753,12 +741,6 @@ void scene_masks_rasterize_dynamic(SceneState *scene) {
                 float wy = b->position.y + ry;
                 verts_scaled[v].x = wx * sx;
                 verts_scaled[v].y = wy * sy;
-            }
-            if (scene->config && scene->config->collider_debug_logs) {
-                fprintf(stderr, "[dynmask] imp=%d body=%d fallback=poly rot_deg=%.2f\n",
-                        obj->source_import,
-                        i,
-                        b->angle * 180.0f / (float)M_PI);
             }
             // Point-in-polygon raster: transform verts are already in world units.
             // Use winding test per cell center.
