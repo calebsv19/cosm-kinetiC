@@ -22,6 +22,16 @@ typedef struct RendererHudInfo {
     bool        velocity_overlay_enabled;
     bool        particle_overlay_enabled;
     bool        velocity_fixed_length;
+    bool        kit_viz_density_enabled;
+    bool        kit_viz_density_active;
+    bool        kit_viz_velocity_enabled;
+    bool        kit_viz_velocity_active;
+    bool        kit_viz_pressure_enabled;
+    bool        kit_viz_pressure_active;
+    bool        kit_viz_vorticity_enabled;
+    bool        kit_viz_vorticity_active;
+    bool        kit_viz_particles_enabled;
+    bool        kit_viz_particles_active;
     bool        objects_gravity_enabled;
     const char *quality_name;
     int         solver_iterations;
@@ -48,6 +58,23 @@ bool renderer_sdl_toggle_flow_particles(void);
 bool renderer_sdl_flow_particles_enabled(void);
 bool renderer_sdl_toggle_velocity_mode(void);
 bool renderer_sdl_velocity_mode_fixed(void);
+bool renderer_sdl_toggle_kit_viz_density(void);
+bool renderer_sdl_set_kit_viz_density_enabled(bool enabled);
+bool renderer_sdl_kit_viz_density_enabled(void);
+bool renderer_sdl_density_using_kit_viz(void);
+bool renderer_sdl_toggle_kit_viz_velocity(void);
+bool renderer_sdl_set_kit_viz_velocity_enabled(bool enabled);
+bool renderer_sdl_kit_viz_velocity_enabled(void);
+bool renderer_sdl_velocity_using_kit_viz(void);
+bool renderer_sdl_set_kit_viz_pressure_enabled(bool enabled);
+bool renderer_sdl_kit_viz_pressure_enabled(void);
+bool renderer_sdl_pressure_using_kit_viz(void);
+bool renderer_sdl_set_kit_viz_vorticity_enabled(bool enabled);
+bool renderer_sdl_kit_viz_vorticity_enabled(void);
+bool renderer_sdl_vorticity_using_kit_viz(void);
+bool renderer_sdl_set_kit_viz_particles_enabled(bool enabled);
+bool renderer_sdl_kit_viz_particles_enabled(void);
+bool renderer_sdl_particles_using_kit_viz(void);
 
 static inline void renderer_sdl_draw(const SceneState *scene,
                                      const RendererHudInfo *hud) {

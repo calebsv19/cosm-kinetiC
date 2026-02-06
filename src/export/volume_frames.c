@@ -2,6 +2,7 @@
 
 #include "app/scene_state.h"
 #include "export/export_paths.h"
+#include "core_pack.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -38,6 +39,20 @@ typedef struct VolumeFrameHeaderV1 {
 static const uint32_t VOLUME_MAGIC = ('V' << 24) | ('F' << 16) | ('R' << 8) | ('M');
 static const uint32_t VOLUME_VERSION_V2 = 2;
 static const uint32_t VOLUME_VERSION_V1 = 1;
+
+static bool build_pack_path(const char *vf2d_path, char *out_pack_path, size_t out_size) {
+    if (!vf2d_path || !out_pack_path || out_size == 0) return false;
+    size_t len = strlen(vf2d_path);
+    if (len + 1 > out_size) return false;
+    memcpy(out_pack_path, vf2d_path, len + 1);
+
+    const char *ext = strrchr(out_pack_path, '.');
+    if (!ext || strcmp(ext, ".vf2d") != 0) return false;
+    size_t stem_len = (size_t)(ext - out_pack_path);
+    if (stem_len + 5 > out_size) return false; // ".pack" + NUL
+    memcpy(out_pack_path + stem_len, ".pack", 6);
+    return true;
+}
 
 static uint32_t obstacle_mask_crc32(const SceneState *scene) {
     if (!scene || !scene->obstacle_mask) return 0;
@@ -202,7 +217,21 @@ bool volume_frames_write(const SceneState *scene,
     }
 
     fclose(f);
-    manifest_append(scene, &header, path, dir);
+
+    bool manifest_ok = manifest_append(scene, &header, path, dir);
+    char pack_path[512];
+    if (build_pack_path(path, pack_path, sizeof(pack_path))) {
+        char manifest_path[512];
+        snprintf(manifest_path, sizeof(manifest_path), "%s/manifest.json", dir);
+        const char *manifest_arg = manifest_ok ? manifest_path : NULL;
+        CoreResult pack_r = core_pack_convert_vf2d(path, pack_path, manifest_arg);
+        if (pack_r.code != CORE_OK) {
+            fprintf(stderr, "[export] Warning: .pack export failed for %s (%s)\n", path, pack_r.message);
+        }
+    } else {
+        fprintf(stderr, "[export] Warning: could not derive .pack path for %s\n", path);
+    }
+
     return true;
 }
 

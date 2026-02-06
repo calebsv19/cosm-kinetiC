@@ -13,6 +13,7 @@
 #include "render/render_common.h"
 #include "render/hud_overlay.h"
 #include "render/field_overlay.h"
+#include "render/kit_viz_field_adapter.h"
 #include "render/debug_draw_objects.h"
 #include "render/velocity_overlay.h"
 #include "render/particle_overlay.h"
@@ -47,6 +48,16 @@ static bool g_draw_pressure = false;
 static bool g_draw_velocity_vectors = false;
 static bool g_draw_flow_particles = false;
 static bool g_velocity_fixed_length = false;
+static bool g_use_kit_viz_density = true;
+static bool g_last_density_render_source_kit_viz = false;
+static bool g_use_kit_viz_velocity = true;
+static bool g_last_velocity_render_source_kit_viz = false;
+static bool g_use_kit_viz_pressure = true;
+static bool g_last_pressure_render_source_kit_viz = false;
+static bool g_use_kit_viz_vorticity = true;
+static bool g_last_vorticity_render_source_kit_viz = false;
+static bool g_use_kit_viz_particles = true;
+static bool g_last_particles_render_source_kit_viz = false;
 
 static bool ensure_density_buffers(size_t cell_count) {
     if (cell_count == 0) return false;
@@ -59,6 +70,33 @@ static bool ensure_density_buffers(size_t cell_count) {
     g_density_blur = blur;
     g_density_capacity = cell_count;
     return true;
+}
+
+static void render_density_legacy_from_normalized(const float *normalized,
+                                                  int w,
+                                                  int h,
+                                                  uint8_t base_black_level,
+                                                  uint8_t *out_rgba,
+                                                  int pitch) {
+    if (!normalized || !out_rgba || w <= 0 || h <= 0 || pitch <= 0) {
+        return;
+    }
+    for (int y = 0; y < h; ++y) {
+        uint8_t *dst = out_rgba + (size_t)y * (size_t)pitch;
+        for (int x = 0; x < w; ++x) {
+            size_t i = (size_t)y * (size_t)w + (size_t)x;
+            float norm = normalized[i];
+            if (norm < 0.0f) norm = 0.0f;
+            if (norm > 1.0f) norm = 1.0f;
+            float span = 255.0f - (float)base_black_level;
+            uint8_t c = (uint8_t)lroundf((float)base_black_level + norm * span);
+            size_t offset = (size_t)x * 4u;
+            dst[offset + 0] = c;
+            dst[offset + 1] = c;
+            dst[offset + 2] = c;
+            dst[offset + 3] = 255;
+        }
+    }
 }
 
 bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH) {
@@ -276,22 +314,27 @@ static bool renderer_upload_scene(const SceneState *scene) {
     (void)blur_enabled;
 #endif
 
-    for (int y = 0; y < h; ++y) {
-        uint8_t *dst = g_scene_pixels + (size_t)y * (size_t)g_scene_pitch;
-        for (int x = 0; x < w; ++x) {
-            size_t i = (size_t)y * (size_t)w + (size_t)x;
-            float norm = g_density_tmp[i];
-            if (norm < 0.0f) norm = 0.0f;
-            if (norm > 1.0f) norm = 1.0f;
-            float span = 255.0f - (float)g_base_black_level;
-            uint8_t c = (uint8_t)lroundf((float)g_base_black_level + norm * span);
-            size_t offset = (size_t)x * 4u;
-            dst[offset + 0] = c;
-            dst[offset + 1] = c;
-            dst[offset + 2] = c;
-            dst[offset + 3] = 255;
-        }
+    bool used_kit_viz = false;
+    if (g_use_kit_viz_density) {
+        PhysicsKitVizDensityRequest request = {
+            .values = g_density_tmp,
+            .width = (uint32_t)w,
+            .height = (uint32_t)h,
+            .base_black_level = g_base_black_level,
+            .out_rgba = g_scene_pixels,
+            .out_rgba_size = needed
+        };
+        used_kit_viz = physics_kit_viz_render_density(&request);
     }
+    if (!used_kit_viz) {
+        render_density_legacy_from_normalized(g_density_tmp,
+                                              w,
+                                              h,
+                                              g_base_black_level,
+                                              g_scene_pixels,
+                                              g_scene_pitch);
+    }
+    g_last_density_render_source_kit_viz = used_kit_viz;
 
     return true;
 }
@@ -301,9 +344,16 @@ bool renderer_sdl_render_scene(const SceneState *scene) {
 
     FieldOverlayConfig overlay_cfg = {
         .draw_vorticity = g_draw_vorticity,
-        .draw_pressure  = g_draw_pressure
+        .draw_pressure  = g_draw_pressure,
+        .prefer_kit_viz_vorticity = g_use_kit_viz_vorticity,
+        .prefer_kit_viz_pressure = g_use_kit_viz_pressure
     };
-    field_overlay_apply(scene, g_scene_pixels, g_scene_pitch, &overlay_cfg);
+    FieldOverlayResult field_result = field_overlay_apply_adapter_first(
+        scene, g_scene_pixels, g_scene_pitch, &overlay_cfg);
+    g_last_pressure_render_source_kit_viz =
+        g_draw_pressure ? field_result.pressure_used_kit_viz : false;
+    g_last_vorticity_render_source_kit_viz =
+        g_draw_vorticity ? field_result.vorticity_used_kit_viz : false;
 
     {
         double dt = (scene) ? scene->dt : (1.0 / 60.0);
@@ -391,10 +441,18 @@ bool renderer_sdl_render_scene(const SceneState *scene) {
             .fixed_length = g_velocity_fixed_length,
             .fixed_fraction = 0.66f
         };
-        velocity_overlay_draw(scene, g_renderer, g_window_w, g_window_h, &vel_cfg);
+        VelocityOverlayRenderSource source = velocity_overlay_draw_adapter_first(
+            scene, g_renderer, g_window_w, g_window_h, &vel_cfg, g_use_kit_viz_velocity);
+        g_last_velocity_render_source_kit_viz = (source == VELOCITY_OVERLAY_SOURCE_KIT_VIZ);
+    } else {
+        g_last_velocity_render_source_kit_viz = false;
     }
     if (g_draw_flow_particles) {
-        particle_overlay_draw(scene, g_renderer, g_window_w, g_window_h);
+        ParticleOverlayRenderSource source = particle_overlay_draw_adapter_first(
+            scene, g_renderer, g_window_w, g_window_h, g_use_kit_viz_particles);
+        g_last_particles_render_source_kit_viz = (source == PARTICLE_OVERLAY_SOURCE_KIT_VIZ);
+    } else {
+        g_last_particles_render_source_kit_viz = false;
     }
     return true;
 }
@@ -508,4 +566,79 @@ bool renderer_sdl_toggle_velocity_mode(void) {
 
 bool renderer_sdl_velocity_mode_fixed(void) {
     return g_velocity_fixed_length;
+}
+
+bool renderer_sdl_toggle_kit_viz_density(void) {
+    g_use_kit_viz_density = !g_use_kit_viz_density;
+    return g_use_kit_viz_density;
+}
+
+bool renderer_sdl_set_kit_viz_density_enabled(bool enabled) {
+    g_use_kit_viz_density = enabled;
+    return g_use_kit_viz_density;
+}
+
+bool renderer_sdl_kit_viz_density_enabled(void) {
+    return g_use_kit_viz_density;
+}
+
+bool renderer_sdl_density_using_kit_viz(void) {
+    return g_last_density_render_source_kit_viz;
+}
+
+bool renderer_sdl_toggle_kit_viz_velocity(void) {
+    g_use_kit_viz_velocity = !g_use_kit_viz_velocity;
+    return g_use_kit_viz_velocity;
+}
+
+bool renderer_sdl_set_kit_viz_velocity_enabled(bool enabled) {
+    g_use_kit_viz_velocity = enabled;
+    return g_use_kit_viz_velocity;
+}
+
+bool renderer_sdl_kit_viz_velocity_enabled(void) {
+    return g_use_kit_viz_velocity;
+}
+
+bool renderer_sdl_velocity_using_kit_viz(void) {
+    return g_last_velocity_render_source_kit_viz;
+}
+
+bool renderer_sdl_set_kit_viz_pressure_enabled(bool enabled) {
+    g_use_kit_viz_pressure = enabled;
+    return g_use_kit_viz_pressure;
+}
+
+bool renderer_sdl_kit_viz_pressure_enabled(void) {
+    return g_use_kit_viz_pressure;
+}
+
+bool renderer_sdl_pressure_using_kit_viz(void) {
+    return g_last_pressure_render_source_kit_viz;
+}
+
+bool renderer_sdl_set_kit_viz_vorticity_enabled(bool enabled) {
+    g_use_kit_viz_vorticity = enabled;
+    return g_use_kit_viz_vorticity;
+}
+
+bool renderer_sdl_kit_viz_vorticity_enabled(void) {
+    return g_use_kit_viz_vorticity;
+}
+
+bool renderer_sdl_vorticity_using_kit_viz(void) {
+    return g_last_vorticity_render_source_kit_viz;
+}
+
+bool renderer_sdl_set_kit_viz_particles_enabled(bool enabled) {
+    g_use_kit_viz_particles = enabled;
+    return g_use_kit_viz_particles;
+}
+
+bool renderer_sdl_kit_viz_particles_enabled(void) {
+    return g_use_kit_viz_particles;
+}
+
+bool renderer_sdl_particles_using_kit_viz(void) {
+    return g_last_particles_render_source_kit_viz;
 }

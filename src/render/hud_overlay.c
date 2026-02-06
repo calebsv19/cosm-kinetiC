@@ -117,6 +117,31 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     snprintf(particles_line, sizeof(particles_line),
              "Particles (L): %s",
              hud->particle_overlay_enabled ? "On" : "Off");
+    char density_path_line[72];
+    snprintf(density_path_line, sizeof(density_path_line),
+             "Density Path (K): %s [%s]",
+             hud->kit_viz_density_enabled ? "kit_viz" : "legacy",
+             hud->kit_viz_density_active ? "active" : "fallback");
+    char velocity_path_line[72];
+    snprintf(velocity_path_line, sizeof(velocity_path_line),
+             "Velocity Path (J): %s [%s]",
+             hud->kit_viz_velocity_enabled ? "kit_viz" : "legacy",
+             hud->kit_viz_velocity_active ? "active" : "fallback");
+    char pressure_path_line[72];
+    snprintf(pressure_path_line, sizeof(pressure_path_line),
+             "Pressure Path: %s [%s]",
+             hud->kit_viz_pressure_enabled ? "kit_viz" : "legacy",
+             hud->kit_viz_pressure_active ? "active" : "fallback");
+    char vorticity_path_line[72];
+    snprintf(vorticity_path_line, sizeof(vorticity_path_line),
+             "Vorticity Path: %s [%s]",
+             hud->kit_viz_vorticity_enabled ? "kit_viz" : "legacy",
+             hud->kit_viz_vorticity_active ? "active" : "fallback");
+    char particles_path_line[72];
+    snprintf(particles_path_line, sizeof(particles_path_line),
+             "Particles Path: %s [%s]",
+             hud->kit_viz_particles_enabled ? "kit_viz" : "legacy",
+             hud->kit_viz_particles_active ? "active" : "fallback");
     char gravity_line[64];
     snprintf(gravity_line, sizeof(gravity_line),
              "Gravity (G): %s",
@@ -125,7 +150,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     snprintf(status_line, sizeof(status_line),
              "Status: %s", hud->paused ? "Paused" : "Running");
     const char *hint_line =
-        "P pause | C clear | E snapshot";
+        "P pause | C clear | E snapshot | K/J kit_viz";
 
     enum { MAX_HUD_LINES = 32 };
     const char *lines[MAX_HUD_LINES];
@@ -140,6 +165,11 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     lines[line_count++] = pressure_line;
     lines[line_count++] = velocity_line;
     lines[line_count++] = particles_line;
+    lines[line_count++] = density_path_line;
+    lines[line_count++] = velocity_path_line;
+    lines[line_count++] = pressure_path_line;
+    lines[line_count++] = vorticity_path_line;
+    lines[line_count++] = particles_path_line;
     lines[line_count++] = gravity_line;
     lines[line_count++] = status_line;
     lines[line_count++] = hint_line;

@@ -9,7 +9,14 @@
 typedef struct FieldOverlayConfig {
     bool draw_vorticity;
     bool draw_pressure;
+    bool prefer_kit_viz_vorticity;
+    bool prefer_kit_viz_pressure;
 } FieldOverlayConfig;
+
+typedef struct FieldOverlayResult {
+    bool pressure_used_kit_viz;
+    bool vorticity_used_kit_viz;
+} FieldOverlayResult;
 
 // Currently no heavy init, but kept for symmetry / future.
 bool field_overlay_init(void);
@@ -23,5 +30,10 @@ void field_overlay_apply(const SceneState *scene,
                          uint8_t *pixels,
                          int pitch,
                          const FieldOverlayConfig *cfg);
+
+FieldOverlayResult field_overlay_apply_adapter_first(const SceneState *scene,
+                                                     uint8_t *pixels,
+                                                     int pitch,
+                                                     const FieldOverlayConfig *cfg);
 
 #endif // FIELD_OVERLAY_H

@@ -16,4 +16,16 @@ void particle_overlay_draw(const SceneState *scene,
                            int window_w,
                            int window_h);
 
+typedef enum ParticleOverlayRenderSource {
+    PARTICLE_OVERLAY_SOURCE_LEGACY = 0,
+    PARTICLE_OVERLAY_SOURCE_KIT_VIZ
+} ParticleOverlayRenderSource;
+
+ParticleOverlayRenderSource particle_overlay_draw_adapter_first(
+    const SceneState *scene,
+    SDL_Renderer *renderer,
+    int window_w,
+    int window_h,
+    bool prefer_kit_viz);
+
 #endif // PARTICLE_OVERLAY_H

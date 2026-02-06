@@ -4,11 +4,11 @@
     "height": 772
   },
   "grid": {
-    "width": 160,
-    "height": 160
+    "width": 96,
+    "height": 96
   },
   "simulation": {
-    "mode": 2,
+    "mode": 0,
     "tunnel_inflow_speed": 30.000000,
     "tunnel_inflow_density": 15.000000,
     "tunnel_viscosity_scale": 0.500000

@@ -7,6 +7,7 @@
 
 #include "physics/fluid2d/fluid2d.h"
 #include "physics/math/math2d.h"
+#include "render/kit_viz_field_adapter.h"
 
 // Tunables: adjust these to change how the flow trails look/behave.
 static const float FLOW_COLOR_MIX        = 0.3f; // 0 = white, 1 = bright green
@@ -51,6 +52,8 @@ static FlowFadeTrail *g_fade_trails = NULL;
 static int g_fade_capacity          = 0;
 static SDL_Color g_color_base       = {255, 255, 255, 255};
 static SDL_Color g_color_mix        = {80, 255, 120, 255};
+enum { FLOW_TRAIL_SEGMENT_MAX = 15 };
+static PhysicsKitVizVectorSegment g_trail_segments[FLOW_TRAIL_SEGMENT_MAX];
 
 static float randf01(void) {
     return (float)rand() / (float)RAND_MAX;
@@ -364,10 +367,116 @@ void particle_overlay_update(const SceneState *scene, double dt, bool spawn_enab
     }
 }
 
-void particle_overlay_draw(const SceneState *scene,
-                           SDL_Renderer *renderer,
-                           int window_w,
-                           int window_h) {
+static void draw_segments(SDL_Renderer *renderer,
+                          const PhysicsKitVizVectorSegment *segments,
+                          size_t segment_count,
+                          float scale_x,
+                          float scale_y,
+                          float strength_scale,
+                          SDL_Color tip_col,
+                          SDL_Color base_col) {
+    for (size_t j = 0; j < segment_count; ++j) {
+        float t = (segment_count > 1) ? (float)(j + 1) / (float)segment_count : 1.0f;
+        float strength = (0.2f + 0.8f * t) * strength_scale;
+        if (strength > 1.0f) strength = 1.0f;
+        SDL_Color col = mix_color(tip_col, base_col, t);
+        Uint8 a = (Uint8)lroundf(255.0f * strength);
+        if (a == 0) continue;
+
+        float x0 = segments[j].x0 * scale_x;
+        float y0 = segments[j].y0 * scale_y;
+        float x1 = segments[j].x1 * scale_x;
+        float y1 = segments[j].y1 * scale_y;
+
+        SDL_SetRenderDrawColor(renderer, col.r, col.g, col.b, a);
+        SDL_RenderDrawLine(renderer,
+                           (int)lroundf(x0),
+                           (int)lroundf(y0),
+                           (int)lroundf(x1),
+                           (int)lroundf(y1));
+    }
+}
+
+static bool build_trail_segments_with_kit_viz(const float *xs,
+                                              const float *ys,
+                                              int point_count,
+                                              size_t *out_segment_count) {
+    if (!xs || !ys || !out_segment_count || point_count < 2) return false;
+    PhysicsKitVizPolylineRequest req = {
+        .xs = xs,
+        .ys = ys,
+        .point_count = (uint32_t)point_count,
+        .out_segments = g_trail_segments,
+        .max_segments = FLOW_TRAIL_SEGMENT_MAX,
+        .out_segment_count = out_segment_count
+    };
+    return physics_kit_viz_build_polyline(&req);
+}
+
+static bool particle_overlay_draw_kit_viz(const SceneState *scene,
+                                          SDL_Renderer *renderer,
+                                          int window_w,
+                                          int window_h) {
+    if (!scene || !scene->smoke || !renderer || !g_particles) return false;
+    const Fluid2D *grid = scene->smoke;
+    if (grid->w <= 0 || grid->h <= 0) return false;
+
+    float scale_x = (float)window_w / (float)grid->w;
+    float scale_y = (float)window_h / (float)grid->h;
+#if !USE_VULKAN
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+#endif
+    SDL_Color base_col = mix_color(g_color_base, g_color_mix, FLOW_COLOR_MIX);
+    SDL_Color tip_col  = mix_color(base_col, g_color_base, 0.35f);
+
+    for (int i = 0; i < g_capacity; ++i) {
+        FlowParticle *pt = &g_particles[i];
+        if (pt->life <= 0.0f && pt->fade_frames_left <= 0.0f) continue;
+        if (pt->trail_count < 2) continue;
+
+        float visibility = 0.0f;
+        bool fading = false;
+        if (pt->life > 0.0f && pt->max_life > 0.0f) {
+            visibility = pt->life / pt->max_life;
+        } else if (pt->fade_frames_left > 0.0f) {
+            visibility = pt->fade_frames_left / FLOW_FADE_FRAMES;
+            fading = true;
+        }
+        if (visibility <= 0.0f) continue;
+
+        float life_ratio = (pt->max_life > 0.0f) ? fmaxf(pt->life / pt->max_life, 0.0f) : 0.0f;
+        float strength = (0.6f + 0.4f * life_ratio) * visibility * g_flow_alpha;
+        if (fading) strength *= 0.8f;
+
+        size_t seg_count = 0;
+        if (!build_trail_segments_with_kit_viz(pt->trail_x, pt->trail_y, pt->trail_count, &seg_count) ||
+            seg_count == 0) {
+            return false;
+        }
+        draw_segments(renderer, g_trail_segments, seg_count, scale_x, scale_y, strength, tip_col, base_col);
+    }
+
+    if (g_fade_trails && g_fade_capacity > 0) {
+        for (int i = 0; i < g_fade_capacity; ++i) {
+            FlowFadeTrail *ft = &g_fade_trails[i];
+            if (ft->frames_left <= 0.0f || ft->count < 2) continue;
+            float visibility = ft->frames_left / FLOW_FADE_FRAMES;
+            float strength = ft->start_strength * visibility * g_flow_alpha;
+            size_t seg_count = 0;
+            if (!build_trail_segments_with_kit_viz(ft->xs, ft->ys, ft->count, &seg_count) ||
+                seg_count == 0) {
+                return false;
+            }
+            draw_segments(renderer, g_trail_segments, seg_count, scale_x, scale_y, strength, tip_col, base_col);
+        }
+    }
+    return true;
+}
+
+static void particle_overlay_draw_legacy(const SceneState *scene,
+                                         SDL_Renderer *renderer,
+                                         int window_w,
+                                         int window_h) {
     if (!scene || !scene->smoke || !renderer || !g_particles) return;
 
     const Fluid2D *grid = scene->smoke;
@@ -453,4 +562,24 @@ void particle_overlay_draw(const SceneState *scene,
             }
         }
     }
+}
+
+void particle_overlay_draw(const SceneState *scene,
+                           SDL_Renderer *renderer,
+                           int window_w,
+                           int window_h) {
+    particle_overlay_draw_legacy(scene, renderer, window_w, window_h);
+}
+
+ParticleOverlayRenderSource particle_overlay_draw_adapter_first(
+    const SceneState *scene,
+    SDL_Renderer *renderer,
+    int window_w,
+    int window_h,
+    bool prefer_kit_viz) {
+    if (prefer_kit_viz && particle_overlay_draw_kit_viz(scene, renderer, window_w, window_h)) {
+        return PARTICLE_OVERLAY_SOURCE_KIT_VIZ;
+    }
+    particle_overlay_draw_legacy(scene, renderer, window_w, window_h);
+    return PARTICLE_OVERLAY_SOURCE_LEGACY;
 }

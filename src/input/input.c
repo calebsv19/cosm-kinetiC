@@ -79,6 +79,18 @@ bool input_poll_events(InputCommands *out,
                     command_bus_push(bus, &cmd);
                 }
                 break;
+            case SDLK_k:
+                if (bus) {
+                    Command cmd = {.type = COMMAND_TOGGLE_KIT_VIZ_DENSITY};
+                    command_bus_push(bus, &cmd);
+                }
+                break;
+            case SDLK_j:
+                if (bus) {
+                    Command cmd = {.type = COMMAND_TOGGLE_KIT_VIZ_VELOCITY};
+                    command_bus_push(bus, &cmd);
+                }
+                break;
             case SDLK_g:
                 if (bus) {
                     Command cmd = {.type = COMMAND_TOGGLE_OBJECT_GRAVITY};

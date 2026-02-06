@@ -67,6 +67,12 @@ static bool handle_scene_command(const Command *cmd, void *user_data) {
     case COMMAND_TOGGLE_PARTICLE_FLOW:
         renderer_sdl_toggle_flow_particles();
         return true;
+    case COMMAND_TOGGLE_KIT_VIZ_DENSITY:
+        renderer_sdl_toggle_kit_viz_density();
+        return true;
+    case COMMAND_TOGGLE_KIT_VIZ_VELOCITY:
+        renderer_sdl_toggle_kit_viz_velocity();
+        return true;
     default:
         return scene_handle_command(ctx->scene, cmd);
     }
@@ -395,6 +401,16 @@ int scene_controller_run(const AppConfig *initial_cfg,
             .velocity_overlay_enabled = renderer_sdl_velocity_vectors_enabled(),
             .particle_overlay_enabled = renderer_sdl_flow_particles_enabled(),
             .velocity_fixed_length = renderer_sdl_velocity_mode_fixed(),
+            .kit_viz_density_enabled = renderer_sdl_kit_viz_density_enabled(),
+            .kit_viz_density_active = renderer_sdl_density_using_kit_viz(),
+            .kit_viz_velocity_enabled = renderer_sdl_kit_viz_velocity_enabled(),
+            .kit_viz_velocity_active = renderer_sdl_velocity_using_kit_viz(),
+            .kit_viz_pressure_enabled = renderer_sdl_kit_viz_pressure_enabled(),
+            .kit_viz_pressure_active = renderer_sdl_pressure_using_kit_viz(),
+            .kit_viz_vorticity_enabled = renderer_sdl_kit_viz_vorticity_enabled(),
+            .kit_viz_vorticity_active = renderer_sdl_vorticity_using_kit_viz(),
+            .kit_viz_particles_enabled = renderer_sdl_kit_viz_particles_enabled(),
+            .kit_viz_particles_active = renderer_sdl_particles_using_kit_viz(),
             .objects_gravity_enabled = scene.objects_gravity_enabled,
             .quality_name = quality_label ? quality_label : "Custom",
             .solver_iterations = cfg.fluid_solver_iterations,
