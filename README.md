@@ -12,6 +12,12 @@ Small SDL-based sandbox for experimenting with paired fluid, particle, and rigid
 - `makefile` – single target that builds the `physics_sim` binary in the root.
 - `export/volume_frames/` – raw `.vf2d` dumps (density + velocity) written with v2 headers (grid, time, dt, origin, cell size, obstacle mask CRC) plus a `manifest.json` listing every frame. Runtime export also writes `.pack` in parallel and refreshes `scene_bundle.json` for cross-app handoff. The reader in `export/volume_frames.h` still understands v1 files for backward compatibility.
 
+## Public vs private docs
+
+This repository keeps public usage and implementation references in the repo lane. Private planning docs and internal execution notes are stored in the top-level CodeWork private docs bucket instead of this repository:
+
+- `docs/private_program_docs/physics_sim/`
+
 ## Shared Diagnostics Tooling
 - `make vf2d_pack_tool` converts a `.vf2d` frame into `.pack` via shared `core_pack`.
 - `make vf2d_dataset_tool` emits a CoreDataset JSON sidecar for a frame using shared `core_data`.
