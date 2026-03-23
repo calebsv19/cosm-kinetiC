@@ -1,4 +1,12 @@
-
-export/*
-
-build/*
+.DS_Store
+**/.DS_Store
+build/
+export/
+ide_files/
+timerhud/
+vk_frame.ppm
+*.dSYM/
+/physics_sim
+/physics_trace_tool
+/vf2d_dataset_tool
+/vf2d_pack_tool
