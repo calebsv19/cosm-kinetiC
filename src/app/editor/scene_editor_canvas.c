@@ -1,6 +1,7 @@
 #include "app/editor/scene_editor_canvas.h"
 #include "app/editor/scene_editor_internal.h"
 #include "app/editor/scene_editor.h"
+#include "app/menu/menu_render.h"
 #include "geo/shape_asset.h"
 #include "app/shape_lookup.h"
 #include "render/import_project.h"
@@ -19,6 +20,16 @@ static SDL_Color COLOR_TEXT_DIM  = {180, 186, 195, 220};
 static SDL_Color COLOR_SELECTED  = {255, 255, 255, 255};
 static SDL_Color COLOR_GRID_LINE = {32, 36, 40, 255};
 static SDL_Color COLOR_BOUNDARY_DISABLED = {45, 50, 58, 180};
+
+static void refresh_canvas_theme(void) {
+    COLOR_CANVAS = menu_color_bg();
+    COLOR_TEXT = menu_color_text();
+    COLOR_TEXT_DIM = menu_color_text_dim();
+    COLOR_SELECTED = menu_color_accent();
+    COLOR_GRID_LINE = menu_color_panel();
+    COLOR_BOUNDARY_DISABLED = menu_color_panel();
+    COLOR_BOUNDARY_DISABLED.a = 180;
+}
 
 static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_Color color);
 static void draw_polyline(SDL_Renderer *renderer, const SDL_Point *pts, int count);
@@ -196,6 +207,7 @@ static void draw_import_collider_outline(SDL_Renderer *renderer,
 void scene_editor_canvas_draw_imports(SDL_Renderer *renderer,
                                       const SceneEditorState *state) {
     if (!renderer || !state || !state->shape_library) return;
+    refresh_canvas_theme();
     for (size_t i = 0; i < state->working.import_shape_count; ++i) {
         const ImportedShape *imp = &state->working.import_shapes[i];
         if (!imp->enabled) continue;
@@ -246,6 +258,7 @@ void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
                                          float preview_x_norm,
                                          float preview_y_norm) {
     if (!renderer || canvas_w <= 0 || canvas_h <= 0) return;
+    refresh_canvas_theme();
     SDL_Rect rect = {canvas_x, canvas_y, canvas_w, canvas_h};
     SDL_SetRenderDrawColor(renderer,
                            COLOR_CANVAS.r,
@@ -287,7 +300,7 @@ void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
         int gx, gy;
         scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
                                     preview_x_norm, preview_y_norm, &gx, &gy);
-        SDL_SetRenderDrawColor(renderer, 90, 170, 255, 180);
+        SDL_SetRenderDrawColor(renderer, COLOR_SELECTED.r, COLOR_SELECTED.g, COLOR_SELECTED.b, 180);
         int preview_r = 16;
         SDL_Rect ghost = {gx - preview_r, gy - preview_r, preview_r * 2, preview_r * 2};
         SDL_RenderDrawRect(renderer, &ghost);
@@ -333,6 +346,7 @@ void scene_editor_canvas_draw_emitters(SDL_Renderer *renderer,
                                        const int *emitter_import_map) {
     (void)font_small;
     if (!renderer || !preset) return;
+    refresh_canvas_theme();
 
     for (size_t i = 0; i < preset->emitter_count; ++i) {
         const FluidEmitter *em = &preset->emitters[i];
@@ -494,6 +508,7 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
                                       int hover_object,
                                       const int *emitter_object_map) {
     if (!renderer || !preset) return;
+    refresh_canvas_theme();
 
     for (size_t i = 0; i < preset->object_count; ++i) {
         const PresetObject *obj = &preset->objects[i];
@@ -557,12 +572,11 @@ void scene_editor_canvas_draw_objects(SDL_Renderer *renderer,
                                                         (int)i,
                                                         &hx,
                                                         &hy)) {
-                // Always draw object handle in pure white to distinguish from emitter handle.
-                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                SDL_SetRenderDrawColor(renderer, COLOR_SELECTED.r, COLOR_SELECTED.g, COLOR_SELECTED.b, 255);
                 SDL_RenderDrawLine(renderer, cx, cy, hx, hy);
                 float knob_px = scene_editor_canvas_handle_size_px(canvas_w, canvas_h) * 0.45f;
                 if (knob_px < 8.0f) knob_px = 8.0f;
-                draw_circle(renderer, hx, hy, (int)lroundf(knob_px), (SDL_Color){255, 255, 255, 255});
+                draw_circle(renderer, hx, hy, (int)lroundf(knob_px), COLOR_SELECTED);
             }
         }
     }
@@ -588,6 +602,7 @@ void scene_editor_canvas_draw_boundary_flows(SDL_Renderer *renderer,
                                              int selected_edge,
                                              bool edit_mode) {
     if (!renderer || !flows) return;
+    refresh_canvas_theme();
     SDL_Rect rects[BOUNDARY_EDGE_COUNT];
     rects[BOUNDARY_EDGE_TOP] = (SDL_Rect){canvas_x, canvas_y, canvas_w, 12};
     rects[BOUNDARY_EDGE_BOTTOM] = (SDL_Rect){canvas_x, canvas_y + canvas_h - 12, canvas_w, 12};
@@ -613,8 +628,11 @@ void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
                                       const char *lines[],
                                       int line_count) {
     if (!renderer || !font || !lines || line_count <= 0) return;
-    SDL_Color bg = {20, 22, 28, 230};
-    SDL_Color border = {255, 255, 255, 60};
+    refresh_canvas_theme();
+    SDL_Color bg = COLOR_CANVAS;
+    SDL_Color border = COLOR_SELECTED;
+    bg.a = 230;
+    border.a = 100;
     SDL_Color text = COLOR_TEXT;
 
     int padding = 6;
@@ -684,6 +702,7 @@ void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
                                    bool renaming,
                                    const TextInputField *input) {
     if (!renderer) return;
+    refresh_canvas_theme();
     (void)canvas_h;
     SDL_Rect rect = {
         .x = canvas_x,
@@ -717,7 +736,7 @@ void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
         }
         if (input->caret_visible) {
             int caret_x = rect.x + 8 + text_w + 2;
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_SetRenderDrawColor(renderer, COLOR_SELECTED.r, COLOR_SELECTED.g, COLOR_SELECTED.b, 255);
             SDL_RenderDrawLine(renderer, caret_x, rect.y + 6,
                                caret_x, rect.y + rect.h - 6);
         }

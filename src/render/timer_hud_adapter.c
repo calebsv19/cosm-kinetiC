@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 static SDL_Renderer* g_timer_hud_renderer = NULL;
 static TTF_Font* g_timer_hud_font = NULL;
@@ -80,6 +81,16 @@ static void timer_hud_draw_rect(int x, int y, int w, int h, TimerHUDColor color)
     vk_renderer_fill_rect((VkRenderer*)g_timer_hud_renderer, &rect);
 }
 
+static void timer_hud_draw_line(int x1, int y1, int x2, int y2, TimerHUDColor color) {
+    if (!g_timer_hud_renderer) return;
+    vk_renderer_set_draw_color((VkRenderer*)g_timer_hud_renderer,
+                               color.r / 255.0f,
+                               color.g / 255.0f,
+                               color.b / 255.0f,
+                               color.a / 255.0f);
+    SDL_RenderDrawLine(g_timer_hud_renderer, x1, y1, x2, y2);
+}
+
 static void timer_hud_draw_text(const char* text, int x, int y, int align_flags, TimerHUDColor color) {
     if (!text || !g_timer_hud_renderer || !ensure_font_loaded()) return;
 
@@ -113,6 +124,7 @@ static const TimerHUDBackend g_timer_hud_backend = {
     .measure_text = timer_hud_measure_text,
     .get_line_height = timer_hud_line_height,
     .draw_rect = timer_hud_draw_rect,
+    .draw_line = timer_hud_draw_line,
     .draw_text = timer_hud_draw_text,
     .hud_padding = 6,
     .hud_spacing = 4,
@@ -121,7 +133,17 @@ static const TimerHUDBackend g_timer_hud_backend = {
 
 void timer_hud_register_backend(void) {
     ts_register_backend(&g_timer_hud_backend);
-    ts_set_settings_path("config/timer_hud_settings.json");
+    ts_set_program_name("physics_sim");
+
+    const char* outputRoot = getenv("TIMERHUD_OUTPUT_ROOT");
+    if (outputRoot && outputRoot[0]) {
+        ts_set_output_root(outputRoot);
+    }
+
+    const char* overridePath = getenv("PHYSICS_SIM_TIMER_HUD_SETTINGS");
+    if (overridePath && overridePath[0]) {
+        ts_set_settings_path(overridePath);
+    }
 }
 
 void timer_hud_bind_renderer(SDL_Renderer* renderer) {

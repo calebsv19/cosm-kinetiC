@@ -1,5 +1,7 @@
 #include "app/menu/menu_window.h"
 
+#include "app/menu/menu_render.h"
+#include "app/menu/shared_theme_font_adapter.h"
 #include "font_paths.h"
 #include <SDL2/SDL_vulkan.h>
 #include <stdio.h>
@@ -8,6 +10,8 @@
 
 bool menu_create_window(SceneMenuInteraction *ctx) {
     if (!ctx) return false;
+
+    physics_sim_shared_theme_load_persisted();
 
     SDL_Window *window = SDL_CreateWindow(
         "Physics Sim - Scene Editor",
@@ -59,25 +63,68 @@ bool menu_create_window(SceneMenuInteraction *ctx) {
 
     vk_renderer_set_logical_size((VkRenderer *)ctx->renderer, (float)MENU_WIDTH, (float)MENU_HEIGHT);
 
-    ctx->font_title = TTF_OpenFont(FONT_TITLE_PATH_1, 32);
+    {
+        PhysicsSimMenuThemePalette shared_palette = {0};
+        if (physics_sim_shared_theme_resolve_menu_palette(&shared_palette)) {
+            MenuThemePalette menu_palette = {
+                .background = shared_palette.background_fill,
+                .panel = shared_palette.panel_fill,
+                .text = shared_palette.text_primary,
+                .text_dim = shared_palette.text_muted,
+                .accent = shared_palette.accent_primary,
+                .button_bg = shared_palette.button_fill,
+                .button_bg_active = shared_palette.button_active_fill
+            };
+            menu_set_theme_palette(&menu_palette);
+        }
+    }
+
+    {
+        char shared_path[256];
+        int shared_size = 32;
+        if (physics_sim_shared_font_resolve_menu_title(shared_path, sizeof(shared_path), &shared_size)) {
+            ctx->font_title = TTF_OpenFont(shared_path, shared_size);
+        }
+    }
     if (!ctx->font_title) {
-        ctx->font_title = TTF_OpenFont(FONT_TITLE_PATH_2, 32);
+        ctx->font_title = TTF_OpenFont(FONT_TITLE_PATH_1, 32);
+        if (!ctx->font_title) {
+            ctx->font_title = TTF_OpenFont(FONT_TITLE_PATH_2, 32);
+        }
     }
     if (!ctx->font_title) {
         fprintf(stderr, "Failed to open title font: %s\n", TTF_GetError());
     }
 
-    ctx->font = TTF_OpenFont(FONT_BODY_PATH_1, 22);
+    {
+        char shared_path[256];
+        int shared_size = 22;
+        if (physics_sim_shared_font_resolve_menu_body(shared_path, sizeof(shared_path), &shared_size)) {
+            ctx->font = TTF_OpenFont(shared_path, shared_size);
+        }
+    }
     if (!ctx->font) {
-        ctx->font = TTF_OpenFont(FONT_BODY_PATH_2, 22);
+        ctx->font = TTF_OpenFont(FONT_BODY_PATH_1, 22);
+        if (!ctx->font) {
+            ctx->font = TTF_OpenFont(FONT_BODY_PATH_2, 22);
+        }
     }
     if (!ctx->font) {
         fprintf(stderr, "Failed to open body font: %s\n", TTF_GetError());
     }
 
-    ctx->font_small = TTF_OpenFont(FONT_BODY_PATH_1, 18);
+    {
+        char shared_path[256];
+        int shared_size = 18;
+        if (physics_sim_shared_font_resolve_menu_small(shared_path, sizeof(shared_path), &shared_size)) {
+            ctx->font_small = TTF_OpenFont(shared_path, shared_size);
+        }
+    }
     if (!ctx->font_small) {
-        ctx->font_small = TTF_OpenFont(FONT_BODY_PATH_2, 18);
+        ctx->font_small = TTF_OpenFont(FONT_BODY_PATH_1, 18);
+        if (!ctx->font_small) {
+            ctx->font_small = TTF_OpenFont(FONT_BODY_PATH_2, 18);
+        }
     }
 
     return true;
@@ -85,6 +132,7 @@ bool menu_create_window(SceneMenuInteraction *ctx) {
 
 void menu_destroy_window(SceneMenuInteraction *ctx) {
     if (!ctx) return;
+    physics_sim_shared_theme_save_persisted();
     if (ctx->font_title) {
         TTF_CloseFont(ctx->font_title);
         ctx->font_title = NULL;

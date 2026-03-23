@@ -6,8 +6,25 @@
 #include "app/editor/scene_editor.h"
 #include "app/menu/menu_render.h"
 #include "app/menu/menu_state.h"
+#include "app/menu/shared_theme_font_adapter.h"
 #include "app/structural/structural_preset_editor.h"
 #include "vk_renderer.h"
+
+static void apply_shared_theme_palette(void) {
+    PhysicsSimMenuThemePalette shared_palette = {0};
+    MenuThemePalette menu_palette;
+    if (!physics_sim_shared_theme_resolve_menu_palette(&shared_palette)) {
+        return;
+    }
+    menu_palette.background = shared_palette.background_fill;
+    menu_palette.panel = shared_palette.panel_fill;
+    menu_palette.text = shared_palette.text_primary;
+    menu_palette.text_dim = shared_palette.text_muted;
+    menu_palette.accent = shared_palette.accent_primary;
+    menu_palette.button_bg = shared_palette.button_fill;
+    menu_palette.button_bg_active = shared_palette.button_active_fill;
+    menu_set_theme_palette(&menu_palette);
+}
 
 void menu_pointer_up(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
@@ -314,13 +331,29 @@ void menu_wheel(void *user, const InputWheelState *wheel) {
 
 void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
-    (void)mod;
+    bool ctrl_or_cmd = (mod & KMOD_CTRL) != 0 || (mod & KMOD_GUI) != 0;
+    bool shift = (mod & KMOD_SHIFT) != 0;
     if (!ctx) return;
     if (ctx->headless_running) {
         if (key == SDLK_ESCAPE) {
             ctx->headless_run_requested = false;
             ctx->headless_running = false;
             menu_set_status(ctx, "Headless run canceled.", true);
+        }
+        return;
+    }
+
+    if (ctrl_or_cmd && shift && key == SDLK_t) {
+        if (physics_sim_shared_theme_cycle_next()) {
+            physics_sim_shared_theme_save_persisted();
+            apply_shared_theme_palette();
+        }
+        return;
+    }
+    if (ctrl_or_cmd && shift && key == SDLK_y) {
+        if (physics_sim_shared_theme_cycle_prev()) {
+            physics_sim_shared_theme_save_persisted();
+            apply_shared_theme_palette();
         }
         return;
     }

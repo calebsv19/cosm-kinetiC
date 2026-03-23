@@ -609,6 +609,11 @@ bool renderer_sdl_set_kit_viz_pressure_enabled(bool enabled) {
     return g_use_kit_viz_pressure;
 }
 
+bool renderer_sdl_toggle_kit_viz_pressure(void) {
+    g_use_kit_viz_pressure = !g_use_kit_viz_pressure;
+    return g_use_kit_viz_pressure;
+}
+
 bool renderer_sdl_kit_viz_pressure_enabled(void) {
     return g_use_kit_viz_pressure;
 }
@@ -622,6 +627,11 @@ bool renderer_sdl_set_kit_viz_vorticity_enabled(bool enabled) {
     return g_use_kit_viz_vorticity;
 }
 
+bool renderer_sdl_toggle_kit_viz_vorticity(void) {
+    g_use_kit_viz_vorticity = !g_use_kit_viz_vorticity;
+    return g_use_kit_viz_vorticity;
+}
+
 bool renderer_sdl_kit_viz_vorticity_enabled(void) {
     return g_use_kit_viz_vorticity;
 }
@@ -632,6 +642,11 @@ bool renderer_sdl_vorticity_using_kit_viz(void) {
 
 bool renderer_sdl_set_kit_viz_particles_enabled(bool enabled) {
     g_use_kit_viz_particles = enabled;
+    return g_use_kit_viz_particles;
+}
+
+bool renderer_sdl_toggle_kit_viz_particles(void) {
+    g_use_kit_viz_particles = !g_use_kit_viz_particles;
     return g_use_kit_viz_particles;
 }
 

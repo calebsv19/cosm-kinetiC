@@ -54,13 +54,19 @@ bool input_poll_events(InputCommands *out,
                 break;
             case SDLK_v:
                 if (bus) {
-                    Command cmd = {.type = COMMAND_TOGGLE_VORTICITY};
+                    Command cmd = {
+                        .type = (mod & KMOD_SHIFT)
+                                    ? COMMAND_TOGGLE_KIT_VIZ_VORTICITY
+                                    : COMMAND_TOGGLE_VORTICITY};
                     command_bus_push(bus, &cmd);
                 }
                 break;
             case SDLK_b:
                 if (bus) {
-                    Command cmd = {.type = COMMAND_TOGGLE_PRESSURE};
+                    Command cmd = {
+                        .type = (mod & KMOD_SHIFT)
+                                    ? COMMAND_TOGGLE_KIT_VIZ_PRESSURE
+                                    : COMMAND_TOGGLE_PRESSURE};
                     command_bus_push(bus, &cmd);
                 }
                 break;
@@ -75,7 +81,10 @@ bool input_poll_events(InputCommands *out,
                 break;
             case SDLK_l:
                 if (bus) {
-                    Command cmd = {.type = COMMAND_TOGGLE_PARTICLE_FLOW};
+                    Command cmd = {
+                        .type = (mod & KMOD_SHIFT)
+                                    ? COMMAND_TOGGLE_KIT_VIZ_PARTICLES
+                                    : COMMAND_TOGGLE_PARTICLE_FLOW};
                     command_bus_push(bus, &cmd);
                 }
                 break;

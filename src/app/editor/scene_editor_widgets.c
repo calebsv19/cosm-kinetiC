@@ -1,4 +1,5 @@
 #include "app/editor/scene_editor_widgets.h"
+#include "app/menu/menu_render.h"
 
 #include <SDL2/SDL_ttf.h>
 
@@ -8,10 +9,17 @@ static SDL_Color COLOR_PANEL     = {32, 36, 40, 255};
 static SDL_Color COLOR_TEXT      = {245, 247, 250, 255};
 static SDL_Color COLOR_TEXT_DIM  = {190, 198, 209, 255};
 
+static void refresh_widget_theme(void) {
+    COLOR_PANEL = menu_color_panel();
+    COLOR_TEXT = menu_color_text();
+    COLOR_TEXT_DIM = menu_color_text_dim();
+}
+
 void scene_editor_draw_button(SDL_Renderer *renderer,
                               const EditorButton *button,
                               TTF_Font *font) {
     if (!renderer || !button || !font) return;
+    refresh_widget_theme();
     SDL_Color fill = button->enabled ? COLOR_PANEL : (SDL_Color){25, 28, 32, 255};
     SDL_SetRenderDrawColor(renderer, fill.r, fill.g, fill.b, fill.a);
     SDL_RenderFillRect(renderer, &button->rect);
@@ -42,6 +50,7 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
                                      const NumericField *field,
                                      const FluidEmitter *selected_emitter) {
     if (!renderer || !font || !field) return;
+    refresh_widget_theme();
     SDL_SetRenderDrawColor(renderer, COLOR_PANEL.r, COLOR_PANEL.g, COLOR_PANEL.b, 255);
     SDL_RenderFillRect(renderer, &field->rect);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);

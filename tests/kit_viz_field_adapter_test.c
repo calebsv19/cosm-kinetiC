@@ -109,13 +109,40 @@ static void test_polyline_render(void) {
     expect(segs[0].x0 == 0.0f && segs[0].x1 == 1.0f, "expected first segment geometry");
 }
 
+static void test_polyline_min_points(void) {
+    const float xs[1] = {1.0f};
+    const float ys[1] = {2.0f};
+    PhysicsKitVizVectorSegment segs[1];
+    size_t count = 123;
+    PhysicsKitVizPolylineRequest req = {
+        .xs = xs,
+        .ys = ys,
+        .point_count = 1,
+        .out_segments = segs,
+        .max_segments = 1,
+        .out_segment_count = &count
+    };
+    PhysicsKitVizPolylineResult r = physics_kit_viz_build_polyline_ex(&req);
+    expect(r == PHYSICS_KIT_VIZ_POLYLINE_RENDERED,
+           "expected polyline success for point_count < 2");
+    expect(count == 0, "expected zero segments for point_count < 2");
+}
+
+static void test_scalar_heatmap_invalid(void) {
+    PhysicsKitVizScalarHeatmapResult r = physics_kit_viz_build_scalar_heatmap_ex(NULL);
+    expect(r == PHYSICS_KIT_VIZ_SCALAR_HEATMAP_INVALID_REQUEST,
+           "expected invalid scalar heatmap request for null");
+}
+
 int main(void) {
     test_density_invalid();
     test_density_render();
     test_vectors_invalid();
     test_vectors_render();
     test_scalar_heatmap_render();
+    test_scalar_heatmap_invalid();
     test_polyline_render();
+    test_polyline_min_points();
     puts("kit_viz_field_adapter_test: success");
     return 0;
 }

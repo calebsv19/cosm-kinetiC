@@ -69,12 +69,15 @@ bool renderer_sdl_velocity_using_kit_viz(void);
 bool renderer_sdl_set_kit_viz_pressure_enabled(bool enabled);
 bool renderer_sdl_kit_viz_pressure_enabled(void);
 bool renderer_sdl_pressure_using_kit_viz(void);
+bool renderer_sdl_toggle_kit_viz_pressure(void);
 bool renderer_sdl_set_kit_viz_vorticity_enabled(bool enabled);
 bool renderer_sdl_kit_viz_vorticity_enabled(void);
 bool renderer_sdl_vorticity_using_kit_viz(void);
+bool renderer_sdl_toggle_kit_viz_vorticity(void);
 bool renderer_sdl_set_kit_viz_particles_enabled(bool enabled);
 bool renderer_sdl_kit_viz_particles_enabled(void);
 bool renderer_sdl_particles_using_kit_viz(void);
+bool renderer_sdl_toggle_kit_viz_particles(void);
 
 static inline void renderer_sdl_draw(const SceneState *scene,
                                      const RendererHudInfo *hud) {

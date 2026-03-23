@@ -1,6 +1,7 @@
 #include "app/editor/scene_editor_panel.h"
 #include "app/editor/scene_editor_canvas.h"
 #include "app/editor/scene_editor_model.h"
+#include "app/menu/menu_render.h"
 
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
@@ -14,6 +15,25 @@ static SDL_Color COLOR_TEXT      = {245, 247, 250, 255};
 static SDL_Color COLOR_TEXT_DIM  = {190, 198, 209, 255};
 static SDL_Color COLOR_FIELD_ACTIVE = {24, 26, 33, 255};
 static SDL_Color COLOR_FIELD_BORDER = {90, 170, 255, 255};
+
+static SDL_Color lighten_color(SDL_Color color, float factor) {
+    if (factor < 0.0f) factor = 0.0f;
+    if (factor > 1.0f) factor = 1.0f;
+    SDL_Color result = color;
+    result.r = (Uint8)(color.r + (Uint8)((255 - color.r) * factor));
+    result.g = (Uint8)(color.g + (Uint8)((255 - color.g) * factor));
+    result.b = (Uint8)(color.b + (Uint8)((255 - color.b) * factor));
+    return result;
+}
+
+static void refresh_panel_theme(void) {
+    COLOR_BG = menu_color_bg();
+    COLOR_PANEL = menu_color_panel();
+    COLOR_TEXT = menu_color_text();
+    COLOR_TEXT_DIM = menu_color_text_dim();
+    COLOR_FIELD_BORDER = menu_color_accent();
+    COLOR_FIELD_ACTIVE = lighten_color(COLOR_PANEL, 0.08f);
+}
 
 static void draw_text(SDL_Renderer *renderer,
                       TTF_Font *font,
@@ -38,6 +58,7 @@ static void draw_text(SDL_Renderer *renderer,
 
 static void draw_object_list(SceneEditorState *state) {
     if (!state) return;
+    refresh_panel_theme();
     int row_h = state->list_view.row_height;
     int x = state->list_rect.x + 6;
     int y_start = state->list_rect.y - (int)editor_list_view_offset(&state->list_view);
@@ -49,9 +70,11 @@ static void draw_object_list(SceneEditorState *state) {
         if (y + row_h < state->list_rect.y || y > state->list_rect.y + state->list_rect.h) continue;
         SDL_Color bg = {0, 0, 0, 0};
         if (i == state->selected_object) {
-            bg = (SDL_Color){70, 120, 200, 80};
+            SDL_Color accent = menu_color_accent();
+            bg = (SDL_Color){accent.r, accent.g, accent.b, 80};
         } else if (i == state->hover_object) {
-            bg = (SDL_Color){90, 100, 120, 60};
+            SDL_Color hover = lighten_color(COLOR_PANEL, 0.12f);
+            bg = (SDL_Color){hover.r, hover.g, hover.b, 90};
         }
         if (bg.a > 0) {
             SDL_Rect r = {state->list_rect.x + 2, y + 2, state->list_rect.w - 14, row_h - 4};
@@ -69,8 +92,10 @@ static void draw_object_list(SceneEditorState *state) {
                  (em_idx >= 0) ? " (Emitter)" : "");
         draw_text(state->renderer, state->font_small, line, x, y + 6, col);
     }
-    SDL_Color track = {20, 20, 22, 180};
-    SDL_Color thumb = {90, 170, 255, 220};
+    SDL_Color track = COLOR_BG;
+    track.a = 180;
+    SDL_Color thumb = menu_color_accent();
+    thumb.a = 220;
     editor_list_view_draw(state->renderer, &state->list_view, track, thumb);
 }
 
@@ -141,6 +166,7 @@ static void draw_hover_tooltip(SceneEditorState *state) {
 
 static void draw_import_list(SceneEditorState *state) {
     if (!state) return;
+    refresh_panel_theme();
     int row_h = state->import_view.row_height;
     int x = state->import_rect.x + 6;
     int y_start = state->import_rect.y - (int)editor_list_view_offset(&state->import_view);
@@ -151,9 +177,11 @@ static void draw_import_list(SceneEditorState *state) {
         if (y + row_h < state->import_rect.y || y > state->import_rect.y + state->import_rect.h) continue;
         SDL_Color bg = {0, 0, 0, 0};
         if (i == state->selected_import_row) {
-            bg = (SDL_Color){70, 120, 200, 80};
+            SDL_Color accent = menu_color_accent();
+            bg = (SDL_Color){accent.r, accent.g, accent.b, 80};
         } else if (i == state->hover_import_row) {
-            bg = (SDL_Color){90, 100, 120, 60};
+            SDL_Color hover = lighten_color(COLOR_PANEL, 0.12f);
+            bg = (SDL_Color){hover.r, hover.g, hover.b, 90};
         }
         if (bg.a > 0) {
             SDL_Rect r = {state->import_rect.x + 2, y + 2, state->import_rect.w - 14, row_h - 4};
@@ -163,8 +191,10 @@ static void draw_import_list(SceneEditorState *state) {
         const char *label = state->import_files[i][0] ? state->import_files[i] : "(empty)";
         draw_text(state->renderer, state->font_small, label, x, y + 6, text);
     }
-    SDL_Color track = {20, 20, 22, 180};
-    SDL_Color thumb = {90, 170, 255, 220};
+    SDL_Color track = COLOR_BG;
+    track.a = 180;
+    SDL_Color thumb = menu_color_accent();
+    thumb.a = 220;
     editor_list_view_draw(state->renderer, &state->import_view, track, thumb);
 }
 
@@ -241,6 +271,7 @@ static void draw_dimension_fields(SceneEditorState *state) {
 
 void scene_editor_panel_draw(SceneEditorState *state) {
     if (!state || !state->renderer) return;
+    refresh_panel_theme();
     SDL_Renderer *renderer = state->renderer;
     SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
     int win_w = 0;
@@ -351,7 +382,7 @@ void scene_editor_panel_draw(SceneEditorState *state) {
 
     SDL_SetRenderDrawColor(renderer, COLOR_PANEL.r, COLOR_PANEL.g, COLOR_PANEL.b, 255);
     SDL_RenderFillRect(renderer, &state->panel_rect);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
+    SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 200);
     SDL_RenderDrawRect(renderer, &state->panel_rect);
     draw_dimension_fields(state);
 
@@ -383,15 +414,17 @@ void scene_editor_panel_draw(SceneEditorState *state) {
 
     SDL_Rect list_rect = state->list_rect;
     SDL_Rect import_rect = state->import_rect;
-    SDL_SetRenderDrawColor(renderer, 28, 30, 36, 255);
+    SDL_Color list_fill = lighten_color(COLOR_PANEL, 0.04f);
+    SDL_SetRenderDrawColor(renderer, list_fill.r, list_fill.g, list_fill.b, 255);
     SDL_RenderFillRect(renderer, &list_rect);
-    SDL_SetRenderDrawColor(renderer, 18, 18, 22, 255);
+    SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
     SDL_RenderDrawRect(renderer, &list_rect);
 
     if (state->showing_import_picker) {
-        SDL_SetRenderDrawColor(renderer, 34, 36, 44, 255);
+        SDL_Color import_fill = lighten_color(COLOR_PANEL, 0.08f);
+        SDL_SetRenderDrawColor(renderer, import_fill.r, import_fill.g, import_fill.b, 255);
         SDL_RenderFillRect(renderer, &import_rect);
-        SDL_SetRenderDrawColor(renderer, 18, 18, 22, 255);
+        SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
         SDL_RenderDrawRect(renderer, &import_rect);
         draw_text(renderer, state->font_small, "Import files", import_rect.x, import_rect.y - 22, COLOR_TEXT_DIM);
         draw_import_list(state);

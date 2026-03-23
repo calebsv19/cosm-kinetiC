@@ -19,7 +19,7 @@ static TTF_Font *load_hud_font(void) {
     };
 
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
-        TTF_Font *font = TTF_OpenFont(paths[i], 14);
+        TTF_Font *font = TTF_OpenFont(paths[i], 12);
         if (font) {
             return font;
         }
@@ -67,112 +67,129 @@ static void render_hud_text_line(const char *text,
     *h = (*surface)->h;
 }
 
+static void append_token(char *dst, size_t dst_size, const char *token) {
+    if (!dst || dst_size == 0 || !token || !token[0]) return;
+    size_t len = strlen(dst);
+    if (len >= dst_size - 1) return;
+    if (len > 0) {
+        snprintf(dst + len, dst_size - len, " %s", token);
+    } else {
+        snprintf(dst + len, dst_size - len, "%s", token);
+    }
+}
+
 void hud_overlay_draw(const RendererHudInfo *hud) {
     if (!hud || !g_hud_renderer || !g_hud_font) return;
 
-    const char *preset_name = (hud->preset_name && hud->preset_name[0])
-                                  ? hud->preset_name
-                                  : "Preset";
-    char preset_line[128];
-    snprintf(preset_line, sizeof(preset_line),
-             "Preset: %s (%s)",
-             preset_name,
-             hud->preset_is_custom ? "custom" : "built-in");
-    char grid_line[64];
-    snprintf(grid_line, sizeof(grid_line), "Grid: %dx%d", hud->grid_w, hud->grid_h);
-    char window_line[64];
-    snprintf(window_line, sizeof(window_line), "Window: %dx%d", hud->window_w, hud->window_h);
-    char mode_line[64];
+    const char *mode_name = "Box";
     if (hud->sim_mode == SIM_MODE_WIND_TUNNEL) {
-        snprintf(mode_line, sizeof(mode_line),
-                 "Mode: Wind (inflow %.1f)",
-                 hud->tunnel_inflow_speed);
+        mode_name = "Wind";
     } else if (hud->sim_mode == SIM_MODE_STRUCTURAL) {
-        snprintf(mode_line, sizeof(mode_line), "Mode: Structural");
-    } else {
-        snprintf(mode_line, sizeof(mode_line), "Mode: Box");
+        mode_name = "Structural";
     }
+
+    char status_line[96];
+    snprintf(status_line, sizeof(status_line), "%s | %s | Grid %dx%d",
+             hud->paused ? "Paused" : "Run",
+             mode_name,
+             hud->grid_w, hud->grid_h);
+
+    char preset_line[128];
+    snprintf(preset_line, sizeof(preset_line), "Preset: %s",
+             (hud->preset_name && hud->preset_name[0]) ? hud->preset_name : "Preset");
+
+    char wind_line[64];
+    if (hud->sim_mode == SIM_MODE_WIND_TUNNEL) {
+        snprintf(wind_line, sizeof(wind_line), "Inflow %.1f", hud->tunnel_inflow_speed);
+    } else {
+        wind_line[0] = '\0';
+    }
+
     char quality_line[64];
     snprintf(quality_line, sizeof(quality_line), "Quality: %s",
              (hud->quality_name && hud->quality_name[0]) ? hud->quality_name : "Custom");
+
     char solver_line[64];
     snprintf(solver_line, sizeof(solver_line),
              "Solver: iter %d, substeps %d",
              hud->solver_iterations,
              hud->physics_substeps);
-    char vorticity_line[64];
-    snprintf(vorticity_line, sizeof(vorticity_line),
-             "Vorticity (V): %s",
-             hud->vorticity_enabled ? "On" : "Off");
-    char pressure_line[64];
-    snprintf(pressure_line, sizeof(pressure_line),
-             "Pressure (B): %s",
-             hud->pressure_enabled ? "On" : "Off");
-    char velocity_line[64];
-    snprintf(velocity_line, sizeof(velocity_line),
-             "Velocity (S / Shift+S mode): %s (%s)",
-             hud->velocity_overlay_enabled ? "On" : "Off",
-             hud->velocity_fixed_length ? "Fixed" : "Magnitude");
-    char particles_line[64];
-    snprintf(particles_line, sizeof(particles_line),
-             "Particles (L): %s",
-             hud->particle_overlay_enabled ? "On" : "Off");
-    char density_path_line[72];
-    snprintf(density_path_line, sizeof(density_path_line),
-             "Density Path (K): %s [%s]",
-             hud->kit_viz_density_enabled ? "kit_viz" : "legacy",
-             hud->kit_viz_density_active ? "active" : "fallback");
-    char velocity_path_line[72];
-    snprintf(velocity_path_line, sizeof(velocity_path_line),
-             "Velocity Path (J): %s [%s]",
-             hud->kit_viz_velocity_enabled ? "kit_viz" : "legacy",
-             hud->kit_viz_velocity_active ? "active" : "fallback");
-    char pressure_path_line[72];
-    snprintf(pressure_path_line, sizeof(pressure_path_line),
-             "Pressure Path: %s [%s]",
-             hud->kit_viz_pressure_enabled ? "kit_viz" : "legacy",
-             hud->kit_viz_pressure_active ? "active" : "fallback");
-    char vorticity_path_line[72];
-    snprintf(vorticity_path_line, sizeof(vorticity_path_line),
-             "Vorticity Path: %s [%s]",
-             hud->kit_viz_vorticity_enabled ? "kit_viz" : "legacy",
-             hud->kit_viz_vorticity_active ? "active" : "fallback");
-    char particles_path_line[72];
-    snprintf(particles_path_line, sizeof(particles_path_line),
-             "Particles Path: %s [%s]",
-             hud->kit_viz_particles_enabled ? "kit_viz" : "legacy",
-             hud->kit_viz_particles_active ? "active" : "fallback");
-    char gravity_line[64];
-    snprintf(gravity_line, sizeof(gravity_line),
-             "Gravity (G): %s",
-             hud->objects_gravity_enabled ? "On" : "Off");
-    char status_line[32];
-    snprintf(status_line, sizeof(status_line),
-             "Status: %s", hud->paused ? "Paused" : "Running");
-    const char *hint_line =
-        "P pause | C clear | E snapshot | K/J kit_viz";
+
+    char overlays_line[160] = {0};
+    if (hud->vorticity_enabled) append_token(overlays_line, sizeof(overlays_line), "Vort(V)");
+    if (hud->pressure_enabled) append_token(overlays_line, sizeof(overlays_line), "Press(B)");
+    if (hud->velocity_overlay_enabled) append_token(overlays_line, sizeof(overlays_line), "Vel(S)");
+    if (hud->particle_overlay_enabled) append_token(overlays_line, sizeof(overlays_line), "Flow(L)");
+
+    char velocity_mode_line[72];
+    if (hud->velocity_overlay_enabled) {
+        snprintf(velocity_mode_line, sizeof(velocity_mode_line),
+                 "Vel mode: %s (Shift+S)",
+                 hud->velocity_fixed_length ? "Fixed" : "Magnitude");
+    } else {
+        velocity_mode_line[0] = '\0';
+    }
+
+    char path_warn_line[160] = {0};
+    if (!hud->kit_viz_density_enabled || !hud->kit_viz_density_active) {
+        append_token(path_warn_line, sizeof(path_warn_line),
+                     hud->kit_viz_density_enabled ? "Dens:fb(K)" : "Dens:legacy(K)");
+    }
+    if (hud->velocity_overlay_enabled &&
+        (!hud->kit_viz_velocity_enabled || !hud->kit_viz_velocity_active)) {
+        append_token(path_warn_line, sizeof(path_warn_line),
+                     hud->kit_viz_velocity_enabled ? "Vel:fb(J)" : "Vel:legacy(J)");
+    }
+    if (hud->pressure_enabled &&
+        (!hud->kit_viz_pressure_enabled || !hud->kit_viz_pressure_active)) {
+        append_token(path_warn_line, sizeof(path_warn_line),
+                     hud->kit_viz_pressure_enabled ? "P:fb(S+B)" : "P:legacy(S+B)");
+    }
+    if (hud->vorticity_enabled &&
+        (!hud->kit_viz_vorticity_enabled || !hud->kit_viz_vorticity_active)) {
+        append_token(path_warn_line, sizeof(path_warn_line),
+                     hud->kit_viz_vorticity_enabled ? "V:fb(S+V)" : "V:legacy(S+V)");
+    }
+    if (hud->particle_overlay_enabled &&
+        (!hud->kit_viz_particles_enabled || !hud->kit_viz_particles_active)) {
+        append_token(path_warn_line, sizeof(path_warn_line),
+                     hud->kit_viz_particles_enabled ? "L:fb(S+L)" : "L:legacy(S+L)");
+    }
+
+    char gravity_line[48];
+    if (!hud->objects_gravity_enabled) {
+        snprintf(gravity_line, sizeof(gravity_line), "Obj gravity: Off (G)");
+    } else {
+        gravity_line[0] = '\0';
+    }
+
+    const char *hint_line_a = "Keys: P/C/E Esc 1/2  V/B/S/L  Shift+S";
+    const char *hint_line_b = "Paths: K/J  Shift+V/B/L  G grav  H elastic";
 
     enum { MAX_HUD_LINES = 32 };
     const char *lines[MAX_HUD_LINES];
     size_t line_count = 0;
-    lines[line_count++] = preset_line;
-    lines[line_count++] = grid_line;
-    lines[line_count++] = window_line;
-    lines[line_count++] = mode_line;
-    lines[line_count++] = quality_line;
-    lines[line_count++] = solver_line;
-    lines[line_count++] = vorticity_line;
-    lines[line_count++] = pressure_line;
-    lines[line_count++] = velocity_line;
-    lines[line_count++] = particles_line;
-    lines[line_count++] = density_path_line;
-    lines[line_count++] = velocity_path_line;
-    lines[line_count++] = pressure_path_line;
-    lines[line_count++] = vorticity_path_line;
-    lines[line_count++] = particles_path_line;
-    lines[line_count++] = gravity_line;
     lines[line_count++] = status_line;
-    lines[line_count++] = hint_line;
+    lines[line_count++] = preset_line;
+    if (wind_line[0]) lines[line_count++] = wind_line;
+    lines[line_count++] = quality_line;
+    if (hud->paused) lines[line_count++] = solver_line;
+    if (overlays_line[0]) {
+        static char overlays_buf[176];
+        snprintf(overlays_buf, sizeof(overlays_buf), "Overlays:%s", overlays_line);
+        lines[line_count++] = overlays_buf;
+    }
+    if (velocity_mode_line[0]) lines[line_count++] = velocity_mode_line;
+    if (path_warn_line[0]) {
+        static char path_warn_buf[176];
+        snprintf(path_warn_buf, sizeof(path_warn_buf), "Path alerts:%s", path_warn_line);
+        lines[line_count++] = path_warn_buf;
+    }
+    if (gravity_line[0]) lines[line_count++] = gravity_line;
+    lines[line_count++] = hint_line_a;
+    if (hud->paused || path_warn_line[0] || overlays_line[0]) {
+        lines[line_count++] = hint_line_b;
+    }
 
     SDL_Surface *surfaces[MAX_HUD_LINES];
     int widths[MAX_HUD_LINES];
@@ -203,8 +220,8 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         return;
     }
 
-    const int padding = 8;
-    const int spacing = 2;
+    const int padding = 6;
+    const int spacing = 1;
     total_h += spacing * (count - 1);
 
     SDL_Rect panel = {
@@ -214,7 +231,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         .h = total_h + padding * 2
     };
 
-    SDL_SetRenderDrawColor(g_hud_renderer, 30, 35, 40, 16);
+    SDL_SetRenderDrawColor(g_hud_renderer, 20, 24, 28, 12);
     SDL_RenderFillRect(g_hud_renderer, &panel);
     SDL_SetRenderDrawColor(g_hud_renderer, 255, 255, 255, 60);
     SDL_RenderDrawRect(g_hud_renderer, &panel);

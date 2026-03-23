@@ -1,9 +1,11 @@
 #include "render/debug_draw_objects.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 #include "app/shape_lookup.h"
 #include "geo/shape_asset.h"
+#include "kit_viz.h"
 #include "render/import_project.h"
 
 #ifndef M_PI
@@ -12,18 +14,76 @@
 
 #define OBJECT_BORDER_THICKNESS 2
 
+static float *g_polyline_xs = NULL;
+static float *g_polyline_ys = NULL;
+static KitVizVecSegment *g_polyline_segments = NULL;
+static size_t g_polyline_capacity = 0;
+
 static float safe_scale(int target, int source) {
     if (source <= 0) return 1.0f;
     if (target <= 0) return 1.0f;
     return (float)target / (float)source;
 }
 
+static bool ensure_polyline_buffers(size_t point_count) {
+    if (point_count < 2) return false;
+    if (point_count <= g_polyline_capacity) return true;
+
+    float *new_xs = (float *)realloc(g_polyline_xs, point_count * sizeof(float));
+    if (!new_xs) return false;
+    g_polyline_xs = new_xs;
+
+    float *new_ys = (float *)realloc(g_polyline_ys, point_count * sizeof(float));
+    if (!new_ys) return false;
+    g_polyline_ys = new_ys;
+
+    size_t seg_count = point_count - 1u;
+    KitVizVecSegment *new_segments = (KitVizVecSegment *)realloc(
+        g_polyline_segments, seg_count * sizeof(KitVizVecSegment));
+    if (!new_segments) return false;
+    g_polyline_segments = new_segments;
+    g_polyline_capacity = point_count;
+    return true;
+}
+
 static void draw_polyline(SDL_Renderer *renderer, const SDL_Point *pts, int count) {
     if (!renderer || !pts || count < 2) return;
-    for (int i = 1; i < count; ++i) {
+    if (!ensure_polyline_buffers((size_t)count)) {
+        for (int i = 1; i < count; ++i) {
+            SDL_RenderDrawLine(renderer,
+                               pts[i - 1].x, pts[i - 1].y,
+                               pts[i].x, pts[i].y);
+        }
+        return;
+    }
+
+    for (int i = 0; i < count; ++i) {
+        g_polyline_xs[i] = (float)pts[i].x;
+        g_polyline_ys[i] = (float)pts[i].y;
+    }
+
+    size_t segment_count = 0;
+    CoreResult r = kit_viz_build_polyline_segments(g_polyline_xs,
+                                                   g_polyline_ys,
+                                                   (uint32_t)count,
+                                                   g_polyline_segments,
+                                                   (size_t)count - 1u,
+                                                   &segment_count);
+    if (r.code != CORE_OK) {
+        for (int i = 1; i < count; ++i) {
+            SDL_RenderDrawLine(renderer,
+                               pts[i - 1].x, pts[i - 1].y,
+                               pts[i].x, pts[i].y);
+        }
+        return;
+    }
+
+    for (size_t i = 0; i < segment_count; ++i) {
         SDL_RenderDrawLine(renderer,
-                           pts[i - 1].x, pts[i - 1].y,
-                           pts[i].x, pts[i].y);
+                           (int)lroundf(g_polyline_segments[i].x0),
+                           (int)lroundf(g_polyline_segments[i].y0),
+                           (int)lroundf(g_polyline_segments[i].x1),
+                           (int)lroundf(g_polyline_segments[i].y1));
     }
 }
 

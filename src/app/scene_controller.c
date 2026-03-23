@@ -73,6 +73,15 @@ static bool handle_scene_command(const Command *cmd, void *user_data) {
     case COMMAND_TOGGLE_KIT_VIZ_VELOCITY:
         renderer_sdl_toggle_kit_viz_velocity();
         return true;
+    case COMMAND_TOGGLE_KIT_VIZ_PRESSURE:
+        renderer_sdl_toggle_kit_viz_pressure();
+        return true;
+    case COMMAND_TOGGLE_KIT_VIZ_VORTICITY:
+        renderer_sdl_toggle_kit_viz_vorticity();
+        return true;
+    case COMMAND_TOGGLE_KIT_VIZ_PARTICLES:
+        renderer_sdl_toggle_kit_viz_particles();
+        return true;
     default:
         return scene_handle_command(ctx->scene, cmd);
     }

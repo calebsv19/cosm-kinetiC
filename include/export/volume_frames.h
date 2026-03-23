@@ -28,6 +28,13 @@ struct SceneState;
 bool volume_frames_write(const struct SceneState *scene,
                          uint64_t frame_index);
 
+// Build a minimal CoreDataset JSON sidecar from a .vf2d frame header.
+// If dataset_json_path is NULL/empty, the output path defaults to
+// "<vf2d stem>.dataset.json". manifest_path is optional metadata.
+bool volume_frame_write_core_dataset_json(const char *vf2d_path,
+                                          const char *dataset_json_path,
+                                          const char *manifest_path);
+
 typedef struct VolumeFrameInfo {
     uint32_t version;
     uint32_t grid_w;

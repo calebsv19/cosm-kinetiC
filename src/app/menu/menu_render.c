@@ -12,6 +12,70 @@ static SDL_Color COLOR_ACCENT   = {90, 170, 255, 255};
 static SDL_Color COLOR_BUTTON_BG = {45, 50, 58, 255};
 static SDL_Color COLOR_BUTTON_BG_ACTIVE = {60, 120, 200, 255};
 
+static int color_luma(SDL_Color color) {
+    return (299 * (int)color.r + 587 * (int)color.g + 114 * (int)color.b) / 1000;
+}
+
+static int color_contrast_gap(SDL_Color a, SDL_Color b) {
+    int gap = color_luma(a) - color_luma(b);
+    return gap < 0 ? -gap : gap;
+}
+
+static Uint8 mix_u8(Uint8 a, Uint8 b, int a_weight, int b_weight) {
+    int total = a_weight + b_weight;
+    if (total <= 0) return a;
+    return (Uint8)(((int)a * a_weight + (int)b * b_weight) / total);
+}
+
+static SDL_Color mix_color(SDL_Color a, SDL_Color b, int a_weight, int b_weight) {
+    return (SDL_Color){
+        mix_u8(a.r, b.r, a_weight, b_weight),
+        mix_u8(a.g, b.g, a_weight, b_weight),
+        mix_u8(a.b, b.b, a_weight, b_weight),
+        mix_u8(a.a, b.a, a_weight, b_weight)
+    };
+}
+
+static SDL_Color ensure_fill_contrast(SDL_Color fill,
+                                      SDL_Color preferred_text,
+                                      SDL_Color darker_anchor) {
+    if (color_contrast_gap(fill, preferred_text) >= 110) {
+        return fill;
+    }
+    if (color_luma(preferred_text) >= 150) {
+        return mix_color(fill, darker_anchor, 1, 2);
+    }
+    return mix_color(fill, (SDL_Color){240, 243, 247, fill.a}, 1, 2);
+}
+
+static SDL_Color choose_readable_text(SDL_Color background, SDL_Color preferred_text) {
+    if (color_contrast_gap(background, preferred_text) >= 110) {
+        return preferred_text;
+    }
+    if (color_luma(background) >= 150) {
+        return (SDL_Color){24, 28, 34, preferred_text.a ? preferred_text.a : 255};
+    }
+    return (SDL_Color){245, 247, 250, preferred_text.a ? preferred_text.a : 255};
+}
+
+static SDL_Color border_for_background(SDL_Color background) {
+    if (color_luma(background) >= 150) {
+        return (SDL_Color){48, 54, 62, 180};
+    }
+    return (SDL_Color){0, 0, 0, 180};
+}
+
+void menu_set_theme_palette(const MenuThemePalette *palette) {
+    if (!palette) return;
+    COLOR_BG = palette->background;
+    COLOR_PANEL = palette->panel;
+    COLOR_TEXT = choose_readable_text(COLOR_PANEL, palette->text);
+    COLOR_TEXT_DIM = choose_readable_text(COLOR_PANEL, palette->text_dim);
+    COLOR_ACCENT = ensure_fill_contrast(palette->accent, COLOR_TEXT, COLOR_PANEL);
+    COLOR_BUTTON_BG = ensure_fill_contrast(palette->button_bg, COLOR_TEXT, COLOR_PANEL);
+    COLOR_BUTTON_BG_ACTIVE = ensure_fill_contrast(palette->button_bg_active, COLOR_TEXT, COLOR_PANEL);
+}
+
 SDL_Rect menu_preset_list_rect(void) {
     SDL_Rect rect = {
         .x = PRESET_LIST_MARGIN_X,
@@ -68,24 +132,35 @@ void menu_draw_button(SDL_Renderer *renderer,
                       TTF_Font *font,
                       bool selected) {
     SDL_Color color = selected ? COLOR_BUTTON_BG_ACTIVE : COLOR_BUTTON_BG;
+    SDL_Color border = border_for_background(color);
+    SDL_Color text = choose_readable_text(color, COLOR_TEXT);
+    if (selected) {
+        color = ensure_fill_contrast(color, text, COLOR_PANEL);
+        border = border_for_background(color);
+        text = choose_readable_text(color, COLOR_TEXT);
+    }
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
     SDL_RenderFillRect(renderer, rect);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
+    SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, border.a);
     SDL_RenderDrawRect(renderer, rect);
-    menu_draw_text(renderer, font, label, rect->x + 12, rect->y + 14, COLOR_TEXT);
+    menu_draw_text(renderer, font, label, rect->x + 12, rect->y + 14, text);
 }
 
 void menu_draw_text_input(SDL_Renderer *renderer,
                           TTF_Font *font,
                           const SDL_Rect *rect,
                           const TextInputField *field) {
-    SDL_SetRenderDrawColor(renderer, 20, 22, 26, 250);
+    SDL_Color fill = ensure_fill_contrast(COLOR_BUTTON_BG, COLOR_TEXT, COLOR_PANEL);
+    SDL_Color border = ensure_fill_contrast(COLOR_ACCENT, COLOR_TEXT, COLOR_PANEL);
+    SDL_Color text_color = choose_readable_text(fill, COLOR_TEXT);
+    SDL_Color caret = choose_readable_text(fill, COLOR_TEXT);
+    SDL_SetRenderDrawColor(renderer, fill.r, fill.g, fill.b, 250);
     SDL_RenderFillRect(renderer, rect);
-    SDL_SetRenderDrawColor(renderer, COLOR_ACCENT.r, COLOR_ACCENT.g, COLOR_ACCENT.b, 255);
+    SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, 255);
     SDL_RenderDrawRect(renderer, rect);
 
-    const char *text = text_input_value(field);
-    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, text, COLOR_TEXT);
+    const char *value = text_input_value(field);
+    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, value, text_color);
     int text_w = 0;
     if (surf) {
         text_w = surf->w;
@@ -103,7 +178,7 @@ void menu_draw_text_input(SDL_Renderer *renderer,
     }
     if (field->caret_visible) {
         int caret_x = rect->x + 8 + text_w + 2;
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 220);
+        SDL_SetRenderDrawColor(renderer, caret.r, caret.g, caret.b, 220);
         SDL_RenderDrawLine(renderer, caret_x, rect->y + 8,
                            caret_x, rect->y + rect->h - 8);
     }
@@ -116,11 +191,18 @@ void menu_draw_toggle(SDL_Renderer *renderer,
                       bool enabled) {
     if (!renderer || !rect || !label || !font) return;
     SDL_Color fill = enabled ? COLOR_ACCENT : COLOR_PANEL;
+    SDL_Color text_color;
+    if (enabled) {
+        fill = ensure_fill_contrast(fill, COLOR_TEXT, COLOR_PANEL);
+    }
+    SDL_Color border = border_for_background(fill);
+    text_color = enabled
+                     ? choose_readable_text(fill, COLOR_TEXT)
+                     : choose_readable_text(fill, COLOR_TEXT_DIM);
     SDL_SetRenderDrawColor(renderer, fill.r, fill.g, fill.b, 255);
     SDL_RenderFillRect(renderer, rect);
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 160);
+    SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, border.a);
     SDL_RenderDrawRect(renderer, rect);
-    SDL_Color text_color = enabled ? COLOR_TEXT : COLOR_TEXT_DIM;
     menu_draw_text(renderer, font, label, rect->x + 10, rect->y + 10, text_color);
 }
 
@@ -168,12 +250,19 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
 
         if (!is_add_entry) {
             SDL_Color row_color = COLOR_PANEL;
+            SDL_Color border = border_for_background(row_color);
+            SDL_Color text_color = choose_readable_text(row_color, COLOR_TEXT);
             if (selected) row_color = COLOR_ACCENT;
             else if (hovered) row_color = lighten_color(COLOR_PANEL, 0.25f);
+            if (selected) {
+                row_color = ensure_fill_contrast(row_color, COLOR_TEXT, COLOR_PANEL);
+            }
+            border = border_for_background(row_color);
+            text_color = choose_readable_text(row_color, COLOR_TEXT);
 
             SDL_SetRenderDrawColor(renderer, row_color.r, row_color.g, row_color.b, 255);
             SDL_RenderFillRect(renderer, &row_rect);
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 140);
+            SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, border.a);
             SDL_RenderDrawRect(renderer, &row_rect);
 
             SDL_Rect label_rect = {
@@ -192,7 +281,7 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                                         ? slot->name
                                         : "Untitled Preset";
                 menu_draw_text(renderer, ctx->font, label,
-                               label_rect.x, label_rect.y, COLOR_TEXT);
+                               label_rect.x, label_rect.y, text_color);
             }
 
             SDL_Rect delete_rect = menu_preset_delete_button_rect(&row_rect);

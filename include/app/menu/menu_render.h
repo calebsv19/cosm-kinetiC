@@ -3,6 +3,18 @@
 
 #include "app/menu/menu_types.h"
 
+typedef struct MenuThemePalette {
+    SDL_Color background;
+    SDL_Color panel;
+    SDL_Color text;
+    SDL_Color text_dim;
+    SDL_Color accent;
+    SDL_Color button_bg;
+    SDL_Color button_bg_active;
+} MenuThemePalette;
+
+void menu_set_theme_palette(const MenuThemePalette *palette);
+
 SDL_Rect menu_preset_list_rect(void);
 void menu_update_scrollbar(SceneMenuInteraction *ctx);
 

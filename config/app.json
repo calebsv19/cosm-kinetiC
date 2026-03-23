@@ -4,8 +4,8 @@
     "height": 772
   },
   "grid": {
-    "width": 96,
-    "height": 96
+    "width": 256,
+    "height": 256
   },
   "simulation": {
     "mode": 0,
@@ -16,7 +16,7 @@
   "timing": {
     "min_dt": 0.006060606,
     "max_dt": 0.033333333,
-    "substeps": 4
+    "substeps": 3
   },
   "commands": {
     "max_per_frame": 256
@@ -26,7 +26,7 @@
     "viscosity": 0.000008,
     "density_decay": 0.050000,
     "buoyancy": 1.500000,
-    "solver_iterations": 32
+    "solver_iterations": 24
   },
   "render": {
     "blur_enabled": true,
