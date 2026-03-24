@@ -59,3 +59,7 @@ As of 2026-03-10 (Slice 4), pack+dataset parity validation is available via:
 - Overlays reuse that cached distance map for alpha falloff, which keeps the far-field uncluttered while rendering the high-contrast pressure/vorticity detail near objects.
 
 Adding new systems (particles, rigid bodies, tools, exporters, etc.) should follow this same layout: pair a header in `include/` with implementation under `src/` and describe the module in the directory-level README.
+
+## License
+
+This repository is licensed under Apache License 2.0. See `LICENSE`.
