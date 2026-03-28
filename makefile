@@ -218,7 +218,15 @@ SHAPE_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SHARED_S
 # =========================
 #  Top-level targets
 # =========================
-.PHONY: all run run-ide-theme run-daw-theme clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-kitviz-field-adapter test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+STABLE_TEST_TARGETS := \
+	test-manifest-to-trace-export \
+	test-vf2d-pack-dataset-parity \
+	test-kitviz-field-adapter
+
+LEGACY_TEST_TARGETS := \
+	test-shared-theme-font-adapter
+
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -371,6 +379,28 @@ run-ide-theme: $(TARGET)
 
 run-daw-theme: $(TARGET)
 	PHYSICS_SIM_USE_SHARED_THEME_FONT=1 PHYSICS_SIM_USE_SHARED_THEME=1 PHYSICS_SIM_USE_SHARED_FONT=1 PHYSICS_SIM_THEME_PRESET=daw_default PHYSICS_SIM_FONT_PRESET=daw_default ./$(TARGET)
+
+run-headless-smoke: all test-stable
+	@echo "physics_sim headless smoke passed (non-interactive)"
+
+visual-harness: $(TARGET)
+	@echo "visual harness binary ready: $(TARGET)"
+
+test-stable:
+	@$(MAKE) $(STABLE_TEST_TARGETS)
+	@echo "physics_sim stable test lane passed"
+
+test-legacy:
+	@set +e; \
+	fails=0; \
+	for t in $(LEGACY_TEST_TARGETS); do \
+		echo "[legacy] running $$t"; \
+		$(MAKE) $$t || fails=1; \
+	done; \
+	if [ $$fails -ne 0 ]; then \
+		echo "[legacy] one or more legacy tests failed"; \
+		exit 1; \
+	fi
 
 VIDEO_FPS ?= 30
 video:

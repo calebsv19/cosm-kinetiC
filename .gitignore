@@ -4,6 +4,9 @@ build/
 export/
 ide_files/
 timerhud/
+tmp/
+data/runtime/
+data/snapshots/
 vk_frame.ppm
 *.dSYM/
 /physics_sim
