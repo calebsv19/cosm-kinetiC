@@ -115,14 +115,52 @@ static void render_text(SDL_Renderer *renderer, TTF_Font *font,
     SDL_FreeSurface(surface);
 }
 
+static bool render_hud_line_limited(SDL_Renderer *renderer,
+                                    TTF_Font *font,
+                                    int x,
+                                    int *y,
+                                    int step,
+                                    int limit_y,
+                                    SDL_Color color,
+                                    const char *text) {
+    if (!renderer || !font || !y || !text) return false;
+    if (*y + step > limit_y) return false;
+    render_text(renderer, font, x, *y, color, text);
+    *y += step;
+    return true;
+}
+
 static void update_layout(StructuralPresetEditor *editor) {
     if (!editor || !editor->renderer) return;
     int w = 0;
     int h = 0;
+    int small_h = 16;
+    int main_h = 22;
+    int compact_h = 34;
+    int action_h = 34;
+    int save_h = 38;
+    int button_gap = 8;
     SDL_GetWindowSize(editor->window, &w, &h);
 
     int margin = 16;
-    editor->panel_w = 320;
+    if (editor->font_small) {
+        small_h = TTF_FontHeight(editor->font_small);
+    }
+    if (editor->font_main) {
+        main_h = TTF_FontHeight(editor->font_main);
+    }
+    if (small_h < 14) small_h = 14;
+    if (main_h < 18) main_h = 18;
+    compact_h = small_h + 14;
+    if (compact_h < 32) compact_h = 32;
+    action_h = small_h + 16;
+    if (action_h < 34) action_h = 34;
+    save_h = main_h + 14;
+    if (save_h < 38) save_h = 38;
+
+    editor->panel_w = 320 + (small_h - 16) * 4;
+    if (editor->panel_w < 320) editor->panel_w = 320;
+    if (editor->panel_w > 440) editor->panel_w = 440;
     editor->panel_x = w - editor->panel_w - margin;
     editor->panel_y = margin;
     editor->panel_h = h - margin * 2;
@@ -148,45 +186,45 @@ static void update_layout(StructuralPresetEditor *editor) {
     if (editor->ground_y < 0.0f) editor->ground_y = 0.0f;
 
     editor->btn_save.rect = (SDL_Rect){editor->panel_x + 16,
-                                       editor->panel_y + editor->panel_h - 96,
+                                       editor->panel_y + editor->panel_h - save_h - 12,
                                        editor->panel_w - 32,
-                                       38};
+                                       save_h};
     editor->btn_save.label = "Save Preset";
     editor->btn_save.enabled = true;
 
     editor->btn_cancel.rect = (SDL_Rect){editor->panel_x + 16,
-                                         editor->panel_y + editor->panel_h - 52,
+                                         editor->btn_save.rect.y - compact_h - button_gap,
                                          editor->panel_w - 32,
-                                         34};
+                                         compact_h};
     editor->btn_cancel.label = "Cancel";
     editor->btn_cancel.enabled = true;
 
     editor->btn_ground.rect = (SDL_Rect){editor->panel_x + 16,
-                                         editor->panel_y + editor->panel_h - 148,
+                                         editor->btn_cancel.rect.y - action_h - button_gap,
                                          editor->panel_w - 32,
-                                         34};
+                                         action_h};
     editor->btn_ground.label = "Attach to Ground";
     editor->btn_ground.enabled = true;
 
     editor->btn_gravity.rect = (SDL_Rect){editor->panel_x + 16,
-                                          editor->panel_y + editor->panel_h - 200,
+                                          editor->btn_ground.rect.y - action_h - button_gap,
                                           editor->panel_w - 32,
-                                          34};
+                                          action_h};
     editor->btn_gravity.label = editor->scene.gravity_enabled ? "Gravity: On" : "Gravity: Off";
     editor->btn_gravity.enabled = true;
 
     int half_w = (editor->panel_w - 40) / 2;
     editor->btn_gravity_minus.rect = (SDL_Rect){editor->panel_x + 16,
-                                                editor->panel_y + editor->panel_h - 240,
+                                                editor->btn_gravity.rect.y - compact_h - button_gap,
                                                 half_w,
-                                                32};
+                                                compact_h};
     editor->btn_gravity_minus.label = "G-";
     editor->btn_gravity_minus.enabled = true;
 
     editor->btn_gravity_plus.rect = (SDL_Rect){editor->panel_x + 24 + half_w,
-                                               editor->panel_y + editor->panel_h - 240,
+                                               editor->btn_gravity_minus.rect.y,
                                                half_w,
-                                               32};
+                                               compact_h};
     editor->btn_gravity_plus.label = "G+";
     editor->btn_gravity_plus.enabled = true;
 }
@@ -762,9 +800,23 @@ static void render_scene(StructuralPresetEditor *editor) {
     SDL_Color dim = {190, 198, 209, 255};
     int hud_x = editor->panel_x + 16;
     int hud_y = editor->panel_y + 16;
+    int hud_limit_y = editor->btn_gravity_minus.rect.y - 10;
+    int hud_step = editor->font_small ? TTF_FontHeight(editor->font_small) + 2 : 18;
+    int hud_block_step = hud_step + 4;
+    if (hud_step < 18) hud_step = 18;
+    if (hud_block_step < 22) hud_block_step = 22;
+    if (hud_limit_y < hud_y) hud_limit_y = hud_y;
     if (editor->font_main) {
-        render_text(renderer, editor->font_main, hud_x, hud_y, text, "Structural Preset");
-        hud_y += 28;
+        int title_step = TTF_FontHeight(editor->font_main) + 8;
+        if (title_step < 22) title_step = 22;
+        (void)render_hud_line_limited(renderer,
+                                      editor->font_main,
+                                      hud_x,
+                                      &hud_y,
+                                      title_step,
+                                      hud_limit_y,
+                                      text,
+                                      "Structural Preset");
     }
 
     const char *tool_label = "Select";
@@ -777,65 +829,66 @@ static void render_scene(StructuralPresetEditor *editor) {
     }
     char line[128];
     snprintf(line, sizeof(line), "Tool: %s (1-5)", tool_label);
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Nodes: %zu  Edges: %zu", scene->node_count, scene->edge_count);
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     const char *mat_name = (scene->material_count > 0 && ed->active_material >= 0 &&
                             ed->active_material < (int)scene->material_count)
                                ? scene->materials[ed->active_material].name
                                : "None";
     snprintf(line, sizeof(line), "Material: %s (M)", mat_name);
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     const char *case_name = (scene->load_case_count > 0 && scene->active_load_case >= 0 &&
                              scene->active_load_case < (int)scene->load_case_count)
                                 ? scene->load_cases[scene->active_load_case].name
                                 : "None";
     snprintf(line, sizeof(line), "Load case: %s ([ / ])", case_name);
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Overlay: T axial | B bend | V shear | Q combined");
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Scale: %s P%.0f gamma %.2f %s %s",
              ed->scale_use_percentile ? "Pct" : "Max",
              ed->scale_percentile * 100.0f,
              ed->scale_gamma,
              ed->scale_freeze ? "freeze" : "live",
              ed->scale_thickness ? "thick" : "flat");
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Viz: Ctrl+Q combined | Ctrl+Y pct | Ctrl+G gamma");
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Viz: Ctrl+K freeze | Ctrl+X thick");
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Constraints: X/Y/Q");
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Solve: Space | Reset: R | New case: N");
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 18;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Snap: G | Deform scale: -/=");
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 22;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_block_step, hud_limit_y, dim, line);
     snprintf(line, sizeof(line), "Gravity: %s (g=%.2f)",
              editor->scene.gravity_enabled ? "On" : "Off",
              editor->scene.gravity_strength);
-    render_text(renderer, editor->font_small, hud_x, hud_y, dim, line);
-    hud_y += 22;
+    (void)render_hud_line_limited(renderer, editor->font_small, hud_x, &hud_y, hud_block_step, hud_limit_y, dim, line);
 
     if (editor->last_result.warning[0]) {
         SDL_Color warn = {255, 180, 100, 255};
-        render_text(renderer, editor->font_small, hud_x, hud_y, warn, editor->last_result.warning);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer,
+                                      editor->font_small,
+                                      hud_x,
+                                      &hud_y,
+                                      hud_step,
+                                      hud_limit_y,
+                                      warn,
+                                      editor->last_result.warning);
     }
     if (ed->status_message[0]) {
         SDL_Color status = {160, 200, 160, 255};
-        render_text(renderer, editor->font_small, hud_x, hud_y, status, ed->status_message);
+        (void)render_hud_line_limited(renderer,
+                                      editor->font_small,
+                                      hud_x,
+                                      &hud_y,
+                                      hud_step,
+                                      hud_limit_y,
+                                      status,
+                                      ed->status_message);
     }
 
     if (editor->pointer_x >= 0 && editor->pointer_y >= 0 &&
@@ -867,17 +920,55 @@ static void render_scene(StructuralPresetEditor *editor) {
             char line[160];
             int tx = editor->pointer_x + 12;
             int ty = editor->pointer_y + 12;
+            int tip_step = editor->font_small ? TTF_FontHeight(editor->font_small) + 2 : 16;
+            int tip_w1 = 0;
+            int tip_w2 = 0;
+            int tip_w3 = 0;
+            int tip_max_w = 0;
+            int tip_h = 0;
+            int win_w = 0;
+            int win_h = 0;
+            if (tip_step < 16) tip_step = 16;
             SDL_Color tip = {240, 240, 240, 255};
             SDL_Color dim2 = {180, 190, 200, 255};
             snprintf(line, sizeof(line), "Edge %d (A %d, B %d)",
                      best_edge->id, best_a->id, best_b->id);
+            if (TTF_SizeUTF8(editor->font_small, line, &tip_w1, NULL) != 0) tip_w1 = 0;
+            snprintf(line, sizeof(line), "Axial: %.3f  Shear: %.3f",
+                     best_edge->axial_stress,
+                     0.5f * (best_edge->shear_force_a + best_edge->shear_force_b));
+            if (TTF_SizeUTF8(editor->font_small, line, &tip_w2, NULL) != 0) tip_w2 = 0;
+            snprintf(line, sizeof(line), "Moment A: %.3f  B: %.3f",
+                     best_edge->bending_moment_a,
+                     best_edge->bending_moment_b);
+            if (TTF_SizeUTF8(editor->font_small, line, &tip_w3, NULL) != 0) tip_w3 = 0;
+            tip_max_w = tip_w1;
+            if (tip_w2 > tip_max_w) tip_max_w = tip_w2;
+            if (tip_w3 > tip_max_w) tip_max_w = tip_w3;
+            tip_h = tip_step * 3;
+            if (editor->window) {
+                SDL_GetWindowSize(editor->window, &win_w, &win_h);
+            }
+            if (win_w > 0) {
+                int max_tx = win_w - tip_max_w - 12;
+                if (tx > max_tx) tx = max_tx;
+                if (tx < 8) tx = 8;
+            }
+            if (win_h > 0) {
+                int max_ty = win_h - tip_h - 12;
+                if (ty > max_ty) ty = max_ty;
+                if (ty < 8) ty = 8;
+            }
+
+            snprintf(line, sizeof(line), "Edge %d (A %d, B %d)",
+                     best_edge->id, best_a->id, best_b->id);
             render_text(renderer, editor->font_small, tx, ty, tip, line);
-            ty += 16;
+            ty += tip_step;
             snprintf(line, sizeof(line), "Axial: %.3f  Shear: %.3f",
                      best_edge->axial_stress,
                      0.5f * (best_edge->shear_force_a + best_edge->shear_force_b));
             render_text(renderer, editor->font_small, tx, ty, dim2, line);
-            ty += 16;
+            ty += tip_step;
             snprintf(line, sizeof(line), "Moment A: %.3f  B: %.3f",
                      best_edge->bending_moment_a,
                      best_edge->bending_moment_b);

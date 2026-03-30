@@ -4,15 +4,273 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "app/menu/menu_input.h"
 #include "app/menu/menu_render.h"
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_types.h"
 #include "app/menu/menu_window.h"
+#include "config/config_loader.h"
 #include "input/input.h"
 #include "render/vk_shared_device.h"
 #include "vk_renderer.h"
+
+static const char *k_runtime_config_path = "data/runtime/app_state.json";
+
+static bool menu_text_entry_active(const SceneMenuInteraction *ctx) {
+    if (!ctx) return false;
+    if (ctx->rename_input.active) return true;
+    if (ctx->editing_headless_frames) return true;
+    if (ctx->editing_inflow) return true;
+    if (ctx->editing_viscosity) return true;
+    return false;
+}
+
+static bool menu_apply_text_zoom_shortcut(SceneMenuInteraction *ctx,
+                                          const InputCommands *cmds) {
+    int next_step = 0;
+    bool changed = false;
+    if (!ctx || !ctx->cfg || !cmds) return false;
+    if (menu_text_entry_active(ctx)) return false;
+    if (!(cmds->text_zoom_in_requested ||
+          cmds->text_zoom_out_requested ||
+          cmds->text_zoom_reset_requested)) {
+        return false;
+    }
+
+    next_step = ctx->cfg->text_zoom_step;
+    if (cmds->text_zoom_reset_requested) {
+        next_step = 0;
+    } else {
+        if (cmds->text_zoom_in_requested) {
+            next_step += 1;
+        }
+        if (cmds->text_zoom_out_requested) {
+            next_step -= 1;
+        }
+    }
+    next_step = app_config_text_zoom_step_clamp(next_step);
+    changed = (next_step != ctx->cfg->text_zoom_step);
+    if (!changed) return false;
+
+    ctx->cfg->text_zoom_step = next_step;
+    if (!menu_reload_fonts(ctx)) {
+        fprintf(stderr, "[menu] Failed to reload fonts after zoom update.\n");
+    }
+    menu_update_scrollbar(ctx);
+
+    if (!config_loader_save(ctx->cfg, k_runtime_config_path)) {
+        fprintf(stderr, "[menu] Failed to persist runtime config to %s\n",
+                k_runtime_config_path);
+    }
+    return true;
+}
+
+static int menu_font_height(TTF_Font *font, int fallback) {
+    if (!font) return fallback;
+    {
+        int h = TTF_FontHeight(font);
+        if (h > 0) return h;
+    }
+    return fallback;
+}
+
+static void menu_fit_text_to_width(TTF_Font *font,
+                                   const char *text,
+                                   int max_width,
+                                   char *out,
+                                   size_t out_size) {
+    int w = 0;
+    size_t len = 0;
+    if (!out || out_size == 0) return;
+    out[0] = '\0';
+    if (!text) return;
+    snprintf(out, out_size, "%s", text);
+    if (!font || max_width <= 0) return;
+    if (TTF_SizeUTF8(font, out, &w, NULL) == 0 && w <= max_width) return;
+
+    len = strlen(out);
+    while (len > 0) {
+        --len;
+        out[len] = '\0';
+        {
+            char candidate[256];
+            snprintf(candidate, sizeof(candidate), "%s...", out);
+            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0 && w <= max_width) {
+                snprintf(out, out_size, "%s", candidate);
+                return;
+            }
+        }
+    }
+    snprintf(out, out_size, "...");
+}
+
+static void menu_update_dynamic_layout(SceneMenuInteraction *ctx,
+                                       int win_w,
+                                       int win_h) {
+    int title_h = 32;
+    int body_h = 22;
+    int small_h = 18;
+    int control_h = 40;
+    int compact_h = 34;
+    int left_margin = PRESET_LIST_MARGIN_X;
+    int right_margin = 40;
+    int list_top = PRESET_LIST_MARGIN_Y;
+    int panel_x = 420;
+    int panel_w = 360;
+    int panel_y = PRESET_LIST_MARGIN_Y;
+    int panel_h = 320;
+    int ui_gap = 12;
+    int config_pad = 12;
+    int icon_w = 36;
+    int action_w = 190;
+    int section_gap = 12;
+    if (!ctx) return;
+
+    title_h = menu_font_height(ctx->font_title, 32);
+    body_h = menu_font_height(ctx->font, 22);
+    small_h = menu_font_height(ctx->font_small ? ctx->font_small : ctx->font, 18);
+    control_h = body_h + 16;
+    if (control_h < 38) control_h = 38;
+    compact_h = small_h + 14;
+    if (compact_h < 32) compact_h = 32;
+    icon_w = compact_h;
+    section_gap = small_h / 2 + 8;
+    if (section_gap < 10) section_gap = 10;
+
+    list_top = 40 + title_h + 24;
+    if (list_top < 90) list_top = 90;
+    if (list_top > win_h - 240) list_top = win_h - 240;
+
+    ctx->list_rect.x = left_margin;
+    ctx->list_rect.y = list_top;
+    ctx->list_rect.w = PRESET_LIST_WIDTH;
+    ctx->list_rect.h = win_h - list_top - (control_h * 2 + 80);
+    if (ctx->list_rect.h < 180) ctx->list_rect.h = 180;
+    if (ctx->list_rect.h > win_h - list_top - 20) {
+        ctx->list_rect.h = win_h - list_top - 20;
+    }
+
+    panel_x = ctx->list_rect.x + ctx->list_rect.w + 20;
+    panel_w = win_w - panel_x - right_margin;
+    if (panel_w < 300) {
+        panel_w = 300;
+        panel_x = win_w - right_margin - panel_w;
+    }
+    if (panel_x < ctx->list_rect.x + ctx->list_rect.w + 8) {
+        panel_x = ctx->list_rect.x + ctx->list_rect.w + 8;
+    }
+
+    ctx->mode_toggle_button.rect.x = panel_x + panel_w - 200;
+    ctx->mode_toggle_button.rect.y = 40 + (title_h - compact_h) / 2;
+    if (ctx->mode_toggle_button.rect.y < 24) ctx->mode_toggle_button.rect.y = 24;
+    ctx->mode_toggle_button.rect.w = 200;
+    ctx->mode_toggle_button.rect.h = compact_h;
+
+    action_w = (panel_w - ui_gap) / 2;
+    if (action_w < 130) action_w = 130;
+    if (action_w > 220) action_w = 220;
+    ctx->start_button.rect.w = action_w;
+    ctx->start_button.rect.h = control_h;
+    ctx->start_button.rect.x = panel_x + panel_w - ctx->start_button.rect.w;
+    ctx->start_button.rect.y = win_h - control_h - 20;
+
+    ctx->edit_button.rect.w = action_w;
+    ctx->edit_button.rect.h = control_h;
+    ctx->edit_button.rect.x = ctx->start_button.rect.x - ctx->edit_button.rect.w - ui_gap;
+    ctx->edit_button.rect.y = ctx->start_button.rect.y;
+    if (ctx->edit_button.rect.x < panel_x) {
+        ctx->edit_button.rect.x = panel_x;
+        ctx->edit_button.rect.w = ctx->start_button.rect.x - ui_gap - ctx->edit_button.rect.x;
+        if (ctx->edit_button.rect.w < 110) ctx->edit_button.rect.w = 110;
+    }
+
+    ctx->quit_button.rect.w = 120;
+    ctx->quit_button.rect.h = compact_h;
+    ctx->quit_button.rect.x = left_margin;
+    ctx->quit_button.rect.y = win_h - compact_h - 20;
+
+    ctx->headless_toggle_button.rect.x = ctx->start_button.rect.x;
+    ctx->headless_toggle_button.rect.y = ctx->start_button.rect.y - compact_h - 12;
+    ctx->headless_toggle_button.rect.w = ctx->start_button.rect.w;
+    ctx->headless_toggle_button.rect.h = compact_h;
+
+    panel_y = ctx->list_rect.y;
+    panel_h = ctx->headless_toggle_button.rect.y - panel_y - 18;
+    if (panel_h < 220) panel_h = 220;
+    ctx->config_panel_rect = (SDL_Rect){panel_x, panel_y, panel_w, panel_h};
+
+    ctx->grid_dec_button.rect = (SDL_Rect){
+        panel_x + panel_w - config_pad - icon_w * 2 - 8,
+        panel_y + config_pad + small_h + 6,
+        icon_w,
+        compact_h
+    };
+    ctx->grid_inc_button.rect = (SDL_Rect){
+        ctx->grid_dec_button.rect.x + icon_w + 8,
+        ctx->grid_dec_button.rect.y,
+        icon_w,
+        compact_h
+    };
+
+    ctx->quality_prev_button.rect = (SDL_Rect){
+        panel_x + config_pad,
+        ctx->grid_dec_button.rect.y + compact_h + section_gap,
+        icon_w,
+        compact_h
+    };
+    ctx->quality_next_button.rect = (SDL_Rect){
+        panel_x + panel_w - config_pad - icon_w,
+        ctx->quality_prev_button.rect.y,
+        icon_w,
+        compact_h
+    };
+
+    ctx->volume_toggle_rect = (SDL_Rect){
+        panel_x + config_pad,
+        ctx->quality_prev_button.rect.y + compact_h + section_gap,
+        panel_w - config_pad * 2,
+        compact_h
+    };
+    ctx->render_toggle_rect = (SDL_Rect){
+        panel_x + config_pad,
+        ctx->volume_toggle_rect.y + compact_h + 8,
+        panel_w - config_pad * 2,
+        compact_h
+    };
+
+    ctx->headless_frames_rect = (SDL_Rect){
+        ctx->headless_toggle_button.rect.x,
+        ctx->headless_toggle_button.rect.y - compact_h - 8,
+        ctx->headless_toggle_button.rect.w,
+        compact_h
+    };
+    ctx->viscosity_rect = (SDL_Rect){
+        ctx->headless_frames_rect.x,
+        ctx->headless_frames_rect.y - compact_h - 8,
+        ctx->headless_frames_rect.w,
+        compact_h
+    };
+    ctx->inflow_rect = (SDL_Rect){
+        ctx->viscosity_rect.x,
+        ctx->viscosity_rect.y - compact_h - 8,
+        ctx->viscosity_rect.w,
+        compact_h
+    };
+
+    {
+        int controls_bottom = ctx->render_toggle_rect.y + ctx->render_toggle_rect.h + config_pad;
+        int needed_h = controls_bottom - panel_y;
+        if (panel_h < needed_h) panel_h = needed_h;
+        {
+            int max_h = ctx->headless_toggle_button.rect.y - panel_y - 8;
+            if (panel_h > max_h) panel_h = max_h;
+        }
+        if (panel_h < 120) panel_h = 120;
+        ctx->config_panel_rect.h = panel_h;
+    }
+}
 
 bool scene_menu_run(AppConfig *cfg,
                     FluidScenePreset *preset_state,
@@ -206,13 +464,25 @@ restart_menu:
             text_input_update(&ctx.viscosity_input, dt);
         }
 
+        int win_w = 0;
+        int win_h = 0;
+        SDL_GetWindowSize(ctx.window, &win_w, &win_h);
+        if (win_w <= 0 || win_h <= 0) {
+            win_w = MENU_WIDTH;
+            win_h = MENU_HEIGHT;
+        }
+        menu_update_dynamic_layout(&ctx, win_w, win_h);
+        menu_update_scrollbar(&ctx);
+
         InputCommands cmds;
         input_poll_events(&cmds, NULL, &context_mgr);
         if (cmds.quit) {
             run = false;
             break;
         }
+        (void)menu_apply_text_zoom_shortcut(&ctx, &cmds);
         menu_clamp_grid_size(cfg);
+        menu_update_dynamic_layout(&ctx, win_w, win_h);
         menu_update_scrollbar(&ctx);
 
         if (ctx.headless_pending && !ctx.headless_running) {
@@ -229,13 +499,6 @@ restart_menu:
             menu_set_status(&ctx, msg, false);
         }
 
-        int win_w = 0;
-        int win_h = 0;
-        SDL_GetWindowSize(ctx.window, &win_w, &win_h);
-        if (win_w <= 0 || win_h <= 0) {
-            win_w = MENU_WIDTH;
-            win_h = MENU_HEIGHT;
-        }
         int drawable_w = win_w;
         int drawable_h = win_h;
         SDL_Vulkan_GetDrawableSize(ctx.window, &drawable_w, &drawable_h);
@@ -284,120 +547,151 @@ restart_menu:
         SDL_Rect clear_rect = {0, 0, clear_w, clear_h};
         SDL_RenderFillRect(ctx.renderer, &clear_rect);
 
-        if (ctx.font_title) {
-            menu_draw_text(ctx.renderer, ctx.font_title, "Custom Presets", PRESET_LIST_MARGIN_X, 40, menu_color_text());
-        }
-        menu_draw_preset_list(&ctx);
+        {
+            int body_h = menu_font_height(ctx.font, 22);
+            int small_h = menu_font_height(ctx.font_small ? ctx.font_small : ctx.font, 18);
+            int title_y = 40;
+            if (ctx.font_title) {
+                menu_draw_text(ctx.renderer,
+                               ctx.font_title,
+                               "Custom Presets",
+                               ctx.list_rect.x,
+                               title_y,
+                               menu_color_text());
+            }
+            menu_draw_preset_list(&ctx);
 
-        TTF_Font *toggle_font = ctx.font_small ? ctx.font_small : ctx.font;
-        if (!toggle_font) toggle_font = ctx.font;
-        ctx.mode_toggle_button.rect.y = 70;
-        char mode_text[48];
-        snprintf(mode_text, sizeof(mode_text), "Mode: %s", menu_mode_label(ctx.active_mode));
-        menu_draw_toggle(ctx.renderer,
-                    toggle_font,
-                    &ctx.mode_toggle_button.rect,
-                    mode_text,
-                    ctx.active_mode == SIM_MODE_WIND_TUNNEL);
+            TTF_Font *toggle_font = ctx.font_small ? ctx.font_small : ctx.font;
+            if (!toggle_font) toggle_font = ctx.font;
+            char mode_text[48];
+            snprintf(mode_text, sizeof(mode_text), "Mode: %s", menu_mode_label(ctx.active_mode));
+            menu_draw_toggle(ctx.renderer,
+                             toggle_font,
+                             &ctx.mode_toggle_button.rect,
+                             mode_text,
+                             ctx.active_mode == SIM_MODE_WIND_TUNNEL);
 
-        SDL_Rect config_panel = {420, 120, 360, 320};
-        menu_draw_panel(ctx.renderer, &config_panel);
-        menu_draw_text(ctx.renderer, ctx.font, "Grid Resolution", config_panel.x + 12, config_panel.y + 12, menu_color_text_dim());
-        char buffer[64];
-        snprintf(buffer, sizeof(buffer), "%dx%d cells", cfg->grid_w, cfg->grid_h);
-        menu_draw_text(ctx.renderer, ctx.font, buffer, config_panel.x + 12, config_panel.y + 42, menu_color_text());
-        ctx.grid_dec_button.rect = (SDL_Rect){config_panel.x + 240, config_panel.y + 40, 40, 40};
-        ctx.grid_inc_button.rect = (SDL_Rect){config_panel.x + 290, config_panel.y + 40, 40, 40};
-        menu_draw_button(ctx.renderer, &ctx.grid_dec_button.rect, ctx.grid_dec_button.label, ctx.font, false);
-        menu_draw_button(ctx.renderer, &ctx.grid_inc_button.rect, ctx.grid_inc_button.label, ctx.font, false);
+            SDL_Rect config_panel = ctx.config_panel_rect;
+            menu_draw_panel(ctx.renderer, &config_panel);
 
-        menu_draw_text(ctx.renderer, ctx.font, "Quality", config_panel.x + 12, config_panel.y + 86, menu_color_text_dim());
-        ctx.quality_prev_button.rect = (SDL_Rect){config_panel.x + 12, config_panel.y + 110, 36, 36};
-        ctx.quality_next_button.rect = (SDL_Rect){config_panel.x + config_panel.w - 48, config_panel.y + 110, 36, 36};
-        menu_draw_button(ctx.renderer, &ctx.quality_prev_button.rect, ctx.quality_prev_button.label, ctx.font, false);
-        menu_draw_button(ctx.renderer, &ctx.quality_next_button.rect, ctx.quality_next_button.label, ctx.font, false);
-        const char *quality_name = menu_current_quality_name(&ctx);
-        menu_draw_text(ctx.renderer,
-                  ctx.font,
-                  quality_name,
-                  ctx.quality_prev_button.rect.x + ctx.quality_prev_button.rect.w + 8,
-                  ctx.quality_prev_button.rect.y + 8,
-                  menu_color_text());
+            int grid_label_y = config_panel.y + 12;
+            int grid_value_y = ctx.grid_dec_button.rect.y + (ctx.grid_dec_button.rect.h - body_h) / 2;
+            menu_draw_text(ctx.renderer,
+                           ctx.font,
+                           "Grid Resolution",
+                           config_panel.x + 12,
+                           grid_label_y,
+                           menu_color_text_dim());
+            char buffer[64];
+            snprintf(buffer, sizeof(buffer), "%dx%d cells", cfg->grid_w, cfg->grid_h);
+            menu_draw_text(ctx.renderer,
+                           ctx.font,
+                           buffer,
+                           config_panel.x + 12,
+                           grid_value_y,
+                           menu_color_text());
+            menu_draw_button(ctx.renderer, &ctx.grid_dec_button.rect, ctx.grid_dec_button.label, ctx.font, false);
+            menu_draw_button(ctx.renderer, &ctx.grid_inc_button.rect, ctx.grid_inc_button.label, ctx.font, false);
 
-        ctx.volume_toggle_rect = (SDL_Rect){config_panel.x + 12,
-                                            config_panel.y + 160,
-                                            config_panel.w - 24,
-                                            36};
-        ctx.render_toggle_rect = (SDL_Rect){config_panel.x + 12,
-                                            config_panel.y + 210,
-                                            config_panel.w - 24,
-                                            36};
+            menu_draw_text(ctx.renderer,
+                           ctx.font,
+                           "Quality",
+                           config_panel.x + 12,
+                           ctx.quality_prev_button.rect.y - small_h - 8,
+                           menu_color_text_dim());
+            menu_draw_button(ctx.renderer, &ctx.quality_prev_button.rect, ctx.quality_prev_button.label, ctx.font, false);
+            menu_draw_button(ctx.renderer, &ctx.quality_next_button.rect, ctx.quality_next_button.label, ctx.font, false);
+            const char *quality_name = menu_current_quality_name(&ctx);
+            char quality_buf[128];
+            int quality_x = ctx.quality_prev_button.rect.x + ctx.quality_prev_button.rect.w + 8;
+            int quality_w = ctx.quality_next_button.rect.x - 8 - quality_x;
+            if (quality_w < 10) quality_w = 10;
+            menu_fit_text_to_width(ctx.font, quality_name, quality_w, quality_buf, sizeof(quality_buf));
+            menu_draw_text(ctx.renderer,
+                           ctx.font,
+                           quality_buf,
+                           quality_x,
+                           ctx.quality_prev_button.rect.y + (ctx.quality_prev_button.rect.h - body_h) / 2,
+                           menu_color_text());
 
-        menu_draw_toggle(ctx.renderer, toggle_font, &ctx.volume_toggle_rect,
-                    "Save Volume Frames", ctx.cfg->save_volume_frames);
-        menu_draw_toggle(ctx.renderer, toggle_font, &ctx.render_toggle_rect,
-                    "Save Render Frames", ctx.cfg->save_render_frames);
+            menu_draw_toggle(ctx.renderer, toggle_font, &ctx.volume_toggle_rect,
+                             "Save Volume Frames", ctx.cfg->save_volume_frames);
+            menu_draw_toggle(ctx.renderer, toggle_font, &ctx.render_toggle_rect,
+                             "Save Render Frames", ctx.cfg->save_render_frames);
 
-        SDL_Rect headless_rect = ctx.headless_toggle_button.rect;
-        headless_rect.y = ctx.start_button.rect.y - 50;
-        headless_rect.x = ctx.start_button.rect.x;
-        headless_rect.w = ctx.start_button.rect.w;
-        ctx.headless_toggle_button.rect = headless_rect;
+            menu_draw_button(ctx.renderer, &ctx.headless_toggle_button.rect, ctx.headless_toggle_button.label, ctx.font,
+                             cfg->headless_enabled);
+            SDL_Color panel_color = menu_color_panel();
+            SDL_Color accent_color = menu_color_accent();
 
-        menu_draw_button(ctx.renderer, &ctx.headless_toggle_button.rect, ctx.headless_toggle_button.label, ctx.font,
-                    cfg->headless_enabled);
-        SDL_Rect frames_rect = {ctx.headless_toggle_button.rect.x,
-                                ctx.headless_toggle_button.rect.y - 35,
-                                ctx.headless_toggle_button.rect.w,
-                                28};
-        ctx.headless_frames_rect = frames_rect;
-        SDL_Color panel_color = menu_color_panel();
-        SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
-        SDL_RenderFillRect(ctx.renderer, &frames_rect);
-        SDL_Color accent_color = menu_color_accent();
-        SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 180);
-        SDL_RenderDrawRect(ctx.renderer, &frames_rect);
+            SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
+            SDL_RenderFillRect(ctx.renderer, &ctx.headless_frames_rect);
+            SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 180);
+            SDL_RenderDrawRect(ctx.renderer, &ctx.headless_frames_rect);
+            if (ctx.editing_headless_frames) {
+                menu_draw_text_input(ctx.renderer, ctx.font, &ctx.headless_frames_rect, &ctx.headless_frames_input);
+            } else {
+                char frames_label[64];
+                char frames_fit[64];
+                snprintf(frames_label, sizeof(frames_label), "Frames: %d", ctx.cfg->headless_frame_count);
+                menu_fit_text_to_width(ctx.font,
+                                       frames_label,
+                                       ctx.headless_frames_rect.w - 16,
+                                       frames_fit,
+                                       sizeof(frames_fit));
+                menu_draw_text(ctx.renderer,
+                               ctx.font,
+                               frames_fit,
+                               ctx.headless_frames_rect.x + 8,
+                               ctx.headless_frames_rect.y + (ctx.headless_frames_rect.h - body_h) / 2,
+                               menu_color_text());
+            }
 
-        if (ctx.editing_headless_frames) {
-            menu_draw_text_input(ctx.renderer, ctx.font, &frames_rect, &ctx.headless_frames_input);
-        } else {
-            char frames_label[64];
-            snprintf(frames_label, sizeof(frames_label), "Frames: %d", ctx.cfg->headless_frame_count);
-            menu_draw_text(ctx.renderer, ctx.font, frames_label, frames_rect.x + 8, frames_rect.y + 6, menu_color_text());
-        }
+            SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
+            SDL_RenderFillRect(ctx.renderer, &ctx.viscosity_rect);
+            SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 140);
+            SDL_RenderDrawRect(ctx.renderer, &ctx.viscosity_rect);
+            if (ctx.editing_viscosity) {
+                menu_draw_text_input(ctx.renderer, ctx.font_small, &ctx.viscosity_rect, &ctx.viscosity_input);
+            } else {
+                char viscosity_label[64];
+                char viscosity_fit[64];
+                snprintf(viscosity_label, sizeof(viscosity_label), "Viscosity: %.6g", ctx.cfg->velocity_damping);
+                menu_fit_text_to_width(ctx.font_small,
+                                       viscosity_label,
+                                       ctx.viscosity_rect.w - 16,
+                                       viscosity_fit,
+                                       sizeof(viscosity_fit));
+                menu_draw_text(ctx.renderer,
+                               ctx.font_small,
+                               viscosity_fit,
+                               ctx.viscosity_rect.x + 8,
+                               ctx.viscosity_rect.y + (ctx.viscosity_rect.h - small_h) / 2,
+                               menu_color_text());
+            }
 
-        SDL_Rect viscosity_rect = {frames_rect.x,
-                                   frames_rect.y - 35,
-                                   frames_rect.w,
-                                   frames_rect.h};
-        ctx.viscosity_rect = viscosity_rect;
-        SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
-        SDL_RenderFillRect(ctx.renderer, &viscosity_rect);
-        SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 140);
-        SDL_RenderDrawRect(ctx.renderer, &viscosity_rect);
-        if (ctx.editing_viscosity) {
-            menu_draw_text_input(ctx.renderer, ctx.font_small, &viscosity_rect, &ctx.viscosity_input);
-        } else {
-            char viscosity_label[64];
-            snprintf(viscosity_label, sizeof(viscosity_label), "Viscosity: %.6g", ctx.cfg->velocity_damping);
-            menu_draw_text(ctx.renderer, ctx.font_small, viscosity_label, viscosity_rect.x + 8, viscosity_rect.y + 6, menu_color_text());
-        }
-
-        SDL_Rect inflow_rect = {viscosity_rect.x,
-                                viscosity_rect.y - 35,
-                                viscosity_rect.w,
-                                viscosity_rect.h};
-        ctx.inflow_rect = inflow_rect;
-        SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
-        SDL_RenderFillRect(ctx.renderer, &inflow_rect);
-        SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 120);
-        SDL_RenderDrawRect(ctx.renderer, &inflow_rect);
-        if (ctx.editing_inflow) {
-            menu_draw_text_input(ctx.renderer, ctx.font_small, &inflow_rect, &ctx.inflow_input);
-        } else {
-            char inflow_label[64];
-            snprintf(inflow_label, sizeof(inflow_label), "Inflow: %.3f", ctx.cfg->tunnel_inflow_speed);
-            menu_draw_text(ctx.renderer, ctx.font_small, inflow_label, inflow_rect.x + 8, inflow_rect.y + 6, menu_color_text());
+            SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
+            SDL_RenderFillRect(ctx.renderer, &ctx.inflow_rect);
+            SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 120);
+            SDL_RenderDrawRect(ctx.renderer, &ctx.inflow_rect);
+            if (ctx.editing_inflow) {
+                menu_draw_text_input(ctx.renderer, ctx.font_small, &ctx.inflow_rect, &ctx.inflow_input);
+            } else {
+                char inflow_label[64];
+                char inflow_fit[64];
+                snprintf(inflow_label, sizeof(inflow_label), "Inflow: %.3f", ctx.cfg->tunnel_inflow_speed);
+                menu_fit_text_to_width(ctx.font_small,
+                                       inflow_label,
+                                       ctx.inflow_rect.w - 16,
+                                       inflow_fit,
+                                       sizeof(inflow_fit));
+                menu_draw_text(ctx.renderer,
+                               ctx.font_small,
+                               inflow_fit,
+                               ctx.inflow_rect.x + 8,
+                               ctx.inflow_rect.y + (ctx.inflow_rect.h - small_h) / 2,
+                               menu_color_text());
+            }
         }
         menu_draw_button(ctx.renderer, &ctx.start_button.rect, ctx.start_button.label, ctx.font, false);
         menu_draw_button(ctx.renderer, &ctx.edit_button.rect, ctx.edit_button.label, ctx.font, false);
@@ -406,16 +700,23 @@ restart_menu:
         if (ctx.status_visible && ctx.font && ctx.status_text[0]) {
             int text_w = 0;
             int text_h = 0;
-            TTF_SizeUTF8(ctx.font, ctx.status_text, &text_w, &text_h);
             int status_x = ctx.headless_frames_rect.x;
-            int max_x = MENU_WIDTH - text_w - 20;
+            int max_text_w = win_w - status_x - 20;
+            if (max_text_w < 10) max_text_w = 10;
+            char status_buf[128];
+            menu_fit_text_to_width(ctx.font, ctx.status_text, max_text_w, status_buf, sizeof(status_buf));
+            TTF_SizeUTF8(ctx.font, status_buf, &text_w, &text_h);
+            int max_x = win_w - text_w - 20;
             if (status_x > max_x) status_x = max_x;
             if (status_x < 20) status_x = 20;
             int status_y = ctx.headless_frames_rect.y - text_h - 10;
+            if (status_y > ctx.inflow_rect.y - text_h - 10) {
+                status_y = ctx.inflow_rect.y - text_h - 10;
+            }
             if (status_y < 20) status_y = 20;
             menu_draw_text(ctx.renderer,
                       ctx.font,
-                      ctx.status_text,
+                      status_buf,
                       status_x,
                       status_y,
                       ctx.status_wait_ack ? menu_color_accent() : menu_color_text_dim());

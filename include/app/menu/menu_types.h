@@ -55,6 +55,7 @@ typedef struct SceneMenuInteraction {
     MenuButton quality_next_button;
     MenuButton headless_toggle_button;
     MenuButton mode_toggle_button;
+    SDL_Rect config_panel_rect;
     SDL_Rect volume_toggle_rect;
     SDL_Rect render_toggle_rect;
     bool *running;

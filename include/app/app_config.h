@@ -46,6 +46,7 @@ typedef struct AppConfig {
     int    render_black_level; // 0-255 base luminance for empty space
 
     int    quality_index;
+    int    text_zoom_step; // runtime UI text zoom step; persisted in runtime app state
 
     bool   headless_enabled;
     int    headless_frame_count;
@@ -75,6 +76,19 @@ typedef struct AppConfig {
     bool   collider_debug_logs;          // verbose collider logging
 } AppConfig;
 
+enum {
+    PHYSICS_SIM_TEXT_ZOOM_STEP_MIN = -4,
+    PHYSICS_SIM_TEXT_ZOOM_STEP_MAX = 5,
+    PHYSICS_SIM_TEXT_ZOOM_PERCENT_MIN = 60,
+    PHYSICS_SIM_TEXT_ZOOM_PERCENT_MAX = 180
+};
+
 AppConfig app_config_default(void);
+int app_config_text_zoom_step_clamp(int step);
+int app_config_text_zoom_percent_from_step(int step);
+int app_config_text_zoom_percent(const AppConfig *cfg);
+int app_config_scale_text_point_size(const AppConfig *cfg,
+                                     int base_point_size,
+                                     int min_point_size);
 
 #endif // APP_CONFIG_H

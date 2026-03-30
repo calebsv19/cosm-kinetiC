@@ -6,6 +6,7 @@
 #include "app/editor/scene_editor.h"
 #include "app/menu/menu_render.h"
 #include "app/menu/menu_state.h"
+#include "app/menu/menu_window.h"
 #include "app/menu/shared_theme_font_adapter.h"
 #include "app/structural/structural_preset_editor.h"
 #include "vk_renderer.h"
@@ -160,6 +161,8 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
                                              ctx->context_mgr)) {
                 slot->occupied = true;
             }
+            (void)menu_reload_fonts(ctx);
+            menu_update_scrollbar(ctx);
 #if defined(__APPLE__)
             fprintf(stderr, "[menu] Structural editor returned, showing menu window.\n");
             SDL_ShowWindow(ctx->window);
@@ -184,6 +187,8 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
                 slot->preset.is_custom = true;
                 slot->occupied = true;
             }
+            (void)menu_reload_fonts(ctx);
+            menu_update_scrollbar(ctx);
         }
         SDL_FlushEvent(SDL_MOUSEBUTTONDOWN);
         SDL_FlushEvent(SDL_MOUSEBUTTONUP);

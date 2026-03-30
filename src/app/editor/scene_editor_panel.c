@@ -56,12 +56,44 @@ static void draw_text(SDL_Renderer *renderer,
     SDL_FreeSurface(surf);
 }
 
+static void fit_text_to_width(TTF_Font *font,
+                              const char *text,
+                              int max_width,
+                              char *out,
+                              size_t out_size) {
+    int w = 0;
+    size_t len = 0;
+    if (!out || out_size == 0) return;
+    out[0] = '\0';
+    if (!text) return;
+    snprintf(out, out_size, "%s", text);
+    if (!font || max_width <= 0) return;
+    if (TTF_SizeUTF8(font, out, &w, NULL) == 0 && w <= max_width) return;
+
+    len = strlen(out);
+    while (len > 0) {
+        --len;
+        out[len] = '\0';
+        {
+            char candidate[256];
+            snprintf(candidate, sizeof(candidate), "%s...", out);
+            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0 && w <= max_width) {
+                snprintf(out, out_size, "%s", candidate);
+                return;
+            }
+        }
+    }
+    snprintf(out, out_size, "...");
+}
+
 static void draw_object_list(SceneEditorState *state) {
     if (!state) return;
     refresh_panel_theme();
     int row_h = state->list_view.row_height;
     int x = state->list_rect.x + 6;
     int y_start = state->list_rect.y - (int)editor_list_view_offset(&state->list_view);
+    int text_h = state->font_small ? TTF_FontHeight(state->font_small) : 16;
+    if (text_h < 12) text_h = 12;
     SDL_Color text = COLOR_TEXT;
     int total_rows = (int)state->working.object_count;
     editor_list_view_set_rows(&state->list_view, total_rows);
@@ -86,11 +118,22 @@ static void draw_object_list(SceneEditorState *state) {
         int em_idx = emitter_index_for_object(state, i);
         SDL_Color col = text;
         char line[64];
+        char line_fit[64];
         snprintf(line, sizeof(line), "%s %s%s",
                  label,
                  obj->gravity_enabled ? "[G]" : "[ ]",
                  (em_idx >= 0) ? " (Emitter)" : "");
-        draw_text(state->renderer, state->font_small, line, x, y + 6, col);
+        fit_text_to_width(state->font_small,
+                          line,
+                          state->list_rect.w - 26,
+                          line_fit,
+                          sizeof(line_fit));
+        draw_text(state->renderer,
+                  state->font_small,
+                  line_fit[0] ? line_fit : line,
+                  x,
+                  y + (row_h - text_h) / 2,
+                  col);
     }
     SDL_Color track = COLOR_BG;
     track.a = 180;
@@ -170,6 +213,8 @@ static void draw_import_list(SceneEditorState *state) {
     int row_h = state->import_view.row_height;
     int x = state->import_rect.x + 6;
     int y_start = state->import_rect.y - (int)editor_list_view_offset(&state->import_view);
+    int text_h = state->font_small ? TTF_FontHeight(state->font_small) : 16;
+    if (text_h < 12) text_h = 12;
     SDL_Color text = COLOR_TEXT;
     editor_list_view_set_rows(&state->import_view, state->import_file_count);
     for (int i = 0; i < state->import_file_count; ++i) {
@@ -189,7 +234,18 @@ static void draw_import_list(SceneEditorState *state) {
             SDL_RenderFillRect(state->renderer, &r);
         }
         const char *label = state->import_files[i][0] ? state->import_files[i] : "(empty)";
-        draw_text(state->renderer, state->font_small, label, x, y + 6, text);
+        char label_fit[256];
+        fit_text_to_width(state->font_small,
+                          label,
+                          state->import_rect.w - 24,
+                          label_fit,
+                          sizeof(label_fit));
+        draw_text(state->renderer,
+                  state->font_small,
+                  label_fit,
+                  x,
+                  y + (row_h - text_h) / 2,
+                  text);
     }
     SDL_Color track = COLOR_BG;
     track.a = 180;
@@ -216,8 +272,20 @@ static void draw_dimension_field(SceneEditorState *state,
     SDL_RenderDrawRect(renderer, rect);
     int label_height = TTF_FontHeight(font);
     int label_y = rect->y - label_height - 2;
+    char label_fit[64];
+    char value_fit[64];
+    const char *draw_label = label ? label : "";
+    const char *draw_value = NULL;
+    int max_text_w = rect->w - 8;
+    if (max_text_w < 8) max_text_w = 8;
     if (label_y < 0) label_y = 0;
-    draw_text(renderer, font, label, rect->x + 2, label_y, COLOR_TEXT_DIM);
+    fit_text_to_width(font, draw_label, max_text_w, label_fit, sizeof(label_fit));
+    draw_text(renderer,
+              font,
+              label_fit[0] ? label_fit : draw_label,
+              rect->x + 2,
+              label_y,
+              COLOR_TEXT_DIM);
     char value_buf[32];
     const char *value_text = value_buf;
     if (editing && input) {
@@ -226,7 +294,9 @@ static void draw_dimension_field(SceneEditorState *state,
     } else {
         snprintf(value_buf, sizeof(value_buf), "%.2f", value);
     }
-    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, value_text, COLOR_TEXT);
+    fit_text_to_width(font, value_text, rect->w - 12, value_fit, sizeof(value_fit));
+    draw_value = value_fit[0] ? value_fit : value_text;
+    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, draw_value, COLOR_TEXT);
     int text_w = 0;
     int text_h = 0;
     if (surf) {
@@ -361,6 +431,15 @@ void scene_editor_panel_draw(SceneEditorState *state) {
 
     int info_x = state->canvas_x;
     int info_y = state->canvas_y + state->canvas_height + 20;
+    int info_step = state->font_small ? TTF_FontHeight(state->font_small) + 8 : 26;
+    if (info_step < 24) info_step = 24;
+    if (win_h > 0) {
+        int max_info_y = win_h - info_step * 3 - 8;
+        if (info_y > max_info_y) info_y = max_info_y;
+        if (info_y < state->canvas_y + state->canvas_height + 6) {
+            info_y = state->canvas_y + state->canvas_height + 6;
+        }
+    }
     draw_text(renderer, state->font_small,
               "Shortcuts: Tab emitters, arrows nudge, +/- radius/size, Delete removes",
               info_x,
@@ -369,7 +448,7 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     draw_text(renderer, state->font_small,
               "Drag objects/emitters on canvas. Save applies changes. Esc cancels.",
               info_x,
-              info_y + 26,
+              info_y + info_step,
               COLOR_TEXT_DIM);
     const char *boundary_hint = state->boundary_mode
                                     ? "Air Flow Mode ON: Click edges, E=emit, R=recv, X=clear"
@@ -377,7 +456,7 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     draw_text(renderer, state->font_small,
               boundary_hint,
               info_x,
-              info_y + 52,
+              info_y + info_step * 2,
               COLOR_TEXT_DIM);
 
     SDL_SetRenderDrawColor(renderer, COLOR_PANEL.r, COLOR_PANEL.g, COLOR_PANEL.b, 255);
@@ -426,10 +505,16 @@ void scene_editor_panel_draw(SceneEditorState *state) {
         SDL_RenderFillRect(renderer, &import_rect);
         SDL_SetRenderDrawColor(renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 255);
         SDL_RenderDrawRect(renderer, &import_rect);
-        draw_text(renderer, state->font_small, "Import files", import_rect.x, import_rect.y - 22, COLOR_TEXT_DIM);
+        {
+            int label_h = state->font_small ? TTF_FontHeight(state->font_small) : 16;
+            draw_text(renderer, state->font_small, "Import files", import_rect.x, import_rect.y - label_h - 6, COLOR_TEXT_DIM);
+        }
         draw_import_list(state);
     } else {
-        draw_text(renderer, state->font_small, "Objects", list_rect.x, list_rect.y - 22, COLOR_TEXT_DIM);
+        {
+            int label_h = state->font_small ? TTF_FontHeight(state->font_small) : 16;
+            draw_text(renderer, state->font_small, "Objects", list_rect.x, list_rect.y - label_h - 6, COLOR_TEXT_DIM);
+        }
         draw_object_list(state);
     }
 

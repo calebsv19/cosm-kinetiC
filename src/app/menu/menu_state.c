@@ -12,6 +12,19 @@ static int quality_count(void) {
     return quality_profile_count();
 }
 
+static int menu_preset_row_height(const SceneMenuInteraction *ctx) {
+    int row_height = PRESET_ROW_HEIGHT;
+    if (!ctx || !ctx->font) return row_height;
+    {
+        int font_h = TTF_FontHeight(ctx->font);
+        if (font_h > 0) {
+            int scaled = font_h + 24;
+            if (scaled > row_height) row_height = scaled;
+        }
+    }
+    return row_height;
+}
+
 void menu_apply_quality_profile_index(SceneMenuInteraction *ctx, int index) {
     if (!ctx || !ctx->cfg) return;
     quality_profile_apply(ctx->cfg, index);
@@ -215,12 +228,13 @@ int menu_visible_row_from_slot(const SceneMenuInteraction *ctx, int slot_index) 
 }
 
 float menu_preset_total_height(const SceneMenuInteraction *ctx) {
-    if (!ctx) return (float)PRESET_ROW_HEIGHT;
+    int row_height = menu_preset_row_height(ctx);
+    if (!ctx) return (float)row_height;
     int count = menu_visible_slot_count(ctx);
     if (count < 0) count = 0;
-    return (float)count * (float)PRESET_ROW_HEIGHT +
+    return (float)count * (float)row_height +
            ADD_ENTRY_GAP +
-           (float)PRESET_ROW_HEIGHT;
+           (float)row_height;
 }
 
 int menu_preset_index_from_point(SceneMenuInteraction *ctx,
@@ -233,18 +247,19 @@ int menu_preset_index_from_point(SceneMenuInteraction *ctx,
         return -1;
     }
 
+    int row_height = menu_preset_row_height(ctx);
     float local_y = (float)(y - ctx->list_rect.y) + scrollbar_offset(&ctx->scrollbar);
     if (local_y < 0.0f) local_y = 0.0f;
     int count = menu_visible_slot_count(ctx);
-    float add_start = (float)count * (float)PRESET_ROW_HEIGHT + (float)ADD_ENTRY_GAP;
-    float add_end = add_start + (float)PRESET_ROW_HEIGHT;
+    float add_start = (float)count * (float)row_height + (float)ADD_ENTRY_GAP;
+    float add_end = add_start + (float)row_height;
     if (local_y >= add_start) {
         bool inside_add = local_y < add_end;
         if (is_add_entry) *is_add_entry = inside_add;
         return inside_add ? count : -1;
     }
 
-    int row = (int)(local_y / (float)PRESET_ROW_HEIGHT);
+    int row = (int)(local_y / (float)row_height);
     if (row < 0 || row >= count) {
         if (is_add_entry) *is_add_entry = false;
         return -1;
@@ -258,18 +273,22 @@ bool menu_preset_row_rect(SceneMenuInteraction *ctx,
                           bool is_add_entry,
                           SDL_Rect *out_rect) {
     if (!ctx || !out_rect) return false;
+    int row_height = menu_preset_row_height(ctx);
+    int inset = row_height / 10;
+    if (inset < 4) inset = 4;
+    if (inset > 10) inset = 10;
     float offset = scrollbar_offset(&ctx->scrollbar);
     float y = (float)ctx->list_rect.y +
-              (float)row_index * (float)PRESET_ROW_HEIGHT -
+              (float)row_index * (float)row_height -
               offset;
     if (is_add_entry) {
         y += (float)ADD_ENTRY_GAP;
     }
     SDL_Rect rect = {
         .x = ctx->list_rect.x + 8,
-        .y = (int)(y + 6.0f),
+        .y = (int)(y + (float)inset),
         .w = ctx->list_rect.w - SCROLLBAR_WIDTH - 16,
-        .h = PRESET_ROW_HEIGHT - 12
+        .h = row_height - inset * 2
     };
     *out_rect = rect;
     return rect.y + rect.h >= ctx->list_rect.y &&
@@ -277,11 +296,21 @@ bool menu_preset_row_rect(SceneMenuInteraction *ctx,
 }
 
 SDL_Rect menu_preset_delete_button_rect(const SDL_Rect *row_rect) {
+    int size = 24;
+    int x = 0;
+    int y = 0;
+    if (row_rect) {
+        size = row_rect->h - 12;
+        if (size < 20) size = 20;
+        if (size > 34) size = 34;
+        x = row_rect->x + row_rect->w - size - 8;
+        y = row_rect->y + (row_rect->h - size) / 2;
+    }
     SDL_Rect rect = {
-        .x = row_rect->x + row_rect->w - 34,
-        .y = row_rect->y + 8,
-        .w = 26,
-        .h = row_rect->h - 16
+        .x = x,
+        .y = y,
+        .w = size,
+        .h = size
     };
     return rect;
 }
@@ -364,8 +393,9 @@ void menu_switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode) {
 
 void menu_scroll_to_row(SceneMenuInteraction *ctx, int row_index) {
     if (!ctx) return;
-    float row_top = (float)row_index * (float)PRESET_ROW_HEIGHT;
-    float row_bottom = row_top + (float)PRESET_ROW_HEIGHT;
+    int row_height = menu_preset_row_height(ctx);
+    float row_top = (float)row_index * (float)row_height;
+    float row_bottom = row_top + (float)row_height;
     float offset = scrollbar_offset(&ctx->scrollbar);
     float view = (float)ctx->list_rect.h;
 

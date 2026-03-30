@@ -32,6 +32,9 @@
     "blur_enabled": true,
     "black_level": 50
   },
+  "ui": {
+    "text_zoom_step": 0
+  },
   "collider": {
     "max_loops": 16,
     "max_loop_vertices": 256,

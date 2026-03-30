@@ -30,6 +30,32 @@ bool input_poll_events(InputCommands *out,
             break;
         case SDL_KEYDOWN: {
             SDL_Keymod mod = SDL_GetModState();
+            bool ctrl_or_cmd = (mod & (KMOD_CTRL | KMOD_GUI)) != 0;
+            if (ctrl_or_cmd && e.key.repeat == 0) {
+                switch (e.key.keysym.sym) {
+                case SDLK_EQUALS:
+                case SDLK_PLUS:
+                case SDLK_KP_PLUS:
+                    out->text_zoom_in_requested = true;
+                    break;
+                case SDLK_MINUS:
+                case SDLK_UNDERSCORE:
+                case SDLK_KP_MINUS:
+                    out->text_zoom_out_requested = true;
+                    break;
+                case SDLK_0:
+                case SDLK_KP_0:
+                    out->text_zoom_reset_requested = true;
+                    break;
+                default:
+                    break;
+                }
+            }
+            if (out->text_zoom_in_requested ||
+                out->text_zoom_out_requested ||
+                out->text_zoom_reset_requested) {
+                break;
+            }
             switch (e.key.keysym.sym) {
             case SDLK_ESCAPE:
                 out->quit = true;

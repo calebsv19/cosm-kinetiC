@@ -1,6 +1,12 @@
 #include "app/app_config.h"
 #include <stdio.h>
 
+static int clamp_int(int value, int min_value, int max_value) {
+    if (value < min_value) return min_value;
+    if (value > max_value) return max_value;
+    return value;
+}
+
 AppConfig app_config_default(void) {
     AppConfig cfg;
 
@@ -37,6 +43,7 @@ AppConfig app_config_default(void) {
     cfg.render_black_level = 0;
 
     cfg.quality_index = -1;
+    cfg.text_zoom_step = 0;
 
     cfg.headless_enabled = false;
     cfg.headless_frame_count = 0;
@@ -66,4 +73,42 @@ AppConfig app_config_default(void) {
     cfg.collider_debug_logs = false;
 
     return cfg;
+}
+
+int app_config_text_zoom_step_clamp(int step) {
+    return clamp_int(step,
+                     PHYSICS_SIM_TEXT_ZOOM_STEP_MIN,
+                     PHYSICS_SIM_TEXT_ZOOM_STEP_MAX);
+}
+
+int app_config_text_zoom_percent_from_step(int step) {
+    int clamped_step = app_config_text_zoom_step_clamp(step);
+    int percent = 100 + (clamped_step * 10);
+    return clamp_int(percent,
+                     PHYSICS_SIM_TEXT_ZOOM_PERCENT_MIN,
+                     PHYSICS_SIM_TEXT_ZOOM_PERCENT_MAX);
+}
+
+int app_config_text_zoom_percent(const AppConfig *cfg) {
+    if (!cfg) {
+        return 100;
+    }
+    return app_config_text_zoom_percent_from_step(cfg->text_zoom_step);
+}
+
+int app_config_scale_text_point_size(const AppConfig *cfg,
+                                     int base_point_size,
+                                     int min_point_size) {
+    int scaled = 0;
+    if (base_point_size <= 0) {
+        return min_point_size > 0 ? min_point_size : 1;
+    }
+    scaled = (base_point_size * app_config_text_zoom_percent(cfg) + 50) / 100;
+    if (min_point_size <= 0) {
+        min_point_size = 1;
+    }
+    if (scaled < min_point_size) {
+        scaled = min_point_size;
+    }
+    return scaled;
 }

@@ -43,6 +43,14 @@ Other runtime toggles:
 - `G`: toggle object gravity behavior.
 - `H`: toggle elastic collisions behavior.
 
+Global text zoom shortcuts (handled in `input_poll_events()` and consumed before context callbacks):
+- `Cmd/Ctrl +` (`=`, `+`, keypad `+`): text zoom in.
+- `Cmd/Ctrl -` (`-`, `_`, keypad `-`): text zoom out.
+- `Cmd/Ctrl 0` (main `0` or keypad `0`): text zoom reset.
+
+Runtime note:
+- zoom requests are persisted to `data/runtime/app_state.json` by active UI loops.
+
 ## Scene Menu Input
 
 Sources:
@@ -60,6 +68,7 @@ Keyboard handling:
   - `Enter`: confirm edit
   - `Esc`: cancel edit
   - other key/text input routed to text-input widget
+- `Cmd/Ctrl +/-/0`: text zoom shortcut (ignored while menu text fields are active).
 
 Notes:
 - Menu actions are mostly pointer-driven, with keyboard focused on text editing and cancel/confirm flow.
@@ -80,6 +89,7 @@ Core keys:
 - `+` / `-` (and keypad variants): grow/shrink selected object/emitter.
 - Arrow keys: nudge selected item.
 - `G`: toggle gravity on selected object/import (with emitter-bound safety guards).
+- `Cmd/Ctrl +/-/0`: text zoom shortcut (ignored while editor text fields are active).
 
 Contextual keys:
 - boundary-selected edge:
@@ -115,6 +125,7 @@ Structural runtime (`structural_controller.c`) highlights:
 - `K`: scale freeze toggle.
 - `G`: cycle gamma.
 - `X`: thickness scaling toggle.
+- `Cmd/Ctrl +/-/0`: text zoom shortcut (live HUD/runtime font reload + runtime persistence).
 
 Structural editor (`structural_editor.c`) highlights:
 - `1..5`: tool selection.

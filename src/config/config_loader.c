@@ -236,6 +236,16 @@ static void apply_render_settings(const char *json, AppConfig *cfg) {
     }
 }
 
+static void apply_ui_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "ui", &block)) return;
+
+    double val;
+    if (json_block_number(&block, "text_zoom_step", &val)) {
+        cfg->text_zoom_step = app_config_text_zoom_step_clamp((int)val);
+    }
+}
+
 static void apply_headless_settings(const char *json, AppConfig *cfg) {
     JsonBlock block;
     if (!json_find_object(json, "headless", &block)) return;
@@ -366,6 +376,7 @@ static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_input_settings(json, cfg);
     apply_emitter_settings(json, cfg);
     apply_render_settings(json, cfg);
+    apply_ui_settings(json, cfg);
     apply_collider_settings(json, cfg);
     apply_broadphase_settings(json, cfg);
     apply_debug_settings(json, cfg);
@@ -441,6 +452,9 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "  \"render\": {\n");
     fprintf(f, "    \"blur_enabled\": %s,\n", cfg->enable_render_blur ? "true" : "false");
     fprintf(f, "    \"black_level\": %d\n", cfg->render_black_level);
+    fprintf(f, "  },\n");
+    fprintf(f, "  \"ui\": {\n");
+    fprintf(f, "    \"text_zoom_step\": %d\n", app_config_text_zoom_step_clamp(cfg->text_zoom_step));
     fprintf(f, "  },\n");
     fprintf(f, "  \"collider\": {\n");
     fprintf(f, "    \"max_loops\": %d,\n", cfg->collider_max_loops);

@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-03-28
+Last updated: 2026-03-29
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -61,6 +61,20 @@ Last updated: 2026-03-28
     - `make -C physics_sim test-stable`
   - commit title lock remains in effect for final closeout commit after user confirmation:
     - `Project Scaffold Standardization`
+
+## Post-Scaffold Direction
+- Next structured execution lane is the post-scaffold font-size pass.
+- Active private plan:
+  - `../docs/private_program_docs/physics_sim/2026-03-29_physics_sim_post_scaffold_font_size_pass_plan.md`
+- Current phase status:
+  - `PS-F0` complete (font/text/input mapping + risk capture)
+  - `PS-F1` complete (runtime zoom state + clamp/percent mapping + menu post-tier scaling)
+  - `PS-F2` complete (keyboard shortcuts + live refresh/invalidation contract)
+  - `PS-F3` complete (layout safety pass; metric-driven spacing/hitbox reflow landed in menu/editor/structural lanes)
+  - `PS-F4` complete (pane-by-pane visual audit closed; overlap/clip hardening landed, including width-fit control/field text safety in menu + editor lanes)
+  - `PS-F5` complete (verification/docs/memory/commit wrap-up executed with required title)
+- Wrap-up commit title for that lane remains fixed:
+  - `Post-Scaffold Font Size Standardization`
 
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.

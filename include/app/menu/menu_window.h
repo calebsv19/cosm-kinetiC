@@ -6,6 +6,7 @@
 #include "app/menu/menu_types.h"
 
 bool menu_create_window(SceneMenuInteraction *ctx);
+bool menu_reload_fonts(SceneMenuInteraction *ctx);
 void menu_destroy_window(SceneMenuInteraction *ctx);
 
 #endif

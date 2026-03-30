@@ -8,6 +8,123 @@
 
 #include "render/vk_shared_device.h"
 
+static int menu_scaled_font_size(const SceneMenuInteraction *ctx,
+                                 int base_point_size,
+                                 int min_point_size) {
+    const AppConfig *cfg = (ctx && ctx->cfg) ? ctx->cfg : NULL;
+    return app_config_scale_text_point_size(cfg, base_point_size, min_point_size);
+}
+
+static void menu_close_fonts(SceneMenuInteraction *ctx) {
+    if (!ctx) return;
+    if (ctx->font_title) {
+        TTF_CloseFont(ctx->font_title);
+        ctx->font_title = NULL;
+    }
+    if (ctx->font) {
+        TTF_CloseFont(ctx->font);
+        ctx->font = NULL;
+    }
+    if (ctx->font_small) {
+        TTF_CloseFont(ctx->font_small);
+        ctx->font_small = NULL;
+    }
+}
+
+static bool menu_open_fonts_resolved(const SceneMenuInteraction *ctx,
+                                     TTF_Font **out_title,
+                                     TTF_Font **out_body,
+                                     TTF_Font **out_small) {
+    TTF_Font *font_title = NULL;
+    TTF_Font *font_body = NULL;
+    TTF_Font *font_small = NULL;
+    if (!ctx || !out_title || !out_body || !out_small) return false;
+
+    {
+        char shared_path[256];
+        int shared_size = 32;
+        if (physics_sim_shared_font_resolve_menu_title(shared_path, sizeof(shared_path), &shared_size)) {
+            shared_size = menu_scaled_font_size(ctx, shared_size, 8);
+            font_title = TTF_OpenFont(shared_path, shared_size);
+        }
+    }
+    if (!font_title) {
+        int fallback_size = menu_scaled_font_size(ctx, 32, 8);
+        font_title = TTF_OpenFont(FONT_TITLE_PATH_1, fallback_size);
+        if (!font_title) {
+            font_title = TTF_OpenFont(FONT_TITLE_PATH_2, fallback_size);
+        }
+    }
+    if (!font_title) {
+        fprintf(stderr, "Failed to open title font: %s\n", TTF_GetError());
+    }
+
+    {
+        char shared_path[256];
+        int shared_size = 22;
+        if (physics_sim_shared_font_resolve_menu_body(shared_path, sizeof(shared_path), &shared_size)) {
+            shared_size = menu_scaled_font_size(ctx, shared_size, 6);
+            font_body = TTF_OpenFont(shared_path, shared_size);
+        }
+    }
+    if (!font_body) {
+        int fallback_size = menu_scaled_font_size(ctx, 22, 6);
+        font_body = TTF_OpenFont(FONT_BODY_PATH_1, fallback_size);
+        if (!font_body) {
+            font_body = TTF_OpenFont(FONT_BODY_PATH_2, fallback_size);
+        }
+    }
+    if (!font_body) {
+        fprintf(stderr, "Failed to open body font: %s\n", TTF_GetError());
+    }
+
+    {
+        char shared_path[256];
+        int shared_size = 18;
+        if (physics_sim_shared_font_resolve_menu_small(shared_path, sizeof(shared_path), &shared_size)) {
+            shared_size = menu_scaled_font_size(ctx, shared_size, 6);
+            font_small = TTF_OpenFont(shared_path, shared_size);
+        }
+    }
+    if (!font_small) {
+        int fallback_size = menu_scaled_font_size(ctx, 18, 6);
+        font_small = TTF_OpenFont(FONT_BODY_PATH_1, fallback_size);
+        if (!font_small) {
+            font_small = TTF_OpenFont(FONT_BODY_PATH_2, fallback_size);
+        }
+    }
+    if (!font_small) {
+        fprintf(stderr, "Failed to open small font: %s\n", TTF_GetError());
+    }
+
+    if (!font_title || !font_body || !font_small) {
+        if (font_title) TTF_CloseFont(font_title);
+        if (font_body) TTF_CloseFont(font_body);
+        if (font_small) TTF_CloseFont(font_small);
+        return false;
+    }
+
+    *out_title = font_title;
+    *out_body = font_body;
+    *out_small = font_small;
+    return true;
+}
+
+static bool menu_open_fonts(SceneMenuInteraction *ctx) {
+    TTF_Font *new_title = NULL;
+    TTF_Font *new_body = NULL;
+    TTF_Font *new_small = NULL;
+    if (!ctx) return false;
+    if (!menu_open_fonts_resolved(ctx, &new_title, &new_body, &new_small)) {
+        return false;
+    }
+    menu_close_fonts(ctx);
+    ctx->font_title = new_title;
+    ctx->font = new_body;
+    ctx->font_small = new_small;
+    return true;
+}
+
 bool menu_create_window(SceneMenuInteraction *ctx) {
     if (!ctx) return false;
 
@@ -79,72 +196,18 @@ bool menu_create_window(SceneMenuInteraction *ctx) {
         }
     }
 
-    {
-        char shared_path[256];
-        int shared_size = 32;
-        if (physics_sim_shared_font_resolve_menu_title(shared_path, sizeof(shared_path), &shared_size)) {
-            ctx->font_title = TTF_OpenFont(shared_path, shared_size);
-        }
-    }
-    if (!ctx->font_title) {
-        ctx->font_title = TTF_OpenFont(FONT_TITLE_PATH_1, 32);
-        if (!ctx->font_title) {
-            ctx->font_title = TTF_OpenFont(FONT_TITLE_PATH_2, 32);
-        }
-    }
-    if (!ctx->font_title) {
-        fprintf(stderr, "Failed to open title font: %s\n", TTF_GetError());
-    }
+    return menu_open_fonts(ctx);
+}
 
-    {
-        char shared_path[256];
-        int shared_size = 22;
-        if (physics_sim_shared_font_resolve_menu_body(shared_path, sizeof(shared_path), &shared_size)) {
-            ctx->font = TTF_OpenFont(shared_path, shared_size);
-        }
-    }
-    if (!ctx->font) {
-        ctx->font = TTF_OpenFont(FONT_BODY_PATH_1, 22);
-        if (!ctx->font) {
-            ctx->font = TTF_OpenFont(FONT_BODY_PATH_2, 22);
-        }
-    }
-    if (!ctx->font) {
-        fprintf(stderr, "Failed to open body font: %s\n", TTF_GetError());
-    }
-
-    {
-        char shared_path[256];
-        int shared_size = 18;
-        if (physics_sim_shared_font_resolve_menu_small(shared_path, sizeof(shared_path), &shared_size)) {
-            ctx->font_small = TTF_OpenFont(shared_path, shared_size);
-        }
-    }
-    if (!ctx->font_small) {
-        ctx->font_small = TTF_OpenFont(FONT_BODY_PATH_1, 18);
-        if (!ctx->font_small) {
-            ctx->font_small = TTF_OpenFont(FONT_BODY_PATH_2, 18);
-        }
-    }
-
-    return true;
+bool menu_reload_fonts(SceneMenuInteraction *ctx) {
+    if (!ctx) return false;
+    return menu_open_fonts(ctx);
 }
 
 void menu_destroy_window(SceneMenuInteraction *ctx) {
     if (!ctx) return;
     physics_sim_shared_theme_save_persisted();
-    if (ctx->font_title) {
-        TTF_CloseFont(ctx->font_title);
-        ctx->font_title = NULL;
-    }
-    if (ctx->font) {
-        TTF_CloseFont(ctx->font);
-        ctx->font = NULL;
-    }
-    if (ctx->font_small) {
-        TTF_CloseFont(ctx->font_small);
-        ctx->font_small = NULL;
-    }
+    menu_close_fonts(ctx);
 
     if (ctx->renderer) {
         vk_renderer_wait_idle((VkRenderer *)ctx->renderer);

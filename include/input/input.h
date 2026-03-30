@@ -20,6 +20,10 @@ typedef struct InputCommands {
 
     BrushMode brush_mode;
     bool      brush_mode_changed;
+
+    bool text_zoom_in_requested;
+    bool text_zoom_out_requested;
+    bool text_zoom_reset_requested;
 } InputCommands;
 
 bool input_poll_events(InputCommands *out,

@@ -11,6 +11,7 @@
 
 #include "input/input.h"
 #include "input/input_context.h"
+#include "config/config_loader.h"
 #include "physics/structural/structural_scene.h"
 #include "physics/structural/structural_solver.h"
 #include "app/structural/structural_render.h"
@@ -79,18 +80,71 @@ typedef struct StructuralController {
     char preset_path[256];
 } StructuralController;
 
-static TTF_Font *load_font(int size) {
+static const char *k_runtime_config_path = "data/runtime/app_state.json";
+
+static TTF_Font *load_font(const AppConfig *cfg, int size) {
     const char *paths[] = {
         FONT_BODY_PATH_1,
         FONT_BODY_PATH_2,
         FONT_TITLE_PATH_1,
         FONT_TITLE_PATH_2
     };
+    int scaled_size = app_config_scale_text_point_size(cfg, size, 6);
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
-        TTF_Font *font = TTF_OpenFont(paths[i], size);
+        TTF_Font *font = TTF_OpenFont(paths[i], scaled_size);
         if (font) return font;
     }
     return NULL;
+}
+
+static bool structural_reload_fonts(StructuralController *ctrl,
+                                    const AppConfig *cfg) {
+    TTF_Font *small = NULL;
+    TTF_Font *hud = NULL;
+    if (!ctrl || !cfg) return false;
+    small = load_font(cfg, 12);
+    hud = load_font(cfg, 14);
+    if (!small || !hud) {
+        if (small) TTF_CloseFont(small);
+        if (hud) TTF_CloseFont(hud);
+        return false;
+    }
+    if (ctrl->font_small) TTF_CloseFont(ctrl->font_small);
+    if (ctrl->font_hud) TTF_CloseFont(ctrl->font_hud);
+    ctrl->font_small = small;
+    ctrl->font_hud = hud;
+    return true;
+}
+
+static bool structural_apply_text_zoom_shortcut(const InputCommands *cmds,
+                                                AppConfig *cfg,
+                                                StructuralController *ctrl) {
+    int next_step = 0;
+    if (!cmds || !cfg || !ctrl) return false;
+    if (!(cmds->text_zoom_in_requested ||
+          cmds->text_zoom_out_requested ||
+          cmds->text_zoom_reset_requested)) {
+        return false;
+    }
+    next_step = cfg->text_zoom_step;
+    if (cmds->text_zoom_reset_requested) {
+        next_step = 0;
+    } else {
+        if (cmds->text_zoom_in_requested) next_step += 1;
+        if (cmds->text_zoom_out_requested) next_step -= 1;
+    }
+    next_step = app_config_text_zoom_step_clamp(next_step);
+    if (next_step == cfg->text_zoom_step) return false;
+    cfg->text_zoom_step = next_step;
+
+    if (!config_loader_save(cfg, k_runtime_config_path)) {
+        fprintf(stderr, "[struct] Failed to persist runtime config to %s\n",
+                k_runtime_config_path);
+    }
+    if (!structural_reload_fonts(ctrl, cfg)) {
+        fprintf(stderr, "[struct] Failed to reload fonts after zoom update.\n");
+    }
+    return true;
 }
 
 static void render_text(SDL_Renderer *renderer, TTF_Font *font,
@@ -108,6 +162,21 @@ static void render_text(SDL_Renderer *renderer, TTF_Font *font,
         vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &texture);
     }
     SDL_FreeSurface(surface);
+}
+
+static bool render_hud_line_limited(SDL_Renderer *renderer,
+                                    TTF_Font *font,
+                                    int x,
+                                    int *y,
+                                    int step,
+                                    int limit_y,
+                                    SDL_Color color,
+                                    const char *text) {
+    if (!renderer || !font || !y || !text) return false;
+    if (*y + step > limit_y) return false;
+    render_text(renderer, font, x, *y, color, text);
+    *y += step;
+    return true;
 }
 
 static void runtime_view_clear(StructuralRuntimeView *view) {
@@ -1094,64 +1163,53 @@ static void render_scene(SDL_Renderer *renderer, StructuralController *ctrl) {
     int hud_x = 16;
     int hud_y = 16;
     if (ctrl->font_hud) {
+        int hud_limit_y = (ctrl->window_h > 0) ? (ctrl->window_h - 20) : 1000000;
+        int hud_line_step = TTF_FontHeight(ctrl->font_hud) + 4;
+        if (hud_line_step < 18) hud_line_step = 18;
         char line[128];
         snprintf(line, sizeof(line), "Mode: Structural");
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Nodes: %zu  Edges: %zu", scene->node_count, scene->edge_count);
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Solve: Space | Reset sim: R");
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Dynamic: E %s | Play: P %s | Step: S",
                  ctrl->dynamic_mode ? "On" : "Off",
                  ctrl->dynamic_playing ? "On" : "Off");
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Integrator: %s (Z)",
                  ctrl->integrator == STRUCT_INTEGRATOR_NEWMARK ? "Newmark" : "Explicit");
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Time scale: %.2f (6/7)", ctrl->time_scale);
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Damping a: %.2f (A/F)", ctrl->damping_alpha);
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Damping b: %.2f (H/J)", ctrl->damping_beta);
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Gravity ramp: %s %.2fs (U/0)",
                  ctrl->gravity_ramp_enabled ? "On" : "Off",
                  ctrl->gravity_ramp_duration);
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Sim time: %.2fs", ctrl->sim_time);
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Overlay: T axial | B bend | V shear | Q combined");
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Scale: %s P%.0f gamma %.2f %s %s",
                  ctrl->scale_use_percentile ? "Pct" : "Max",
                  ctrl->scale_percentile * 100.0f,
                  ctrl->scale_gamma,
                  ctrl->scale_freeze ? "freeze" : "live",
                  ctrl->scale_thickness ? "thick" : "flat");
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         snprintf(line, sizeof(line), "Viz: Q combined | Y pct | G gamma | K freeze | X thick");
-        render_text(renderer, ctrl->font_hud, hud_x, hud_y, hud_color, line);
-        hud_y += 18;
+        (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, hud_color, line);
         if (ctrl->last_result.warning[0]) {
             SDL_Color warn = {255, 180, 100, 255};
-            render_text(renderer, ctrl->font_hud, hud_x, hud_y, warn, ctrl->last_result.warning);
-            hud_y += 18;
+            (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, warn, ctrl->last_result.warning);
         }
         if (ctrl->last_result.warning[0]) {
             SDL_Color status = {160, 200, 160, 255};
-            render_text(renderer, ctrl->font_hud, hud_x, hud_y, status, ctrl->last_result.warning);
+            (void)render_hud_line_limited(renderer, ctrl->font_hud, hud_x, &hud_y, hud_line_step, hud_limit_y, status, ctrl->last_result.warning);
         }
     }
 
@@ -1180,17 +1238,50 @@ static void render_scene(SDL_Renderer *renderer, StructuralController *ctrl) {
             char line[160];
             int tx = ctrl->pointer_x + 12;
             int ty = ctrl->pointer_y + 12;
+            int tip_line_step = TTF_FontHeight(ctrl->font_small) + 2;
+            int line_w1 = 0;
+            int line_w2 = 0;
+            int line_w3 = 0;
+            int max_w = 0;
+            int tip_h = 0;
+            if (tip_line_step < 16) tip_line_step = 16;
             SDL_Color tip = {240, 240, 240, 255};
             SDL_Color dim = {180, 190, 200, 255};
             snprintf(line, sizeof(line), "Edge %d (A %d, B %d)",
                      best_edge->id, best_a->id, best_b->id);
+            if (TTF_SizeUTF8(ctrl->font_small, line, &line_w1, NULL) != 0) line_w1 = 0;
+            snprintf(line, sizeof(line), "Axial: %.3f  Shear: %.3f",
+                     best_edge->axial_stress,
+                     0.5f * (best_edge->shear_force_a + best_edge->shear_force_b));
+            if (TTF_SizeUTF8(ctrl->font_small, line, &line_w2, NULL) != 0) line_w2 = 0;
+            snprintf(line, sizeof(line), "Moment A: %.3f  B: %.3f",
+                     best_edge->bending_moment_a,
+                     best_edge->bending_moment_b);
+            if (TTF_SizeUTF8(ctrl->font_small, line, &line_w3, NULL) != 0) line_w3 = 0;
+            max_w = line_w1;
+            if (line_w2 > max_w) max_w = line_w2;
+            if (line_w3 > max_w) max_w = line_w3;
+            tip_h = tip_line_step * 3;
+            if (ctrl->window_w > 0) {
+                int max_tx = ctrl->window_w - max_w - 12;
+                if (tx > max_tx) tx = max_tx;
+                if (tx < 8) tx = 8;
+            }
+            if (ctrl->window_h > 0) {
+                int max_ty = ctrl->window_h - tip_h - 12;
+                if (ty > max_ty) ty = max_ty;
+                if (ty < 8) ty = 8;
+            }
+
+            snprintf(line, sizeof(line), "Edge %d (A %d, B %d)",
+                     best_edge->id, best_a->id, best_b->id);
             render_text(renderer, ctrl->font_small, tx, ty, tip, line);
-            ty += 16;
+            ty += tip_line_step;
             snprintf(line, sizeof(line), "Axial: %.3f  Shear: %.3f",
                      best_edge->axial_stress,
                      0.5f * (best_edge->shear_force_a + best_edge->shear_force_b));
             render_text(renderer, ctrl->font_small, tx, ty, dim, line);
-            ty += 16;
+            ty += tip_line_step;
             snprintf(line, sizeof(line), "Moment A: %.3f  B: %.3f",
                      best_edge->bending_moment_a,
                      best_edge->bending_moment_b);
@@ -1387,7 +1478,7 @@ static void on_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     (void)mod;
 }
 
-int structural_controller_run(const AppConfig *cfg,
+int structural_controller_run(AppConfig *cfg,
                               const ShapeAssetLibrary *shape_library,
                               const char *preset_path) {
     (void)shape_library;
@@ -1528,8 +1619,8 @@ int structural_controller_run(const AppConfig *cfg,
     ctrl.newmark_beta = 0.25f;
     ctrl.newmark_gamma = 0.5f;
     ctrl.gravity_ramp_duration = 1.0f;
-    ctrl.font_small = load_font(12);
-    ctrl.font_hud = load_font(14);
+    ctrl.font_small = load_font(cfg, 12);
+    ctrl.font_hud = load_font(cfg, 14);
     ctrl.running = true;
     SDL_GetWindowSize(window, &ctrl.window_w, &ctrl.window_h);
     vk_renderer_set_logical_size((VkRenderer *)renderer,
@@ -1562,6 +1653,7 @@ int structural_controller_run(const AppConfig *cfg,
         if (!running || cmds.quit) {
             ctrl.running = false;
         }
+        (void)structural_apply_text_zoom_shortcut(&cmds, cfg, &ctrl);
 
         Uint32 now = SDL_GetTicks();
         float dt = (float)(now - last_ticks) / 1000.0f;

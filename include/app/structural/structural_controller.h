@@ -4,7 +4,7 @@
 #include "app/app_config.h"
 #include "geo/shape_library.h"
 
-int structural_controller_run(const AppConfig *cfg,
+int structural_controller_run(AppConfig *cfg,
                               const ShapeAssetLibrary *shape_library,
                               const char *preset_path);
 

@@ -32,7 +32,10 @@ typedef struct SceneEditorState {
     SDL_Renderer *renderer;
     TTF_Font     *font_main;
     TTF_Font     *font_small;
+    bool          owns_font_main;
+    bool          owns_font_small;
     AppConfig     cfg;
+    AppConfig    *cfg_live;
     FluidScenePreset working;
     FluidScenePreset *target;
     InputContextManager *context_mgr;
@@ -59,6 +62,8 @@ typedef struct SceneEditorState {
     SDL_Rect panel_rect;
     SDL_Rect width_rect;
     SDL_Rect height_rect;
+    int layout_win_w;
+    int layout_win_h;
 
     int  selected_emitter;
     int  hover_emitter;
