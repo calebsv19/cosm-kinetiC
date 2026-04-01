@@ -98,6 +98,15 @@ Last updated: 2026-04-01
   - public packaging reference:
     - `docs/desktop_packaging.md`
 
+- trio shared-scene bridge lane:
+  - `TP-S4` complete in `physics_sim`:
+    - runtime preflight/apply bridge for `scene_runtime_v1`
+    - namespace-safe writeback guardrails (`extensions.physics_sim.*`)
+    - stable contract tests integrated into `test-stable`
+  - `TP-S5` complete:
+    - fixture-driven round-trip interop checks landed across `ray_tracing` + `physics_sim`
+    - nondestructive namespace-preservation behavior validated for both app overlays
+
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.
 - No shared subtree redesign inside scaffold migration commits.

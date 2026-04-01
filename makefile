@@ -42,6 +42,8 @@ SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
 SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
 VULKAN_CFLAGS :=
 VULKAN_LIBS :=
+JSON_CFLAGS := $(shell pkg-config --cflags json-c 2>/dev/null)
+JSON_LIBS := $(shell pkg-config --libs json-c 2>/dev/null)
 
 # =========================
 #  Base flags
@@ -103,9 +105,18 @@ ifeq ($(UNAME_S),Darwin)
     CFLAGS += -DVK_USE_PLATFORM_METAL_EXT
 endif
 
+ifeq ($(strip $(JSON_LIBS)),)
+JSON_LIBS := -ljson-c
+endif
+ifeq ($(UNAME_S),Darwin)
+ifeq ($(strip $(JSON_CFLAGS)),)
+JSON_CFLAGS := -I/opt/homebrew/include
+endif
+endif
 
 # Always link libm
 LIBS += -lm
+LIBS += $(JSON_LIBS)
 
 # =========================
 #  Source / object discovery
@@ -157,16 +168,18 @@ CORE_IO_DIR := ../shared/core/core_io
 CORE_DATA_DIR := ../shared/core/core_data
 CORE_PACK_DIR := ../shared/core/core_pack
 CORE_SCENE_DIR := ../shared/core/core_scene
+CORE_SCENE_COMPILE_DIR := ../shared/core/core_scene_compile
 CORE_TRACE_DIR := ../shared/core/core_trace
 CORE_THEME_DIR := ../shared/core/core_theme
 CORE_FONT_DIR := ../shared/core/core_font
-CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include
+CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include
 
 CORE_BASE_SRCS := $(CORE_BASE_DIR)/src/core_base.c
 CORE_IO_SRCS := $(CORE_IO_DIR)/src/core_io.c
 CORE_DATA_SRCS := $(CORE_DATA_DIR)/src/core_data.c
 CORE_PACK_SRCS := $(CORE_PACK_DIR)/src/core_pack.c $(CORE_PACK_DIR)/src/core_pack_vf2d.c
 CORE_SCENE_SRCS := $(CORE_SCENE_DIR)/src/core_scene.c
+CORE_SCENE_COMPILE_SRCS := $(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c
 CORE_TRACE_SRCS := $(CORE_TRACE_DIR)/src/core_trace.c
 CORE_THEME_SRCS := $(CORE_THEME_DIR)/src/core_theme.c
 CORE_FONT_SRCS := $(CORE_FONT_DIR)/src/core_font.c
@@ -176,11 +189,12 @@ CORE_IO_OBJS := $(patsubst $(CORE_IO_DIR)/src/%.c,$(BUILD_DIR)/core_io/%.o,$(COR
 CORE_DATA_OBJS := $(patsubst $(CORE_DATA_DIR)/src/%.c,$(BUILD_DIR)/core_data/%.o,$(CORE_DATA_SRCS))
 CORE_PACK_OBJS := $(patsubst $(CORE_PACK_DIR)/src/%.c,$(BUILD_DIR)/core_pack/%.o,$(CORE_PACK_SRCS))
 CORE_SCENE_OBJS := $(patsubst $(CORE_SCENE_DIR)/src/%.c,$(BUILD_DIR)/core_scene/%.o,$(CORE_SCENE_SRCS))
+CORE_SCENE_COMPILE_OBJS := $(patsubst $(CORE_SCENE_COMPILE_DIR)/src/%.c,$(BUILD_DIR)/core_scene_compile/%.o,$(CORE_SCENE_COMPILE_SRCS))
 CORE_TRACE_OBJS := $(patsubst $(CORE_TRACE_DIR)/src/%.c,$(BUILD_DIR)/core_trace/%.o,$(CORE_TRACE_SRCS))
 CORE_THEME_OBJS := $(patsubst $(CORE_THEME_DIR)/src/%.c,$(BUILD_DIR)/core_theme/%.o,$(CORE_THEME_SRCS))
 CORE_FONT_OBJS := $(patsubst $(CORE_FONT_DIR)/src/%.c,$(BUILD_DIR)/core_font/%.o,$(CORE_FONT_SRCS))
 KIT_VIZ_OBJS := $(patsubst $(KIT_VIZ_DIR)/src/%.c,$(BUILD_DIR)/kit_viz/%.o,$(KIT_VIZ_SRCS))
-OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(KIT_VIZ_OBJS)
+OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(KIT_VIZ_OBJS)
 DEPS := $(OBJS:.o=.d)
 CORE_PACK_TOOL_SRCS := \
 	$(VF2D_PACK_TOOL_SRC) \
@@ -233,12 +247,13 @@ STABLE_TEST_TARGETS := \
 	test-vf2d-pack-dataset-parity \
 	test-kitviz-field-adapter \
 	test-sim-mode-route-contract \
-	test-preset-io-dimensional-contract
+	test-preset-io-dimensional-contract \
+	test-runtime-scene-bridge-contract
 
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-runtime-scene-bridge-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -287,6 +302,15 @@ SIM_MODE_ROUTE_CONTRACT_TEST_SRCS := \
 	tests/sim_mode_route_contract_test.c \
 	$(SRC_DIR)/app/sim_modes/sim_mode_dispatch.c
 
+RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
+	tests/runtime_scene_bridge_contract_test.c \
+	$(SRC_DIR)/import/runtime_scene_bridge.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/scene_presets.c \
+	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
+	$(CORE_IO_DIR)/src/core_io.c \
+	$(CORE_BASE_DIR)/src/core_base.c
+
 test-sim-mode-route-contract: $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
@@ -300,6 +324,15 @@ test-preset-io-dimensional-contract: $(PRESET_IO_DIMENSIONAL_TEST_SRCS)
 		-I$(INC_DIR) -I$(SRC_DIR) \
 		-o $(BUILD_DIR)/preset_io_dimensional_contract_test $(PRESET_IO_DIMENSIONAL_TEST_SRCS) -lm
 	$(BUILD_DIR)/preset_io_dimensional_contract_test
+
+test-runtime-scene-bridge-contract: $(RUNTIME_SCENE_BRIDGE_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include \
+		$(JSON_CFLAGS) \
+		-o $(BUILD_DIR)/runtime_scene_bridge_contract_test $(RUNTIME_SCENE_BRIDGE_TEST_SRCS) $(JSON_LIBS) -lm
+	$(BUILD_DIR)/runtime_scene_bridge_contract_test
 
 shape_sanity_tool: $(SHAPE_SANITY_TOOL_OBJ)
 	@mkdir -p $(dir $(SHAPE_SANITY_TOOL_OBJ))
@@ -388,6 +421,10 @@ $(BUILD_DIR)/core_pack/%.o: $(CORE_PACK_DIR)/src/%.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/core_scene/%.o: $(CORE_SCENE_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/core_scene_compile/%.o: $(CORE_SCENE_COMPILE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 

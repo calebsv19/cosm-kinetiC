@@ -41,6 +41,7 @@ Stable test lane:
   - `test-kitviz-field-adapter`
   - `test-sim-mode-route-contract`
   - `test-preset-io-dimensional-contract`
+  - `test-runtime-scene-bridge-contract`
 
 Legacy test lane:
 - `make -C physics_sim test-legacy`
@@ -146,6 +147,24 @@ Legacy test lane:
   - runtime HUD route visibility from `PS-U4` remains the canonical run-lane route indicator:
     - `Space: <requested> [-> <projection>]`
     - `Backend: Canonical 2D lane` / `Controlled 3D lane`
+- trio runtime-scene bridge is active in `physics_sim` (`TP-S4` complete):
+  - bridge APIs:
+    - preflight/apply:
+      - `runtime_scene_bridge_preflight_json/file`
+      - `runtime_scene_bridge_apply_json/file`
+    - namespace-safe writeback:
+      - `runtime_scene_bridge_writeback_physics_overlay_json`
+  - contract behavior:
+    - consumes `scene_runtime_v1`,
+    - maps runtime payload into `AppConfig.space_mode` + `FluidScenePreset` object/emitter/dimension lanes,
+    - writeback permits only `extensions.physics_sim.*` plus approved runtime lane `space_mode_default`,
+    - preserves unrelated extension namespaces and unknown runtime fields.
+  - coverage:
+    - `tests/runtime_scene_bridge_contract_test.c`
+    - stable-lane target: `test-runtime-scene-bridge-contract`
+  - `TP-S5` interop fixture validation is active:
+    - compile shared authoring fixture -> physics overlay writeback -> apply
+    - validates preservation of non-physics namespaces (`line_drawing`, `ray_tracing`)
 
 ## Temp/Generated Lane Snapshot
 - currently gitignored:
