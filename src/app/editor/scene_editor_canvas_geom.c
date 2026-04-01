@@ -1,7 +1,26 @@
 #include "app/editor/scene_editor_canvas.h"
 #include "app/shape_lookup.h"
+#include "app/space_mode_adapter.h"
 
 #include <math.h>
+
+static SpaceMode s_scene_editor_canvas_space_mode = SPACE_MODE_2D;
+static SpaceMode s_scene_editor_canvas_projection_mode = SPACE_MODE_2D;
+
+void scene_editor_canvas_set_space_mode(SpaceMode mode) {
+    s_scene_editor_canvas_space_mode = space_mode_adapter_resolve(mode);
+    s_scene_editor_canvas_projection_mode = SPACE_MODE_2D;
+}
+
+void scene_editor_canvas_set_mode_route(const SimModeRoute *route) {
+    SpaceModeViewContext view_ctx = space_mode_adapter_build_canvas_view_context_for_route(route,
+                                                                                            0,
+                                                                                            0,
+                                                                                            1,
+                                                                                            1);
+    s_scene_editor_canvas_space_mode = view_ctx.requested_mode;
+    s_scene_editor_canvas_projection_mode = view_ctx.projection_mode;
+}
 
 float scene_editor_canvas_object_visual_radius_px(const PresetObject *obj, int canvas_w) {
     if (!obj) return (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
@@ -64,9 +83,14 @@ void scene_editor_canvas_project(int canvas_x,
                                  float py,
                                  int *out_x,
                                  int *out_y) {
-    if (!out_x || !out_y) return;
-    *out_x = canvas_x + (int)lroundf(px * (float)canvas_w);
-    *out_y = canvas_y + (int)lroundf(py * (float)canvas_h);
+    SpaceModeViewContext view_ctx = space_mode_adapter_build_canvas_view_context_ex(
+        s_scene_editor_canvas_space_mode,
+        s_scene_editor_canvas_projection_mode,
+        canvas_x,
+        canvas_y,
+        canvas_w,
+        canvas_h);
+    space_mode_adapter_world_to_screen(&view_ctx, px, py, out_x, out_y);
 }
 
 void scene_editor_canvas_to_normalized(int canvas_x,
@@ -77,15 +101,14 @@ void scene_editor_canvas_to_normalized(int canvas_x,
                                        int sy,
                                        float *out_x,
                                        float *out_y) {
-    if (!out_x || !out_y) return;
-    float nx = (float)(sx - canvas_x) / (float)canvas_w;
-    float ny = (float)(sy - canvas_y) / (float)canvas_h;
-    if (nx < 0.0f) nx = 0.0f;
-    if (nx > 1.0f) nx = 1.0f;
-    if (ny < 0.0f) ny = 0.0f;
-    if (ny > 1.0f) ny = 1.0f;
-    *out_x = nx;
-    *out_y = ny;
+    SpaceModeViewContext view_ctx = space_mode_adapter_build_canvas_view_context_ex(
+        s_scene_editor_canvas_space_mode,
+        s_scene_editor_canvas_projection_mode,
+        canvas_x,
+        canvas_y,
+        canvas_w,
+        canvas_h);
+    space_mode_adapter_screen_to_world_clamped(&view_ctx, sx, sy, out_x, out_y);
 }
 
 void scene_editor_canvas_to_import_normalized(int canvas_x,
@@ -96,26 +119,14 @@ void scene_editor_canvas_to_import_normalized(int canvas_x,
                                               int sy,
                                               float *out_x,
                                               float *out_y) {
-    if (!out_x || !out_y) return;
-    float min_dim = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
-    float cx_px = (float)canvas_x + 0.5f * (float)canvas_w;
-    float cy_px = (float)canvas_y + 0.5f * (float)canvas_h;
-    float dx = ((float)sx - cx_px) / min_dim;
-    float dy = ((float)sy - cy_px) / min_dim;
-    float span_x = 0.5f * ((float)canvas_w / min_dim);
-    float span_y = 0.5f * ((float)canvas_h / min_dim);
-    float nx = 0.5f + dx;
-    float ny = 0.5f + dy;
-    float min_x = 0.5f - span_x;
-    float max_x = 0.5f + span_x;
-    float min_y = 0.5f - span_y;
-    float max_y = 0.5f + span_y;
-    if (nx < min_x) nx = min_x;
-    if (nx > max_x) nx = max_x;
-    if (ny < min_y) ny = min_y;
-    if (ny > max_y) ny = max_y;
-    *out_x = nx;
-    *out_y = ny;
+    SpaceModeViewContext view_ctx = space_mode_adapter_build_canvas_view_context_ex(
+        s_scene_editor_canvas_space_mode,
+        s_scene_editor_canvas_projection_mode,
+        canvas_x,
+        canvas_y,
+        canvas_w,
+        canvas_h);
+    space_mode_adapter_screen_to_import_world_clamped(&view_ctx, sx, sy, out_x, out_y);
 }
 
 static bool import_hit_oriented_box(const ImportedShape *imp,

@@ -15,10 +15,12 @@ typedef struct FluidEmitter {
     FluidEmitterType type;
     float position_x;   // normalized 0..1
     float position_y;
+    float position_z;   // additive dimensional field (defaults to 0 for 2D compatibility)
     float radius;       // normalized radius (fraction of grid)
     float strength;     // general scalar (density per second or velocity magnitude)
     float dir_x;        // for velocity jets / sinks
     float dir_y;
+    float dir_z;        // additive dimensional field (defaults to 0 for 2D compatibility)
     int   attached_object; // -1 if free; otherwise index into preset objects
     int   attached_import; // -1 if free; otherwise index into imported shapes
 } FluidEmitter;
@@ -53,8 +55,10 @@ typedef struct PresetObject {
     PresetObjectType type;
     float position_x;
     float position_y;
+    float position_z; // additive dimensional field (defaults to 0 for 2D compatibility)
     float size_x;
     float size_y;
+    float size_z;     // additive dimensional field (defaults to size_x when omitted)
     float angle;
     bool  is_static;
     bool  gravity_enabled;
@@ -67,6 +71,7 @@ typedef struct ImportedShape {
     int   shape_id;       // resolved index into ShapeAsset library (-1 if unresolved)
     float position_x;     // normalized 0..1
     float position_y;     // normalized 0..1
+    float position_z;     // additive dimensional field (defaults to 0 for 2D compatibility)
     float rotation_deg;   // degrees
     float scale;          // uniform scale (1 = fit as-authored)
     float density;        // physics density override
@@ -90,6 +95,11 @@ typedef enum FluidSceneDomainType {
     SCENE_DOMAIN_STRUCTURAL
 } FluidSceneDomainType;
 
+typedef enum FluidSceneDimensionMode {
+    SCENE_DIMENSION_MODE_2D = 0,
+    SCENE_DIMENSION_MODE_3D
+} FluidSceneDimensionMode;
+
 typedef struct FluidScenePreset {
     const char *name;
     size_t emitter_count;
@@ -101,6 +111,7 @@ typedef struct FluidScenePreset {
     ImportedShape import_shapes[MAX_IMPORTED_SHAPES];
     BoundaryFlow boundary_flows[BOUNDARY_EDGE_COUNT];
     FluidSceneDomainType domain;
+    FluidSceneDimensionMode dimension_mode;
     float domain_width;
     float domain_height;
     char  structural_scene_path[256];

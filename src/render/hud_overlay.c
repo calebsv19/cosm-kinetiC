@@ -78,6 +78,16 @@ static void append_token(char *dst, size_t dst_size, const char *token) {
     }
 }
 
+static const char *hud_space_mode_label(SpaceMode mode) {
+    switch (mode) {
+    case SPACE_MODE_3D:
+        return "3D";
+    case SPACE_MODE_2D:
+    default:
+        return "2D";
+    }
+}
+
 void hud_overlay_draw(const RendererHudInfo *hud) {
     if (!hud || !g_hud_renderer || !g_hud_font) return;
 
@@ -93,6 +103,27 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
              hud->paused ? "Paused" : "Run",
              mode_name,
              hud->grid_w, hud->grid_h);
+
+    char space_line[120];
+    snprintf(space_line,
+             sizeof(space_line),
+             "Space: %s%s%s",
+             hud_space_mode_label(hud->requested_space_mode),
+             (hud->requested_space_mode != hud->projection_space_mode) ? " -> " : "",
+             (hud->requested_space_mode != hud->projection_space_mode)
+                 ? hud_space_mode_label(hud->projection_space_mode)
+                 : "");
+
+    char backend_line[160];
+    snprintf(backend_line,
+             sizeof(backend_line),
+             "Backend: %s%s",
+             (hud->backend_lane == SIM_BACKEND_CONTROLLED_3D)
+                 ? "Controlled 3D lane"
+                 : "Canonical 2D lane",
+             hud->backend_uses_canonical_2d_solver
+                 ? " (2D solver scaffold)"
+                 : "");
 
     char preset_line[128];
     snprintf(preset_line, sizeof(preset_line), "Preset: %s",
@@ -170,6 +201,8 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     const char *lines[MAX_HUD_LINES];
     size_t line_count = 0;
     lines[line_count++] = status_line;
+    lines[line_count++] = space_line;
+    lines[line_count++] = backend_line;
     lines[line_count++] = preset_line;
     if (wind_line[0]) lines[line_count++] = wind_line;
     lines[line_count++] = quality_line;

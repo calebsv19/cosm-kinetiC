@@ -37,12 +37,20 @@ static void window_to_grid(const SceneState *scene, int win_x, int win_y,
 
 SceneState scene_create(const AppConfig *cfg,
                         const FluidScenePreset *preset,
-                        const ShapeAssetLibrary *shape_library) {
+                        const ShapeAssetLibrary *shape_library,
+                        const SimModeRoute *mode_route) {
     SceneState s;
     s.time   = 0.0;
     s.dt     = 0.0;
     s.paused = false;
     s.emitters_enabled = true;
+    if (mode_route) {
+        s.mode_route = *mode_route;
+    } else if (cfg) {
+        s.mode_route = sim_mode_resolve_route(cfg->sim_mode, cfg->space_mode);
+    } else {
+        s.mode_route = sim_mode_resolve_route(SIM_MODE_BOX, SPACE_MODE_2D);
+    }
     s.config = cfg;
     s.preset = preset;
     s.wind_ramp_steps = 0;

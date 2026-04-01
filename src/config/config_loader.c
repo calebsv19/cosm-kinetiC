@@ -355,6 +355,14 @@ static void apply_simulation_settings(const char *json, AppConfig *cfg) {
         }
         cfg->sim_mode = (SimulationMode)mode;
     }
+    if (json_block_number(&block, "space_mode", &val) ||
+        json_block_number(&block, "spaceMode", &val)) {
+        int mode = (int)val;
+        if (mode < SPACE_MODE_2D || mode >= SPACE_MODE_COUNT) {
+            mode = SPACE_MODE_2D;
+        }
+        cfg->space_mode = (SpaceMode)mode;
+    }
     if (json_block_number(&block, "tunnel_inflow_speed", &val)) {
         cfg->tunnel_inflow_speed = (float)val;
     }
@@ -430,6 +438,7 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "  },\n");
     fprintf(f, "  \"simulation\": {\n");
     fprintf(f, "    \"mode\": %d,\n", cfg->sim_mode);
+    fprintf(f, "    \"space_mode\": %d,\n", cfg->space_mode);
     fprintf(f, "    \"tunnel_inflow_speed\": %.6f,\n", cfg->tunnel_inflow_speed);
     fprintf(f, "    \"tunnel_inflow_density\": %.6f,\n", cfg->tunnel_inflow_density);
     fprintf(f, "    \"tunnel_viscosity_scale\": %.6f\n", cfg->tunnel_viscosity_scale);

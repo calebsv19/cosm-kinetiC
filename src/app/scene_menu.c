@@ -18,6 +18,14 @@
 
 static const char *k_runtime_config_path = "data/runtime/app_state.json";
 
+static void menu_persist_runtime_config(const AppConfig *cfg) {
+    if (!cfg) return;
+    if (!config_loader_save(cfg, k_runtime_config_path)) {
+        fprintf(stderr, "[menu] Failed to persist runtime config to %s\n",
+                k_runtime_config_path);
+    }
+}
+
 static bool menu_text_entry_active(const SceneMenuInteraction *ctx) {
     if (!ctx) return false;
     if (ctx->rename_input.active) return true;
@@ -60,10 +68,7 @@ static bool menu_apply_text_zoom_shortcut(SceneMenuInteraction *ctx,
     }
     menu_update_scrollbar(ctx);
 
-    if (!config_loader_save(ctx->cfg, k_runtime_config_path)) {
-        fprintf(stderr, "[menu] Failed to persist runtime config to %s\n",
-                k_runtime_config_path);
-    }
+    menu_persist_runtime_config(ctx->cfg);
     return true;
 }
 
@@ -167,6 +172,11 @@ static void menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     if (ctx->mode_toggle_button.rect.y < 24) ctx->mode_toggle_button.rect.y = 24;
     ctx->mode_toggle_button.rect.w = 200;
     ctx->mode_toggle_button.rect.h = compact_h;
+
+    ctx->space_toggle_button.rect.x = ctx->mode_toggle_button.rect.x;
+    ctx->space_toggle_button.rect.y = ctx->mode_toggle_button.rect.y + compact_h + 8;
+    ctx->space_toggle_button.rect.w = ctx->mode_toggle_button.rect.w;
+    ctx->space_toggle_button.rect.h = compact_h;
 
     action_w = (panel_w - ui_gap) / 2;
     if (action_w < 130) action_w = 130;
@@ -339,7 +349,9 @@ restart_menu:
         }
     }
     SimulationMode selection_mode = menu_normalize_sim_mode(cfg->sim_mode);
+    SpaceMode selection_space_mode = menu_normalize_space_mode(cfg->space_mode);
     current_selection.sim_mode = selection_mode;
+    cfg->space_mode = selection_space_mode;
     if (selection_mode >= 0 && selection_mode < SIMULATION_MODE_COUNT &&
         current_selection.last_mode_slot[selection_mode] < 0) {
         current_selection.last_mode_slot[selection_mode] = current_selection.custom_slot_index;
@@ -385,6 +397,7 @@ restart_menu:
         .quality_next_button = {.rect = {0, 0, 0, 0}, .label = ">"},
         .headless_toggle_button = {.rect = {MENU_WIDTH - 220, MENU_HEIGHT - 130, 180, 40}, .label = "Headless"},
         .mode_toggle_button = {.rect = {MENU_WIDTH - 220, 60, 180, 36}, .label = "Mode"},
+        .space_toggle_button = {.rect = {MENU_WIDTH - 220, 104, 180, 36}, .label = "Space"},
         .running = &run,
         .start_requested = &start_requested,
         .context_mgr = NULL,
@@ -570,6 +583,34 @@ restart_menu:
                              &ctx.mode_toggle_button.rect,
                              mode_text,
                              ctx.active_mode == SIM_MODE_WIND_TUNNEL);
+
+            {
+                char space_text[64];
+                snprintf(space_text,
+                         sizeof(space_text),
+                         "Space: %s",
+                         menu_space_mode_label(ctx.cfg ? ctx.cfg->space_mode : SPACE_MODE_2D));
+                menu_draw_toggle(ctx.renderer,
+                                 toggle_font,
+                                 &ctx.space_toggle_button.rect,
+                                 space_text,
+                                 (ctx.cfg && menu_normalize_space_mode(ctx.cfg->space_mode) == SPACE_MODE_3D));
+                if (ctx.cfg && menu_normalize_space_mode(ctx.cfg->space_mode) == SPACE_MODE_3D) {
+                    const char *scaffold_hint = "3D lane scaffold: canonical 2D backend route";
+                    char scaffold_hint_fit[96];
+                    menu_fit_text_to_width(toggle_font,
+                                           scaffold_hint,
+                                           ctx.space_toggle_button.rect.w,
+                                           scaffold_hint_fit,
+                                           sizeof(scaffold_hint_fit));
+                    menu_draw_text(ctx.renderer,
+                                   toggle_font,
+                                   scaffold_hint_fit,
+                                   ctx.space_toggle_button.rect.x,
+                                   ctx.space_toggle_button.rect.y + ctx.space_toggle_button.rect.h + 6,
+                                   menu_color_text_dim());
+                }
+            }
 
             SDL_Rect config_panel = ctx.config_panel_rect;
             menu_draw_panel(ctx.renderer, &config_panel);

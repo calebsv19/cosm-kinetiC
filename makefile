@@ -221,12 +221,14 @@ SHAPE_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SHARED_S
 STABLE_TEST_TARGETS := \
 	test-manifest-to-trace-export \
 	test-vf2d-pack-dataset-parity \
-	test-kitviz-field-adapter
+	test-kitviz-field-adapter \
+	test-sim-mode-route-contract \
+	test-preset-io-dimensional-contract
 
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -265,6 +267,29 @@ test-kitviz-field-adapter: $(KIT_VIZ_FIELD_TEST_SRCS)
 		-I$(KIT_VIZ_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/kit_viz_field_adapter_test $(KIT_VIZ_FIELD_TEST_SRCS) -lm
 	$(BUILD_DIR)/kit_viz_field_adapter_test
+
+PRESET_IO_DIMENSIONAL_TEST_SRCS := \
+	tests/preset_io_dimensional_contract_test.c \
+	$(SRC_DIR)/app/preset_io.c \
+	$(SRC_DIR)/app/scene_presets.c
+
+SIM_MODE_ROUTE_CONTRACT_TEST_SRCS := \
+	tests/sim_mode_route_contract_test.c \
+	$(SRC_DIR)/app/sim_modes/sim_mode_dispatch.c
+
+test-sim-mode-route-contract: $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/sim_mode_route_contract_test $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_mode_route_contract_test
+
+test-preset-io-dimensional-contract: $(PRESET_IO_DIMENSIONAL_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/preset_io_dimensional_contract_test $(PRESET_IO_DIMENSIONAL_TEST_SRCS) -lm
+	$(BUILD_DIR)/preset_io_dimensional_contract_test
 
 shape_sanity_tool: $(SHAPE_SANITY_TOOL_OBJ)
 	@mkdir -p $(dir $(SHAPE_SANITY_TOOL_OBJ))

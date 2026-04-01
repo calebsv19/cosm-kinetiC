@@ -9,6 +9,7 @@
   },
   "simulation": {
     "mode": 0,
+    "space_mode": 0,
     "tunnel_inflow_speed": 30.000000,
     "tunnel_inflow_density": 15.000000,
     "tunnel_viscosity_scale": 0.500000

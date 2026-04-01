@@ -53,6 +53,7 @@ AppConfig app_config_default(void) {
     snprintf(cfg.headless_output_dir, sizeof(cfg.headless_output_dir), "data/snapshots");
 
     cfg.sim_mode = SIM_MODE_BOX;
+    cfg.space_mode = SPACE_MODE_2D;
     cfg.tunnel_inflow_speed = 40.0f;
     cfg.tunnel_inflow_density = 15.0f;
     cfg.tunnel_viscosity_scale = 0.5f;

@@ -16,6 +16,13 @@ static SDL_Color COLOR_TEXT_DIM  = {190, 198, 209, 255};
 static SDL_Color COLOR_FIELD_ACTIVE = {24, 26, 33, 255};
 static SDL_Color COLOR_FIELD_BORDER = {90, 170, 255, 255};
 
+static const char *editor_space_mode_label(SpaceMode mode) {
+    if (mode == SPACE_MODE_3D) {
+        return "3D (Scaffold)";
+    }
+    return "2D";
+}
+
 static SDL_Color lighten_color(SDL_Color color, float factor) {
     if (factor < 0.0f) factor = 0.0f;
     if (factor > 1.0f) factor = 1.0f;
@@ -432,31 +439,50 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     int info_x = state->canvas_x;
     int info_y = state->canvas_y + state->canvas_height + 20;
     int info_step = state->font_small ? TTF_FontHeight(state->font_small) + 8 : 26;
+    int info_lines = 5;
+    char space_mode_line[128];
+    const char *space_mode_hint = (state->cfg.space_mode == SPACE_MODE_3D)
+                                      ? "3D scaffold uses canonical 2D solver/projection route."
+                                      : "2D canonical lane active.";
     if (info_step < 24) info_step = 24;
+    snprintf(space_mode_line,
+             sizeof(space_mode_line),
+             "Space Mode: %s (switch in main menu)",
+             editor_space_mode_label(state->cfg.space_mode));
     if (win_h > 0) {
-        int max_info_y = win_h - info_step * 3 - 8;
+        int max_info_y = win_h - info_step * info_lines - 8;
         if (info_y > max_info_y) info_y = max_info_y;
         if (info_y < state->canvas_y + state->canvas_height + 6) {
             info_y = state->canvas_y + state->canvas_height + 6;
         }
     }
     draw_text(renderer, state->font_small,
-              "Shortcuts: Tab emitters, arrows nudge, +/- radius/size, Delete removes",
+              space_mode_line,
               info_x,
               info_y,
               COLOR_TEXT_DIM);
     draw_text(renderer, state->font_small,
-              "Drag objects/emitters on canvas. Save applies changes. Esc cancels.",
+              "Shortcuts: Tab emitters, arrows nudge, +/- radius/size, Delete removes",
               info_x,
               info_y + info_step,
+              COLOR_TEXT_DIM);
+    draw_text(renderer, state->font_small,
+              "Drag objects/emitters on canvas. Save applies changes. Esc cancels.",
+              info_x,
+              info_y + info_step * 2,
               COLOR_TEXT_DIM);
     const char *boundary_hint = state->boundary_mode
                                     ? "Air Flow Mode ON: Click edges, E=emit, R=recv, X=clear"
                                     : "Air Flow Mode OFF: Click button to edit edge flows";
     draw_text(renderer, state->font_small,
+              space_mode_hint,
+              info_x,
+              info_y + info_step * 3,
+              COLOR_TEXT_DIM);
+    draw_text(renderer, state->font_small,
               boundary_hint,
               info_x,
-              info_y + info_step * 2,
+              info_y + info_step * 4,
               COLOR_TEXT_DIM);
 
     SDL_SetRenderDrawColor(renderer, COLOR_PANEL.r, COLOR_PANEL.g, COLOR_PANEL.b, 255);

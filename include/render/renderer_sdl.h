@@ -16,6 +16,10 @@ typedef struct RendererHudInfo {
     size_t      stroke_samples;
     bool        paused;
     SimulationMode sim_mode;
+    SpaceMode   requested_space_mode;
+    SpaceMode   projection_space_mode;
+    SimBackendLane backend_lane;
+    bool        backend_uses_canonical_2d_solver;
     float       tunnel_inflow_speed;
     bool        vorticity_enabled;
     bool        pressure_enabled;

@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-03-29
+Last updated: 2026-03-31
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -63,18 +63,25 @@ Last updated: 2026-03-29
     - `Project Scaffold Standardization`
 
 ## Post-Scaffold Direction
-- Next structured execution lane is the post-scaffold font-size pass.
-- Active private plan:
-  - `../docs/private_program_docs/physics_sim/2026-03-29_physics_sim_post_scaffold_font_size_pass_plan.md`
-- Current phase status:
-  - `PS-F0` complete (font/text/input mapping + risk capture)
-  - `PS-F1` complete (runtime zoom state + clamp/percent mapping + menu post-tier scaling)
-  - `PS-F2` complete (keyboard shortcuts + live refresh/invalidation contract)
-  - `PS-F3` complete (layout safety pass; metric-driven spacing/hitbox reflow landed in menu/editor/structural lanes)
-  - `PS-F4` complete (pane-by-pane visual audit closed; overlap/clip hardening landed, including width-fit control/field text safety in menu + editor lanes)
-  - `PS-F5` complete (verification/docs/memory/commit wrap-up executed with required title)
-- Wrap-up commit title for that lane remains fixed:
-  - `Post-Scaffold Font Size Standardization`
+- completed post-scaffold lane:
+  - font-size standardization (`PS-F0` through `PS-F5`) is complete
+  - wrap-up commit title used:
+    - `Post-Scaffold Font Size Standardization`
+- active post-scaffold lane:
+  - trio 2D/3D parity propagation with `line_drawing` and `ray_tracing`:
+    - `../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
+  - current status:
+    - `PS-U0` complete (baseline freeze + gap map + tracker sync)
+    - `PS-U1` complete (space mode runtime contract + persistence + menu selector)
+    - `PS-U2` complete (mode adapter seam for world/view/solver routing)
+    - `PS-U3` complete (additive scene/object dimensional contract + compatibility tests)
+    - `PS-U4` complete (backend separation + mode routing + route contract tests)
+    - `PS-U5` complete (mode visibility + controlled 3D lane UX hints)
+    - `PS-U6` complete (verification + docs + memory closeout)
+  - parity lane status:
+    - complete (`PS-U0` through `PS-U6`)
+  - latest execution log:
+    - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u6_verification_docs_memory_closeout.md`
 
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.

@@ -143,6 +143,23 @@ const char *menu_mode_label(SimulationMode mode) {
     }
 }
 
+SpaceMode menu_normalize_space_mode(SpaceMode mode) {
+    if (mode < SPACE_MODE_2D || mode >= SPACE_MODE_COUNT) {
+        return SPACE_MODE_2D;
+    }
+    return mode;
+}
+
+const char *menu_space_mode_label(SpaceMode mode) {
+    switch (menu_normalize_space_mode(mode)) {
+    case SPACE_MODE_3D:
+        return "3D (Scaffold)";
+    case SPACE_MODE_2D:
+    default:
+        return "2D";
+    }
+}
+
 static const char *structural_default_scene_path(void) {
     return "config/structural_scene.txt";
 }

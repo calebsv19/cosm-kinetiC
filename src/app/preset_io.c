@@ -6,7 +6,7 @@
 #include <string.h>
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-static const int PRESET_FILE_VERSION = 11;
+static const int PRESET_FILE_VERSION = 12;
 static const char *STRUCTURAL_SCENE_DEFAULT = "config/structural_scene.txt";
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
@@ -17,6 +17,16 @@ static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
         return domain;
     default:
         return SCENE_DOMAIN_BOX;
+    }
+}
+
+static FluidSceneDimensionMode sanitize_dimension_mode(FluidSceneDimensionMode mode) {
+    switch (mode) {
+    case SCENE_DIMENSION_MODE_2D:
+    case SCENE_DIMENSION_MODE_3D:
+        return mode;
+    default:
+        return SCENE_DIMENSION_MODE_2D;
     }
 }
 
@@ -32,6 +42,8 @@ static void sanitize_emitter(FluidEmitter *em) {
     if (!isfinite(em->position_y)) em->position_y = 0.5f;
     em->position_x = clampf(em->position_x, 0.0f, 1.0f);
     em->position_y = clampf(em->position_y, 0.0f, 1.0f);
+    if (!isfinite(em->position_z)) em->position_z = 0.0f;
+    em->position_z = clampf(em->position_z, -8.0f, 8.0f);
 
     if (!isfinite(em->radius) || em->radius < 0.01f) em->radius = 0.08f;
     if (em->radius > 0.6f) em->radius = 0.6f;
@@ -47,24 +59,30 @@ static void sanitize_emitter(FluidEmitter *em) {
     if (!isfinite(dx) || !isfinite(dy)) {
         em->dir_x = 0.0f;
         em->dir_y = -1.0f;
+        em->dir_z = 0.0f;
         return;
     }
     float len = sqrtf(dx * dx + dy * dy);
     if (len < 1e-4f) {
         em->dir_x = 0.0f;
         em->dir_y = -1.0f;
+        em->dir_z = 0.0f;
         return;
     }
     em->dir_x = dx / len;
     em->dir_y = dy / len;
+    if (!isfinite(em->dir_z)) em->dir_z = 0.0f;
+    em->dir_z = clampf(em->dir_z, -1.0f, 1.0f);
 }
 
 static void sanitize_preset_object(PresetObject *obj) {
     if (!obj) return;
     obj->position_x = clampf(isfinite(obj->position_x) ? obj->position_x : 0.5f, 0.0f, 1.0f);
     obj->position_y = clampf(isfinite(obj->position_y) ? obj->position_y : 0.5f, 0.0f, 1.0f);
+    obj->position_z = clampf(isfinite(obj->position_z) ? obj->position_z : 0.0f, -8.0f, 8.0f);
     obj->size_x = clampf(isfinite(obj->size_x) ? obj->size_x : 0.05f, 0.005f, 1.0f);
     obj->size_y = clampf(isfinite(obj->size_y) ? obj->size_y : obj->size_x, 0.005f, 1.0f);
+    obj->size_z = clampf(isfinite(obj->size_z) ? obj->size_z : obj->size_x, 0.005f, 1.0f);
     if (!isfinite(obj->angle)) obj->angle = 0.0f;
     obj->is_static = obj->is_static ? true : false;
     obj->gravity_enabled = obj->gravity_enabled ? true : false;
@@ -85,6 +103,9 @@ static void sanitize_import_shape(ImportedShape *imp) {
     if (imp->position_x > POS_MAX) imp->position_x = POS_MAX;
     if (imp->position_y < POS_MIN) imp->position_y = POS_MIN;
     if (imp->position_y > POS_MAX) imp->position_y = POS_MAX;
+    if (!isfinite(imp->position_z)) imp->position_z = 0.0f;
+    if (imp->position_z < POS_MIN) imp->position_z = POS_MIN;
+    if (imp->position_z > POS_MAX) imp->position_z = POS_MAX;
     if (!isfinite(imp->rotation_deg)) imp->rotation_deg = 0.0f;
     if (!isfinite(imp->scale) || imp->scale <= 0.0f) imp->scale = 1.0f;
     if (!isfinite(imp->density) || imp->density <= 0.0f) imp->density = 1.0f;
@@ -152,6 +173,7 @@ static void preset_slot_reset(CustomPresetSlot *slot, int index) {
     slot->preset.is_custom = true;
     boundary_flows_reset(slot->preset.boundary_flows);
     slot->preset.domain = SCENE_DOMAIN_BOX;
+    slot->preset.dimension_mode = SCENE_DIMENSION_MODE_2D;
     slot->preset.domain_width = 1.0f;
     slot->preset.domain_height = 1.0f;
     slot->preset.structural_scene_path[0] = '\0';
@@ -233,6 +255,7 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
     if (preset_copy) {
         slot->preset = *preset_copy;
         slot->preset.domain = sanitize_domain(preset_copy->domain);
+        slot->preset.dimension_mode = sanitize_dimension_mode(preset_copy->dimension_mode);
         slot->preset.domain_width = sanitize_dimension_value(preset_copy->domain_width);
         slot->preset.domain_height = sanitize_dimension_value(preset_copy->domain_height);
         if (slot->preset.emitter_count > MAX_FLUID_EMITTERS) {
@@ -260,6 +283,7 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
         slot->preset.is_custom = true;
         boundary_flows_reset(slot->preset.boundary_flows);
         slot->preset.domain = SCENE_DOMAIN_BOX;
+        slot->preset.dimension_mode = SCENE_DIMENSION_MODE_2D;
         slot->preset.domain_width = 1.0f;
         slot->preset.domain_height = 1.0f;
         slot->preset.structural_scene_path[0] = '\0';
@@ -349,6 +373,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         FluidSceneDomainType domain = (file_version >= 1)
                                           ? sanitize_domain((FluidSceneDomainType)domain_raw)
                                           : SCENE_DOMAIN_BOX;
+        FluidSceneDimensionMode dimension_mode = SCENE_DIMENSION_MODE_2D;
         float domain_width = 1.0f;
         float domain_height = 1.0f;
         if (file_version >= 2) {
@@ -356,6 +381,13 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 domain_width = 1.0f;
                 domain_height = 1.0f;
             }
+        }
+        if (file_version >= 12) {
+            int dimension_mode_raw = (int)SCENE_DIMENSION_MODE_2D;
+            if (fscanf(f, "%d\n", &dimension_mode_raw) != 1) {
+                dimension_mode_raw = (int)SCENE_DIMENSION_MODE_2D;
+            }
+            dimension_mode = sanitize_dimension_mode((FluidSceneDimensionMode)dimension_mode_raw);
         }
         char name_buf[CUSTOM_PRESET_NAME_MAX] = {0};
         if (!read_line(f, name_buf, sizeof(name_buf))) {
@@ -382,6 +414,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         slot.preset.is_custom = true;
         slot.preset.emitter_count = 0;
         slot.preset.domain = domain;
+        slot.preset.dimension_mode = dimension_mode;
         slot.preset.domain_width = sanitize_dimension_value(domain_width);
         slot.preset.domain_height = sanitize_dimension_value(domain_height);
         if (structural_path_buf[0] != '\0') {
@@ -417,7 +450,24 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
             int type = 0;
             int attached_obj = -1;
             int attached_imp = -1;
-            if (file_version >= 6) {
+            if (file_version >= 12) {
+                if (fscanf(f, "%d %f %f %f %f %f %f %f %f %d %d\n",
+                           &type,
+                           &emitter.position_x,
+                           &emitter.position_y,
+                           &emitter.position_z,
+                           &emitter.radius,
+                           &emitter.strength,
+                           &emitter.dir_x,
+                           &emitter.dir_y,
+                           &emitter.dir_z,
+                           &attached_obj,
+                           &attached_imp) != 11) {
+                    break;
+                }
+                emitter.attached_object = attached_obj;
+                emitter.attached_import = attached_imp;
+            } else if (file_version >= 6) {
                 if (fscanf(f, "%d %f %f %f %f %f %f %d %d\n",
                            &type,
                            &emitter.position_x,
@@ -432,6 +482,8 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 }
                 emitter.attached_object = attached_obj;
                 emitter.attached_import = attached_imp;
+                emitter.position_z = 0.0f;
+                emitter.dir_z = 0.0f;
             } else if (file_version >= 5) {
                 if (fscanf(f, "%d %f %f %f %f %f %f %d\n",
                            &type,
@@ -446,6 +498,8 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 }
                 emitter.attached_object = attached_obj;
                 emitter.attached_import = -1;
+                emitter.position_z = 0.0f;
+                emitter.dir_z = 0.0f;
             } else {
                 if (fscanf(f, "%d %f %f %f %f %f %f\n",
                            &type,
@@ -459,6 +513,8 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 }
                 emitter.attached_object = -1;
                 emitter.attached_import = -1;
+                emitter.position_z = 0.0f;
+                emitter.dir_z = 0.0f;
             }
             emitter.type = (FluidEmitterType)type;
             sanitize_emitter(&emitter);
@@ -509,7 +565,21 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 int is_static = 0;
                 PresetObject obj = {0};
                 int gravity_flag = 1;
-                if (file_version >= 7) {
+                if (file_version >= 12) {
+                    if (fscanf(f, "%d %f %f %f %f %f %f %f %d %d\n",
+                               &type,
+                               &obj.position_x,
+                               &obj.position_y,
+                               &obj.position_z,
+                               &obj.size_x,
+                               &obj.size_y,
+                               &obj.size_z,
+                               &obj.angle,
+                               &is_static,
+                               &gravity_flag) != 10) {
+                        break;
+                    }
+                } else if (file_version >= 7) {
                     if (fscanf(f, "%d %f %f %f %f %f %d %d\n",
                                &type,
                                &obj.position_x,
@@ -521,6 +591,8 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                &gravity_flag) != 8) {
                         break;
                     }
+                    obj.position_z = 0.0f;
+                    obj.size_z = obj.size_x;
                 } else if (fscanf(f, "%d %f %f %f %f %f %d\n",
                            &type,
                            &obj.position_x,
@@ -530,6 +602,9 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            &obj.angle,
                            &is_static) != 7) {
                     break;
+                } else {
+                    obj.position_z = 0.0f;
+                    obj.size_z = obj.size_x;
                 }
                 obj.type = (type == PRESET_OBJECT_BOX) ? PRESET_OBJECT_BOX : PRESET_OBJECT_CIRCLE;
                 obj.is_static = (is_static != 0);
@@ -562,19 +637,38 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                         int gravity_int = 0;
                         int vert_count = 0;
                         int part_count = 0;
-                        if (fscanf(f, "%f %f %f %f %d %f %f %d %d %d %d\n",
-                                   &imp.position_x,
-                                   &imp.position_y,
-                                   &imp.scale,
-                                   &imp.rotation_deg,
-                                   &enabled,
-                                   &imp.density,
-                                   &imp.friction,
-                                   &static_int,
-                                   &gravity_int,
-                                   &vert_count,
-                                   &part_count) < 5) {
-                            break;
+                        if (file_version >= 12) {
+                            if (fscanf(f, "%f %f %f %f %f %d %f %f %d %d %d %d\n",
+                                       &imp.position_x,
+                                       &imp.position_y,
+                                       &imp.position_z,
+                                       &imp.scale,
+                                       &imp.rotation_deg,
+                                       &enabled,
+                                       &imp.density,
+                                       &imp.friction,
+                                       &static_int,
+                                       &gravity_int,
+                                       &vert_count,
+                                       &part_count) < 6) {
+                                break;
+                            }
+                        } else {
+                            if (fscanf(f, "%f %f %f %f %d %f %f %d %d %d %d\n",
+                                       &imp.position_x,
+                                       &imp.position_y,
+                                       &imp.scale,
+                                       &imp.rotation_deg,
+                                       &enabled,
+                                       &imp.density,
+                                       &imp.friction,
+                                       &static_int,
+                                       &gravity_int,
+                                       &vert_count,
+                                       &part_count) < 5) {
+                                break;
+                            }
+                            imp.position_z = 0.0f;
                         }
                         imp.is_static = static_int != 0;
                         imp.gravity_enabled = gravity_int != 0;
@@ -624,6 +718,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                    &enabled) != 5) {
                             break;
                         }
+                        imp.position_z = 0.0f;
                         imp.density = 1.0f;
                         imp.friction = 0.2f;
                         imp.is_static = true;
@@ -647,6 +742,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         lib->slots[i] = slot;
         lib->slots[i].preset.name = lib->slots[i].name;
         lib->slots[i].preset.domain = domain;
+        lib->slots[i].preset.dimension_mode = dimension_mode;
         lib->slot_count++;
     }
 
@@ -672,20 +768,23 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         float domain_w = sanitize_dimension_value(slot->preset.domain_width);
         float domain_h = sanitize_dimension_value(slot->preset.domain_height);
         fprintf(f, "%.6f %.6f\n", domain_w, domain_h);
+        fprintf(f, "%d\n", (int)sanitize_dimension_mode(slot->preset.dimension_mode));
         const char *name = (slot->name[0] != '\0') ? slot->name : DEFAULT_SLOT_LABEL;
         fprintf(f, "%s\n", name);
         fprintf(f, "%s\n", slot->preset.structural_scene_path);
         fprintf(f, "%zu\n", slot->preset.emitter_count);
         for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
             const FluidEmitter *em = &slot->preset.emitters[e];
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %d %d\n",
+            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %d %d\n",
                     em->type,
                     em->position_x,
                     em->position_y,
+                    em->position_z,
                     em->radius,
                     em->strength,
                     em->dir_x,
                     em->dir_y,
+                    em->dir_z,
                     em->attached_object,
                     em->attached_import);
         }
@@ -700,12 +799,14 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         fprintf(f, "OBJ %zu\n", slot->preset.object_count);
         for (size_t o = 0; o < slot->preset.object_count; ++o) {
             const PresetObject *obj = &slot->preset.objects[o];
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %d %d\n",
+            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %d %d\n",
                     obj->type,
                     obj->position_x,
                     obj->position_y,
+                    obj->position_z,
                     obj->size_x,
                     obj->size_y,
+                    obj->size_z,
                     obj->angle,
                     obj->is_static ? 1 : 0,
                     obj->gravity_enabled ? 1 : 0);
@@ -717,9 +818,10 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
             ImportedShape imp = slot->preset.import_shapes[s];
             sanitize_import_shape(&imp);
             fprintf(f, "%s\n", imp.path);
-            fprintf(f, "%.6f %.6f %.6f %.6f %d %.6f %.6f %d %d %d %d\n",
+            fprintf(f, "%.6f %.6f %.6f %.6f %.6f %d %.6f %.6f %d %d %d %d\n",
                     imp.position_x,
                     imp.position_y,
+                    imp.position_z,
                     imp.scale,
                     imp.rotation_deg,
                     imp.enabled ? 1 : 0,

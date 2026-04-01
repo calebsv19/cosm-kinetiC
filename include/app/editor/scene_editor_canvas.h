@@ -5,7 +5,9 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
 
+#include "app/app_config.h"
 #include "app/scene_presets.h"
+#include "app/sim_mode.h"
 #include "geo/shape_library.h"
 
 typedef struct SceneEditorState SceneEditorState;
@@ -45,6 +47,9 @@ typedef struct SceneEditorHit {
 #define SCENE_EDITOR_STATE_FWD
 struct SceneEditorState;
 #endif
+
+void scene_editor_canvas_set_space_mode(SpaceMode mode);
+void scene_editor_canvas_set_mode_route(const SimModeRoute *route);
 
 void scene_editor_canvas_project(int canvas_x,
                                  int canvas_y,

@@ -10,6 +10,7 @@
 #include "input/input.h"
 #include "input/stroke_buffer.h"
 #include "app/scene_presets.h"
+#include "app/sim_mode.h"
 #include "physics/objects/object_manager.h"
 #include "geo/shape_library.h"
 
@@ -18,6 +19,7 @@ typedef struct SceneState {
     double dt;
     bool   paused;
     bool   emitters_enabled;
+    SimModeRoute mode_route;
 
     Fluid2D *smoke;
     const FluidScenePreset *preset;
@@ -57,7 +59,8 @@ typedef struct SceneState {
 
 SceneState scene_create(const AppConfig *cfg,
                         const FluidScenePreset *preset,
-                        const ShapeAssetLibrary *shape_library);
+                        const ShapeAssetLibrary *shape_library,
+                        const SimModeRoute *mode_route);
 void       scene_destroy(SceneState *scene);
 
 void scene_apply_input(SceneState *scene, const InputCommands *cmds);

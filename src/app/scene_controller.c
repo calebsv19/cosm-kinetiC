@@ -243,9 +243,14 @@ int scene_controller_run(const AppConfig *initial_cfg,
     AppConfig cfg = *initial_cfg;
     const FluidScenePreset *preset_fallback = preset ? preset : scene_presets_get_default();
     FluidScenePreset runtime_preset = preset_fallback ? *preset_fallback : (FluidScenePreset){0};
-    const SimModeHooks *mode_hooks = sim_mode_get_hooks(cfg.sim_mode);
+    SimModeRoute mode_route = sim_mode_resolve_route(cfg.sim_mode, cfg.space_mode);
+    const SimModeHooks *mode_hooks = mode_route.hooks;
     if (mode_hooks && mode_hooks->configure_app) {
         mode_hooks->configure_app(&cfg, &runtime_preset);
+    }
+    if (mode_route.fallback_to_2d_projection) {
+        fprintf(stderr,
+                "[scene] Space mode 3D requested; using controlled 3D lane with canonical 2D solver/projection scaffold.\n");
     }
 
     if (!renderer_sdl_init(cfg.window_w, cfg.window_h, cfg.grid_w, cfg.grid_h)) {
@@ -255,7 +260,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
         return 1;
     }
 
-    SceneState scene = scene_create(&cfg, &runtime_preset, shape_library);
+    SceneState scene = scene_create(&cfg, &runtime_preset, shape_library, &mode_route);
     if (!scene.smoke) {
         fprintf(stderr, "[scene] Fluid grid failed to initialize.\n");
     }
@@ -404,6 +409,10 @@ int scene_controller_run(const AppConfig *initial_cfg,
             .window_h = cfg.window_h,
             .paused = scene.paused,
             .sim_mode = cfg.sim_mode,
+            .requested_space_mode = scene.mode_route.requested_space_mode,
+            .projection_space_mode = scene.mode_route.projection_space_mode,
+            .backend_lane = scene.mode_route.backend_lane,
+            .backend_uses_canonical_2d_solver = scene.mode_route.backend_uses_canonical_2d_solver,
             .tunnel_inflow_speed = cfg.tunnel_inflow_speed,
             .vorticity_enabled = renderer_sdl_vorticity_enabled(),
             .pressure_enabled = renderer_sdl_pressure_enabled(),

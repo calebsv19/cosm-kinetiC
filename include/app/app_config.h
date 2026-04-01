@@ -12,6 +12,13 @@ typedef enum SimulationMode {
 
 #define SIMULATION_MODE_COUNT 3
 
+typedef enum SpaceMode {
+    SPACE_MODE_2D = 0,
+    SPACE_MODE_3D
+} SpaceMode;
+
+#define SPACE_MODE_COUNT 2
+
 typedef struct AppConfig {
     int window_w;
     int window_h;
@@ -56,6 +63,7 @@ typedef struct AppConfig {
     char   headless_output_dir[256];
 
     SimulationMode sim_mode;
+    SpaceMode space_mode;
     float  tunnel_inflow_speed;
     float  tunnel_inflow_density;
     float  tunnel_viscosity_scale;

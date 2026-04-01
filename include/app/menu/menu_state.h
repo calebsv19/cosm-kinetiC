@@ -18,6 +18,8 @@ void menu_run_headless_batch(SceneMenuInteraction *ctx);
 
 SimulationMode menu_normalize_sim_mode(SimulationMode mode);
 const char *menu_mode_label(SimulationMode mode);
+SpaceMode menu_normalize_space_mode(SpaceMode mode);
+const char *menu_space_mode_label(SpaceMode mode);
 
 int menu_visible_slot_count(const SceneMenuInteraction *ctx);
 int menu_slot_index_from_visible_row(const SceneMenuInteraction *ctx, int row_index);

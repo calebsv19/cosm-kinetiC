@@ -5,6 +5,7 @@
 #include "app/editor/scene_editor_panel.h"
 #include "app/editor/scene_editor_precision.h"
 #include "app/menu/shared_theme_font_adapter.h"
+#include "app/sim_mode.h"
 
 #include "config/config_loader.h"
 #include "font_paths.h"
@@ -348,6 +349,10 @@ bool scene_editor_run(SDL_Window *window,
     state.shape_library = shape_library;
     if (state.working.domain_width <= 0.0f) state.working.domain_width = 1.0f;
     if (state.working.domain_height <= 0.0f) state.working.domain_height = 1.0f;
+    {
+        SimModeRoute editor_route = sim_mode_resolve_route(state.cfg.sim_mode, state.cfg.space_mode);
+        scene_editor_canvas_set_mode_route(&editor_route);
+    }
 
     if (state.name_buffer) {
         state.name_edit_ptr = state.name_buffer;
@@ -427,6 +432,8 @@ bool scene_editor_run(SDL_Window *window,
 
     Uint32 prev_ticks = SDL_GetTicks();
     while (state.running) {
+        SimModeRoute editor_route = sim_mode_resolve_route(state.cfg.sim_mode, state.cfg.space_mode);
+        scene_editor_canvas_set_mode_route(&editor_route);
         Uint32 now = SDL_GetTicks();
         double dt = (double)(now - prev_ticks) / 1000.0;
         prev_ticks = now;

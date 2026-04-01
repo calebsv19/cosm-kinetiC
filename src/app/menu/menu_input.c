@@ -9,7 +9,18 @@
 #include "app/menu/menu_window.h"
 #include "app/menu/shared_theme_font_adapter.h"
 #include "app/structural/structural_preset_editor.h"
+#include "config/config_loader.h"
 #include "vk_renderer.h"
+
+static const char *k_runtime_config_path = "data/runtime/app_state.json";
+
+static void menu_persist_runtime_config(const AppConfig *cfg) {
+    if (!cfg) return;
+    if (!config_loader_save(cfg, k_runtime_config_path)) {
+        fprintf(stderr, "[menu] Failed to persist runtime config to %s\n",
+                k_runtime_config_path);
+    }
+}
 
 static void apply_shared_theme_palette(void) {
     PhysicsSimMenuThemePalette shared_palette = {0};
@@ -239,6 +250,16 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         SimulationMode new_mode = (SimulationMode)((ctx->active_mode + 1) % SIMULATION_MODE_COUNT);
         menu_switch_mode(ctx, new_mode);
         menu_update_scrollbar(ctx);
+        menu_persist_runtime_config(ctx->cfg);
+        return;
+    }
+
+    if (menu_point_in_rect(x, y, &ctx->space_toggle_button.rect)) {
+        if (ctx->cfg) {
+            SpaceMode current = menu_normalize_space_mode(ctx->cfg->space_mode);
+            ctx->cfg->space_mode = (current == SPACE_MODE_2D) ? SPACE_MODE_3D : SPACE_MODE_2D;
+            menu_persist_runtime_config(ctx->cfg);
+        }
         return;
     }
 

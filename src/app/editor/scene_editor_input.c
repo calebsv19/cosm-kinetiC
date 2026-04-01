@@ -244,6 +244,7 @@ static bool add_import_from_picker(SceneEditorState *state, int row) {
         imp->shape_id = -1;
         imp->position_x = 0.5f;
         imp->position_y = 0.5f;
+        imp->position_z = 0.0f;
         imp->scale = 1.0f;
         imp->rotation_deg = 0.0f;
         imp->density = 1.0f;
@@ -272,6 +273,7 @@ static bool add_import_from_existing(SceneEditorState *state, int row) {
     imp->shape_id = -1;
     imp->position_x = 0.5f;
     imp->position_y = 0.5f;
+    imp->position_z = 0.0f;
     imp->scale = 1.0f;
     imp->rotation_deg = 0.0f;
     imp->density = 1.0f;
@@ -903,6 +905,7 @@ void editor_pointer_up(void *user, const InputPointerState *ptr) {
                 imp->shape_id = -1;
                 imp->position_x = state->import_drag_pos_x;
                 imp->position_y = state->import_drag_pos_y;
+                imp->position_z = 0.0f;
                 imp->scale = 1.0f;
                 imp->rotation_deg = 0.0f;
                 imp->density = 1.0f;

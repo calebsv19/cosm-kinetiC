@@ -30,8 +30,12 @@ void clamp_object(PresetObject *obj) {
     if (obj->position_x > 1.0f) obj->position_x = 1.0f;
     if (obj->position_y < 0.0f) obj->position_y = 0.0f;
     if (obj->position_y > 1.0f) obj->position_y = 1.0f;
+    if (!isfinite(obj->position_z)) obj->position_z = 0.0f;
+    if (obj->position_z < -8.0f) obj->position_z = -8.0f;
+    if (obj->position_z > 8.0f) obj->position_z = 8.0f;
     if (obj->size_x < 0.005f) obj->size_x = 0.005f;
     if (obj->size_y < 0.005f) obj->size_y = 0.005f;
+    if (!isfinite(obj->size_z) || obj->size_z < 0.005f) obj->size_z = obj->size_x;
 }
 
 bool object_is_outside(float x, float y) {
@@ -125,6 +129,7 @@ void sync_emitter_to_import(SceneEditorState *state, int import_index) {
     const ImportedShape *imp = &state->working.import_shapes[import_index];
     em->position_x = imp->position_x;
     em->position_y = imp->position_y;
+    em->position_z = imp->position_z;
     em->attached_object = -1;
     em->attached_import = import_index;
     state->emitter_object_map[em_idx] = -1;
@@ -287,9 +292,13 @@ static void normalize_direction(FluidEmitter *em) {
     if (len < 0.001f) {
         em->dir_x = 0.0f;
         em->dir_y = -1.0f;
+        em->dir_z = 0.0f;
     } else {
         em->dir_x /= len;
         em->dir_y /= len;
+        if (!isfinite(em->dir_z)) em->dir_z = 0.0f;
+        if (em->dir_z < -1.0f) em->dir_z = -1.0f;
+        if (em->dir_z > 1.0f) em->dir_z = 1.0f;
     }
 }
 
@@ -328,17 +337,17 @@ static void apply_defaults_for_type(FluidEmitter *em, FluidEmitterType type) {
     case EMITTER_DENSITY_SOURCE:
         em->radius = 0.08f;
         em->strength = 8.0f;
-        em->dir_x = 0.0f; em->dir_y = -1.0f;
+        em->dir_x = 0.0f; em->dir_y = -1.0f; em->dir_z = 0.0f;
         break;
     case EMITTER_VELOCITY_JET:
         em->radius = 0.08f;
         em->strength = 40.0f;
-        em->dir_x = 0.0f; em->dir_y = -1.0f;
+        em->dir_x = 0.0f; em->dir_y = -1.0f; em->dir_z = 0.0f;
         break;
     case EMITTER_SINK:
         em->radius = 0.08f;
         em->strength = 25.0f;
-        em->dir_x = 0.0f; em->dir_y = -1.0f;
+        em->dir_x = 0.0f; em->dir_y = -1.0f; em->dir_z = 0.0f;
         break;
     default:
         break;
@@ -356,6 +365,7 @@ void sync_emitter_to_object(SceneEditorState *state, int obj_index) {
     const PresetObject *obj = &state->working.objects[obj_index];
     em->position_x = obj->position_x;
     em->position_y = obj->position_y;
+    em->position_z = obj->position_z;
     em->attached_object = obj_index;
     em->attached_import = -1;
     state->emitter_object_map[em_idx] = obj_index;
@@ -412,9 +422,11 @@ int ensure_emitter_for_object(SceneEditorState *state,
         .type = type,
         .position_x = obj->position_x,
         .position_y = obj->position_y,
+        .position_z = obj->position_z,
         .radius = fmaxf(obj->size_x, obj->size_y),
         .dir_x = 0.0f,
         .dir_y = -1.0f,
+        .dir_z = 0.0f,
         .attached_object = obj_index,
         .attached_import = -1
     };
@@ -456,9 +468,11 @@ int ensure_emitter_for_import(SceneEditorState *state,
         .type = type,
         .position_x = imp->position_x,
         .position_y = imp->position_y,
+        .position_z = imp->position_z,
         .radius = import_max_extent_norm(state, import_index),
         .dir_x = 0.0f,
         .dir_y = -1.0f,
+        .dir_z = 0.0f,
         .attached_object = -1,
         .attached_import = import_index
     };
@@ -479,9 +493,11 @@ void add_emitter(SceneEditorState *state, FluidEmitterType type) {
         .type = type,
         .position_x = 0.5f,
         .position_y = 0.5f,
+        .position_z = 0.0f,
         .radius = 0.08f,
         .dir_x = 0.0f,
         .dir_y = -1.0f,
+        .dir_z = 0.0f,
         .attached_object = -1,
         .attached_import = -1
     };
