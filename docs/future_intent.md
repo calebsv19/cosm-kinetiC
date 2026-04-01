@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-03-31
+Last updated: 2026-04-01
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -63,11 +63,10 @@ Last updated: 2026-03-31
     - `Project Scaffold Standardization`
 
 ## Post-Scaffold Direction
-- completed post-scaffold lane:
+- completed post-scaffold lanes:
   - font-size standardization (`PS-F0` through `PS-F5`) is complete
   - wrap-up commit title used:
     - `Post-Scaffold Font Size Standardization`
-- active post-scaffold lane:
   - trio 2D/3D parity propagation with `line_drawing` and `ray_tracing`:
     - `../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
   - current status:
@@ -82,6 +81,22 @@ Last updated: 2026-03-31
     - complete (`PS-U0` through `PS-U6`)
   - latest execution log:
     - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u6_verification_docs_memory_closeout.md`
+
+- desktop packaging lane:
+  - `PS-PK0` baseline mapping complete
+  - `PS-PK1` implementation complete
+  - `PS-PK2` closeout/docs sync in progress
+  - current packaging targets in `makefile`:
+    - `package-desktop`
+    - `package-desktop-smoke`
+    - `package-desktop-self-test`
+    - `package-desktop-copy-desktop`
+    - `package-desktop-sync`
+    - `package-desktop-open`
+    - `package-desktop-remove`
+    - `package-desktop-refresh`
+  - public packaging reference:
+    - `docs/desktop_packaging.md`
 
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.

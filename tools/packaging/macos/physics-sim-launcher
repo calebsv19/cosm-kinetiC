@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+APP_CONTENTS_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+RES_DIR="$APP_CONTENTS_DIR/Resources"
+LOG_DIR="${HOME}/Library/Logs/PhysicsSim"
+LOG_FILE="$LOG_DIR/launcher.log"
+
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+if ! touch "$LOG_FILE" 2>/dev/null; then
+    LOG_FILE="${TMPDIR:-/tmp}/physics-sim-launcher.log"
+    touch "$LOG_FILE" 2>/dev/null || true
+fi
+
+export VK_RENDERER_SHADER_ROOT="${VK_RENDERER_SHADER_ROOT:-$RES_DIR}"
+export SHAPE_ASSET_DIR="${SHAPE_ASSET_DIR:-$RES_DIR/config/objects}"
+
+if [ "${1:-}" = "--print-config" ]; then
+    echo "APP_CONTENTS_DIR=$APP_CONTENTS_DIR"
+    echo "RES_DIR=$RES_DIR"
+    echo "LOG_FILE=$LOG_FILE"
+    echo "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
+    echo "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
+    exit 0
+fi
+
+if [ "${1:-}" = "--self-test" ]; then
+    [ -x "$SCRIPT_DIR/physics-sim-bin" ] || { echo "missing: physics-sim-bin" >&2; exit 1; }
+    [ -f "$APP_CONTENTS_DIR/Info.plist" ] || { echo "missing: Info.plist" >&2; exit 1; }
+    [ -f "$RES_DIR/config/app.json" ] || { echo "missing: config/app.json" >&2; exit 1; }
+    [ -f "$RES_DIR/config/custom_preset.txt" ] || { echo "missing: config/custom_preset.txt" >&2; exit 1; }
+    [ -f "$RES_DIR/config/structural_scene.txt" ] || { echo "missing: config/structural_scene.txt" >&2; exit 1; }
+    [ -f "$RES_DIR/config/objects/Hexagon.asset.json" ] || { echo "missing: bundled shape assets" >&2; exit 1; }
+    [ -d "$RES_DIR/data/runtime" ] || { echo "missing: runtime dir" >&2; exit 1; }
+    [ -d "$RES_DIR/data/snapshots" ] || { echo "missing: snapshots dir" >&2; exit 1; }
+    [ -f "$RES_DIR/vk_renderer/shaders/textured.vert.spv" ] || { echo "missing: bundled vk_renderer shader" >&2; exit 1; }
+    [ -f "$RES_DIR/shaders/textured.vert.spv" ] || { echo "missing: bundled runtime shader" >&2; exit 1; }
+    echo "self-test: ok"
+    echo "LOG_FILE=$LOG_FILE"
+    echo "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
+    echo "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
+    exit 0
+fi
+
+cd "$RES_DIR"
+printf '%s launch begin pid=%s cwd=%s shader_root=%s shape_asset_dir=%s args=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$$" "$RES_DIR" "$VK_RENDERER_SHADER_ROOT" "$SHAPE_ASSET_DIR" "$*" >>"$LOG_FILE" 2>/dev/null || true
+exec "$SCRIPT_DIR/physics-sim-bin" "$@" >>"$LOG_FILE" 2>&1

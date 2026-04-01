@@ -15,10 +15,20 @@ BUILD_DIR := build
 TARGET    := physics_sim
 VK_RENDERER_DIR := ../shared/vk_renderer
 KIT_VIZ_DIR := ../shared/kit/kit_viz
+SHARED_ASSETS_DIR := ../shared/assets
 SHIM_MODE ?= off
 SYS_SHIMS_DIR := ../shared/sys_shims
 SYS_SHIMS_OVERLAY_DIR := $(SYS_SHIMS_DIR)/overlay/include
 SYS_SHIMS_INCLUDE_DIR := $(SYS_SHIMS_DIR)/include
+DIST_DIR := dist
+PACKAGE_APP_NAME := PhysicsSim.app
+PACKAGE_APP_DIR := $(DIST_DIR)/$(PACKAGE_APP_NAME)
+PACKAGE_CONTENTS_DIR := $(PACKAGE_APP_DIR)/Contents
+PACKAGE_MACOS_DIR := $(PACKAGE_CONTENTS_DIR)/MacOS
+PACKAGE_RESOURCES_DIR := $(PACKAGE_CONTENTS_DIR)/Resources
+PACKAGE_INFO_PLIST_SRC := tools/packaging/macos/Info.plist
+PACKAGE_LAUNCHER_SRC := tools/packaging/macos/physics-sim-launcher
+DESKTOP_APP_DIR ?= $(HOME)/Desktop/$(PACKAGE_APP_NAME)
 
 # =========================
 #  Diagnostics
@@ -228,7 +238,7 @@ STABLE_TEST_TARGETS := \
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -410,6 +420,65 @@ run-headless-smoke: all test-stable
 
 visual-harness: $(TARGET)
 	@echo "visual harness binary ready: $(TARGET)"
+
+package-desktop: all
+	@echo "Preparing desktop package..."
+	@rm -rf "$(PACKAGE_APP_DIR)"
+	@mkdir -p "$(PACKAGE_MACOS_DIR)" "$(PACKAGE_RESOURCES_DIR)"
+	@cp "$(PACKAGE_INFO_PLIST_SRC)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
+	@cp "$(TARGET)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
+	@cp "$(PACKAGE_LAUNCHER_SRC)" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
+	@chmod +x "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
+	@cp -R config "$(PACKAGE_RESOURCES_DIR)/"
+	@mkdir -p "$(PACKAGE_RESOURCES_DIR)/data/runtime" "$(PACKAGE_RESOURCES_DIR)/data/snapshots"
+	@if [ -d "$(SHARED_ASSETS_DIR)/fonts" ]; then \
+		mkdir -p "$(PACKAGE_RESOURCES_DIR)/shared/assets"; \
+		cp -R "$(SHARED_ASSETS_DIR)/fonts" "$(PACKAGE_RESOURCES_DIR)/shared/assets/"; \
+	fi
+	@mkdir -p "$(PACKAGE_RESOURCES_DIR)/vk_renderer" "$(PACKAGE_RESOURCES_DIR)/shaders"
+	@cp -R "$(VK_RENDERER_DIR)/shaders" "$(PACKAGE_RESOURCES_DIR)/vk_renderer/"
+	@cp -R "$(VK_RENDERER_DIR)/shaders/." "$(PACKAGE_RESOURCES_DIR)/shaders/"
+	@echo "Desktop package ready: $(PACKAGE_APP_DIR)"
+
+package-desktop-smoke: package-desktop
+	@test -x "$(PACKAGE_MACOS_DIR)/physics-sim-launcher" || (echo "Missing launcher"; exit 1)
+	@test -x "$(PACKAGE_MACOS_DIR)/physics-sim-bin" || (echo "Missing app binary"; exit 1)
+	@test -f "$(PACKAGE_CONTENTS_DIR)/Info.plist" || (echo "Missing Info.plist"; exit 1)
+	@test -f "$(PACKAGE_RESOURCES_DIR)/config/app.json" || (echo "Missing config/app.json"; exit 1)
+	@test -f "$(PACKAGE_RESOURCES_DIR)/config/custom_preset.txt" || (echo "Missing config/custom_preset.txt"; exit 1)
+	@test -f "$(PACKAGE_RESOURCES_DIR)/config/structural_scene.txt" || (echo "Missing config/structural_scene.txt"; exit 1)
+	@test -f "$(PACKAGE_RESOURCES_DIR)/config/objects/Hexagon.asset.json" || (echo "Missing bundled shape assets"; exit 1)
+	@test -d "$(PACKAGE_RESOURCES_DIR)/data/runtime" || (echo "Missing runtime dir"; exit 1)
+	@test -d "$(PACKAGE_RESOURCES_DIR)/data/snapshots" || (echo "Missing snapshots dir"; exit 1)
+	@test -f "$(PACKAGE_RESOURCES_DIR)/vk_renderer/shaders/textured.vert.spv" || (echo "Missing bundled vk_renderer shader"; exit 1)
+	@test -f "$(PACKAGE_RESOURCES_DIR)/shaders/textured.vert.spv" || (echo "Missing bundled runtime shader"; exit 1)
+	@echo "package-desktop-smoke passed."
+
+package-desktop-self-test: package-desktop-smoke
+	@"$(PACKAGE_MACOS_DIR)/physics-sim-launcher" --self-test || (echo "package-desktop self-test failed."; exit 1)
+	@echo "package-desktop-self-test passed."
+
+package-desktop-copy-desktop: package-desktop
+	@mkdir -p "$(dir $(DESKTOP_APP_DIR))"
+	@rm -rf "$(DESKTOP_APP_DIR)"
+	@cp -R "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
+	@echo "Copied $(PACKAGE_APP_NAME) to $(DESKTOP_APP_DIR)"
+
+package-desktop-sync: package-desktop-copy-desktop
+	@echo "Desktop package synchronized: $(DESKTOP_APP_DIR)"
+
+package-desktop-open: package-desktop
+	@open "$(PACKAGE_APP_DIR)"
+
+package-desktop-remove:
+	@rm -rf "$(PACKAGE_APP_DIR)"
+	@echo "Removed desktop package: $(PACKAGE_APP_DIR)"
+
+package-desktop-refresh: package-desktop
+	@mkdir -p "$(dir $(DESKTOP_APP_DIR))"
+	@rm -rf "$(DESKTOP_APP_DIR)"
+	@cp -R "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
+	@echo "Refreshed $(PACKAGE_APP_NAME) at $(DESKTOP_APP_DIR)"
 
 test-stable:
 	@$(MAKE) $(STABLE_TEST_TARGETS)

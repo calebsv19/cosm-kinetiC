@@ -14,6 +14,7 @@ Start here for public repository documentation.
 ## Public Runtime Docs
 - `README.md` (repo root): product/runtime overview, execution flow, and controls.
 - `docs/KEYBINDS.md`: full keybind list across fluid and structural lanes.
+- `docs/desktop_packaging.md`: desktop app bundle workflow, launcher contract, and verification commands.
 
 ## Runtime Persistence Policy
 - tracked defaults remain under `config/`

@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-03-31
+Last updated: 2026-04-01
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -27,6 +27,11 @@ Last updated: 2026-03-31
   - `make -C physics_sim run-headless-smoke`
 - Visual harness build gate:
   - `make -C physics_sim visual-harness`
+- desktop packaging gates:
+  - `make -C physics_sim package-desktop`
+  - `make -C physics_sim package-desktop-smoke`
+  - `make -C physics_sim package-desktop-self-test`
+  - `make -C physics_sim package-desktop-refresh`
 
 Stable test lane:
 - `make -C physics_sim test-stable`
@@ -130,7 +135,7 @@ Legacy test lane:
   - route regression coverage added:
     - test target: `test-sim-mode-route-contract`
     - verifies canonical 2D route, controlled 3D lane fallback route, and invalid-mode clamp behavior
-- UX + editor parity layer (`PS-U5`) is active:
+- UX + editor parity layer (`PS-U5`) is complete:
   - menu lane now shows explicit controlled-3D scaffold guidance when `Space: 3D` is selected:
     - `3D lane scaffold: canonical 2D backend route`
     - source: `src/app/scene_menu.c`
@@ -149,6 +154,7 @@ Legacy test lane:
   - `ide_files/`
   - `timerhud/`
   - `tmp/`
+  - `dist/`
   - `data/runtime/`
   - `data/snapshots/`
   - tool binaries and `.dSYM` lanes
@@ -156,18 +162,18 @@ Legacy test lane:
   - tracked defaults stay in `config/`
   - mutable runtime state writes to ignored `data/runtime/`
 
-## Active Scaffold Migration State
+## Scaffold Migration State
 - Private migration plan:
   - `../docs/private_program_docs/physics_sim/2026-03-28_physics_sim_scaffold_standardization_switchover_plan.md`
 - Baseline freeze:
   - `../docs/private_program_docs/physics_sim/2026-03-28_ps_s0_baseline_freeze_and_mapping.md`
 - Completed phases:
   - `PS-S0`, `PS-S1`, `PS-S2`, `PS-S3`, `PS-S4`, `PS-S5`
-- Active post-scaffold lanes:
+- Completed post-scaffold lanes:
   - completed font-size standardization lane:
     - `../docs/private_program_docs/physics_sim/2026-03-29_physics_sim_post_scaffold_font_size_pass_plan.md`
     - `PS-F0` through `PS-F5` complete
-  - active trio 2D/3D parity lane:
+  - completed trio 2D/3D parity lane:
     - `../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
     - `PS-U0` complete (baseline freeze + gap map + tracker sync)
     - `PS-U1` complete (space mode runtime contract + persistence + menu selector)
@@ -185,4 +191,20 @@ Legacy test lane:
       - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u5_ux_editor_parity_layer.md`
       - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u6_verification_docs_memory_closeout.md`
     - parity lane status: complete (`PS-U0` through `PS-U6`)
-  - `test-stable` remains the baseline non-interactive regression gate during parity rollout slices
+  - `test-stable` remains the baseline non-interactive regression gate
+
+## Desktop Packaging State
+- desktop app bundle contract is active:
+  - `dist/PhysicsSim.app`
+  - launcher: `Contents/MacOS/physics-sim-launcher`
+  - app binary: `Contents/MacOS/physics-sim-bin`
+- launcher runtime defaults:
+  - `VK_RENDERER_SHADER_ROOT` defaults to bundle `Resources/`
+  - `SHAPE_ASSET_DIR` defaults to bundle `Resources/config/objects`
+  - launcher runs binary from bundle `Resources` cwd
+- packaging resources include:
+  - `config/`
+  - `data/runtime/` and `data/snapshots/` dirs
+  - shader roots under both `Resources/vk_renderer/shaders` and `Resources/shaders`
+- packaging reference:
+  - `docs/desktop_packaging.md`
