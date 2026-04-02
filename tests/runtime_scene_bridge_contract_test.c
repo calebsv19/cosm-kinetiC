@@ -455,7 +455,52 @@ static bool test_runtime_scene_bridge_trio_fixture_compile_writeback_apply(void)
     return true;
 }
 
-int main(void) {
+static int run_bridge_apply_file_mode(const char *runtime_scene_path) {
+    RuntimeSceneBridgePreflight preflight;
+    RuntimeSceneBridgePreflight summary;
+    AppConfig cfg = app_config_default();
+    const FluidScenePreset *base = scene_presets_get_default();
+    FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
+    bool ok = false;
+
+    if (!runtime_scene_path || !runtime_scene_path[0]) {
+        fprintf(stderr, "runtime_scene_bridge_apply_file: missing path\n");
+        return 1;
+    }
+
+    ok = runtime_scene_bridge_preflight_file(runtime_scene_path, &preflight);
+    if (!ok) {
+        fprintf(stderr, "runtime_scene_bridge_preflight_file failed: %s\n", preflight.diagnostics);
+        return 1;
+    }
+
+    ok = runtime_scene_bridge_apply_file(runtime_scene_path, &cfg, &preset, &summary);
+    if (!ok) {
+        fprintf(stderr, "runtime_scene_bridge_apply_file failed: %s\n", summary.diagnostics);
+        return 1;
+    }
+
+    fprintf(stdout,
+            "runtime_scene_bridge_apply_file: PASS scene_id=%s objects=%d materials=%d lights=%d cameras=%d space_mode=%d dimension_mode=%d\n",
+            summary.scene_id,
+            summary.object_count,
+            summary.material_count,
+            summary.light_count,
+            summary.camera_count,
+            cfg.space_mode,
+            preset.dimension_mode);
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    if (argc == 3 && strcmp(argv[1], "--bridge-apply-file") == 0) {
+        return run_bridge_apply_file_mode(argv[2]);
+    }
+    if (argc != 1) {
+        fprintf(stderr, "usage: %s [--bridge-apply-file <scene_runtime.json>]\n", argv[0]);
+        return 1;
+    }
+
     if (!test_runtime_scene_bridge_preflight_accepts_runtime_fixture()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: runtime fixture preflight failed\n");
         return 1;

@@ -7,6 +7,18 @@
 static SpaceMode s_scene_editor_canvas_space_mode = SPACE_MODE_2D;
 static SpaceMode s_scene_editor_canvas_projection_mode = SPACE_MODE_2D;
 
+static float clampf_local(float value, float min_v, float max_v) {
+    if (value < min_v) return min_v;
+    if (value > max_v) return max_v;
+    return value;
+}
+
+static float object_depth_visual_scale(const PresetObject *obj) {
+    if (!obj) return 1.0f;
+    if (s_scene_editor_canvas_space_mode != SPACE_MODE_3D) return 1.0f;
+    return clampf_local(1.0f - (obj->position_z * 0.06f), 0.55f, 1.75f);
+}
+
 void scene_editor_canvas_set_space_mode(SpaceMode mode) {
     s_scene_editor_canvas_space_mode = space_mode_adapter_resolve(mode);
     s_scene_editor_canvas_projection_mode = SPACE_MODE_2D;
@@ -24,7 +36,7 @@ void scene_editor_canvas_set_mode_route(const SimModeRoute *route) {
 
 float scene_editor_canvas_object_visual_radius_px(const PresetObject *obj, int canvas_w) {
     if (!obj) return (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
-    float radius = obj->size_x * (float)canvas_w;
+    float radius = obj->size_x * (float)canvas_w * object_depth_visual_scale(obj);
     if (radius < (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX) {
         radius = (float)SCENE_EDITOR_OBJECT_MIN_RADIUS_PX;
     }
@@ -37,8 +49,9 @@ void scene_editor_canvas_object_visual_half_sizes_px(const PresetObject *obj,
                                                      float *out_half_w_px,
                                                      float *out_half_h_px) {
     if (!obj) return;
-    float half_w = obj->size_x * (float)canvas_w;
-    float half_h = obj->size_y * (float)canvas_h;
+    float depth_scale = object_depth_visual_scale(obj);
+    float half_w = obj->size_x * (float)canvas_w * depth_scale;
+    float half_h = obj->size_y * (float)canvas_h * depth_scale;
     if (half_w < (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX) half_w = (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX;
     if (half_h < (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX) half_h = (float)SCENE_EDITOR_OBJECT_MIN_HALF_PX;
     if (out_half_w_px) *out_half_w_px = half_w;

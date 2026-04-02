@@ -102,7 +102,7 @@ Legacy test lane:
     - `SimModeRoute` in `include/app/sim_mode.h`
     - `sim_mode_resolve_route(...)` in `src/app/sim_modes/sim_mode_dispatch.c`
     - scene-controller runtime entrypoint route selection in `src/app/scene_controller.c`
-  - current 3D behavior remains controlled/scaffolded and intentionally falls back to canonical 2D projection/backend behavior
+  - current 3D route remains controlled and intentionally falls back to canonical 2D projection/backend behavior for solver math; NP-4 adds z-aware editor visual differentiation.
 - additive scene/object dimensional contract (`PS-U3`) is active:
   - additive dimensional fields are present in preset contracts with backward-safe defaults:
     - `FluidEmitter.position_z`
@@ -148,6 +148,9 @@ Legacy test lane:
   - runtime HUD route visibility from `PS-U4` remains the canonical run-lane route indicator:
     - `Space: <requested> [-> <projection>]`
     - `Backend: Canonical 2D lane` / `Controlled 3D lane`
+- NP-4 editor 3D behavior slice is active:
+  - scene editor object visual sizing now scales by object `position_z` when 3D is requested,
+  - projection/backend contracts remain unchanged (`Controlled 3D` -> canonical 2D route).
 - trio runtime-scene bridge is active in `physics_sim` (`TP-S4` complete):
   - bridge APIs:
     - preflight/apply:
