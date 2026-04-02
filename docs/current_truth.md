@@ -38,6 +38,7 @@ Stable test lane:
 - current composition:
   - `test-manifest-to-trace-export`
   - `test-vf2d-pack-dataset-parity`
+  - `test-trio-scene-contract-diff`
   - `test-kitviz-field-adapter`
   - `test-sim-mode-route-contract`
   - `test-preset-io-dimensional-contract`
@@ -157,7 +158,17 @@ Legacy test lane:
   - contract behavior:
     - consumes `scene_runtime_v1`,
     - maps runtime payload into `AppConfig.space_mode` + `FluidScenePreset` object/emitter/dimension lanes,
+    - writeback guardrails are now shared-promoted via:
+      - `shared/core/core_scene_compile/include/core_scene_overlay_merge_shared.h`,
     - writeback permits only `extensions.physics_sim.*` plus approved runtime lane `space_mode_default`,
+    - `space_mode_default` writeback values are constrained to `"2d"` or `"3d"` only,
+    - `extensions.physics_sim` payload must be a JSON object,
+    - writeback now requires provenance metadata:
+      - `overlay_meta.producer = "physics_sim"`
+      - `overlay_meta.logical_clock >= 0`,
+    - deterministic merge guards:
+      - stale producer-clock overlays are rejected,
+      - canonical `space_mode_default` writes use logical-clock ordering with lexical producer tie-break,
     - preserves unrelated extension namespaces and unknown runtime fields.
   - coverage:
     - `tests/runtime_scene_bridge_contract_test.c`

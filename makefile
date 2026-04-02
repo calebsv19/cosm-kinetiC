@@ -16,12 +16,13 @@ TARGET    := physics_sim
 VK_RENDERER_DIR := ../shared/vk_renderer
 KIT_VIZ_DIR := ../shared/kit/kit_viz
 SHARED_ASSETS_DIR := ../shared/assets
+CORE_SCENE_COMPILE_DIR := ../shared/core/core_scene_compile
 SHIM_MODE ?= off
 SYS_SHIMS_DIR := ../shared/sys_shims
 SYS_SHIMS_OVERLAY_DIR := $(SYS_SHIMS_DIR)/overlay/include
 SYS_SHIMS_INCLUDE_DIR := $(SYS_SHIMS_DIR)/include
 DIST_DIR := dist
-PACKAGE_APP_NAME := PhysicsSim.app
+PACKAGE_APP_NAME := kinetiC.app
 PACKAGE_APP_DIR := $(DIST_DIR)/$(PACKAGE_APP_NAME)
 PACKAGE_CONTENTS_DIR := $(PACKAGE_APP_DIR)/Contents
 PACKAGE_MACOS_DIR := $(PACKAGE_CONTENTS_DIR)/MacOS
@@ -130,6 +131,7 @@ CFLAGS += $(TIMER_HUD_INCLUDE) -I$(VK_RENDERER_DIR)/include $(VULKAN_CFLAGS) \
 	-include $(VK_RENDERER_DIR)/include/vk_renderer_sdl.h
 LIBS += $(VULKAN_LIBS)
 CFLAGS += -I$(KIT_VIZ_DIR)/include
+CFLAGS += -I$(CORE_SCENE_COMPILE_DIR)/include
 
 SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/tools/cli/*' \
@@ -245,6 +247,7 @@ SHAPE_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SHARED_S
 STABLE_TEST_TARGETS := \
 	test-manifest-to-trace-export \
 	test-vf2d-pack-dataset-parity \
+	test-trio-scene-contract-diff \
 	test-kitviz-field-adapter \
 	test-sim-mode-route-contract \
 	test-preset-io-dimensional-contract \
@@ -253,7 +256,7 @@ STABLE_TEST_TARGETS := \
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-runtime-scene-bridge-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-runtime-scene-bridge-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -566,6 +569,9 @@ test-manifest-to-trace-export: physics_trace_tool
 
 test-vf2d-pack-dataset-parity: vf2d_pack_tool vf2d_dataset_tool
 	tests/integration/run_vf2d_pack_dataset_parity.sh
+
+test-trio-scene-contract-diff:
+	tests/integration/run_trio_scene_contract_diff.sh
 
 SHARED_THEME_FONT_ADAPTER_TEST_SRCS := \
 	tests/shared_theme_font_adapter_test.c \

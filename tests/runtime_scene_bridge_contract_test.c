@@ -153,6 +153,7 @@ static bool test_runtime_scene_bridge_writeback_overlay_preserves_non_physics_st
         "}";
     const char *overlay_json =
         "{"
+        "\"overlay_meta\":{\"producer\":\"physics_sim\",\"logical_clock\":10},"
         "\"space_mode_default\":\"3d\","
         "\"extensions\":{"
           "\"physics_sim\":{"
@@ -198,6 +199,7 @@ static bool test_runtime_scene_bridge_writeback_rejects_foreign_extension_namesp
         "}";
     const char *overlay_json =
         "{"
+        "\"overlay_meta\":{\"producer\":\"physics_sim\",\"logical_clock\":11},"
         "\"extensions\":{"
           "\"ray_tracing\":{\"seed\":2}"
         "}"
@@ -212,6 +214,176 @@ static bool test_runtime_scene_bridge_writeback_rejects_foreign_extension_namesp
     free(merged);
     if (ok) return false;
     if (strstr(diagnostics, "namespace not allowed") == NULL) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_writeback_rejects_forbidden_top_level_overlay_key(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_writeback_ps_3\","
+        "\"space_mode_default\":\"2d\","
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{}"
+        "}";
+    const char *overlay_json =
+        "{"
+        "\"overlay_meta\":{\"producer\":\"physics_sim\",\"logical_clock\":12},"
+        "\"objects\":[{\"object_id\":\"hack\"}]"
+        "}";
+    char diagnostics[256];
+    char *merged = NULL;
+    bool ok = runtime_scene_bridge_writeback_physics_overlay_json(runtime_json,
+                                                                  overlay_json,
+                                                                  &merged,
+                                                                  diagnostics,
+                                                                  sizeof(diagnostics));
+    free(merged);
+    if (ok) return false;
+    if (strstr(diagnostics, "overlay key not allowed") == NULL) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_writeback_rejects_invalid_space_mode_value(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_writeback_ps_4\","
+        "\"space_mode_default\":\"2d\","
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{}"
+        "}";
+    const char *overlay_json =
+        "{"
+        "\"overlay_meta\":{\"producer\":\"physics_sim\",\"logical_clock\":13},"
+        "\"space_mode_default\":\"4d\""
+        "}";
+    char diagnostics[256];
+    char *merged = NULL;
+    bool ok = runtime_scene_bridge_writeback_physics_overlay_json(runtime_json,
+                                                                  overlay_json,
+                                                                  &merged,
+                                                                  diagnostics,
+                                                                  sizeof(diagnostics));
+    free(merged);
+    if (ok) return false;
+    if (strstr(diagnostics, "space_mode_default must be '2d' or '3d'") == NULL) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_writeback_rejects_non_object_physics_extension_payload(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_writeback_ps_5\","
+        "\"space_mode_default\":\"2d\","
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{}"
+        "}";
+    const char *overlay_json =
+        "{"
+        "\"overlay_meta\":{\"producer\":\"physics_sim\",\"logical_clock\":14},"
+        "\"extensions\":{"
+          "\"physics_sim\":[1,2]"
+        "}"
+        "}";
+    char diagnostics[256];
+    char *merged = NULL;
+    bool ok = runtime_scene_bridge_writeback_physics_overlay_json(runtime_json,
+                                                                  overlay_json,
+                                                                  &merged,
+                                                                  diagnostics,
+                                                                  sizeof(diagnostics));
+    free(merged);
+    if (ok) return false;
+    if (strstr(diagnostics, "payload must be object") == NULL) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_writeback_rejects_missing_overlay_meta(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_writeback_ps_6\","
+        "\"space_mode_default\":\"2d\","
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{}"
+        "}";
+    const char *overlay_json =
+        "{"
+        "\"extensions\":{\"physics_sim\":{\"iterations\":8}}"
+        "}";
+    char diagnostics[256];
+    char *merged = NULL;
+    bool ok = runtime_scene_bridge_writeback_physics_overlay_json(runtime_json,
+                                                                  overlay_json,
+                                                                  &merged,
+                                                                  diagnostics,
+                                                                  sizeof(diagnostics));
+    free(merged);
+    if (ok) return false;
+    if (strstr(diagnostics, "overlay_meta object is required") == NULL) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_writeback_rejects_stale_logical_clock(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_writeback_ps_7\","
+        "\"space_mode_default\":\"2d\","
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{"
+          "\"overlay_merge\":{"
+            "\"producer_clocks\":{\"physics_sim\":20}"
+          "}"
+        "}"
+        "}";
+    const char *overlay_json =
+        "{"
+        "\"overlay_meta\":{\"producer\":\"physics_sim\",\"logical_clock\":20},"
+        "\"extensions\":{\"physics_sim\":{\"iterations\":16}}"
+        "}";
+    char diagnostics[256];
+    char *merged = NULL;
+    bool ok = runtime_scene_bridge_writeback_physics_overlay_json(runtime_json,
+                                                                  overlay_json,
+                                                                  &merged,
+                                                                  diagnostics,
+                                                                  sizeof(diagnostics));
+    free(merged);
+    if (ok) return false;
+    if (strstr(diagnostics, "logical_clock is stale") == NULL) return false;
     return true;
 }
 
@@ -306,6 +478,26 @@ int main(void) {
     }
     if (!test_runtime_scene_bridge_writeback_rejects_foreign_extension_namespace()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: writeback namespace gate failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_writeback_rejects_forbidden_top_level_overlay_key()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: writeback forbidden key gate failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_writeback_rejects_invalid_space_mode_value()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: writeback invalid space-mode gate failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_writeback_rejects_non_object_physics_extension_payload()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: writeback payload-type gate failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_writeback_rejects_missing_overlay_meta()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: writeback missing-metadata gate failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_writeback_rejects_stale_logical_clock()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: writeback stale-logical-clock gate failed\n");
         return 1;
     }
     if (!test_runtime_scene_bridge_trio_fixture_compile_writeback_apply()) {
