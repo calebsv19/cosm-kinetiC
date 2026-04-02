@@ -223,6 +223,15 @@ Legacy test lane:
     - parity lane status: complete (`PS-U0` through `PS-U6`)
   - `test-stable` remains the baseline non-interactive regression gate
 
+## Connection Pass State
+- `PS-CP0` through `PS-CP2` are complete:
+  - `../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
+- current ownership summary:
+  - wrapper (`src/app/physics_sim_app_main.c`) now owns explicit stage enum/context + guarded transitions and explicit runtime dispatch seam
+  - legacy body (`src/main.c`, `physics_sim_app_main_legacy(...)`) still owns most runtime initialization/routing/teardown
+- next slices:
+  - optional `PS-CP3+`: deeper runtime/update/render ownership extraction from legacy concentration points
+
 ## Desktop Packaging State
 - desktop app bundle contract is active:
   - `dist/PhysicsSim.app`

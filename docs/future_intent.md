@@ -107,6 +107,16 @@ Last updated: 2026-04-01
     - fixture-driven round-trip interop checks landed across `ray_tracing` + `physics_sim`
     - nondestructive namespace-preservation behavior validated for both app overlays
 
+- connection-pass lane:
+  - completed:
+    - `PS-CP0` baseline routing/ownership map captured
+    - `PS-CP1` wrapper context + guarded stage-transition hardening
+    - `PS-CP2` explicit wrapper dispatch seam extraction
+    - execution log:
+      - `../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
+  - next:
+    - optional `PS-CP3+`: deeper extraction of runtime/update/render ownership from legacy concentration points
+
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.
 - No shared subtree redesign inside scaffold migration commits.
