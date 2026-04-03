@@ -335,7 +335,17 @@ int scene_controller_run(const AppConfig *initial_cfg,
         if (!scene.paused) {
             scene.dt = dt;
             ts_start_timer("physics");
-            int substeps = cfg.physics_substeps > 0 ? cfg.physics_substeps : 1;
+            AppConfig step_cfg = cfg;
+            SimModeStepPolicy step_policy = sim_mode_step_policy(&scene.mode_route,
+                                                                 scene.preset ? scene.preset->dimension_mode
+                                                                              : SCENE_DIMENSION_MODE_2D);
+            if (step_policy.constrained_3d_active) {
+                if (step_cfg.physics_substeps < step_policy.min_substeps) {
+                    step_cfg.physics_substeps = step_policy.min_substeps;
+                }
+                step_cfg.fluid_buoyancy_force *= step_policy.buoyancy_scale;
+            }
+            int substeps = step_cfg.physics_substeps > 0 ? step_cfg.physics_substeps : 1;
             double sub_dt = dt / (double)substeps;
             for (int i = 0; i < substeps; ++i) {
                 if (mode_hooks && mode_hooks->pre_substep) {
@@ -354,7 +364,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 const BoundaryFlow *flows = scene.preset ? scene.preset->boundary_flows : NULL;
                 fluid2d_step(scene.smoke,
                              sub_dt,
-                             &cfg,
+                             &step_cfg,
                              flows,
                              scene.obstacle_mask,
                              scene.obstacle_velX,
@@ -368,7 +378,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
                     mode_hooks->post_substep(&scene, sub_dt);
                 }
 
-                object_manager_step(&scene.objects, sub_dt, &cfg, scene.objects_gravity_enabled);
+                object_manager_step(&scene.objects, sub_dt, &step_cfg, scene.objects_gravity_enabled);
                 // Sync import positions/angles to their dynamic bodies so rendering tracks physics.
                 for (size_t ii = 0; ii < scene.import_shape_count; ++ii) {
                     int body_idx = scene.import_body_map[ii];

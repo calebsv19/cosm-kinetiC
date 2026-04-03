@@ -25,10 +25,21 @@ typedef struct SimModeRoute {
     SimBackendLane backend_lane;
     bool backend_uses_canonical_2d_solver;
     bool fallback_to_2d_projection;
+    bool constrained_3d_solver_scaffold;
+    int  constrained_3d_min_substeps;
+    float constrained_3d_buoyancy_scale;
     const SimModeHooks *hooks;
 } SimModeRoute;
 
+typedef struct SimModeStepPolicy {
+    bool constrained_3d_active;
+    int min_substeps;
+    float buoyancy_scale;
+} SimModeStepPolicy;
+
 SimModeRoute sim_mode_resolve_route(SimulationMode mode, SpaceMode space_mode);
 const SimModeHooks *sim_mode_get_hooks(SimulationMode mode);
+SimModeStepPolicy sim_mode_step_policy(const SimModeRoute *route,
+                                       FluidSceneDimensionMode dimension_mode);
 
 #endif // SIM_MODE_H

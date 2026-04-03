@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -218,6 +218,14 @@ Legacy test lane:
     - execution logs:
       - `../docs/private_program_docs/physics_sim/2026-03-30_ps_u0_baseline_freeze_and_gap_map.md`
       - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u1_space_mode_runtime_contract.md`
+
+## Wrapper Contract State
+- cross-program wrapper initiative status:
+  - `W0` complete
+  - `W1` complete for `physics_sim`
+  - `W2` complete for `physics_sim`
+- execution note:
+  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
       - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u2_mode_adapter_seam.md`
       - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u3_additive_scene_object_contract.md`
       - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u4_backend_separation_and_mode_routing.md`
@@ -234,6 +242,12 @@ Legacy test lane:
   - legacy body (`src/main.c`, `physics_sim_app_main_legacy(...)`) still owns most runtime initialization/routing/teardown
 - next slices:
   - optional `PS-CP3+`: deeper runtime/update/render ownership extraction from legacy concentration points
+- cross-program wrapper wave note:
+  - `W1` wrapper contract alignment is complete for `physics_sim` (`src/app/physics_sim_app_main.c`)
+  - `W2` diagnostics normalization started in wrapper:
+    - stage-order violation logs
+    - structured wrapper error codes per lifecycle boundary
+    - wrapper final status summary line
 
 ## Desktop Packaging State
 - desktop app bundle contract is active:
@@ -250,3 +264,50 @@ Legacy test lane:
   - shader roots under both `Resources/vk_renderer/shaders` and `Resources/shaders`
 - packaging reference:
   - `docs/desktop_packaging.md`
+- `W1/W2` verification snapshot (2026-04-02):
+  - `make -C physics_sim`
+  - `make -C physics_sim run-headless-smoke`
+  - `make -C physics_sim visual-harness`
+  - `make -C physics_sim test-stable`
+
+## PS3D Execution State
+- active execution plan:
+  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_ps3d_execution_plan.md`
+- `PS3D-0` runtime intake is complete:
+  - runtime bridge preflight/apply/writeback contract suite remains active under `tests/runtime_scene_bridge_contract_test.c`
+  - baseline intake gate:
+    - `make -C physics_sim test-runtime-scene-bridge-contract` -> PASS
+- `PS3D-1` dynamics-domain mapping is complete:
+  - runtime bridge now enforces canonical runtime units (`unit_system=meters`, finite positive `world_scale`)
+  - runtime->preset mapping applies `world_scale` consistently to object and light-seeded emitter transforms
+  - runtime mapping regression suite expanded for malformed payload rejection, unit-system rejection, and scaled mapping assertions
+- `PS3D-1` verification snapshot:
+  - `make -C physics_sim test-runtime-scene-bridge-contract` -> PASS
+  - `make -C physics_sim test-stable` -> PASS
+  - `./bin/run_trio_scene_pipeline.sh` -> PASS
+- `PS3D-2` overlay writeback constraints is complete:
+  - allow-list remains `extensions.physics_sim.*` plus `space_mode_default`
+  - canonical runtime-core overlay writes remain blocked (including `unit_system`/`world_scale`)
+  - deterministic conflict handling paths are regression-covered (stale clock + tie-break behavior)
+- `PS3D-2` verification snapshot:
+  - `make -C physics_sim test-runtime-scene-bridge-contract` -> PASS
+  - `make -C physics_sim test-stable` -> PASS
+  - `./bin/run_trio_scene_pipeline.sh` -> PASS
+- `PS3D-3` early 3D solver path is complete:
+  - controlled 3D lane now carries explicit constrained-solver scaffold metadata in `SimModeRoute`
+  - deterministic step policy (`sim_mode_step_policy`) now gates constrained 3D behavior by lane + `dimension_mode`
+  - scene controller applies constrained 3D step policy additively (minimum substeps + buoyancy scale) while retaining canonical 2D solver backend
+  - 2D path behavior remains unchanged and continues to pass stable gates
+- `PS3D-3` verification snapshot:
+  - `make -C physics_sim test-sim-mode-route-contract` -> PASS
+  - `make -C physics_sim test-stable` -> PASS
+  - `./bin/run_trio_scene_pipeline.sh` -> PASS
+- `PS3D-4` closeout complete:
+  - runtime bridge contract gate rerun:
+    - `make -C physics_sim test-runtime-scene-bridge-contract` -> PASS
+  - full local stable lane rerun:
+    - `make -C physics_sim test-stable` -> PASS
+  - trio interop smoke rerun:
+    - `./bin/run_trio_scene_pipeline.sh` -> PASS
+  - lane status:
+    - `PS3D-0` through `PS3D-4` complete

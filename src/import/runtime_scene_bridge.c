@@ -62,9 +62,13 @@ static bool validate_runtime_scene_root(json_object *root,
     json_object *schema_family = NULL;
     json_object *schema_variant = NULL;
     json_object *scene_id = NULL;
+    json_object *unit_system = NULL;
+    json_object *world_scale = NULL;
     const char *schema_family_str = NULL;
     const char *schema_variant_str = NULL;
     const char *scene_id_str = NULL;
+    const char *unit_system_str = NULL;
+    double world_scale_value = 1.0;
 
     if (!root || !out_preflight) return false;
 
@@ -98,6 +102,29 @@ static bool validate_runtime_scene_root(json_object *root,
     scene_id_str = json_object_get_string(scene_id);
     if (!scene_id_str || !scene_id_str[0]) {
         preflight_diag(out_preflight, "scene_id is empty");
+        return false;
+    }
+
+    if (!json_object_object_get_ex(root, "unit_system", &unit_system) ||
+        !json_object_is_type(unit_system, json_type_string)) {
+        preflight_diag(out_preflight, "missing unit_system");
+        return false;
+    }
+    unit_system_str = json_object_get_string(unit_system);
+    if (!unit_system_str || strcmp(unit_system_str, "meters") != 0) {
+        preflight_diag(out_preflight, "unit_system must be meters");
+        return false;
+    }
+
+    if (!json_object_object_get_ex(root, "world_scale", &world_scale) ||
+        (!json_object_is_type(world_scale, json_type_double) &&
+         !json_object_is_type(world_scale, json_type_int))) {
+        preflight_diag(out_preflight, "missing world_scale");
+        return false;
+    }
+    world_scale_value = json_object_get_double(world_scale);
+    if (!(world_scale_value > 0.0) || !isfinite(world_scale_value)) {
+        preflight_diag(out_preflight, "world_scale must be finite and > 0");
         return false;
     }
 
@@ -155,6 +182,7 @@ static PresetObjectType map_object_type(const char *object_type) {
 }
 
 static void apply_objects(json_object *objects_array,
+                          double world_scale,
                           FluidScenePreset *in_out_preset,
                           RuntimeSceneBridgePreflight *out_summary) {
     size_t src_count = 0;
@@ -214,12 +242,12 @@ static void apply_objects(json_object *objects_array,
             }
         }
 
-        dst->position_x = clampf_dim((float)px, -8.0f, 8.0f);
-        dst->position_y = clampf_dim((float)py, -8.0f, 8.0f);
-        dst->position_z = clampf_dim((float)pz, -8.0f, 8.0f);
-        dst->size_x = clampf_dim((float)sx, 0.005f, 1.0f);
-        dst->size_y = clampf_dim((float)sy, 0.005f, 1.0f);
-        dst->size_z = clampf_dim((float)sz, 0.005f, 1.0f);
+        dst->position_x = clampf_dim((float)(px * world_scale), -8.0f, 8.0f);
+        dst->position_y = clampf_dim((float)(py * world_scale), -8.0f, 8.0f);
+        dst->position_z = clampf_dim((float)(pz * world_scale), -8.0f, 8.0f);
+        dst->size_x = clampf_dim((float)(sx * world_scale), 0.005f, 1.0f);
+        dst->size_y = clampf_dim((float)(sy * world_scale), 0.005f, 1.0f);
+        dst->size_z = clampf_dim((float)(sz * world_scale), 0.005f, 1.0f);
         dst->angle = 0.0f;
         dst->is_static = false;
         dst->gravity_enabled = true;
@@ -240,6 +268,7 @@ static void apply_objects(json_object *objects_array,
 }
 
 static void apply_emitters_from_lights(json_object *lights_array,
+                                       double world_scale,
                                        FluidScenePreset *in_out_preset) {
     size_t src_count = 0;
     size_t i = 0;
@@ -264,9 +293,9 @@ static void apply_emitters_from_lights(json_object *lights_array,
         memset(dst, 0, sizeof(*dst));
 
         if (parse_vec3(light, "position", &lx, &ly, &lz)) {
-            dst->position_x = clampf_dim((float)lx, -8.0f, 8.0f);
-            dst->position_y = clampf_dim((float)ly, -8.0f, 8.0f);
-            dst->position_z = clampf_dim((float)lz, -8.0f, 8.0f);
+            dst->position_x = clampf_dim((float)(lx * world_scale), -8.0f, 8.0f);
+            dst->position_y = clampf_dim((float)(ly * world_scale), -8.0f, 8.0f);
+            dst->position_z = clampf_dim((float)(lz * world_scale), -8.0f, 8.0f);
         } else {
             dst->position_x = 0.5f;
             dst->position_y = 0.5f;
@@ -351,6 +380,8 @@ bool runtime_scene_bridge_apply_json(const char *runtime_scene_json,
     json_object *root = NULL;
     json_object *objects = NULL;
     json_object *lights = NULL;
+    json_object *world_scale_obj = NULL;
+    double world_scale = 1.0;
 
     if (!runtime_scene_json || !in_out_cfg || !in_out_preset || !out_summary) return false;
     preflight_reset(out_summary);
@@ -368,10 +399,13 @@ bool runtime_scene_bridge_apply_json(const char *runtime_scene_json,
     }
 
     apply_space_mode(root, in_out_cfg, in_out_preset);
+    if (json_object_object_get_ex(root, "world_scale", &world_scale_obj)) {
+        world_scale = json_object_get_double(world_scale_obj);
+    }
     json_object_object_get_ex(root, "objects", &objects);
     json_object_object_get_ex(root, "lights", &lights);
-    apply_objects(objects, in_out_preset, out_summary);
-    apply_emitters_from_lights(lights, in_out_preset);
+    apply_objects(objects, world_scale, in_out_preset, out_summary);
+    apply_emitters_from_lights(lights, world_scale, in_out_preset);
 
     preflight_diag(out_summary, "ok");
     json_object_put(root);
