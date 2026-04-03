@@ -1,5 +1,6 @@
 #include "physics_sim/physics_sim_app_main.h"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -22,12 +23,45 @@ typedef struct PhysicsSimLaunchArgs {
 typedef struct PhysicsSimDispatchSummary {
     uint32_t dispatch_count;
     bool used_legacy_entry;
+    bool dispatch_succeeded;
+    int last_dispatch_exit_code;
 } PhysicsSimDispatchSummary;
 
 typedef struct PhysicsSimDispatchOutput {
     int exit_code;
     PhysicsSimDispatchSummary summary;
 } PhysicsSimDispatchOutput;
+
+typedef struct PhysicsSimRuntimeLoopRequest {
+    const struct PhysicsSimAppContext *ctx;
+} PhysicsSimRuntimeLoopRequest;
+
+typedef struct PhysicsSimRuntimeLoopOutput {
+    bool dispatched;
+    PhysicsSimDispatchOutput dispatch_output;
+} PhysicsSimRuntimeLoopOutput;
+
+typedef struct PhysicsSimRunLoopHandoffRequest {
+    struct PhysicsSimAppContext *ctx;
+    PhysicsSimRuntimeLoopRequest loop_request;
+} PhysicsSimRunLoopHandoffRequest;
+
+typedef struct PhysicsSimRunLoopHandoffOutput {
+    bool dispatched;
+    int dispatch_exit_code;
+    int wrapper_exit_code;
+} PhysicsSimRunLoopHandoffOutput;
+
+typedef struct PhysicsSimLifecycleOwnership {
+    bool bootstrap_owned;
+    bool config_owned;
+    bool state_seed_owned;
+    bool subsystems_owned;
+    bool runtime_owned;
+    bool dispatch_owned;
+    bool run_loop_handoff_owned;
+    bool shutdown_owned;
+} PhysicsSimLifecycleOwnership;
 
 typedef struct PhysicsSimAppContext {
     PhysicsSimAppStage stage;
@@ -42,7 +76,21 @@ typedef struct PhysicsSimAppContext {
     int (*legacy_entry)(int argc, char **argv);
     PhysicsSimLaunchArgs launch_args;
     PhysicsSimDispatchSummary dispatch_summary;
+    PhysicsSimLifecycleOwnership ownership;
+    int wrapper_error;
 } PhysicsSimAppContext;
+
+typedef enum PhysicsSimWrapperError {
+    PHYSICS_SIM_WRAP_OK = 0,
+    PHYSICS_SIM_WRAP_BOOTSTRAP_FAILED = 1,
+    PHYSICS_SIM_WRAP_CONFIG_LOAD_FAILED = 2,
+    PHYSICS_SIM_WRAP_STATE_SEED_FAILED = 3,
+    PHYSICS_SIM_WRAP_SUBSYSTEMS_INIT_FAILED = 4,
+    PHYSICS_SIM_WRAP_RUNTIME_START_FAILED = 5,
+    PHYSICS_SIM_WRAP_DISPATCH_FAILED = 6,
+    PHYSICS_SIM_WRAP_STAGE_FINALIZE_FAILED = 7,
+    PHYSICS_SIM_WRAP_RUN_LOOP_HANDOFF_FAILED = 8
+} PhysicsSimWrapperError;
 
 static int physics_sim_default_legacy_entry(int argc, char **argv) {
     (void)argc;
@@ -59,12 +107,30 @@ static PhysicsSimAppContext g_physics_sim_app_ctx = {
 // Guards stage progression to keep wrapper lifecycle deterministic.
 static bool physics_sim_app_transition_stage(PhysicsSimAppContext *ctx,
                                              PhysicsSimAppStage expected,
-                                             PhysicsSimAppStage next) {
+                                             PhysicsSimAppStage next,
+                                             const char *fn_name) {
     if (!ctx || ctx->stage != expected) {
+        fprintf(stderr,
+                "physics_sim: lifecycle stage order violation at %s (expected=%d actual=%d)\n",
+                fn_name ? fn_name : "unknown",
+                (int)expected,
+                ctx ? (int)ctx->stage : -1);
         return false;
     }
     ctx->stage = next;
     return true;
+}
+
+static void physics_sim_log_wrapper_error(PhysicsSimWrapperError code,
+                                          const char *fn_name,
+                                          PhysicsSimAppStage stage,
+                                          const char *reason) {
+    fprintf(stderr,
+            "physics_sim: wrapper error code=%d fn=%s stage=%d reason=%s\n",
+            (int)code,
+            fn_name ? fn_name : "unknown",
+            (int)stage,
+            reason ? reason : "unspecified");
 }
 
 static bool physics_sim_app_bootstrap_ctx(PhysicsSimAppContext *ctx) {
@@ -83,13 +149,17 @@ static bool physics_sim_app_bootstrap_ctx(PhysicsSimAppContext *ctx) {
     ctx->legacy_entry = legacy_entry;
     ctx->launch_args = launch_args;
     ctx->exit_code = 1;
+    ctx->dispatch_summary.last_dispatch_exit_code = 1;
+    ctx->wrapper_error = PHYSICS_SIM_WRAP_OK;
 
     if (!physics_sim_app_transition_stage(ctx,
                                           PHYSICS_SIM_APP_STAGE_INIT,
-                                          PHYSICS_SIM_APP_STAGE_BOOTSTRAPPED)) {
+                                          PHYSICS_SIM_APP_STAGE_BOOTSTRAPPED,
+                                          "physics_sim_app_bootstrap_ctx")) {
         return false;
     }
     ctx->bootstrapped = true;
+    ctx->ownership.bootstrap_owned = true;
     return true;
 }
 
@@ -99,10 +169,12 @@ static bool physics_sim_app_config_load_ctx(PhysicsSimAppContext *ctx) {
     }
     if (!physics_sim_app_transition_stage(ctx,
                                           PHYSICS_SIM_APP_STAGE_BOOTSTRAPPED,
-                                          PHYSICS_SIM_APP_STAGE_CONFIG_LOADED)) {
+                                          PHYSICS_SIM_APP_STAGE_CONFIG_LOADED,
+                                          "physics_sim_app_config_load_ctx")) {
         return false;
     }
     ctx->config_loaded = true;
+    ctx->ownership.config_owned = true;
     return true;
 }
 
@@ -112,10 +184,12 @@ static bool physics_sim_app_state_seed_ctx(PhysicsSimAppContext *ctx) {
     }
     if (!physics_sim_app_transition_stage(ctx,
                                           PHYSICS_SIM_APP_STAGE_CONFIG_LOADED,
-                                          PHYSICS_SIM_APP_STAGE_STATE_SEEDED)) {
+                                          PHYSICS_SIM_APP_STAGE_STATE_SEEDED,
+                                          "physics_sim_app_state_seed_ctx")) {
         return false;
     }
     ctx->state_seeded = true;
+    ctx->ownership.state_seed_owned = true;
     return true;
 }
 
@@ -125,10 +199,12 @@ static bool physics_sim_app_subsystems_init_ctx(PhysicsSimAppContext *ctx) {
     }
     if (!physics_sim_app_transition_stage(ctx,
                                           PHYSICS_SIM_APP_STAGE_STATE_SEEDED,
-                                          PHYSICS_SIM_APP_STAGE_SUBSYSTEMS_READY)) {
+                                          PHYSICS_SIM_APP_STAGE_SUBSYSTEMS_READY,
+                                          "physics_sim_app_subsystems_init_ctx")) {
         return false;
     }
     ctx->subsystems_initialized = true;
+    ctx->ownership.subsystems_owned = true;
     return true;
 }
 
@@ -138,10 +214,12 @@ static bool physics_sim_runtime_start_ctx(PhysicsSimAppContext *ctx) {
     }
     if (!physics_sim_app_transition_stage(ctx,
                                           PHYSICS_SIM_APP_STAGE_SUBSYSTEMS_READY,
-                                          PHYSICS_SIM_APP_STAGE_RUNTIME_STARTED)) {
+                                          PHYSICS_SIM_APP_STAGE_RUNTIME_STARTED,
+                                          "physics_sim_runtime_start_ctx")) {
         return false;
     }
     ctx->runtime_started = true;
+    ctx->ownership.runtime_owned = true;
     return true;
 }
 
@@ -161,26 +239,121 @@ static PhysicsSimDispatchOutput physics_sim_app_dispatch_runtime(const PhysicsSi
     return out;
 }
 
+static bool physics_sim_app_runtime_loop_adapter(const PhysicsSimRuntimeLoopRequest *request,
+                                                 PhysicsSimRuntimeLoopOutput *out) {
+    if (!request || !out) {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    if (!request->ctx || !request->ctx->legacy_entry) {
+        return false;
+    }
+    out->dispatch_output = physics_sim_app_dispatch_runtime(request->ctx);
+    out->dispatched = true;
+    return true;
+}
+
+static bool physics_sim_app_run_loop_handoff_ctx(const PhysicsSimRunLoopHandoffRequest *request,
+                                                 PhysicsSimRunLoopHandoffOutput *out) {
+    PhysicsSimRuntimeLoopOutput loop_output = {0};
+    if (!request || !out || !request->ctx || !request->loop_request.ctx) {
+        if (out) {
+            memset(out, 0, sizeof(*out));
+            out->wrapper_exit_code = PHYSICS_SIM_WRAP_RUN_LOOP_HANDOFF_FAILED;
+        }
+        if (request && request->ctx) {
+            request->ctx->wrapper_error = PHYSICS_SIM_WRAP_RUN_LOOP_HANDOFF_FAILED;
+            physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_RUN_LOOP_HANDOFF_FAILED,
+                                          "physics_sim_app_run_loop_handoff_ctx",
+                                          request->ctx->stage,
+                                          "invalid handoff request");
+        }
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    out->wrapper_exit_code = PHYSICS_SIM_WRAP_DISPATCH_FAILED;
+    request->ctx->ownership.run_loop_handoff_owned = true;
+
+    if (!physics_sim_app_runtime_loop_adapter(&request->loop_request, &loop_output)) {
+        request->ctx->dispatch_summary.dispatch_succeeded = false;
+        request->ctx->dispatch_summary.last_dispatch_exit_code = PHYSICS_SIM_WRAP_DISPATCH_FAILED;
+        request->ctx->wrapper_error = PHYSICS_SIM_WRAP_DISPATCH_FAILED;
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_DISPATCH_FAILED,
+                                      "physics_sim_app_run_loop_handoff_ctx",
+                                      request->ctx->stage,
+                                      "runtime loop adapter failed");
+        return false;
+    }
+
+    request->ctx->dispatch_summary = loop_output.dispatch_output.summary;
+    request->ctx->dispatch_summary.dispatch_succeeded = true;
+    request->ctx->dispatch_summary.last_dispatch_exit_code = loop_output.dispatch_output.exit_code;
+    request->ctx->ownership.dispatch_owned = true;
+    request->ctx->exit_code = loop_output.dispatch_output.exit_code;
+    out->dispatch_exit_code = loop_output.dispatch_output.exit_code;
+
+    if (!physics_sim_app_transition_stage(request->ctx,
+                                          PHYSICS_SIM_APP_STAGE_RUNTIME_STARTED,
+                                          PHYSICS_SIM_APP_STAGE_LOOP_COMPLETED,
+                                          "physics_sim_app_run_loop_handoff_ctx")) {
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_STAGE_FINALIZE_FAILED,
+                                      "physics_sim_app_run_loop_handoff_ctx",
+                                      request->ctx->stage,
+                                      "failed to finalize loop stage transition");
+        out->wrapper_exit_code = PHYSICS_SIM_WRAP_STAGE_FINALIZE_FAILED;
+        request->ctx->wrapper_error = PHYSICS_SIM_WRAP_STAGE_FINALIZE_FAILED;
+        return false;
+    }
+
+    request->ctx->run_loop_completed = true;
+    request->ctx->wrapper_error = PHYSICS_SIM_WRAP_OK;
+    out->dispatched = true;
+    out->wrapper_exit_code = request->ctx->exit_code;
+    return true;
+}
+
 static int physics_sim_app_run_loop_ctx(PhysicsSimAppContext *ctx) {
-    PhysicsSimDispatchOutput dispatch_output = {0};
+    PhysicsSimRunLoopHandoffRequest handoff_request = {0};
+    PhysicsSimRunLoopHandoffOutput handoff_output = {0};
 
     if (!ctx || !ctx->legacy_entry) {
-        return 1;
+        if (ctx) {
+            ctx->wrapper_error = PHYSICS_SIM_WRAP_DISPATCH_FAILED;
+        }
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_DISPATCH_FAILED,
+                                      "physics_sim_app_run_loop_ctx",
+                                      ctx ? ctx->stage : PHYSICS_SIM_APP_STAGE_INIT,
+                                      "invalid wrapper context");
+        return PHYSICS_SIM_WRAP_DISPATCH_FAILED;
     }
     if (ctx->stage != PHYSICS_SIM_APP_STAGE_RUNTIME_STARTED) {
-        return 1;
+        ctx->wrapper_error = PHYSICS_SIM_WRAP_DISPATCH_FAILED;
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_DISPATCH_FAILED,
+                                      "physics_sim_app_run_loop_ctx",
+                                      ctx->stage,
+                                      "run loop invoked before runtime start");
+        return PHYSICS_SIM_WRAP_DISPATCH_FAILED;
     }
 
-    dispatch_output = physics_sim_app_dispatch_runtime(ctx);
-    ctx->dispatch_summary = dispatch_output.summary;
-    ctx->exit_code = dispatch_output.exit_code;
-    if (!physics_sim_app_transition_stage(ctx,
-                                          PHYSICS_SIM_APP_STAGE_RUNTIME_STARTED,
-                                          PHYSICS_SIM_APP_STAGE_LOOP_COMPLETED)) {
-        return 1;
+    handoff_request.ctx = ctx;
+    handoff_request.loop_request.ctx = ctx;
+    if (!physics_sim_app_run_loop_handoff_ctx(&handoff_request, &handoff_output)) {
+        return handoff_output.wrapper_exit_code;
     }
-    ctx->run_loop_completed = true;
-    return ctx->exit_code;
+    return handoff_output.wrapper_exit_code;
+}
+
+static void physics_sim_app_release_ownership_ctx(PhysicsSimAppContext *ctx) {
+    if (!ctx) {
+        return;
+    }
+    ctx->ownership.dispatch_owned = false;
+    ctx->ownership.run_loop_handoff_owned = false;
+    ctx->ownership.runtime_owned = false;
+    ctx->ownership.subsystems_owned = false;
+    ctx->ownership.state_seed_owned = false;
+    ctx->ownership.config_owned = false;
+    ctx->ownership.bootstrap_owned = false;
 }
 
 static void physics_sim_app_shutdown_ctx(PhysicsSimAppContext *ctx) {
@@ -190,6 +363,8 @@ static void physics_sim_app_shutdown_ctx(PhysicsSimAppContext *ctx) {
     if (ctx->stage == PHYSICS_SIM_APP_STAGE_SHUTDOWN_COMPLETED) {
         return;
     }
+    physics_sim_app_release_ownership_ctx(ctx);
+    ctx->ownership.shutdown_owned = true;
     ctx->stage = PHYSICS_SIM_APP_STAGE_SHUTDOWN_COMPLETED;
     ctx->shutdown_completed = true;
 }
@@ -229,29 +404,60 @@ void physics_sim_app_shutdown(void) {
 }
 
 int physics_sim_app_main(int argc, char **argv) {
-    int exit_code = 1;
+    int exit_code = PHYSICS_SIM_WRAP_BOOTSTRAP_FAILED;
 
     g_physics_sim_app_ctx.launch_args.argc = argc;
     g_physics_sim_app_ctx.launch_args.argv = argv;
 
     if (!physics_sim_app_bootstrap_ctx(&g_physics_sim_app_ctx)) {
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_BOOTSTRAP_FAILED,
+                                      "physics_sim_app_main",
+                                      g_physics_sim_app_ctx.stage,
+                                      "bootstrap failed");
         return exit_code;
     }
     if (!physics_sim_app_config_load_ctx(&g_physics_sim_app_ctx)) {
+        exit_code = PHYSICS_SIM_WRAP_CONFIG_LOAD_FAILED;
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_CONFIG_LOAD_FAILED,
+                                      "physics_sim_app_main",
+                                      g_physics_sim_app_ctx.stage,
+                                      "config load failed");
         goto shutdown;
     }
     if (!physics_sim_app_state_seed_ctx(&g_physics_sim_app_ctx)) {
+        exit_code = PHYSICS_SIM_WRAP_STATE_SEED_FAILED;
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_STATE_SEED_FAILED,
+                                      "physics_sim_app_main",
+                                      g_physics_sim_app_ctx.stage,
+                                      "state seed failed");
         goto shutdown;
     }
     if (!physics_sim_app_subsystems_init_ctx(&g_physics_sim_app_ctx)) {
+        exit_code = PHYSICS_SIM_WRAP_SUBSYSTEMS_INIT_FAILED;
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_SUBSYSTEMS_INIT_FAILED,
+                                      "physics_sim_app_main",
+                                      g_physics_sim_app_ctx.stage,
+                                      "subsystems init failed");
         goto shutdown;
     }
     if (!physics_sim_runtime_start_ctx(&g_physics_sim_app_ctx)) {
+        exit_code = PHYSICS_SIM_WRAP_RUNTIME_START_FAILED;
+        physics_sim_log_wrapper_error(PHYSICS_SIM_WRAP_RUNTIME_START_FAILED,
+                                      "physics_sim_app_main",
+                                      g_physics_sim_app_ctx.stage,
+                                      "runtime start failed");
         goto shutdown;
     }
 
     exit_code = physics_sim_app_run_loop_ctx(&g_physics_sim_app_ctx);
 shutdown:
     physics_sim_app_shutdown_ctx(&g_physics_sim_app_ctx);
+    fprintf(stderr,
+            "physics_sim: wrapper exit stage=%d exit_code=%d dispatch_count=%u dispatch_ok=%d wrapper_error=%d\n",
+            (int)g_physics_sim_app_ctx.stage,
+            exit_code,
+            (unsigned)g_physics_sim_app_ctx.dispatch_summary.dispatch_count,
+            g_physics_sim_app_ctx.dispatch_summary.dispatch_succeeded ? 1 : 0,
+            g_physics_sim_app_ctx.wrapper_error);
     return exit_code;
 }

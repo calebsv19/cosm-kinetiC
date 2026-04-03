@@ -224,15 +224,19 @@ Legacy test lane:
   - `W0` complete
   - `W1` complete for `physics_sim`
   - `W2` complete for `physics_sim`
+- `W3` complete for `physics_sim`:
+  - `S0` baseline freeze + verification rerun complete
+  - `S1` typed runtime-loop adapter seam complete
+  - `S2` typed run-loop handoff seam cutover complete
+  - `S3` seam diagnostics + ownership hardening complete
+  - `S4` closeout/docs/memory sync complete
 - execution note:
   - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
-      - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u2_mode_adapter_seam.md`
-      - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u3_additive_scene_object_contract.md`
-      - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u4_backend_separation_and_mode_routing.md`
-      - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u5_ux_editor_parity_layer.md`
-      - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u6_verification_docs_memory_closeout.md`
-    - parity lane status: complete (`PS-U0` through `PS-U6`)
-  - `test-stable` remains the baseline non-interactive regression gate
+  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s0_s1_execution.md`
+  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
+  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
+  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
+- `test-stable` remains the baseline non-interactive regression gate
 
 ## Connection Pass State
 - `PS-CP0` through `PS-CP2` are complete:
@@ -244,10 +248,14 @@ Legacy test lane:
   - optional `PS-CP3+`: deeper runtime/update/render ownership extraction from legacy concentration points
 - cross-program wrapper wave note:
   - `W1` wrapper contract alignment is complete for `physics_sim` (`src/app/physics_sim_app_main.c`)
-  - `W2` diagnostics normalization started in wrapper:
+  - `W2` diagnostics normalization is complete in wrapper:
     - stage-order violation logs
     - structured wrapper error codes per lifecycle boundary
     - wrapper final status summary line
+  - `W3` extraction lane has started:
+    - run-loop adapter seam is now explicit (`physics_sim_app_runtime_loop_adapter(...)`)
+    - typed run-loop handoff seam is now explicit (`physics_sim_app_run_loop_handoff_ctx(...)`)
+    - seam diagnostics/ownership hardening is now explicit (wrapper ownership state + seam-local wrapper error capture)
 
 ## Desktop Packaging State
 - desktop app bundle contract is active:

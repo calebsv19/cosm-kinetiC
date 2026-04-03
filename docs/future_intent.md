@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-04-01
+Last updated: 2026-04-02
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -116,6 +116,25 @@ Last updated: 2026-04-01
       - `../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
   - next:
     - optional `PS-CP3+`: deeper extraction of runtime/update/render ownership from legacy concentration points
+
+- cross-program wrapper initiative:
+  - `W0` complete (canonical wrapper contract frozen in scaffold docs)
+  - `W1` complete for `physics_sim` (wrapper alignment in `src/app/physics_sim_app_main.c`)
+  - `W2` complete for `physics_sim` (structured wrapper diagnostics normalization with stage-order violations, wrapper error taxonomy, and final wrapper exit summary logging)
+  - `W3` complete:
+    - `S0` baseline freeze + verification rerun complete
+    - `S1` typed runtime-loop adapter seam complete (`physics_sim_app_runtime_loop_adapter(...)`)
+    - `S2` typed run-loop handoff seam cutover complete (`physics_sim_app_run_loop_handoff_ctx(...)`)
+    - `S3` seam diagnostics and ownership hardening complete (ownership state + seam-local wrapper error diagnostics)
+    - `S4` closeout/docs/memory sync complete
+  - next:
+    - optional `W4+` only if deeper legacy-lane extraction is needed
+  - execution note:
+    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
+    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s0_s1_execution.md`
+    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
+    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
+    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
 
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.
