@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-02
+Last updated: 2026-04-03
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -256,6 +256,36 @@ Legacy test lane:
     - run-loop adapter seam is now explicit (`physics_sim_app_runtime_loop_adapter(...)`)
     - typed run-loop handoff seam is now explicit (`physics_sim_app_run_loop_handoff_ctx(...)`)
     - seam diagnostics/ownership hardening is now explicit (wrapper ownership state + seam-local wrapper error capture)
+
+## RS1 Render Split State
+- private execution note:
+  - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
+  - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s2_closeout.md`
+- `RS1-S0` complete:
+  - top-level update/render ownership map captured in `src/app/scene_controller.c`.
+- `RS1-S1` complete:
+  - typed frame contracts landed:
+    - `SceneControllerUpdateFrame`
+    - `SceneControllerRenderDeriveFrame`
+  - explicit phase seams landed in `scene_controller.c`:
+    - `scene_controller_update_phase(...)`
+    - `scene_controller_render_derive_phase(...)`
+    - `scene_controller_render_submit_phase(...)`
+  - optional diagnostics gate landed:
+    - env: `PHYSICS_SIM_RS1_DIAG=1`
+- verification snapshot (2026-04-03):
+  - `make -C physics_sim clean && make -C physics_sim` pass
+  - `make -C physics_sim test-stable` pass
+  - `make -C physics_sim run-headless-smoke` pass
+  - `make -C physics_sim visual-harness` pass
+- `RS1-S2` complete:
+  - diagnostics closeout + tracker synchronization completed across:
+    - `physics_sim/docs/current_truth.md`
+    - `physics_sim/docs/future_intent.md`
+    - `docs/private_program_docs/physics_sim/README.md`
+    - `docs/ecosystem_north_star_docs/scaffold_system/07_program_upgrade_backlog.md`
+- next:
+  - optional deeper extraction only if RS1 contracts need promotion into a broader shared kit lane.
 
 ## Desktop Packaging State
 - desktop app bundle contract is active:

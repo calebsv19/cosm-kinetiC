@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-04-02
+Last updated: 2026-04-03
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -135,6 +135,16 @@ Last updated: 2026-04-02
     - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
     - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
     - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
+
+- RS1 render split lane:
+  - `RS1-S0` complete (render ownership baseline map captured in scene controller)
+  - `RS1-S1` complete (typed update/derive/submit frame contracts + explicit phase seams landed)
+  - `RS1-S2` complete (diagnostics closeout + tracker synchronization)
+  - execution note:
+    - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
+    - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s2_closeout.md`
+  - next:
+    - optional deeper extraction only if RS1 contracts need promotion into a broader shared kit lane
 
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.

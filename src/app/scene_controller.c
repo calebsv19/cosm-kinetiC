@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "command/command_bus.h"
 #include "app/scene_state.h"
@@ -40,9 +41,29 @@ typedef struct StrokeSampler {
     float        sample_spacing;
 } StrokeSampler;
 
+typedef struct SceneControllerRs1DiagTotals {
+    uint64_t frame_count;
+    uint64_t derive_ns_total;
+    uint64_t submit_ns_total;
+    uint64_t invalidation_reason_bits_total;
+    uint64_t dispatched_commands_total;
+} SceneControllerRs1DiagTotals;
+
 static const double DEFAULT_SAMPLE_RATE = 240.0;
 static const float  DEFAULT_SAMPLE_SPACING = 3.0f;
 static const size_t MAX_SAMPLES_PER_FRAME = 512;
+
+static bool scene_controller_rs1_diag_enabled(void) {
+    const char *value = getenv("PHYSICS_SIM_RS1_DIAG");
+    if (!value || !value[0]) {
+        return false;
+    }
+    return strcmp(value, "1") == 0 ||
+           strcmp(value, "true") == 0 ||
+           strcmp(value, "TRUE") == 0 ||
+           strcmp(value, "yes") == 0 ||
+           strcmp(value, "on") == 0;
+}
 
 static bool handle_scene_command(const Command *cmd, void *user_data) {
     CommandDispatchContext *ctx = (CommandDispatchContext *)user_data;
@@ -221,6 +242,246 @@ static void inject_object_motion_into_fluid(SceneState *scene) {
     }
 }
 
+static bool scene_controller_input_has_activity(const InputCommands *cmds) {
+    if (!cmds) return false;
+    return cmds->quit ||
+           cmds->mouse_down ||
+           cmds->brush_mode_changed ||
+           cmds->text_zoom_in_requested ||
+           cmds->text_zoom_out_requested ||
+           cmds->text_zoom_reset_requested;
+}
+
+static SceneControllerUpdateFrame scene_controller_update_phase(
+    SceneState *scene,
+    AppConfig *cfg,
+    const InputCommands *cmds,
+    double dt,
+    bool running,
+    bool aborted,
+    bool headless_mode,
+    uint64_t frame_index,
+    CommandBus *bus,
+    StrokeSampler *sampler,
+    CommandDispatchContext *dispatch_ctx,
+    const SimModeHooks *mode_hooks,
+    const char *snapshot_dir,
+    int *snapshot_index) {
+    SceneControllerUpdateFrame frame = {0};
+
+    if (!scene || !cfg || !cmds || !bus || !sampler || !dispatch_ctx || !snapshot_index) {
+        return frame;
+    }
+
+    frame.valid = true;
+    frame.running = running;
+    frame.aborted = aborted;
+    frame.headless_mode = headless_mode;
+    frame.dt = dt;
+    frame.frame_index = frame_index;
+
+    if (scene_controller_input_has_activity(cmds)) {
+        frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_INPUT;
+    }
+
+    scene_apply_input(scene, cmds);
+    stroke_sampler_capture(sampler, cmds, dt);
+    stroke_sampler_apply(sampler, scene, MAX_SAMPLES_PER_FRAME);
+
+    {
+        size_t max_commands = (cfg->command_batch_limit > 0)
+                                  ? (size_t)cfg->command_batch_limit
+                                  : 0;
+        frame.dispatched_command_count =
+            command_bus_dispatch(bus, max_commands, handle_scene_command, dispatch_ctx);
+        if (frame.dispatched_command_count > 0) {
+            frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_COMMAND;
+        }
+    }
+
+    if (!scene->paused) {
+        scene->dt = dt;
+        ts_start_timer("physics");
+        {
+            AppConfig step_cfg = *cfg;
+            SimModeStepPolicy step_policy = sim_mode_step_policy(&scene->mode_route,
+                                                                 scene->preset ? scene->preset->dimension_mode
+                                                                              : SCENE_DIMENSION_MODE_2D);
+            if (step_policy.constrained_3d_active) {
+                if (step_cfg.physics_substeps < step_policy.min_substeps) {
+                    step_cfg.physics_substeps = step_policy.min_substeps;
+                }
+                step_cfg.fluid_buoyancy_force *= step_policy.buoyancy_scale;
+            }
+            int substeps = step_cfg.physics_substeps > 0 ? step_cfg.physics_substeps : 1;
+            double sub_dt = dt / (double)substeps;
+            for (int i = 0; i < substeps; ++i) {
+                if (mode_hooks && mode_hooks->pre_substep) {
+                    mode_hooks->pre_substep(scene, sub_dt);
+                }
+
+                scene_apply_emitters(scene, sub_dt);
+                scene_apply_boundary_flows(scene, sub_dt);
+                scene_enforce_obstacles(scene);
+
+                ts_start_timer("fluid_step");
+                {
+                    const BoundaryFlow *flows = scene->preset ? scene->preset->boundary_flows : NULL;
+                    fluid2d_step(scene->smoke,
+                                 sub_dt,
+                                 &step_cfg,
+                                 flows,
+                                 scene->obstacle_mask,
+                                 scene->obstacle_velX,
+                                 scene->obstacle_velY);
+                }
+                ts_stop_timer("fluid_step");
+
+                scene_enforce_obstacles(scene);
+                scene_enforce_boundary_flows(scene);
+
+                if (mode_hooks && mode_hooks->post_substep) {
+                    mode_hooks->post_substep(scene, sub_dt);
+                }
+
+                object_manager_step(&scene->objects, sub_dt, &step_cfg, scene->objects_gravity_enabled);
+                for (size_t ii = 0; ii < scene->import_shape_count; ++ii) {
+                    int body_idx = scene->import_body_map[ii];
+                    if (body_idx < 0 || body_idx >= scene->objects.count) continue;
+                    RigidBody2D *b = &scene->objects.objects[body_idx].body;
+                    scene->import_shapes[ii].position_x = b->position.x / (float)cfg->window_w;
+                    scene->import_shapes[ii].position_y = b->position.y / (float)cfg->window_h;
+                    scene->import_shapes[ii].rotation_deg = b->angle * 180.0f / (float)M_PI;
+                }
+                scene_rasterize_dynamic_obstacles(scene);
+                inject_object_motion_into_fluid(scene);
+                scene->obstacle_mask_dirty = true;
+                scene->time += sub_dt;
+            }
+        }
+        ts_stop_timer("physics");
+        frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_SIM_STEP;
+    } else {
+        scene_enforce_obstacles(scene);
+    }
+
+    frame.snapshot_requested = dispatch_ctx->snapshot_requested;
+    if (dispatch_ctx->snapshot_requested) {
+        char path[256];
+        build_snapshot_path(path, sizeof(path), snapshot_dir, (*snapshot_index)++);
+        if (!scene_export_snapshot(scene, path)) {
+            fprintf(stderr, "Failed to export snapshot to %s\n", path);
+        } else {
+            fprintf(stderr, "Exported snapshot to %s\n", path);
+            frame.snapshot_exported = true;
+            frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_SNAPSHOT_EXPORT;
+        }
+    }
+
+    return frame;
+}
+
+static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
+    const SceneState *scene,
+    const AppConfig *cfg,
+    const SceneControllerUpdateFrame *update_frame,
+    bool headless_mode,
+    bool skip_present) {
+    SceneControllerRenderDeriveFrame frame = {0};
+    const char *quality_label = NULL;
+
+    if (!scene || !cfg || !update_frame || !update_frame->valid) {
+        return frame;
+    }
+
+    quality_label = quality_profile_name(cfg->quality_index);
+    frame.valid = true;
+    frame.headless_mode = headless_mode;
+    frame.frame_index = update_frame->frame_index;
+    frame.invalidation_reason_bits = update_frame->invalidation_reason_bits;
+    frame.should_save_volume_frames = cfg->save_volume_frames;
+    frame.should_save_render_frames = cfg->save_render_frames;
+    frame.should_present = !headless_mode || !skip_present;
+
+    frame.hud = (RendererHudInfo){
+        .preset_name = (scene->preset && scene->preset->name) ? scene->preset->name : "Preset",
+        .preset_is_custom = scene->preset ? scene->preset->is_custom : false,
+        .grid_w = scene->config ? scene->config->grid_w : cfg->grid_w,
+        .grid_h = scene->config ? scene->config->grid_h : cfg->grid_h,
+        .window_w = cfg->window_w,
+        .window_h = cfg->window_h,
+        .paused = scene->paused,
+        .sim_mode = cfg->sim_mode,
+        .requested_space_mode = scene->mode_route.requested_space_mode,
+        .projection_space_mode = scene->mode_route.projection_space_mode,
+        .backend_lane = scene->mode_route.backend_lane,
+        .backend_uses_canonical_2d_solver = scene->mode_route.backend_uses_canonical_2d_solver,
+        .tunnel_inflow_speed = cfg->tunnel_inflow_speed,
+        .vorticity_enabled = renderer_sdl_vorticity_enabled(),
+        .pressure_enabled = renderer_sdl_pressure_enabled(),
+        .velocity_overlay_enabled = renderer_sdl_velocity_vectors_enabled(),
+        .particle_overlay_enabled = renderer_sdl_flow_particles_enabled(),
+        .velocity_fixed_length = renderer_sdl_velocity_mode_fixed(),
+        .kit_viz_density_enabled = renderer_sdl_kit_viz_density_enabled(),
+        .kit_viz_density_active = renderer_sdl_density_using_kit_viz(),
+        .kit_viz_velocity_enabled = renderer_sdl_kit_viz_velocity_enabled(),
+        .kit_viz_velocity_active = renderer_sdl_velocity_using_kit_viz(),
+        .kit_viz_pressure_enabled = renderer_sdl_kit_viz_pressure_enabled(),
+        .kit_viz_pressure_active = renderer_sdl_pressure_using_kit_viz(),
+        .kit_viz_vorticity_enabled = renderer_sdl_kit_viz_vorticity_enabled(),
+        .kit_viz_vorticity_active = renderer_sdl_vorticity_using_kit_viz(),
+        .kit_viz_particles_enabled = renderer_sdl_kit_viz_particles_enabled(),
+        .kit_viz_particles_active = renderer_sdl_particles_using_kit_viz(),
+        .objects_gravity_enabled = scene->objects_gravity_enabled,
+        .quality_name = quality_label ? quality_label : "Custom",
+        .solver_iterations = cfg->fluid_solver_iterations,
+        .physics_substeps = cfg->physics_substeps
+    };
+
+    if (frame.should_save_volume_frames || frame.should_save_render_frames || frame.should_present) {
+        frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_RENDER_OUTPUT;
+    }
+
+    return frame;
+}
+
+static void scene_controller_render_submit_phase(const SceneState *scene,
+                                                 const SceneControllerRenderDeriveFrame *derive_frame,
+                                                 bool *io_running,
+                                                 bool *io_aborted) {
+    if (!scene || !derive_frame || !derive_frame->valid || !io_running || !io_aborted) {
+        return;
+    }
+
+    if (derive_frame->should_save_volume_frames) {
+        volume_frames_write(scene, derive_frame->frame_index);
+    }
+
+    if (renderer_sdl_render_scene(scene)) {
+        if (derive_frame->should_save_render_frames) {
+            uint8_t *pixels = NULL;
+            int pitch = 0;
+            if (renderer_sdl_capture_pixels(&pixels, &pitch)) {
+                render_frames_write_bmp(pixels,
+                                        renderer_sdl_output_width(),
+                                        renderer_sdl_output_height(),
+                                        pitch,
+                                        derive_frame->frame_index);
+                renderer_sdl_free_capture(pixels);
+            }
+        }
+        if (derive_frame->should_present) {
+            renderer_sdl_present_with_hud(&derive_frame->hud);
+        }
+    }
+
+    if (renderer_sdl_device_lost()) {
+        fprintf(stderr, "[scene] Vulkan device lost; stopping simulation.\n");
+        *io_aborted = true;
+        *io_running = false;
+    }
+}
+
 int scene_controller_run(const AppConfig *initial_cfg,
                         const FluidScenePreset *preset,
                         const ShapeAssetLibrary *shape_library,
@@ -290,6 +551,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
     int interactive_frame_limit = (!headless_mode && cfg.headless_frame_count > 0)
                                       ? cfg.headless_frame_count
                                       : 0;
+    SceneControllerRs1DiagTotals rs1_diag_totals = {0};
     while (running) {
         ts_frame_start();
         ts_start_timer("frame");
@@ -311,167 +573,65 @@ int scene_controller_run(const AppConfig *initial_cfg,
             aborted = true;
         }
         double dt = timing_begin_frame(&timer, &cfg);
-
-
-        scene_apply_input(&scene, &cmds);
-        stroke_sampler_capture(&sampler, &cmds, dt);
-
-
         CommandDispatchContext dispatch_ctx = {
             .scene = &scene,
             .snapshot_requested = false,
         };
+        SceneControllerUpdateFrame update_frame =
+            scene_controller_update_phase(&scene,
+                                          &cfg,
+                                          &cmds,
+                                          dt,
+                                          running,
+                                          aborted,
+                                          headless_mode,
+                                          frame_index,
+                                          &bus,
+                                          &sampler,
+                                          &dispatch_ctx,
+                                          mode_hooks,
+                                          snapshot_dir,
+                                          &snapshot_index);
 
+        uint64_t derive_begin = SDL_GetPerformanceCounter();
+        SceneControllerRenderDeriveFrame derive_frame =
+            scene_controller_render_derive_phase(&scene,
+                                                &cfg,
+                                                &update_frame,
+                                                headless_mode,
+                                                headless_mode && headless && headless->skip_present);
+        uint64_t derive_end = SDL_GetPerformanceCounter();
 
-        stroke_sampler_apply(&sampler, &scene, MAX_SAMPLES_PER_FRAME);
+        scene_controller_render_submit_phase(&scene, &derive_frame, &running, &aborted);
+        uint64_t submit_end = SDL_GetPerformanceCounter();
 
-
-        size_t max_commands = (cfg.command_batch_limit > 0)
-                                  ? (size_t)cfg.command_batch_limit
-                                  : 0; // 0 => unlimited
-
-        command_bus_dispatch(&bus, max_commands, handle_scene_command, &dispatch_ctx);
-
-        if (!scene.paused) {
-            scene.dt = dt;
-            ts_start_timer("physics");
-            AppConfig step_cfg = cfg;
-            SimModeStepPolicy step_policy = sim_mode_step_policy(&scene.mode_route,
-                                                                 scene.preset ? scene.preset->dimension_mode
-                                                                              : SCENE_DIMENSION_MODE_2D);
-            if (step_policy.constrained_3d_active) {
-                if (step_cfg.physics_substeps < step_policy.min_substeps) {
-                    step_cfg.physics_substeps = step_policy.min_substeps;
-                }
-                step_cfg.fluid_buoyancy_force *= step_policy.buoyancy_scale;
+        {
+            uint64_t perf_freq = SDL_GetPerformanceFrequency();
+            uint64_t derive_ns = 0;
+            uint64_t submit_ns = 0;
+            if (perf_freq > 0) {
+                derive_ns = (uint64_t)((derive_end - derive_begin) * 1000000000ull / perf_freq);
+                submit_ns = (uint64_t)((submit_end - derive_end) * 1000000000ull / perf_freq);
             }
-            int substeps = step_cfg.physics_substeps > 0 ? step_cfg.physics_substeps : 1;
-            double sub_dt = dt / (double)substeps;
-            for (int i = 0; i < substeps; ++i) {
-                if (mode_hooks && mode_hooks->pre_substep) {
-                    mode_hooks->pre_substep(&scene, sub_dt);
-                }
-
-                scene_apply_emitters(&scene, sub_dt);
-
-                // ts_start_timer("boundary_flows");
-                scene_apply_boundary_flows(&scene, sub_dt);
-                // ts_stop_timer("boundary_flows");
-
-                scene_enforce_obstacles(&scene);
-
-                ts_start_timer("fluid_step");
-                const BoundaryFlow *flows = scene.preset ? scene.preset->boundary_flows : NULL;
-                fluid2d_step(scene.smoke,
-                             sub_dt,
-                             &step_cfg,
-                             flows,
-                             scene.obstacle_mask,
-                             scene.obstacle_velX,
-                             scene.obstacle_velY);
-                ts_stop_timer("fluid_step");
-
-                scene_enforce_obstacles(&scene);
-                scene_enforce_boundary_flows(&scene);
-
-                if (mode_hooks && mode_hooks->post_substep) {
-                    mode_hooks->post_substep(&scene, sub_dt);
-                }
-
-                object_manager_step(&scene.objects, sub_dt, &step_cfg, scene.objects_gravity_enabled);
-                // Sync import positions/angles to their dynamic bodies so rendering tracks physics.
-                for (size_t ii = 0; ii < scene.import_shape_count; ++ii) {
-                    int body_idx = scene.import_body_map[ii];
-                    if (body_idx < 0 || body_idx >= scene.objects.count) continue;
-                    RigidBody2D *b = &scene.objects.objects[body_idx].body;
-                    scene.import_shapes[ii].position_x = b->position.x / (float)cfg.window_w;
-                    scene.import_shapes[ii].position_y = b->position.y / (float)cfg.window_h;
-                    scene.import_shapes[ii].rotation_deg = b->angle * 180.0f / (float)M_PI;
-                }
-                // Rasterize using the latest physics-resolved poses.
-                scene_rasterize_dynamic_obstacles(&scene);
-                inject_object_motion_into_fluid(&scene);
-                scene.obstacle_mask_dirty = true;
-                scene.time += sub_dt;
+            rs1_diag_totals.frame_count += 1u;
+            rs1_diag_totals.derive_ns_total += derive_ns;
+            rs1_diag_totals.submit_ns_total += submit_ns;
+            rs1_diag_totals.invalidation_reason_bits_total += derive_frame.invalidation_reason_bits;
+            rs1_diag_totals.dispatched_commands_total += update_frame.dispatched_command_count;
+            if (scene_controller_rs1_diag_enabled()) {
+                printf("[rs1] physics_sim frame=%llu derive_ns=%llu submit_ns=%llu invalidation_bits=0x%x "
+                       "commands=%llu totals(frames=%llu derive_ns=%llu submit_ns=%llu invalid_bits_sum=%llu commands=%llu)\n",
+                       (unsigned long long)rs1_diag_totals.frame_count,
+                       (unsigned long long)derive_ns,
+                       (unsigned long long)submit_ns,
+                       (unsigned int)derive_frame.invalidation_reason_bits,
+                       (unsigned long long)update_frame.dispatched_command_count,
+                       (unsigned long long)rs1_diag_totals.frame_count,
+                       (unsigned long long)rs1_diag_totals.derive_ns_total,
+                       (unsigned long long)rs1_diag_totals.submit_ns_total,
+                       (unsigned long long)rs1_diag_totals.invalidation_reason_bits_total,
+                       (unsigned long long)rs1_diag_totals.dispatched_commands_total);
             }
-            ts_stop_timer("physics");
-        } else {
-            scene_enforce_obstacles(&scene);
-        }
-
-        if (dispatch_ctx.snapshot_requested) {
-            char path[256];
-            build_snapshot_path(path, sizeof(path), snapshot_dir, snapshot_index++);
-            if (!scene_export_snapshot(&scene, path)) {
-                fprintf(stderr, "Failed to export snapshot to %s\n", path);
-            } else {
-                fprintf(stderr, "Exported snapshot to %s\n", path);
-            }
-        }
-
-        const char *quality_label = quality_profile_name(cfg.quality_index);
-        RendererHudInfo hud = {
-            .preset_name = (scene.preset && scene.preset->name) ? scene.preset->name : "Preset",
-            .preset_is_custom = scene.preset ? scene.preset->is_custom : false,
-            .grid_w = scene.config ? scene.config->grid_w : cfg.grid_w,
-            .grid_h = scene.config ? scene.config->grid_h : cfg.grid_h,
-            .window_w = cfg.window_w,
-            .window_h = cfg.window_h,
-            .paused = scene.paused,
-            .sim_mode = cfg.sim_mode,
-            .requested_space_mode = scene.mode_route.requested_space_mode,
-            .projection_space_mode = scene.mode_route.projection_space_mode,
-            .backend_lane = scene.mode_route.backend_lane,
-            .backend_uses_canonical_2d_solver = scene.mode_route.backend_uses_canonical_2d_solver,
-            .tunnel_inflow_speed = cfg.tunnel_inflow_speed,
-            .vorticity_enabled = renderer_sdl_vorticity_enabled(),
-            .pressure_enabled = renderer_sdl_pressure_enabled(),
-            .velocity_overlay_enabled = renderer_sdl_velocity_vectors_enabled(),
-            .particle_overlay_enabled = renderer_sdl_flow_particles_enabled(),
-            .velocity_fixed_length = renderer_sdl_velocity_mode_fixed(),
-            .kit_viz_density_enabled = renderer_sdl_kit_viz_density_enabled(),
-            .kit_viz_density_active = renderer_sdl_density_using_kit_viz(),
-            .kit_viz_velocity_enabled = renderer_sdl_kit_viz_velocity_enabled(),
-            .kit_viz_velocity_active = renderer_sdl_velocity_using_kit_viz(),
-            .kit_viz_pressure_enabled = renderer_sdl_kit_viz_pressure_enabled(),
-            .kit_viz_pressure_active = renderer_sdl_pressure_using_kit_viz(),
-            .kit_viz_vorticity_enabled = renderer_sdl_kit_viz_vorticity_enabled(),
-            .kit_viz_vorticity_active = renderer_sdl_vorticity_using_kit_viz(),
-            .kit_viz_particles_enabled = renderer_sdl_kit_viz_particles_enabled(),
-            .kit_viz_particles_active = renderer_sdl_particles_using_kit_viz(),
-            .objects_gravity_enabled = scene.objects_gravity_enabled,
-            .quality_name = quality_label ? quality_label : "Custom",
-            .solver_iterations = cfg.fluid_solver_iterations,
-            .physics_substeps = cfg.physics_substeps
-        };
-
-
-        if (cfg.save_volume_frames) {
-            volume_frames_write(&scene, frame_index);
-        }
-
-
-        if (renderer_sdl_render_scene(&scene)) {
-            if (cfg.save_render_frames) {
-                uint8_t *pixels = NULL;
-                int pitch = 0;
-                if (renderer_sdl_capture_pixels(&pixels, &pitch)) {
-                    render_frames_write_bmp(pixels,
-                                            renderer_sdl_output_width(),
-                                            renderer_sdl_output_height(),
-                                            pitch,
-                                            frame_index);
-                    renderer_sdl_free_capture(pixels);
-                }
-            }
-            if (!headless_mode || !headless->skip_present) {
-                renderer_sdl_present_with_hud(&hud);
-            }
-        }
-        if (renderer_sdl_device_lost()) {
-            fprintf(stderr, "[scene] Vulkan device lost; stopping simulation.\n");
-            aborted = true;
-            running = false;
         }
 
 

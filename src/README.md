@@ -7,7 +7,7 @@ Holds the implementation for every runtime subsystem. Each `.c` file exposes its
 - `timing.c` – small helper that clamps frame delta time via `FrameTimer`.
 
 ## Subdirectories
-- `app/` – configuration defaults plus the scene editor/menu, presets, scene state, and controller that glue inputs, solvers, and rendering together.
+- `app/` – configuration defaults plus the scene editor/menu, presets, scene state, and controller that glue inputs, solvers, and rendering together. The scene controller now exposes explicit RS1 frame phases (`Update -> RenderDerive -> RenderSubmit`) via typed contracts.
 - `command/` – shared command bus implementations used to relay actions from input to higher layers.
 - `config/` – loaders that read `config/app.json` and populate `AppConfig`.
 - `input/` – SDL event pump, stroke buffer utilities, and related headers that supply high-level `InputCommands`.
