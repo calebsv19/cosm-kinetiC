@@ -287,6 +287,34 @@ Legacy test lane:
 - next:
   - optional deeper extraction only if RS1 contracts need promotion into a broader shared kit lane.
 
+## IR1 Input Routing State
+- private execution note:
+  - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
+- `IR1-S0` through `IR1-S3` complete:
+  - explicit typed input frame contracts landed in:
+    - `include/app/scene_controller.h`
+      - `SceneControllerInputEventRaw`
+      - `SceneControllerInputEventNormalized`
+      - `SceneControllerInputRouteResult`
+      - `SceneControllerInputInvalidationResult`
+      - `SceneControllerInputFrame`
+  - explicit phase seams landed in `src/app/scene_controller.c`:
+    - `scene_controller_input_intake_phase(...)`
+    - `scene_controller_input_normalize_phase(...)`
+    - `scene_controller_input_route_phase(...)`
+    - `scene_controller_input_invalidate_phase(...)`
+    - `scene_controller_input_phase(...)`
+  - runtime loop now consumes typed input frame handoff for update/route ownership.
+  - optional diagnostics gate landed:
+    - env: `PHYSICS_SIM_IR1_DIAG=1`
+- verification snapshot (2026-04-03):
+  - `make -C physics_sim clean && make -C physics_sim` pass
+  - `make -C physics_sim test-stable` pass
+  - `make -C physics_sim run-headless-smoke` pass
+  - `make -C physics_sim visual-harness` pass
+- next:
+  - optional deeper pane-target routing split only if upcoming editor work requires finer route-policy ownership.
+
 ## Desktop Packaging State
 - desktop app bundle contract is active:
   - `dist/PhysicsSim.app`

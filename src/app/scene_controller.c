@@ -49,12 +49,23 @@ typedef struct SceneControllerRs1DiagTotals {
     uint64_t dispatched_commands_total;
 } SceneControllerRs1DiagTotals;
 
+typedef struct SceneControllerIr1DiagTotals {
+    uint64_t frame_count;
+    uint64_t routed_global_total;
+    uint64_t routed_scene_total;
+    uint64_t routed_fallback_total;
+    uint64_t invalidation_reason_bits_total;
+} SceneControllerIr1DiagTotals;
+
 static const double DEFAULT_SAMPLE_RATE = 240.0;
 static const float  DEFAULT_SAMPLE_SPACING = 3.0f;
 static const size_t MAX_SAMPLES_PER_FRAME = 512;
 
-static bool scene_controller_rs1_diag_enabled(void) {
-    const char *value = getenv("PHYSICS_SIM_RS1_DIAG");
+static bool scene_controller_env_flag_enabled(const char *name) {
+    if (!name) {
+        return false;
+    }
+    const char *value = getenv(name);
     if (!value || !value[0]) {
         return false;
     }
@@ -63,6 +74,14 @@ static bool scene_controller_rs1_diag_enabled(void) {
            strcmp(value, "TRUE") == 0 ||
            strcmp(value, "yes") == 0 ||
            strcmp(value, "on") == 0;
+}
+
+static bool scene_controller_rs1_diag_enabled(void) {
+    return scene_controller_env_flag_enabled("PHYSICS_SIM_RS1_DIAG");
+}
+
+static bool scene_controller_ir1_diag_enabled(void) {
+    return scene_controller_env_flag_enabled("PHYSICS_SIM_IR1_DIAG");
 }
 
 static bool handle_scene_command(const Command *cmd, void *user_data) {
@@ -242,20 +261,129 @@ static void inject_object_motion_into_fluid(SceneState *scene) {
     }
 }
 
-static bool scene_controller_input_has_activity(const InputCommands *cmds) {
-    if (!cmds) return false;
-    return cmds->quit ||
-           cmds->mouse_down ||
-           cmds->brush_mode_changed ||
-           cmds->text_zoom_in_requested ||
-           cmds->text_zoom_out_requested ||
-           cmds->text_zoom_reset_requested;
+static uint32_t scene_controller_count_bool(bool value) {
+    return value ? 1u : 0u;
+}
+
+static void scene_controller_input_intake_phase(InputContextManager *ctx_mgr,
+                                                CommandBus *bus,
+                                                bool ignore_input,
+                                                SceneControllerInputEventRaw *out_raw) {
+    if (!out_raw) {
+        return;
+    }
+    memset(out_raw, 0, sizeof(*out_raw));
+    out_raw->ignore_input_active = ignore_input;
+    out_raw->polled = input_poll_events(&out_raw->commands, bus, ctx_mgr);
+    out_raw->quit_requested = out_raw->commands.quit;
+    out_raw->running_after_poll = ignore_input ? true : out_raw->polled;
+    out_raw->valid = true;
+
+    if (ignore_input) {
+        bool quit_requested = out_raw->commands.quit;
+        memset(&out_raw->commands, 0, sizeof(out_raw->commands));
+        out_raw->commands.quit = quit_requested;
+        out_raw->quit_requested = quit_requested;
+    }
+}
+
+static void scene_controller_input_normalize_phase(
+    const SceneControllerInputEventRaw *raw,
+    SceneControllerInputEventNormalized *out_normalized) {
+    if (!raw || !out_normalized) {
+        return;
+    }
+    memset(out_normalized, 0, sizeof(*out_normalized));
+    out_normalized->has_quit_action = raw->commands.quit;
+    out_normalized->has_pointer_actions = raw->commands.mouse_down;
+    out_normalized->has_shortcut_actions = raw->commands.text_zoom_in_requested ||
+                                           raw->commands.text_zoom_out_requested ||
+                                           raw->commands.text_zoom_reset_requested;
+    out_normalized->has_brush_mode_change = raw->commands.brush_mode_changed;
+    out_normalized->action_count += scene_controller_count_bool(out_normalized->has_quit_action);
+    out_normalized->action_count += scene_controller_count_bool(out_normalized->has_pointer_actions);
+    out_normalized->action_count += scene_controller_count_bool(out_normalized->has_shortcut_actions);
+    out_normalized->action_count += scene_controller_count_bool(out_normalized->has_brush_mode_change);
+}
+
+static void scene_controller_input_route_phase(
+    const SceneControllerInputEventNormalized *normalized,
+    SceneControllerInputRouteResult *out_route) {
+    if (!normalized || !out_route) {
+        return;
+    }
+    memset(out_route, 0, sizeof(*out_route));
+    out_route->target_policy = SCENE_CONTROLLER_INPUT_ROUTE_TARGET_FALLBACK;
+
+    if (normalized->has_shortcut_actions || normalized->has_quit_action) {
+        out_route->routed_global_count = normalized->action_count;
+        out_route->target_policy = SCENE_CONTROLLER_INPUT_ROUTE_TARGET_GLOBAL;
+        out_route->consumed = true;
+        return;
+    }
+    if (normalized->has_pointer_actions || normalized->has_brush_mode_change) {
+        out_route->routed_scene_count = normalized->action_count;
+        out_route->target_policy = SCENE_CONTROLLER_INPUT_ROUTE_TARGET_SCENE;
+        out_route->consumed = true;
+        return;
+    }
+    if (normalized->action_count > 0u) {
+        out_route->routed_fallback_count = normalized->action_count;
+        out_route->target_policy = SCENE_CONTROLLER_INPUT_ROUTE_TARGET_FALLBACK;
+        out_route->consumed = true;
+    }
+}
+
+static void scene_controller_input_invalidate_phase(
+    const SceneControllerInputFrame *input_frame,
+    SceneControllerInputInvalidationResult *out_invalidation) {
+    if (!input_frame || !out_invalidation) {
+        return;
+    }
+    memset(out_invalidation, 0, sizeof(*out_invalidation));
+    if (input_frame->normalized.has_quit_action) {
+        out_invalidation->invalidation_reason_bits |= SCENE_CONTROLLER_INPUT_INVALIDATE_REASON_QUIT;
+        out_invalidation->full_invalidation_count += 1u;
+        out_invalidation->full_invalidate = true;
+    }
+    if (input_frame->normalized.has_shortcut_actions) {
+        out_invalidation->invalidation_reason_bits |= SCENE_CONTROLLER_INPUT_INVALIDATE_REASON_SHORTCUT;
+    }
+    if (input_frame->normalized.has_pointer_actions) {
+        out_invalidation->invalidation_reason_bits |= SCENE_CONTROLLER_INPUT_INVALIDATE_REASON_POINTER;
+    }
+    if (input_frame->normalized.has_brush_mode_change) {
+        out_invalidation->invalidation_reason_bits |= SCENE_CONTROLLER_INPUT_INVALIDATE_REASON_BRUSH;
+    }
+    out_invalidation->target_invalidation_count += input_frame->route.routed_global_count;
+    out_invalidation->target_invalidation_count += input_frame->route.routed_scene_count;
+    out_invalidation->target_invalidation_count += input_frame->route.routed_fallback_count;
+}
+
+static SceneControllerInputFrame scene_controller_input_phase(InputContextManager *ctx_mgr,
+                                                              CommandBus *bus,
+                                                              bool ignore_input,
+                                                              bool headless_mode) {
+    SceneControllerInputFrame frame = {0};
+    frame.valid = true;
+    scene_controller_input_intake_phase(ctx_mgr, bus, ignore_input, &frame.raw);
+    scene_controller_input_normalize_phase(&frame.raw, &frame.normalized);
+    scene_controller_input_route_phase(&frame.normalized, &frame.route);
+    scene_controller_input_invalidate_phase(&frame, &frame.invalidation);
+    frame.effective_commands = frame.raw.commands;
+    frame.running = frame.raw.running_after_poll;
+    frame.aborted = false;
+    if (headless_mode && frame.effective_commands.quit) {
+        frame.running = false;
+        frame.aborted = true;
+    }
+    return frame;
 }
 
 static SceneControllerUpdateFrame scene_controller_update_phase(
     SceneState *scene,
     AppConfig *cfg,
-    const InputCommands *cmds,
+    const SceneControllerInputFrame *input_frame,
     double dt,
     bool running,
     bool aborted,
@@ -269,7 +397,7 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
     int *snapshot_index) {
     SceneControllerUpdateFrame frame = {0};
 
-    if (!scene || !cfg || !cmds || !bus || !sampler || !dispatch_ctx || !snapshot_index) {
+    if (!scene || !cfg || !input_frame || !bus || !sampler || !dispatch_ctx || !snapshot_index) {
         return frame;
     }
 
@@ -280,12 +408,13 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
     frame.dt = dt;
     frame.frame_index = frame_index;
 
-    if (scene_controller_input_has_activity(cmds)) {
+    if (input_frame->invalidation.target_invalidation_count > 0u ||
+        input_frame->invalidation.full_invalidation_count > 0u) {
         frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_INPUT;
     }
 
-    scene_apply_input(scene, cmds);
-    stroke_sampler_capture(sampler, cmds, dt);
+    scene_apply_input(scene, &input_frame->effective_commands);
+    stroke_sampler_capture(sampler, &input_frame->effective_commands, dt);
     stroke_sampler_apply(sampler, scene, MAX_SAMPLES_PER_FRAME);
 
     {
@@ -552,26 +681,19 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                       ? cfg.headless_frame_count
                                       : 0;
     SceneControllerRs1DiagTotals rs1_diag_totals = {0};
+    SceneControllerIr1DiagTotals ir1_diag_totals = {0};
     while (running) {
         ts_frame_start();
         ts_start_timer("frame");
 
-        InputCommands cmds;
         bool ignore_input = headless_mode && headless->ignore_input;
-        bool polled = input_poll_events(&cmds, &bus, &ctx_mgr);
-        if (ignore_input) {
-            bool quit_requested = cmds.quit;
-            memset(&cmds, 0, sizeof(cmds));
-            cmds.quit = quit_requested;
-            running = true;
-        } else {
-            running = polled;
-        }
-
-        if (headless_mode && cmds.quit) {
-            running = false;
+        SceneControllerInputFrame input_frame =
+            scene_controller_input_phase(&ctx_mgr, &bus, ignore_input, headless_mode);
+        running = input_frame.running;
+        if (input_frame.aborted) {
             aborted = true;
         }
+
         double dt = timing_begin_frame(&timer, &cfg);
         CommandDispatchContext dispatch_ctx = {
             .scene = &scene,
@@ -580,7 +702,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
         SceneControllerUpdateFrame update_frame =
             scene_controller_update_phase(&scene,
                                           &cfg,
-                                          &cmds,
+                                          &input_frame,
                                           dt,
                                           running,
                                           aborted,
@@ -592,6 +714,29 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                           mode_hooks,
                                           snapshot_dir,
                                           &snapshot_index);
+        ir1_diag_totals.frame_count += 1u;
+        ir1_diag_totals.routed_global_total += input_frame.route.routed_global_count;
+        ir1_diag_totals.routed_scene_total += input_frame.route.routed_scene_count;
+        ir1_diag_totals.routed_fallback_total += input_frame.route.routed_fallback_count;
+        ir1_diag_totals.invalidation_reason_bits_total += input_frame.invalidation.invalidation_reason_bits;
+        if (scene_controller_ir1_diag_enabled()) {
+            printf("[ir1] physics_sim frame=%llu actions=%u route(global=%u scene=%u fallback=%u target=%d) "
+                   "invalidate(bits=0x%x target=%u full=%u) totals(frames=%llu global=%llu scene=%llu fallback=%llu invalid_bits_sum=%llu)\n",
+                   (unsigned long long)frame_index,
+                   (unsigned int)input_frame.normalized.action_count,
+                   (unsigned int)input_frame.route.routed_global_count,
+                   (unsigned int)input_frame.route.routed_scene_count,
+                   (unsigned int)input_frame.route.routed_fallback_count,
+                   (int)input_frame.route.target_policy,
+                   (unsigned int)input_frame.invalidation.invalidation_reason_bits,
+                   (unsigned int)input_frame.invalidation.target_invalidation_count,
+                   (unsigned int)input_frame.invalidation.full_invalidation_count,
+                   (unsigned long long)ir1_diag_totals.frame_count,
+                   (unsigned long long)ir1_diag_totals.routed_global_total,
+                   (unsigned long long)ir1_diag_totals.routed_scene_total,
+                   (unsigned long long)ir1_diag_totals.routed_fallback_total,
+                   (unsigned long long)ir1_diag_totals.invalidation_reason_bits_total);
+        }
 
         uint64_t derive_begin = SDL_GetPerformanceCounter();
         SceneControllerRenderDeriveFrame derive_frame =

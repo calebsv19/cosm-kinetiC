@@ -146,6 +146,16 @@ Last updated: 2026-04-03
   - next:
     - optional deeper extraction only if RS1 contracts need promotion into a broader shared kit lane
 
+- IR1 input-routing lane:
+  - `IR1-S0` complete (top-level input ownership baseline map captured in scene controller)
+  - `IR1-S1` complete (typed input frame contracts landed)
+  - `IR1-S2` complete (explicit input phase seams landed with behavior parity)
+  - `IR1-S3` complete (diagnostics + tracker synchronization closeout)
+  - execution note:
+    - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
+  - next:
+    - optional deeper pane-target routing split only if upcoming editor work requires finer route-policy ownership
+
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.
 - No shared subtree redesign inside scaffold migration commits.
