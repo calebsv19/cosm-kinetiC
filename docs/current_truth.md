@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-03
+Last updated: 2026-04-04
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -50,6 +50,78 @@ Legacy test lane:
   - `test-shared-theme-font-adapter`
     - failure message:
       - `shared_theme_font_adapter_test: theme should be disabled by default`
+
+## Release Readiness Snapshot
+- `PS-RL0` complete:
+  - release contract is now locked in `Makefile` with:
+    - `RELEASE_PRODUCT_NAME := kinetiC`
+    - `RELEASE_PROGRAM_KEY := physics_sim`
+    - `RELEASE_BUNDLE_ID := com.cosm.kinetic`
+  - canonical version source is present:
+    - `VERSION` (`0.1.0`)
+  - release contract gate:
+    - `make -C physics_sim release-contract`
+- `PS-RL1` complete:
+  - package stage now bundles Frameworks closure via:
+    - `tools/packaging/macos/bundle-dylibs.sh`
+  - package smoke now requires:
+    - `libvulkan.1.dylib`
+    - `libMoltenVK.dylib`
+  - launcher now enforces writable runtime root:
+    - default: `~/Library/Application Support/PhysicsSim/runtime`
+    - fallback: `${TMPDIR}/PhysicsSim/runtime`
+  - launcher now emits runtime ICD JSON and exports:
+    - `VK_ICD_FILENAMES`
+    - `VK_DRIVER_FILES`
+  - release audit gate:
+    - `make -C physics_sim release-bundle-audit`
+    - validates bundle id, portable dylib closure, runtime path rooting, and Vulkan ICD env output.
+- `PS-RL2` complete:
+  - Developer ID signing + verification is active:
+    - `make -C physics_sim release-verify-signed APPLE_SIGN_IDENTITY="Developer ID Application: ... (J4ZR8UWD8G)"`
+  - notarization + staple + notarized verify passed:
+    - `make -C physics_sim release-notarize APPLE_SIGN_IDENTITY="Developer ID Application: ... (J4ZR8UWD8G)" APPLE_NOTARY_PROFILE="cosm-notary"`
+    - `make -C physics_sim release-staple`
+    - `make -C physics_sim release-verify-notarized`
+  - accepted notary submission id:
+    - `04c18af1-f648-47f6-b4c7-6a69b9c1d590`
+  - pre-notary `spctl` rejection (`Unnotarized Developer ID`) is treated as expected in `release-verify`; strict notarized trust remains enforced by `release-verify-notarized`.
+- `PS-RL3` complete:
+  - release artifact generation is active:
+    - `make -C physics_sim release-artifact`
+  - produced stable-channel outputs:
+    - `build/release/kinetiC-0.1.0-macOS-stable.zip`
+    - `build/release/kinetiC-0.1.0-macOS-stable.zip.sha256`
+    - `build/release/kinetiC-0.1.0-macOS-stable.manifest.txt`
+  - desktop refresh + trust verification passed:
+    - `make -C physics_sim release-desktop-refresh`
+    - `spctl --assess --type execute --verbose=2 /Users/calebsv/Desktop/kinetiC.app`
+    - `codesign --verify --deep --strict /Users/calebsv/Desktop/kinetiC.app`
+- `PS-RL4` complete:
+  - Finder/open launch evidence confirms runtime-root execution:
+    - `open /Users/calebsv/Desktop/kinetiC.app`
+    - launcher log `launch begin` shows:
+      - `cwd=/Users/calebsv/Library/Application Support/PhysicsSim/runtime`
+      - `runtime_dir=/Users/calebsv/Library/Application Support/PhysicsSim/runtime`
+      - `shader_root=/Users/calebsv/Library/Application Support/PhysicsSim/runtime`
+  - runtime Vulkan ICD wiring is confirmed:
+    - launcher `--print-config` exposes runtime ICD env:
+      - `VK_ICD_FILENAMES=/Users/calebsv/Library/Application Support/PhysicsSim/runtime/vk/MoltenVK_icd.json`
+      - `VK_DRIVER_FILES=/Users/calebsv/Library/Application Support/PhysicsSim/runtime/vk/MoltenVK_icd.json`
+    - runtime ICD JSON points to bundled MoltenVK dylib:
+      - `/Users/calebsv/Desktop/kinetiC.app/Contents/Frameworks/libMoltenVK.dylib`
+- `PS-RL5` complete:
+  - one-shot distribution gate passed end-to-end:
+    - `make -C /Users/calebsv/Desktop/CodeWork/physics_sim release-distribute APPLE_SIGN_IDENTITY="Developer ID Application: ... (J4ZR8UWD8G)" APPLE_NOTARY_PROFILE="cosm-notary"`
+  - final accepted notary submission id:
+    - `f43fec3b-19f1-448c-bc5c-8773d48d2bab`
+  - closeout verify evidence:
+    - `dist/kinetiC.app: accepted`
+    - `source=Notarized Developer ID`
+  - release artifact remains:
+    - `build/release/kinetiC-0.1.0-macOS-stable.zip`
+    - `build/release/kinetiC-0.1.0-macOS-stable.zip.sha256`
+    - `build/release/kinetiC-0.1.0-macOS-stable.manifest.txt`
 
 ## Shared Dependency Snapshot
 - Shared libs actively consumed by current `makefile`:

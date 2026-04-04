@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-04-03
+Last updated: 2026-04-04
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -160,3 +160,17 @@ Last updated: 2026-04-03
 - No feature-expansion work unrelated to scaffold alignment.
 - No shared subtree redesign inside scaffold migration commits.
 - No one-pass broad naming churn; changes stay phase-bounded and parity-verified.
+
+## Release Readiness Next Intent
+- active release lane:
+  - `PS-RL0` through `PS-RL5` execution plan:
+    - `../docs/private_program_docs/physics_sim/2026-04-04_physics_sim_release_readiness_rl0_rl5_execution_plan.md`
+- completed now:
+  - `PS-RL0` release contract freeze
+  - `PS-RL1` bundle audit + Vulkan runtime hardening
+  - `PS-RL2` signing/notary integration
+  - `PS-RL3` artifact + desktop release flow
+  - `PS-RL4` validation evidence + docs synchronization
+  - `PS-RL5` one-shot `release-distribute` closeout (notarize/staple/verify)
+- next:
+  - no immediate release-lane work; proceed to next program release rollout
