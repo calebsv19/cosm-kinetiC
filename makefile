@@ -275,12 +275,13 @@ STABLE_TEST_TARGETS := \
 	test-kitviz-field-adapter \
 	test-sim-mode-route-contract \
 	test-preset-io-dimensional-contract \
-	test-runtime-scene-bridge-contract
+	test-runtime-scene-bridge-contract \
+	test-structural-runtime-split-contract
 
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-runtime-scene-bridge-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -339,6 +340,18 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	$(CORE_IO_DIR)/src/core_io.c \
 	$(CORE_BASE_DIR)/src/core_base.c
 
+STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS := \
+	tests/structural_runtime_split_contract_test.c \
+	$(SRC_DIR)/app/structural/structural_controller_runtime.c \
+	$(SRC_DIR)/physics/structural/structural_scene.c \
+	$(SRC_DIR)/physics/structural/structural_solver.c
+
+ifeq ($(UNAME_S),Darwin)
+STRUCTURAL_RUNTIME_SPLIT_TEST_PLATFORM_CFLAGS := -I/opt/homebrew/include -D_THREAD_SAFE
+else
+STRUCTURAL_RUNTIME_SPLIT_TEST_PLATFORM_CFLAGS := $(if $(SDL_CFLAGS),$(SDL_CFLAGS),-I/usr/include/SDL2)
+endif
+
 test-sim-mode-route-contract: $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
@@ -361,6 +374,13 @@ test-runtime-scene-bridge-contract: $(RUNTIME_SCENE_BRIDGE_TEST_SRCS)
 		$(JSON_CFLAGS) \
 		-o $(BUILD_DIR)/runtime_scene_bridge_contract_test $(RUNTIME_SCENE_BRIDGE_TEST_SRCS) $(JSON_LIBS) -lm
 	$(BUILD_DIR)/runtime_scene_bridge_contract_test
+
+test-structural-runtime-split-contract: $(STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) $(STRUCTURAL_RUNTIME_SPLIT_TEST_PLATFORM_CFLAGS) \
+		-o $(BUILD_DIR)/structural_runtime_split_contract_test $(STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS) -lm
+	$(BUILD_DIR)/structural_runtime_split_contract_test
 
 shape_sanity_tool: $(SHAPE_SANITY_TOOL_OBJ)
 	@mkdir -p $(dir $(SHAPE_SANITY_TOOL_OBJ))

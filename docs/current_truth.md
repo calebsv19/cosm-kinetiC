@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-08
+Last updated: 2026-04-09
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -43,6 +43,7 @@ Stable test lane:
   - `test-sim-mode-route-contract`
   - `test-preset-io-dimensional-contract`
   - `test-runtime-scene-bridge-contract`
+  - `test-structural-runtime-split-contract`
 
 Legacy test lane:
 - `make -C physics_sim test-legacy`
@@ -446,6 +447,14 @@ Legacy test lane:
   - runtime mapping regression suite expanded for malformed payload rejection, unit-system rejection, and scaled mapping assertions
 - `PS3D-1` verification snapshot:
   - `make -C physics_sim test-runtime-scene-bridge-contract` -> PASS
+- structural-controller split stability lane (`SC2`) in progress:
+  - split seam ownership cleanup is complete through `SC2-S1`
+  - runtime split regression contract is active in stable lane:
+    - `tests/structural_runtime_split_contract_test.c`
+    - `make -C physics_sim test-structural-runtime-split-contract` -> PASS
+  - packaging/signing safety rerun after split hardening is verified:
+    - `make -C physics_sim package-desktop-refresh` -> PASS
+    - `codesign --verify --deep --strict ~/Desktop/kinetiC.app` -> PASS
   - `make -C physics_sim test-stable` -> PASS
   - `./bin/run_trio_scene_pipeline.sh` -> PASS
 - `PS3D-2` overlay writeback constraints is complete:

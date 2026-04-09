@@ -131,6 +131,10 @@ Structural runtime (`structural_controller.c`) highlights:
 - `X`: thickness scaling toggle.
 - `Cmd/Ctrl +/-/0`: text zoom shortcut (live HUD/runtime font reload + runtime persistence).
 
+Split-stability note (`SC2`):
+- The `structural_controller` runtime/render file split did not change structural keybind behavior.
+- Existing structural runtime controls above remain the current shipped contract.
+
 Structural editor (`structural_editor.c`) highlights:
 - `1..5`: tool selection.
 - `8`/`9`/`0`: support presets (pinned/fixed/roller).
