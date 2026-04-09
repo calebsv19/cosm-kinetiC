@@ -7,6 +7,7 @@
 
 #include "app/quality_profiles.h"
 #include "app/scene_controller.h"
+#include "app/data_paths.h"
 
 static int quality_count(void) {
     return quality_profile_count();
@@ -76,9 +77,7 @@ void menu_run_headless_batch(SceneMenuInteraction *ctx) {
         .ignore_input = false,
         .preserve_sdl_state = true
     };
-    const char *output_dir = cfg_copy.headless_output_dir[0]
-                                 ? cfg_copy.headless_output_dir
-                                 : "data/snapshots";
+    const char *output_dir = physics_sim_resolve_snapshot_output_dir(cfg_copy.headless_output_dir);
     CustomPresetSlot *slot = preset_library_get_slot(ctx->library,
                                                      ctx->selection->custom_slot_index);
     FluidScenePreset preset_copy = slot ? slot->preset : ctx->preview_preset;
@@ -634,4 +633,68 @@ void menu_finish_inflow_edit(SceneMenuInteraction *ctx, bool apply) {
     }
     text_input_end(&ctx->inflow_input);
     ctx->editing_inflow = false;
+}
+
+void menu_begin_input_root_edit(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return;
+    text_input_begin(&ctx->input_root_input,
+                     ctx->cfg->input_root,
+                     sizeof(ctx->cfg->input_root) - 1);
+    ctx->editing_input_root = true;
+}
+
+void menu_finish_input_root_edit(SceneMenuInteraction *ctx, bool apply) {
+    if (!ctx || !ctx->editing_input_root) return;
+    if (apply && ctx->cfg) {
+        const char *value = text_input_value(&ctx->input_root_input);
+        if (value) {
+            size_t start = strspn(value, " \t\r\n");
+            const char *trimmed = value + start;
+            if (trimmed[0] == '\0') {
+                snprintf(ctx->cfg->input_root,
+                         sizeof(ctx->cfg->input_root),
+                         "%s",
+                         physics_sim_default_input_root());
+            } else {
+                snprintf(ctx->cfg->input_root,
+                         sizeof(ctx->cfg->input_root),
+                         "%s",
+                         trimmed);
+            }
+        }
+    }
+    text_input_end(&ctx->input_root_input);
+    ctx->editing_input_root = false;
+}
+
+void menu_begin_output_root_edit(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return;
+    text_input_begin(&ctx->output_root_input,
+                     ctx->cfg->headless_output_dir,
+                     sizeof(ctx->cfg->headless_output_dir) - 1);
+    ctx->editing_output_root = true;
+}
+
+void menu_finish_output_root_edit(SceneMenuInteraction *ctx, bool apply) {
+    if (!ctx || !ctx->editing_output_root) return;
+    if (apply && ctx->cfg) {
+        const char *value = text_input_value(&ctx->output_root_input);
+        if (value) {
+            size_t start = strspn(value, " \t\r\n");
+            const char *trimmed = value + start;
+            if (trimmed[0] == '\0') {
+                snprintf(ctx->cfg->headless_output_dir,
+                         sizeof(ctx->cfg->headless_output_dir),
+                         "%s",
+                         physics_sim_default_snapshot_dir());
+            } else {
+                snprintf(ctx->cfg->headless_output_dir,
+                         sizeof(ctx->cfg->headless_output_dir),
+                         "%s",
+                         trimmed);
+            }
+        }
+    }
+    text_input_end(&ctx->output_root_input);
+    ctx->editing_output_root = false;
 }

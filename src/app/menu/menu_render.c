@@ -321,7 +321,6 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 200);
     SDL_RenderDrawRect(renderer, &panel);
 
-#if !USE_VULKAN
     SDL_Rect clip = {
         panel.x + 2,
         panel.y + 2,
@@ -329,7 +328,6 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
         panel.h - 4
     };
     SDL_RenderSetClipRect(renderer, &clip);
-#endif
 
     int count = menu_visible_slot_count(ctx);
     int total_rows = count + 1;
@@ -433,9 +431,7 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
         }
     }
 
-#if !USE_VULKAN
     SDL_RenderSetClipRect(renderer, NULL);
-#endif
     scrollbar_draw(renderer, &ctx->scrollbar);
 }
 

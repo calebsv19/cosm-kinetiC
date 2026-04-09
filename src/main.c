@@ -1,11 +1,11 @@
 #include <stdbool.h>
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 
 #include "app/app_config.h"
+#include "app/data_paths.h"
 #include "app/scene_controller.h"
 #include "app/preset_io.h"
 #include "app/scene_menu.h"
@@ -21,47 +21,82 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
-static bool physics_sim_file_exists(const char *path) {
-    if (!path) {
-        return false;
-    }
-    FILE *f = fopen(path, "rb");
-    if (!f) {
-        return false;
-    }
-    fclose(f);
-    return true;
+static bool physics_sim_dir_exists_local(const char *path) {
+    struct stat st;
+    if (!path || !path[0]) return false;
+    if (stat(path, &st) != 0) return false;
+    return S_ISDIR(st.st_mode);
 }
 
-static bool physics_sim_ensure_runtime_dirs(void) {
-    if (mkdir("data", 0755) != 0 && errno != EEXIST) {
-        return false;
+static bool physics_sim_apply_startup_root_fallbacks(AppConfig *cfg,
+                                                     char *warning_out,
+                                                     size_t warning_out_size) {
+    bool changed = false;
+    bool warned = false;
+    if (!cfg) return false;
+    if (warning_out && warning_out_size > 0) {
+        warning_out[0] = '\0';
     }
-    if (mkdir("data/runtime", 0755) != 0 && errno != EEXIST) {
-        return false;
+
+    if (cfg->input_root[0] == '\0') {
+        snprintf(cfg->input_root,
+                 sizeof(cfg->input_root),
+                 "%s",
+                 physics_sim_default_input_root());
+        changed = true;
+    } else if (!physics_sim_dir_exists_local(cfg->input_root)) {
+        if (warning_out && warning_out_size > 0 && !warned) {
+            snprintf(warning_out,
+                     warning_out_size,
+                     "Startup fallback: input root '%s' missing; using '%s'.",
+                     cfg->input_root,
+                     physics_sim_default_input_root());
+            warned = true;
+        }
+        snprintf(cfg->input_root,
+                 sizeof(cfg->input_root),
+                 "%s",
+                 physics_sim_default_input_root());
+        changed = true;
     }
-    return true;
+
+    if (cfg->headless_output_dir[0] == '\0') {
+        snprintf(cfg->headless_output_dir,
+                 sizeof(cfg->headless_output_dir),
+                 "%s",
+                 physics_sim_default_snapshot_dir());
+        changed = true;
+    } else if (!physics_sim_dir_exists_local(cfg->headless_output_dir)) {
+        if (warning_out && warning_out_size > 0 && !warned) {
+            snprintf(warning_out,
+                     warning_out_size,
+                     "Startup fallback: output root '%s' missing; using '%s'.",
+                     cfg->headless_output_dir,
+                     physics_sim_default_snapshot_dir());
+            warned = true;
+        }
+        snprintf(cfg->headless_output_dir,
+                 sizeof(cfg->headless_output_dir),
+                 "%s",
+                 physics_sim_default_snapshot_dir());
+        changed = true;
+    }
+    return changed;
 }
 
 int physics_sim_app_main_legacy(int argc, char **argv) {
     (void)argc;
     (void)argv;
 
-    const char *default_preset_path = "config/custom_preset.txt";
-    const char *runtime_preset_path = "data/runtime/custom_preset.txt";
-    const char *preset_load_path = physics_sim_file_exists(runtime_preset_path)
-                                       ? runtime_preset_path
-                                       : default_preset_path;
-    const char *preset_save_path = runtime_preset_path;
-
-    const char *default_config_path = "config/app.json";
-    const char *runtime_config_path = "data/runtime/app_state.json";
-    const char *config_load_path = physics_sim_file_exists(runtime_config_path)
-                                       ? runtime_config_path
-                                       : default_config_path;
-    const char *config_save_path = runtime_config_path;
+    char preset_input_path[512];
+    char shape_dir_buffer[512];
+    const char *preset_load_path = NULL;
+    const char *preset_save_path = physics_sim_runtime_preset_path();
+    const char *config_load_path = physics_sim_resolve_config_load_path();
+    const char *config_save_path = physics_sim_runtime_config_path();
 
     AppConfig cfg;
+    char startup_root_warning[256];
     ConfigLoadOptions opts = {
         .path = config_load_path,
         .allow_missing = true,
@@ -73,19 +108,41 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
     if (!physics_sim_ensure_runtime_dirs()) {
         fprintf(stderr, "[runtime] Failed to ensure data/runtime path; save may fail.\n");
     }
+    if (physics_sim_apply_startup_root_fallbacks(&cfg,
+                                                 startup_root_warning,
+                                                 sizeof(startup_root_warning))) {
+        if (startup_root_warning[0]) {
+            fprintf(stderr, "[startup] %s\n", startup_root_warning);
+        }
+        if (!config_loader_save(&cfg, config_save_path)) {
+            fprintf(stderr, "[startup] Failed to persist fallback root updates.\n");
+        }
+    }
 
     timer_hud_register_backend();
     ts_init();
 
+    if (cfg.input_root[0] == '\0') {
+        snprintf(cfg.input_root,
+                 sizeof(cfg.input_root),
+                 "%s",
+                 physics_sim_default_input_root());
+    }
+    preset_load_path = physics_sim_resolve_preset_load_path_for_root(cfg.input_root,
+                                                                      preset_input_path,
+                                                                      sizeof(preset_input_path));
+
     const char *shape_dir = getenv("SHAPE_ASSET_DIR");
     if (!shape_dir || shape_dir[0] == '\0') {
-        shape_dir = "config/objects";
+        shape_dir = physics_sim_resolve_shape_asset_dir_for_root(cfg.input_root,
+                                                                 shape_dir_buffer,
+                                                                 sizeof(shape_dir_buffer));
     }
 
     ShapeAssetLibrary shape_lib;
     bool loaded_shapes = shape_library_load_dir(shape_dir, &shape_lib);
     if (!loaded_shapes) {
-        fprintf(stderr, "[shape] No ShapeAssets loaded from config/objects\n");
+        fprintf(stderr, "[shape] No ShapeAssets loaded from %s\n", shape_dir);
         memset(&shape_lib, 0, sizeof(shape_lib));
     }
 
@@ -145,9 +202,7 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
             .ignore_input = false,
             .preserve_sdl_state = false
         };
-        const char *output_dir = cfg.headless_output_dir[0]
-                                     ? cfg.headless_output_dir
-                                     : "data/snapshots";
+        const char *output_dir = physics_sim_resolve_snapshot_output_dir(cfg.headless_output_dir);
         scene_controller_run(&cfg, preset_to_run, &shape_lib, output_dir, &headless_opts);
 
         preset_library_save(preset_save_path, &library);
@@ -174,7 +229,12 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
                                           : NULL;
             structural_controller_run(&cfg, &shape_lib, preset_path);
         } else {
-            scene_controller_run(&cfg, preset_to_run, &shape_lib, "data/snapshots", NULL);
+            const char *output_dir = physics_sim_resolve_snapshot_output_dir(cfg.headless_output_dir);
+            scene_controller_run(&cfg,
+                                 preset_to_run,
+                                 &shape_lib,
+                                 output_dir,
+                                 NULL);
         }
         cfg.quality_index = selection.quality_index;
         cfg.headless_frame_count = selection.headless_frame_count;

@@ -11,8 +11,8 @@
 #include "ui/scrollbar.h"
 #include "vk_renderer.h"
 
-#define MENU_WIDTH 820
-#define MENU_HEIGHT 660
+#define MENU_WIDTH 1024
+#define MENU_HEIGHT 760
 #define PRESET_ROW_HEIGHT 60
 #define PRESET_LIST_WIDTH 360
 #define PRESET_LIST_MARGIN_X 40
@@ -56,6 +56,10 @@ typedef struct SceneMenuInteraction {
     MenuButton headless_toggle_button;
     MenuButton mode_toggle_button;
     MenuButton space_toggle_button;
+    MenuButton input_root_edit_button;
+    MenuButton input_root_folder_button;
+    MenuButton output_root_edit_button;
+    MenuButton output_root_folder_button;
     SDL_Rect config_panel_rect;
     SDL_Rect volume_toggle_rect;
     SDL_Rect render_toggle_rect;
@@ -88,6 +92,12 @@ typedef struct SceneMenuInteraction {
     TextInputField inflow_input;
     bool editing_inflow;
     SDL_Rect inflow_rect;
+    TextInputField input_root_input;
+    bool editing_input_root;
+    SDL_Rect input_root_rect;
+    TextInputField output_root_input;
+    bool editing_output_root;
+    SDL_Rect output_root_rect;
     Uint32 last_headless_click_ticks;
     Uint32 last_viscosity_click_ticks;
     Uint32 last_inflow_click_ticks;

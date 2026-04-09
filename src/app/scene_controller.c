@@ -13,6 +13,7 @@
 #include "app/scene_presets.h"
 #include "app/sim_mode.h"
 #include "app/quality_profiles.h"
+#include "app/data_paths.h"
 #include "input/input.h"
 #include "input/stroke_buffer.h"
 #include "physics/fluid2d/fluid2d.h"
@@ -130,7 +131,7 @@ static bool handle_scene_command(const Command *cmd, void *user_data) {
 static void build_snapshot_path(char *buffer, size_t buffer_size,
                                 const char *dir, int index) {
     if (!buffer || buffer_size == 0) return;
-    const char *base_dir = dir ? dir : "data/snapshots";
+    const char *base_dir = (dir && dir[0]) ? dir : physics_sim_default_snapshot_dir();
     snprintf(buffer, buffer_size, "%s/frame_%04d.ps2d", base_dir, index);
 }
 

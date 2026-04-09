@@ -60,6 +60,7 @@ typedef struct AppConfig {
     int    headless_custom_slot;
     int    headless_quality_index;
     bool   headless_skip_present;
+    char   input_root[256];
     char   headless_output_dir[256];
 
     SimulationMode sim_mode;

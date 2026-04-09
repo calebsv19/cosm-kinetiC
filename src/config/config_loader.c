@@ -343,6 +343,38 @@ static void apply_export_settings(const char *json, AppConfig *cfg) {
     }
 }
 
+static void apply_paths_settings(const char *json, AppConfig *cfg) {
+    JsonBlock block;
+    if (!json_find_object(json, "paths", &block)) return;
+    char *copy = copy_block_text(&block);
+    if (!copy) return;
+    {
+        char pattern[64];
+        snprintf(pattern, sizeof(pattern), "\"input_root\"");
+        char *key_pos = strstr(copy, pattern);
+        if (key_pos) {
+            char *colon = strchr(key_pos + strlen(pattern), ':');
+            if (colon) {
+                colon++;
+                while (*colon && isspace((unsigned char)*colon)) colon++;
+                if (*colon == '"') {
+                    colon++;
+                    char *end = strchr(colon, '"');
+                    if (end) {
+                        size_t len = (size_t)(end - colon);
+                        if (len >= sizeof(cfg->input_root)) {
+                            len = sizeof(cfg->input_root) - 1;
+                        }
+                        memcpy(cfg->input_root, colon, len);
+                        cfg->input_root[len] = '\0';
+                    }
+                }
+            }
+        }
+    }
+    free(copy);
+}
+
 static void apply_simulation_settings(const char *json, AppConfig *cfg) {
     JsonBlock block;
     if (!json_find_object(json, "simulation", &block)) return;
@@ -390,6 +422,7 @@ static void apply_json_overrides(const char *json, AppConfig *cfg) {
     apply_debug_settings(json, cfg);
     apply_headless_settings(json, cfg);
     apply_export_settings(json, cfg);
+    apply_paths_settings(json, cfg);
 }
 
 bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts) {
@@ -465,6 +498,9 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "  \"ui\": {\n");
     fprintf(f, "    \"text_zoom_step\": %d\n", app_config_text_zoom_step_clamp(cfg->text_zoom_step));
     fprintf(f, "  },\n");
+    fprintf(f, "  \"paths\": {\n");
+    fprintf(f, "    \"input_root\": \"%s\"\n", cfg->input_root);
+    fprintf(f, "  },\n");
     fprintf(f, "  \"collider\": {\n");
     fprintf(f, "    \"max_loops\": %d,\n", cfg->collider_max_loops);
     fprintf(f, "    \"max_loop_vertices\": %d,\n", cfg->collider_max_loop_vertices);
@@ -485,7 +521,8 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "    \"frame_count\": %d,\n", cfg->headless_frame_count);
     fprintf(f, "    \"custom_slot_index\": %d,\n", cfg->headless_custom_slot);
     fprintf(f, "    \"quality_index\": %d,\n", cfg->headless_quality_index);
-    fprintf(f, "    \"skip_present\": %s\n", cfg->headless_skip_present ? "true" : "false");
+    fprintf(f, "    \"skip_present\": %s,\n", cfg->headless_skip_present ? "true" : "false");
+    fprintf(f, "    \"output_dir\": \"%s\"\n", cfg->headless_output_dir);
     fprintf(f, "  }\n");
     fprintf(f, "}\n");
 

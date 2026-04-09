@@ -64,10 +64,14 @@ Pointer handling:
 
 Keyboard handling:
 - During headless run: `Esc` cancels the headless batch.
-- Active text fields (rename, headless frame count, inflow, viscosity):
+- Active text fields (rename, headless frame count, inflow, viscosity, input root, output root):
   - `Enter`: confirm edit
   - `Esc`: cancel edit
   - other key/text input routed to text-input widget
+- `Cmd/Ctrl + I`: open native input-root folder chooser.
+- `Cmd/Ctrl + Shift + I`: open typed input-root edit mode.
+- `Cmd/Ctrl + O`: open native output-root folder chooser.
+- `Cmd/Ctrl + Shift + O`: open typed output-root edit mode.
 - `Cmd/Ctrl +/-/0`: text zoom shortcut (ignored while menu text fields are active).
 
 Notes:

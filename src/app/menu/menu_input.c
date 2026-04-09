@@ -2,23 +2,24 @@
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "app/editor/scene_editor.h"
 #include "app/menu/menu_render.h"
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_window.h"
 #include "app/menu/shared_theme_font_adapter.h"
+#include "app/data_paths.h"
 #include "app/structural/structural_preset_editor.h"
 #include "config/config_loader.h"
 #include "vk_renderer.h"
 
-static const char *k_runtime_config_path = "data/runtime/app_state.json";
-
 static void menu_persist_runtime_config(const AppConfig *cfg) {
+    const char *runtime_config_path = physics_sim_runtime_config_path();
     if (!cfg) return;
-    if (!config_loader_save(cfg, k_runtime_config_path)) {
+    if (!config_loader_save(cfg, runtime_config_path)) {
         fprintf(stderr, "[menu] Failed to persist runtime config to %s\n",
-                k_runtime_config_path);
+                runtime_config_path);
     }
 }
 
@@ -36,6 +37,74 @@ static void apply_shared_theme_palette(void) {
     menu_palette.button_bg = shared_palette.button_fill;
     menu_palette.button_bg_active = shared_palette.button_active_fill;
     menu_set_theme_palette(&menu_palette);
+}
+
+static bool menu_pick_output_root_macos(char *out_path, size_t out_cap) {
+#if defined(__APPLE__)
+    FILE *pipe = NULL;
+    char line[512];
+    if (!out_path || out_cap == 0u) return false;
+    pipe = popen("/usr/bin/osascript -e 'POSIX path of (choose folder with prompt \"Choose PhysicsSim Output Root\")'",
+                 "r");
+    if (!pipe) return false;
+    if (!fgets(line, sizeof(line), pipe)) {
+        (void)pclose(pipe);
+        return false;
+    }
+    (void)pclose(pipe);
+    line[strcspn(line, "\r\n")] = '\0';
+    if (line[0] == '\0') return false;
+    snprintf(out_path, out_cap, "%s", line);
+    return true;
+#else
+    (void)out_path;
+    (void)out_cap;
+    return false;
+#endif
+}
+
+static bool menu_apply_output_root(SceneMenuInteraction *ctx, const char *path) {
+    if (!ctx || !ctx->cfg || !path || path[0] == '\0') return false;
+    snprintf(ctx->cfg->headless_output_dir,
+             sizeof(ctx->cfg->headless_output_dir),
+             "%s",
+             path);
+    menu_persist_runtime_config(ctx->cfg);
+    return true;
+}
+
+static bool menu_pick_input_root_macos(char *out_path, size_t out_cap) {
+#if defined(__APPLE__)
+    FILE *pipe = NULL;
+    char line[512];
+    if (!out_path || out_cap == 0u) return false;
+    pipe = popen("/usr/bin/osascript -e 'POSIX path of (choose folder with prompt \"Choose PhysicsSim Input Root\")'",
+                 "r");
+    if (!pipe) return false;
+    if (!fgets(line, sizeof(line), pipe)) {
+        (void)pclose(pipe);
+        return false;
+    }
+    (void)pclose(pipe);
+    line[strcspn(line, "\r\n")] = '\0';
+    if (line[0] == '\0') return false;
+    snprintf(out_path, out_cap, "%s", line);
+    return true;
+#else
+    (void)out_path;
+    (void)out_cap;
+    return false;
+#endif
+}
+
+static bool menu_apply_input_root(SceneMenuInteraction *ctx, const char *path) {
+    if (!ctx || !ctx->cfg || !path || path[0] == '\0') return false;
+    snprintf(ctx->cfg->input_root,
+             sizeof(ctx->cfg->input_root),
+             "%s",
+             path);
+    menu_persist_runtime_config(ctx->cfg);
+    return true;
 }
 
 void menu_pointer_up(void *user, const InputPointerState *state) {
@@ -72,6 +141,57 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
     if (menu_point_in_rect(x, y, &ctx->headless_toggle_button.rect)) {
         ctx->cfg->headless_enabled = !ctx->cfg->headless_enabled;
         return;
+    }
+
+    if (menu_point_in_rect(x, y, &ctx->input_root_folder_button.rect)) {
+        char selected[512];
+        if (menu_pick_input_root_macos(selected, sizeof(selected))) {
+            if (menu_apply_input_root(ctx, selected)) {
+                menu_set_status(ctx, "Input root updated (applies on next launch).", false);
+            }
+        } else {
+            menu_set_status(ctx, "Input root folder dialog canceled/unavailable.", false);
+        }
+        return;
+    }
+
+    if (menu_point_in_rect(x, y, &ctx->input_root_edit_button.rect)) {
+        menu_begin_input_root_edit(ctx);
+        return;
+    }
+
+    if (menu_point_in_rect(x, y, &ctx->input_root_rect)) {
+        menu_begin_input_root_edit(ctx);
+        return;
+    } else if (ctx->editing_input_root) {
+        menu_finish_input_root_edit(ctx, true);
+        menu_persist_runtime_config(ctx->cfg);
+        menu_set_status(ctx, "Input root updated (applies on next launch).", false);
+    }
+
+    if (menu_point_in_rect(x, y, &ctx->output_root_folder_button.rect)) {
+        char selected[512];
+        if (menu_pick_output_root_macos(selected, sizeof(selected))) {
+            if (menu_apply_output_root(ctx, selected)) {
+                menu_set_status(ctx, "Output root updated from folder dialog.", false);
+            }
+        } else {
+            menu_set_status(ctx, "Output root folder dialog canceled/unavailable.", false);
+        }
+        return;
+    }
+
+    if (menu_point_in_rect(x, y, &ctx->output_root_edit_button.rect)) {
+        menu_begin_output_root_edit(ctx);
+        return;
+    }
+
+    if (menu_point_in_rect(x, y, &ctx->output_root_rect)) {
+        menu_begin_output_root_edit(ctx);
+        return;
+    } else if (ctx->editing_output_root) {
+        menu_finish_output_root_edit(ctx, true);
+        menu_persist_runtime_config(ctx->cfg);
     }
 
     if (menu_point_in_rect(x, y, &ctx->inflow_rect)) {
@@ -116,6 +236,14 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         }
         if (ctx->editing_headless_frames) {
             menu_finish_headless_frames_edit(ctx, true);
+        }
+        if (ctx->editing_input_root) {
+            menu_finish_input_root_edit(ctx, true);
+            menu_persist_runtime_config(ctx->cfg);
+        }
+        if (ctx->editing_output_root) {
+            menu_finish_output_root_edit(ctx, true);
+            menu_persist_runtime_config(ctx->cfg);
         }
         if (ctx->editing_inflow) {
             menu_finish_inflow_edit(ctx, true);
@@ -427,6 +555,65 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         }
         return;
     }
+
+    if (ctx->editing_input_root) {
+        if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+            menu_finish_input_root_edit(ctx, true);
+            menu_persist_runtime_config(ctx->cfg);
+            menu_set_status(ctx, "Input root updated (applies on next launch).", false);
+        } else if (key == SDLK_ESCAPE) {
+            menu_finish_input_root_edit(ctx, false);
+        } else {
+            text_input_handle_key(&ctx->input_root_input, key);
+        }
+        return;
+    }
+
+    if (ctx->editing_output_root) {
+        if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+            menu_finish_output_root_edit(ctx, true);
+            menu_persist_runtime_config(ctx->cfg);
+        } else if (key == SDLK_ESCAPE) {
+            menu_finish_output_root_edit(ctx, false);
+        } else {
+            text_input_handle_key(&ctx->output_root_input, key);
+        }
+        return;
+    }
+
+    if (ctrl_or_cmd && key == SDLK_i && !shift) {
+        char selected[512];
+        if (menu_pick_input_root_macos(selected, sizeof(selected))) {
+            if (menu_apply_input_root(ctx, selected)) {
+                menu_set_status(ctx, "Input root updated (applies on next launch).", false);
+            }
+        } else {
+            menu_set_status(ctx, "Input root folder dialog canceled/unavailable.", false);
+        }
+        return;
+    }
+
+    if (ctrl_or_cmd && shift && key == SDLK_i) {
+        menu_begin_input_root_edit(ctx);
+        return;
+    }
+
+    if (ctrl_or_cmd && key == SDLK_o && !shift) {
+        char selected[512];
+        if (menu_pick_output_root_macos(selected, sizeof(selected))) {
+            if (menu_apply_output_root(ctx, selected)) {
+                menu_set_status(ctx, "Output root updated from folder dialog.", false);
+            }
+        } else {
+            menu_set_status(ctx, "Output root folder dialog canceled/unavailable.", false);
+        }
+        return;
+    }
+
+    if (ctrl_or_cmd && shift && key == SDLK_o) {
+        menu_begin_output_root_edit(ctx);
+        return;
+    }
 }
 
 void menu_text_input(void *user, const char *text) {
@@ -447,6 +634,14 @@ void menu_text_input(void *user, const char *text) {
     }
     if (ctx->editing_viscosity) {
         text_input_handle_text(&ctx->viscosity_input, text);
+        return;
+    }
+    if (ctx->editing_input_root) {
+        text_input_handle_text(&ctx->input_root_input, text);
+        return;
+    }
+    if (ctx->editing_output_root) {
+        text_input_handle_text(&ctx->output_root_input, text);
         return;
     }
 }

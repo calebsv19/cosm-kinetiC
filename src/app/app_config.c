@@ -1,4 +1,5 @@
 #include "app/app_config.h"
+#include "app/data_paths.h"
 #include <stdio.h>
 
 static int clamp_int(int value, int min_value, int max_value) {
@@ -50,7 +51,14 @@ AppConfig app_config_default(void) {
     cfg.headless_custom_slot = 0;
     cfg.headless_quality_index = -1;
     cfg.headless_skip_present = true;
-    snprintf(cfg.headless_output_dir, sizeof(cfg.headless_output_dir), "data/snapshots");
+    snprintf(cfg.input_root,
+             sizeof(cfg.input_root),
+             "%s",
+             physics_sim_default_input_root());
+    snprintf(cfg.headless_output_dir,
+             sizeof(cfg.headless_output_dir),
+             "%s",
+             physics_sim_default_snapshot_dir());
 
     cfg.sim_mode = SIM_MODE_BOX;
     cfg.space_mode = SPACE_MODE_2D;

@@ -333,6 +333,7 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	tests/runtime_scene_bridge_contract_test.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
 	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
 	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
 	$(CORE_IO_DIR)/src/core_io.c \
@@ -503,6 +504,12 @@ package-desktop: all
 	@mkdir -p "$(PACKAGE_RESOURCES_DIR)/vk_renderer" "$(PACKAGE_RESOURCES_DIR)/shaders"
 	@cp -R "$(VK_RENDERER_DIR)/shaders" "$(PACKAGE_RESOURCES_DIR)/vk_renderer/"
 	@cp -R "$(VK_RENDERER_DIR)/shaders/." "$(PACKAGE_RESOURCES_DIR)/shaders/"
+	@for dylib in $$(/usr/bin/find "$(PACKAGE_FRAMEWORKS_DIR)" -type f -name '*.dylib' 2>/dev/null); do \
+		/usr/bin/codesign --force --sign "$(PACKAGE_ADHOC_SIGN_IDENTITY)" --timestamp=none "$$dylib"; \
+	done
+	@/usr/bin/codesign --force --sign "$(PACKAGE_ADHOC_SIGN_IDENTITY)" --timestamp=none "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
+	@/usr/bin/codesign --force --sign "$(PACKAGE_ADHOC_SIGN_IDENTITY)" --timestamp=none "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
+	@/usr/bin/codesign --force --sign "$(PACKAGE_ADHOC_SIGN_IDENTITY)" --timestamp=none "$(PACKAGE_APP_DIR)"
 	@echo "Desktop package ready: $(PACKAGE_APP_DIR)"
 
 package-desktop-smoke: package-desktop
@@ -528,7 +535,7 @@ package-desktop-self-test: package-desktop-smoke
 package-desktop-copy-desktop: package-desktop
 	@mkdir -p "$(dir $(DESKTOP_APP_DIR))"
 	@rm -rf "$(DESKTOP_APP_DIR)"
-	@cp -R "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
+	@/usr/bin/ditto "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
 	@echo "Copied $(PACKAGE_APP_NAME) to $(DESKTOP_APP_DIR)"
 
 package-desktop-sync: package-desktop-copy-desktop
@@ -544,7 +551,7 @@ package-desktop-remove:
 package-desktop-refresh: package-desktop
 	@mkdir -p "$(dir $(DESKTOP_APP_DIR))"
 	@rm -rf "$(DESKTOP_APP_DIR)"
-	@cp -R "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
+	@/usr/bin/ditto "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
 	@echo "Refreshed $(PACKAGE_APP_NAME) at $(DESKTOP_APP_DIR)"
 
 release-contract:

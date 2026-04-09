@@ -6,6 +6,7 @@
 #include "app/editor/scene_editor_precision.h"
 #include "app/menu/shared_theme_font_adapter.h"
 #include "app/sim_mode.h"
+#include "app/data_paths.h"
 
 #include "config/config_loader.h"
 #include "font_paths.h"
@@ -13,8 +14,6 @@
 #include <stdio.h>
 
 #include "vk_renderer.h"
-
-static const char *k_runtime_config_path = "data/runtime/app_state.json";
 
 static int editor_scaled_font_size(const AppConfig *cfg,
                                    int base_point_size,
@@ -250,6 +249,7 @@ static bool editor_apply_text_zoom_shortcut(SceneEditorState *state,
                                             const InputCommands *cmds) {
     int next_step = 0;
     AppConfig *persist_cfg = NULL;
+    const char *runtime_config_path = physics_sim_runtime_config_path();
     if (!state || !cmds) return false;
     if (!(cmds->text_zoom_in_requested ||
           cmds->text_zoom_out_requested ||
@@ -273,9 +273,9 @@ static bool editor_apply_text_zoom_shortcut(SceneEditorState *state,
         state->cfg_live->text_zoom_step = next_step;
     }
     persist_cfg = state->cfg_live ? state->cfg_live : &state->cfg;
-    if (!config_loader_save(persist_cfg, k_runtime_config_path)) {
+    if (!config_loader_save(persist_cfg, runtime_config_path)) {
         fprintf(stderr, "[editor] Failed to persist runtime config to %s\n",
-                k_runtime_config_path);
+                runtime_config_path);
     }
     if (!editor_reload_fonts(state)) {
         fprintf(stderr, "[editor] Failed to reload fonts after zoom update.\n");

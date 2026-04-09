@@ -54,6 +54,10 @@ void menu_begin_viscosity_edit(SceneMenuInteraction *ctx);
 void menu_finish_viscosity_edit(SceneMenuInteraction *ctx, bool apply);
 void menu_begin_inflow_edit(SceneMenuInteraction *ctx);
 void menu_finish_inflow_edit(SceneMenuInteraction *ctx, bool apply);
+void menu_begin_input_root_edit(SceneMenuInteraction *ctx);
+void menu_finish_input_root_edit(SceneMenuInteraction *ctx, bool apply);
+void menu_begin_output_root_edit(SceneMenuInteraction *ctx);
+void menu_finish_output_root_edit(SceneMenuInteraction *ctx, bool apply);
 
 void menu_assign_structural_preset_path(CustomPresetSlot *slot, int index);
 

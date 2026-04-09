@@ -11,6 +11,7 @@
 
 #include "input/input.h"
 #include "input/input_context.h"
+#include "app/data_paths.h"
 #include "config/config_loader.h"
 #include "physics/structural/structural_scene.h"
 #include "physics/structural/structural_solver.h"
@@ -80,8 +81,6 @@ typedef struct StructuralController {
     char preset_path[256];
 } StructuralController;
 
-static const char *k_runtime_config_path = "data/runtime/app_state.json";
-
 static TTF_Font *load_font(const AppConfig *cfg, int size) {
     const char *paths[] = {
         FONT_BODY_PATH_1,
@@ -120,6 +119,7 @@ static bool structural_apply_text_zoom_shortcut(const InputCommands *cmds,
                                                 AppConfig *cfg,
                                                 StructuralController *ctrl) {
     int next_step = 0;
+    const char *runtime_config_path = physics_sim_runtime_config_path();
     if (!cmds || !cfg || !ctrl) return false;
     if (!(cmds->text_zoom_in_requested ||
           cmds->text_zoom_out_requested ||
@@ -137,9 +137,9 @@ static bool structural_apply_text_zoom_shortcut(const InputCommands *cmds,
     if (next_step == cfg->text_zoom_step) return false;
     cfg->text_zoom_step = next_step;
 
-    if (!config_loader_save(cfg, k_runtime_config_path)) {
+    if (!config_loader_save(cfg, runtime_config_path)) {
         fprintf(stderr, "[struct] Failed to persist runtime config to %s\n",
-                k_runtime_config_path);
+                runtime_config_path);
     }
     if (!structural_reload_fonts(ctrl, cfg)) {
         fprintf(stderr, "[struct] Failed to reload fonts after zoom update.\n");

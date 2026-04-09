@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-04
+Last updated: 2026-04-08
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -141,6 +141,14 @@ Legacy test lane:
   - runtime file first, default fallback when runtime state is missing
 - save path:
   - runtime lane only (`data/runtime/*`) so normal app runs do not mutate tracked defaults
+- startup root hygiene (`DP S4`) is active:
+  - startup validates configured `input_root` and `headless_output_dir`
+  - missing/invalid `input_root` falls back to `config`
+  - missing/invalid `headless_output_dir` falls back to `data/snapshots`
+  - fallback corrections are persisted immediately to runtime `data/runtime/app_state.json`
+  - startup emits explicit stderr warning when fallback correction is applied
+- output routing contract (`DP S4`) is active:
+  - both headless and interactive fluid runtime lanes resolve exports through configured `headless_output_dir` (with fallback policy above), not a hidden hardcoded interactive export path
 - runtime UI zoom contract (font-pass `PS-F1` + `PS-F2`):
   - `ui.text_zoom_step` now loads/saves through the same runtime app-state lane
   - clamp policy: `[-4, +5]` steps
@@ -258,6 +266,23 @@ Legacy test lane:
   - `export/`
   - `ide_files/`
   - `timerhud/`
+
+## Data Path Contract Rollout Status (2026-04-08)
+
+- `DP S0-S5` closeout is complete for `physics_sim`.
+- Delivered contract surfaces:
+  - path accessor layer (`src/app/data_paths.c`, `include/app/data_paths.h`)
+  - menu-root UX for input/output lanes (typed + native chooser keybinds)
+  - startup root fallback hygiene + persisted correction
+  - interactive + headless output-root route convergence
+- menu UX refinement summary:
+  - larger menu baseline (`1024x760`)
+  - explicit right-side sections (`Simulation Settings`, `Data I/O + Batch`)
+  - top controls balanced as horizontal mode/space row with reserved scaffold-hint line
+  - preset-list clipping enforced to prevent draw overlap
+- desktop packaging integrity summary:
+  - ad-hoc re-signing of bundle components after dylib rewrite is active in package lane
+  - desktop copy/refresh uses `ditto` to preserve sealed-resource signature integrity
   - `tmp/`
   - `dist/`
   - `data/runtime/`
