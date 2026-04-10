@@ -22,4 +22,4 @@ Start here for public repository documentation.
 
 ## Private Planning Docs
 - Private scaffold plans/checklists are kept in the workspace private docs bucket:
-  - `../docs/private_program_docs/physics_sim/`
+  - `../../docs/private_program_docs/physics_sim/`

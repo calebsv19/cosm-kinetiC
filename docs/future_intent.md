@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-04-04
+Last updated: 2026-04-10
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -68,7 +68,7 @@ Last updated: 2026-04-04
   - wrap-up commit title used:
     - `Post-Scaffold Font Size Standardization`
   - trio 2D/3D parity propagation with `line_drawing` and `ray_tracing`:
-    - `../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
+    - `../../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
   - current status:
     - `PS-U0` complete (baseline freeze + gap map + tracker sync)
     - `PS-U1` complete (space mode runtime contract + persistence + menu selector)
@@ -80,12 +80,12 @@ Last updated: 2026-04-04
   - parity lane status:
     - complete (`PS-U0` through `PS-U6`)
   - latest execution log:
-    - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u6_verification_docs_memory_closeout.md`
+    - `../../docs/private_program_docs/physics_sim/2026-03-31_ps_u6_verification_docs_memory_closeout.md`
 
 - desktop packaging lane:
   - `PS-PK0` baseline mapping complete
   - `PS-PK1` implementation complete
-  - `PS-PK2` closeout/docs sync in progress
+  - `PS-PK2` closeout/docs sync complete
   - current packaging targets in `makefile`:
     - `package-desktop`
     - `package-desktop-smoke`
@@ -113,7 +113,7 @@ Last updated: 2026-04-04
     - `PS-CP1` wrapper context + guarded stage-transition hardening
     - `PS-CP2` explicit wrapper dispatch seam extraction
     - execution log:
-      - `../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
+      - `../../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
   - next:
     - optional `PS-CP3+`: deeper extraction of runtime/update/render ownership from legacy concentration points
 
@@ -130,19 +130,19 @@ Last updated: 2026-04-04
   - next:
     - optional `W4+` only if deeper legacy-lane extraction is needed
   - execution note:
-    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
-    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s0_s1_execution.md`
-    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
-    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
-    - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s0_s1_execution.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
 
 - RS1 render split lane:
   - `RS1-S0` complete (render ownership baseline map captured in scene controller)
   - `RS1-S1` complete (typed update/derive/submit frame contracts + explicit phase seams landed)
   - `RS1-S2` complete (diagnostics closeout + tracker synchronization)
   - execution note:
-    - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
-    - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s2_closeout.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s2_closeout.md`
   - next:
     - optional deeper extraction only if RS1 contracts need promotion into a broader shared kit lane
 
@@ -152,9 +152,14 @@ Last updated: 2026-04-04
   - `IR1-S2` complete (explicit input phase seams landed with behavior parity)
   - `IR1-S3` complete (diagnostics + tracker synchronization closeout)
   - execution note:
-    - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
   - next:
     - optional deeper pane-target routing split only if upcoming editor work requires finer route-policy ownership
+
+- structural-controller split stability lane:
+  - `SC2-S0` through `SC2-S5` complete (interface split + runtime/render parity + closeout docs/keybind sync)
+  - execution note:
+    - `../../docs/private_program_docs/physics_sim/2026-04-09_physics_sim_structural_controller_split_stability_plan.md`
 
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.
@@ -164,7 +169,7 @@ Last updated: 2026-04-04
 ## Release Readiness Next Intent
 - active release lane:
   - `PS-RL0` through `PS-RL5` execution plan:
-    - `../docs/private_program_docs/physics_sim/2026-04-04_physics_sim_release_readiness_rl0_rl5_execution_plan.md`
+    - `../../docs/private_program_docs/physics_sim/2026-04-04_physics_sim_release_readiness_rl0_rl5_execution_plan.md`
 - completed now:
   - `PS-RL0` release contract freeze
   - `PS-RL1` bundle audit + Vulkan runtime hardening

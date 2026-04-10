@@ -49,7 +49,7 @@ This repository keeps public usage and implementation references in the repo lan
 
 - Public docs start point in this repo:
   - `docs/README.md`
-- `docs/private_program_docs/physics_sim/`
+- `../docs/private_program_docs/physics_sim/`
 
 ## Shared Diagnostics Tooling
 - `make vf2d_pack_tool` converts a `.vf2d` frame into `.pack` via shared `core_pack`.

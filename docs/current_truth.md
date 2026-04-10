@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-09
+Last updated: 2026-04-10
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -17,7 +17,7 @@ Last updated: 2026-04-09
 - Active source subsystem lanes:
   - `app`, `command`, `config`, `export`, `geo`, `import`, `input`, `physics`, `render`, `tools`, `ui`
 - Header strategy:
-  - include-dominant (`79` headers in `include/`, `6` private headers in `src/`)
+  - include-dominant with public interfaces primarily under `include/` and a smaller private-header set under `src/`
   - include layout is currently domain-first (`include/app`, `include/physics`, etc.)
 
 ## Runtime/Verification Contract (Current)
@@ -295,17 +295,17 @@ Legacy test lane:
 
 ## Scaffold Migration State
 - Private migration plan:
-  - `../docs/private_program_docs/physics_sim/2026-03-28_physics_sim_scaffold_standardization_switchover_plan.md`
+  - `../../docs/private_program_docs/physics_sim/2026-03-28_physics_sim_scaffold_standardization_switchover_plan.md`
 - Baseline freeze:
-  - `../docs/private_program_docs/physics_sim/2026-03-28_ps_s0_baseline_freeze_and_mapping.md`
+  - `../../docs/private_program_docs/physics_sim/2026-03-28_ps_s0_baseline_freeze_and_mapping.md`
 - Completed phases:
   - `PS-S0`, `PS-S1`, `PS-S2`, `PS-S3`, `PS-S4`, `PS-S5`
 - Completed post-scaffold lanes:
   - completed font-size standardization lane:
-    - `../docs/private_program_docs/physics_sim/2026-03-29_physics_sim_post_scaffold_font_size_pass_plan.md`
+    - `../../docs/private_program_docs/physics_sim/2026-03-29_physics_sim_post_scaffold_font_size_pass_plan.md`
     - `PS-F0` through `PS-F5` complete
   - completed trio 2D/3D parity lane:
-    - `../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
+    - `../../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
     - `PS-U0` complete (baseline freeze + gap map + tracker sync)
     - `PS-U1` complete (space mode runtime contract + persistence + menu selector)
     - `PS-U2` complete (mode adapter seam for world/view/solver routing)
@@ -314,8 +314,8 @@ Legacy test lane:
     - `PS-U5` complete (UX + editor parity mode-visibility + scaffold guidance)
     - `PS-U6` complete (verification + docs + memory closeout)
     - execution logs:
-      - `../docs/private_program_docs/physics_sim/2026-03-30_ps_u0_baseline_freeze_and_gap_map.md`
-      - `../docs/private_program_docs/physics_sim/2026-03-31_ps_u1_space_mode_runtime_contract.md`
+      - `../../docs/private_program_docs/physics_sim/2026-03-30_ps_u0_baseline_freeze_and_gap_map.md`
+      - `../../docs/private_program_docs/physics_sim/2026-03-31_ps_u1_space_mode_runtime_contract.md`
 
 ## Wrapper Contract State
 - cross-program wrapper initiative status:
@@ -329,16 +329,16 @@ Legacy test lane:
   - `S3` seam diagnostics + ownership hardening complete
   - `S4` closeout/docs/memory sync complete
 - execution note:
-  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
-  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s0_s1_execution.md`
-  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
-  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
-  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s0_s1_execution.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
 - `test-stable` remains the baseline non-interactive regression gate
 
 ## Connection Pass State
 - `PS-CP0` through `PS-CP2` are complete:
-  - `../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
 - current ownership summary:
   - wrapper (`src/app/physics_sim_app_main.c`) now owns explicit stage enum/context + guarded transitions and explicit runtime dispatch seam
   - legacy body (`src/main.c`, `physics_sim_app_main_legacy(...)`) still owns most runtime initialization/routing/teardown
@@ -357,8 +357,8 @@ Legacy test lane:
 
 ## RS1 Render Split State
 - private execution note:
-  - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
-  - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s2_closeout.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s2_closeout.md`
 - `RS1-S0` complete:
   - top-level update/render ownership map captured in `src/app/scene_controller.c`.
 - `RS1-S1` complete:
@@ -380,14 +380,14 @@ Legacy test lane:
   - diagnostics closeout + tracker synchronization completed across:
     - `physics_sim/docs/current_truth.md`
     - `physics_sim/docs/future_intent.md`
-    - `docs/private_program_docs/physics_sim/README.md`
+    - `../../docs/private_program_docs/physics_sim/README.md`
     - `docs/ecosystem_north_star_docs/scaffold_system/07_program_upgrade_backlog.md`
 - next:
   - optional deeper extraction only if RS1 contracts need promotion into a broader shared kit lane.
 
 ## IR1 Input Routing State
 - private execution note:
-  - `../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
 - `IR1-S0` through `IR1-S3` complete:
   - explicit typed input frame contracts landed in:
     - `include/app/scene_controller.h`
@@ -415,7 +415,7 @@ Legacy test lane:
 
 ## Desktop Packaging State
 - desktop app bundle contract is active:
-  - `dist/PhysicsSim.app`
+  - `dist/kinetiC.app`
   - launcher: `Contents/MacOS/physics-sim-launcher`
   - app binary: `Contents/MacOS/physics-sim-bin`
 - launcher runtime defaults:
@@ -436,7 +436,7 @@ Legacy test lane:
 
 ## PS3D Execution State
 - active execution plan:
-  - `../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_ps3d_execution_plan.md`
+  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_ps3d_execution_plan.md`
 - `PS3D-0` runtime intake is complete:
   - runtime bridge preflight/apply/writeback contract suite remains active under `tests/runtime_scene_bridge_contract_test.c`
   - baseline intake gate:
@@ -447,8 +447,8 @@ Legacy test lane:
   - runtime mapping regression suite expanded for malformed payload rejection, unit-system rejection, and scaled mapping assertions
 - `PS3D-1` verification snapshot:
   - `make -C physics_sim test-runtime-scene-bridge-contract` -> PASS
-- structural-controller split stability lane (`SC2`) in progress:
-  - split seam ownership cleanup is complete through `SC2-S1`
+- structural-controller split stability lane (`SC2`) is complete (`SC2-S0` through `SC2-S5`):
+  - split seam ownership cleanup closed through `SC2-S5`
   - runtime split regression contract is active in stable lane:
     - `tests/structural_runtime_split_contract_test.c`
     - `make -C physics_sim test-structural-runtime-split-contract` -> PASS

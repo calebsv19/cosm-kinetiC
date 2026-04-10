@@ -1,6 +1,6 @@
 # Physics Sim Desktop Packaging
 
-Last updated: 2026-04-01
+Last updated: 2026-04-10
 
 ## Bundle Targets
 - `make -C physics_sim package-desktop`
@@ -13,7 +13,7 @@ Last updated: 2026-04-01
 - `make -C physics_sim package-desktop-refresh`
 
 ## Bundle Layout
-- app path: `physics_sim/dist/PhysicsSim.app`
+- app path: `physics_sim/dist/kinetiC.app`
 - launcher: `Contents/MacOS/physics-sim-launcher`
 - binary: `Contents/MacOS/physics-sim-bin`
 - resources root: `Contents/Resources`
@@ -41,6 +41,6 @@ Runtime defaults set by launcher:
 ## Verification Sequence
 1. `make -C physics_sim package-desktop-self-test`
 2. `make -C physics_sim package-desktop-refresh`
-3. `/Users/<user>/Desktop/PhysicsSim.app/Contents/MacOS/physics-sim-launcher --print-config`
-4. `open /Users/<user>/Desktop/PhysicsSim.app`
+3. `/Users/<user>/Desktop/kinetiC.app/Contents/MacOS/physics-sim-launcher --print-config`
+4. `open /Users/<user>/Desktop/kinetiC.app`
 5. `tail -n 120 ~/Library/Logs/PhysicsSim/launcher.log`
