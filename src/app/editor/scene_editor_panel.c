@@ -115,6 +115,86 @@ static void fit_text_to_width(SDL_Renderer *renderer,
     snprintf(out, out_size, "...");
 }
 
+static int text_fits_width(SDL_Renderer *renderer,
+                           TTF_Font *font,
+                           const char *text,
+                           int max_width) {
+    int w = 0;
+    if (!text || !text[0] || !font || max_width <= 0) return 1;
+    if (TTF_SizeUTF8(font, text, &w, NULL) != 0) return 1;
+    w = physics_sim_text_logical_pixels(renderer, w);
+    return w <= max_width;
+}
+
+static void wrap_text_lines(SDL_Renderer *renderer,
+                            TTF_Font *font,
+                            const char *text,
+                            int max_width,
+                            int max_lines,
+                            char out[][192],
+                            int *out_count) {
+    const char *cursor = text;
+    int count = 0;
+    if (out_count) *out_count = 0;
+    if (!out || max_lines <= 0) return;
+    for (int i = 0; i < max_lines; ++i) {
+        out[i][0] = '\0';
+    }
+    if (!text || !text[0]) return;
+
+    while (*cursor == ' ') ++cursor;
+    while (*cursor && count < max_lines) {
+        size_t remaining_len = strlen(cursor);
+        if (remaining_len >= sizeof(out[0])) remaining_len = sizeof(out[0]) - 1;
+
+        if (count == max_lines - 1 || text_fits_width(renderer, font, cursor, max_width)) {
+            fit_text_to_width(renderer, font, cursor, max_width, out[count], sizeof(out[count]));
+            ++count;
+            break;
+        }
+
+        size_t best_break = 0;
+        size_t last_space = 0;
+        char candidate[192];
+        for (size_t i = 1; i <= remaining_len; ++i) {
+            memcpy(candidate, cursor, i);
+            candidate[i] = '\0';
+            if (text_fits_width(renderer, font, candidate, max_width)) {
+                best_break = i;
+                if (cursor[i - 1] == ' ') last_space = i - 1;
+            } else {
+                break;
+            }
+        }
+
+        if (best_break == 0) {
+            fit_text_to_width(renderer, font, cursor, max_width, out[count], sizeof(out[count]));
+            ++count;
+            break;
+        }
+
+        if (last_space > 0) {
+            best_break = last_space;
+        }
+        while (best_break > 0 && cursor[best_break - 1] == ' ') {
+            --best_break;
+        }
+        if (best_break == 0) {
+            fit_text_to_width(renderer, font, cursor, max_width, out[count], sizeof(out[count]));
+            ++count;
+            break;
+        }
+
+        memcpy(out[count], cursor, best_break);
+        out[count][best_break] = '\0';
+        ++count;
+        cursor += best_break;
+        while (*cursor == ' ') ++cursor;
+    }
+
+    if (out_count) *out_count = count;
+}
+
 static int panel_font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
     int font_h = 0;
     if (!font) return fallback;
@@ -183,6 +263,9 @@ static void draw_object_list(SceneEditorState *state) {
 static void draw_scene_library_summary(SceneEditorState *state) {
     char line[256];
     const PhysicsSimSceneLibraryEntry *entry = NULL;
+    int main_h = 0;
+    int small_h = 0;
+    int text_y = 0;
     if (!state) return;
     if (state->scene_library.mode == PHYSICS_SIM_SCENE_LIBRARY_MODE_3D) {
         entry = physics_sim_editor_scene_library_selected_retained(&state->scene_library);
@@ -198,11 +281,16 @@ static void draw_scene_library_summary(SceneEditorState *state) {
                  "2D catalog: %s",
                  entry && entry->display_name[0] ? entry->display_name : "none");
     }
+    main_h = panel_font_height(state->renderer, state->font_main, 24);
+    if (main_h < 20) main_h = 20;
+    small_h = panel_font_height(state->renderer, state->font_small, 16);
+    if (small_h < 14) small_h = 14;
+    text_y = state->panel_rect.y + 12 + main_h + 6;
     draw_text(state->renderer,
               state->font_small,
               line,
               state->panel_rect.x + 12,
-              state->panel_rect.y + 30,
+              text_y,
               COLOR_TEXT_DIM);
 }
 
@@ -646,34 +734,24 @@ static void draw_status_card(SceneEditorState *state,
                              int card_bottom_y) {
     char overlay_line[192];
     char save_line[192];
-    char overlay_fit[192];
-    char save_fit[192];
+    char overlay_wrap[2][192];
+    char save_wrap[2][192];
     SDL_Color overlay_color = COLOR_TEXT_DIM;
     SDL_Color save_color = COLOR_TEXT_DIM;
     SDL_Rect card_rect;
+    int overlay_lines = 0;
+    int save_lines = 0;
     int line_step = 0;
     int line_h = 0;
     int card_h = 0;
+    int current_y = 0;
     if (!state || !state->renderer || !physics_sim_editor_session_has_retained_scene(&state->session)) return;
 
     line_h = panel_font_height(state->renderer, state->font_small, 15);
     if (line_h < 14) line_h = 14;
     line_step = line_h + 8;
-    card_h = line_step * 3 + 18;
-    if (card_bottom_y > y && card_h > (card_bottom_y - y)) {
-        card_h = card_bottom_y - y;
-    }
-    if (card_h < line_step * 3) {
-        card_h = line_step * 3;
-    }
-    card_rect = (SDL_Rect){x, y, w, card_h};
 
     SDL_Color card_fill = lighten_color(COLOR_PANEL, 0.05f);
-    SDL_SetRenderDrawColor(state->renderer, card_fill.r, card_fill.g, card_fill.b, 255);
-    SDL_RenderFillRect(state->renderer, &card_rect);
-    SDL_SetRenderDrawColor(state->renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 220);
-    SDL_RenderDrawRect(state->renderer, &card_rect);
-
     if (state->dirty) {
         snprintf(overlay_line, sizeof(overlay_line), "Overlay: unapplied changes");
         overlay_color = COLOR_STATUS_WARN;
@@ -695,22 +773,49 @@ static void draw_status_card(SceneEditorState *state,
         save_color = COLOR_STATUS_WARN;
     }
 
-    fit_text_to_width(state->renderer, state->font_small, overlay_line, w - 16, overlay_fit, sizeof(overlay_fit));
-    fit_text_to_width(state->renderer, state->font_small, save_line, w - 16, save_fit, sizeof(save_fit));
+    wrap_text_lines(state->renderer,
+                    state->font_small,
+                    overlay_line,
+                    w - 16,
+                    2,
+                    overlay_wrap,
+                    &overlay_lines);
+    wrap_text_lines(state->renderer,
+                    state->font_small,
+                    save_line,
+                    w - 16,
+                    2,
+                    save_wrap,
+                    &save_lines);
+    if (overlay_lines < 1) overlay_lines = 1;
+    if (save_lines < 1) save_lines = 1;
+
+    card_h = 16 + line_step * (1 + overlay_lines + save_lines);
+    if (card_bottom_y > y && card_h > (card_bottom_y - y)) {
+        card_h = card_bottom_y - y;
+    }
+    if (card_h < line_step * 3) {
+        card_h = line_step * 3;
+    }
+    card_rect = (SDL_Rect){x, y, w, card_h};
+
+    SDL_SetRenderDrawColor(state->renderer, card_fill.r, card_fill.g, card_fill.b, 255);
+    SDL_RenderFillRect(state->renderer, &card_rect);
+    SDL_SetRenderDrawColor(state->renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 220);
+    SDL_RenderDrawRect(state->renderer, &card_rect);
 
     draw_text(state->renderer, state->font_small, "Status", x + 8, y + 8, COLOR_TEXT);
-    draw_text(state->renderer,
-              state->font_small,
-              overlay_fit[0] ? overlay_fit : overlay_line,
-              x + 8,
-              y + 8 + line_step,
-              overlay_color);
-    draw_text(state->renderer,
-              state->font_small,
-              save_fit[0] ? save_fit : save_line,
-              x + 8,
-              y + 8 + line_step * 2,
-              save_color);
+    current_y = y + 8 + line_step;
+    for (int i = 0; i < overlay_lines; ++i) {
+        if (!overlay_wrap[i][0]) continue;
+        draw_text(state->renderer, state->font_small, overlay_wrap[i], x + 8, current_y, overlay_color);
+        current_y += line_step;
+    }
+    for (int i = 0; i < save_lines; ++i) {
+        if (!save_wrap[i][0]) continue;
+        draw_text(state->renderer, state->font_small, save_wrap[i], x + 8, current_y, save_color);
+        current_y += line_step;
+    }
 }
 
 static void draw_right_panel_summary(SceneEditorState *state) {
@@ -1015,4 +1120,5 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     }
     scene_editor_draw_button(renderer, &state->btn_save, state->font_small);
     scene_editor_draw_button(renderer, &state->btn_cancel, state->font_small);
+    scene_editor_draw_button(renderer, &state->btn_menu, state->font_small);
 }

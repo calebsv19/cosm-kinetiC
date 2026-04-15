@@ -236,7 +236,20 @@ Last updated: 2026-04-13
     - retained overlay mutation now clears `derived_defaults` before save so reopened scenes read as edited documents, not untouched scaffolds
     - file-based round-trip validation now exists in `runtime_scene_bridge_contract_test`
   - next:
-    - return to the deferred `PS4D-UIF0+` pane/layout cleanup phase on top of the now-stable retained-scene save/reopen flow
+    - `PS4D-UIF0` is now complete:
+      - the current pane/layout defect map is frozen into a keep/resize/reflow plan
+    - `PS4D-UIF1` is now complete:
+      - the right-pane overlay block is compacted into a tighter top-row state lane plus one compact velocity row
+    - `PS4D-UIF2` is now complete:
+      - retained-scene status messages now wrap into bounded multi-line text instead of truncating
+    - `PS4D-UIF3` is now complete:
+      - left-pane summary/button/card/list spacing now uses cleaner vertical separation
+    - `PS4D-UIF4` is now complete:
+      - the bottom action row now uses explicit `Cancel` and `Menu` exits
+    - `PS4D-UIF5` is now complete:
+      - the retained-scene editor cleanup lane is now closed for the current scope
+    - immediate next boundary is deeper retained-scene physics behavior:
+      - start honest runtime consumption of overlay state that is still editor-only today, especially per-object initial-velocity/runtime sink behavior
 
 - connection-pass lane:
   - completed:

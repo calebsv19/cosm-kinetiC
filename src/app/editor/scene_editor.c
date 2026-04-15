@@ -135,6 +135,7 @@ static void editor_layout_controls(SceneEditorState *state) {
     int right_x = 0;
     int left_field_w = 0;
     int right_field_w = 0;
+    int main_h = 24;
     int small_h = 18;
     int field_h = 32;
     int button_h = 34;
@@ -145,6 +146,8 @@ static void editor_layout_controls(SceneEditorState *state) {
     int save_h = 40;
     int apply_h = 40;
     int cancel_h = 36;
+    int action_gap = 8;
+    int bottom_button_w = 0;
     int cancel_y = 0;
     int save_y = 0;
     int apply_y = 0;
@@ -154,10 +157,13 @@ static void editor_layout_controls(SceneEditorState *state) {
     int bottom_pad = 8;
     int inspector_top = 0;
     int overlay_top = 0;
-    int overlay_gap = 8;
-    int half_button_w = 0;
-    int third_button_w = 0;
+    int overlay_gap = 6;
+    int overlay_row_button_w = 0;
+    int velocity_button_w = 0;
+    int overlay_button_h = 0;
+    int velocity_button_h = 0;
     int summary_top = 0;
+    int info_line_step = 0;
     if (!state) return;
 
     left_x = state->panel_rect.x + 12;
@@ -167,11 +173,17 @@ static void editor_layout_controls(SceneEditorState *state) {
     if (left_field_w < 140) left_field_w = 140;
     if (right_field_w < 140) right_field_w = 140;
 
+    main_h = editor_font_height(state->renderer, state->font_main, 24);
+    if (main_h < 20) main_h = 20;
     small_h = editor_font_height(state->renderer, state->font_small, 18);
     field_h = small_h + 16;
     if (field_h < 32) field_h = 32;
     button_h = small_h + 14;
     if (button_h < 34) button_h = 34;
+    overlay_button_h = small_h + 8;
+    if (overlay_button_h < 28) overlay_button_h = 28;
+    velocity_button_h = small_h + 6;
+    if (velocity_button_h < 26) velocity_button_h = 26;
 
     inspector_top = state->height_rect.y + state->height_rect.h + 20;
     state->radius_field.rect = (SDL_Rect){right_x, inspector_top + 24, right_field_w, field_h};
@@ -185,51 +197,65 @@ static void editor_layout_controls(SceneEditorState *state) {
     state->strength_field.target = FIELD_STRENGTH;
 
     overlay_top = state->strength_field.rect.y + state->strength_field.rect.h + 18;
-    half_button_w = (right_field_w - overlay_gap) / 2;
-    if (half_button_w < 66) half_button_w = 66;
-    third_button_w = (right_field_w - overlay_gap * 2) / 3;
-    if (third_button_w < 52) third_button_w = 52;
+    overlay_row_button_w = (right_field_w - overlay_gap * 2) / 3;
+    if (overlay_row_button_w < 52) overlay_row_button_w = 52;
+    velocity_button_w = (right_field_w - overlay_gap * 5) / 6;
+    if (velocity_button_w < 24) velocity_button_w = 24;
 
-    state->btn_overlay_dynamic.rect = (SDL_Rect){right_x, overlay_top, half_button_w, button_h};
+    state->btn_overlay_dynamic.rect = (SDL_Rect){right_x, overlay_top, overlay_row_button_w, overlay_button_h};
     state->btn_overlay_dynamic.label = "Dynamic";
     state->btn_overlay_dynamic.enabled = false;
-    state->btn_overlay_static.rect = (SDL_Rect){right_x + half_button_w + overlay_gap, overlay_top, half_button_w, button_h};
+    state->btn_overlay_static.rect = (SDL_Rect){right_x + overlay_row_button_w + overlay_gap,
+                                                overlay_top,
+                                                overlay_row_button_w,
+                                                overlay_button_h};
     state->btn_overlay_static.label = "Static";
     state->btn_overlay_static.enabled = false;
-
-    overlay_top += button_h + overlay_gap;
-    state->btn_overlay_vel_x_pos.rect = (SDL_Rect){right_x, overlay_top, third_button_w, button_h};
-    state->btn_overlay_vel_x_pos.label = "X+";
-    state->btn_overlay_vel_x_pos.enabled = false;
-    state->btn_overlay_vel_y_pos.rect = (SDL_Rect){right_x + third_button_w + overlay_gap, overlay_top, third_button_w, button_h};
-    state->btn_overlay_vel_y_pos.label = "Y+";
-    state->btn_overlay_vel_y_pos.enabled = false;
-    state->btn_overlay_vel_z_pos.rect = (SDL_Rect){right_x + (third_button_w + overlay_gap) * 2, overlay_top, third_button_w, button_h};
-    state->btn_overlay_vel_z_pos.label = "Z+";
-    state->btn_overlay_vel_z_pos.enabled = false;
-
-    overlay_top += button_h + overlay_gap;
-    state->btn_overlay_vel_x_neg.rect = (SDL_Rect){right_x, overlay_top, third_button_w, button_h};
-    state->btn_overlay_vel_x_neg.label = "X-";
-    state->btn_overlay_vel_x_neg.enabled = false;
-    state->btn_overlay_vel_y_neg.rect = (SDL_Rect){right_x + third_button_w + overlay_gap, overlay_top, third_button_w, button_h};
-    state->btn_overlay_vel_y_neg.label = "Y-";
-    state->btn_overlay_vel_y_neg.enabled = false;
-    state->btn_overlay_vel_z_neg.rect = (SDL_Rect){right_x + (third_button_w + overlay_gap) * 2, overlay_top, third_button_w, button_h};
-    state->btn_overlay_vel_z_neg.label = "Z-";
-    state->btn_overlay_vel_z_neg.enabled = false;
-
-    overlay_top += button_h + overlay_gap;
-    state->btn_overlay_vel_reset.rect = (SDL_Rect){right_x + (right_field_w - third_button_w) / 2,
+    state->btn_overlay_vel_reset.rect = (SDL_Rect){right_x + (overlay_row_button_w + overlay_gap) * 2,
                                                    overlay_top,
-                                                   third_button_w,
-                                                   button_h};
+                                                   overlay_row_button_w,
+                                                   overlay_button_h};
     state->btn_overlay_vel_reset.label = "Reset Vel";
     state->btn_overlay_vel_reset.enabled = false;
-    summary_top = overlay_top + button_h + 16;
+
+    overlay_top += overlay_button_h + overlay_gap;
+    state->btn_overlay_vel_x_pos.rect = (SDL_Rect){right_x, overlay_top, velocity_button_w, velocity_button_h};
+    state->btn_overlay_vel_x_pos.label = "X+";
+    state->btn_overlay_vel_x_pos.enabled = false;
+    state->btn_overlay_vel_y_pos.rect = (SDL_Rect){right_x + velocity_button_w + overlay_gap,
+                                                   overlay_top,
+                                                   velocity_button_w,
+                                                   velocity_button_h};
+    state->btn_overlay_vel_y_pos.label = "Y+";
+    state->btn_overlay_vel_y_pos.enabled = false;
+    state->btn_overlay_vel_z_pos.rect = (SDL_Rect){right_x + (velocity_button_w + overlay_gap) * 2,
+                                                   overlay_top,
+                                                   velocity_button_w,
+                                                   velocity_button_h};
+    state->btn_overlay_vel_z_pos.label = "Z+";
+    state->btn_overlay_vel_z_pos.enabled = false;
+    state->btn_overlay_vel_x_neg.rect = (SDL_Rect){right_x + (velocity_button_w + overlay_gap) * 3,
+                                                   overlay_top,
+                                                   velocity_button_w,
+                                                   velocity_button_h};
+    state->btn_overlay_vel_x_neg.label = "X-";
+    state->btn_overlay_vel_x_neg.enabled = false;
+    state->btn_overlay_vel_y_neg.rect = (SDL_Rect){right_x + (velocity_button_w + overlay_gap) * 4,
+                                                   overlay_top,
+                                                   velocity_button_w,
+                                                   velocity_button_h};
+    state->btn_overlay_vel_y_neg.label = "Y-";
+    state->btn_overlay_vel_y_neg.enabled = false;
+    state->btn_overlay_vel_z_neg.rect = (SDL_Rect){right_x + (velocity_button_w + overlay_gap) * 5,
+                                                   overlay_top,
+                                                   velocity_button_w,
+                                                   velocity_button_h};
+    state->btn_overlay_vel_z_neg.label = "Z-";
+    state->btn_overlay_vel_z_neg.enabled = false;
+    summary_top = overlay_top + velocity_button_h + 14;
     state->overlay_summary_rect = (SDL_Rect){right_x, summary_top, right_field_w, 0};
 
-    button_row_y = state->panel_rect.y + 42;
+    button_row_y = state->panel_rect.y + 12 + main_h + small_h + 20;
     button_w = (left_field_w - 24) / 3;
     if (button_w < 60) button_w = 60;
     state->btn_add_source.rect = (SDL_Rect){left_x, button_row_y, button_w, button_h};
@@ -284,17 +310,29 @@ static void editor_layout_controls(SceneEditorState *state) {
     state->btn_apply_overlay.label = "Apply Overlay";
     state->btn_apply_overlay.enabled = false;
     state->btn_save.rect = (SDL_Rect){right_x, save_y, right_field_w, save_h};
-    state->btn_cancel.rect = (SDL_Rect){right_x, cancel_y, right_field_w, cancel_h};
+    bottom_button_w = (right_field_w - action_gap) / 2;
+    if (bottom_button_w < 64) bottom_button_w = 64;
+    state->btn_cancel.rect = (SDL_Rect){right_x, cancel_y, bottom_button_w, cancel_h};
+    state->btn_menu.rect = (SDL_Rect){right_x + bottom_button_w + action_gap,
+                                      cancel_y,
+                                      right_field_w - bottom_button_w - action_gap,
+                                      cancel_h};
     state->btn_save.label = "Save Changes";
     state->btn_save.enabled = true;
     state->btn_cancel.label = "Cancel";
     state->btn_cancel.enabled = true;
+    state->btn_menu.label = "Menu";
+    state->btn_menu.enabled = true;
 
-    list_top = boundary_y + button_h + 14;
-    info_card_h = physics_sim_editor_session_has_retained_scene(&state->session) ? 138 : 0;
+    list_top = boundary_y + button_h + 18;
+    info_line_step = small_h + 6;
+    if (info_line_step < 18) info_line_step = 18;
+    info_card_h = physics_sim_editor_session_has_retained_scene(&state->session)
+                      ? (16 + info_line_step * 6)
+                      : 0;
     if (info_card_h > 0) {
         state->object_info_rect = (SDL_Rect){left_x, list_top, left_field_w, info_card_h};
-        list_top += info_card_h + 12;
+        list_top += info_card_h + 18;
     } else {
         state->object_info_rect = (SDL_Rect){left_x, list_top, left_field_w, 0};
     }
@@ -595,6 +633,7 @@ bool scene_editor_run(SDL_Window *window,
                                         state.retained_runtime_scene_json != NULL &&
                                         state.retained_runtime_scene_json[0] != '\0')
                                      : true;
+        state.btn_menu.enabled = true;
         state.btn_overlay_dynamic.enabled = retained_scene_active && overlay_object_active;
         state.btn_overlay_static.enabled = retained_scene_active && overlay_object_active;
         state.btn_overlay_vel_x_neg.enabled = retained_scene_active && overlay_object_active;

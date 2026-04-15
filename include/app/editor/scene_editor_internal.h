@@ -105,6 +105,7 @@ typedef struct SceneEditorState {
     EditorButton btn_save;
     EditorButton btn_apply_overlay;
     EditorButton btn_cancel;
+    EditorButton btn_menu;
     EditorButton btn_add_source;
     EditorButton btn_add_jet;
     EditorButton btn_add_sink;

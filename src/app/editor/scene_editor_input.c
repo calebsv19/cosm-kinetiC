@@ -107,6 +107,7 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         &state->btn_apply_overlay,
         &state->btn_save,
         &state->btn_cancel,
+        &state->btn_menu,
         &state->btn_add_source,
         &state->btn_add_jet,
         &state->btn_add_sink,
@@ -133,6 +134,8 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
             } else if (btn == &state->btn_save) {
                 scene_editor_input_finish_and_apply(state);
             } else if (btn == &state->btn_cancel) {
+                scene_editor_input_cancel_and_close(state);
+            } else if (btn == &state->btn_menu) {
                 scene_editor_input_cancel_and_close(state);
             } else if (btn == &state->btn_add_source ||
                        btn == &state->btn_add_jet ||

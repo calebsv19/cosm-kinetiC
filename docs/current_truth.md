@@ -583,8 +583,50 @@ Legacy test lane:
     - overlay mutation now clears `derived_defaults` before save so reopened scenes reflect edited overlay state instead of default scaffold state
     - `runtime_scene_bridge_contract_test` now includes a real file-based round-trip save/reopen validation path
     - `PS4D-SAVE0+` is closed for the current retained-scene document scope
-    - next boundary is `PS4D-UIF0+`:
+    - next boundary was `PS4D-UIF0+`:
       - resume editor UI cleanup and layout polish on top of the now-stable save/reopen flow
+  - `PS4D-UIF0` slice 1 is now complete:
+    - pane/layout audit is now frozen against the current post-save-flow editor shell
+    - the locked defect map captures:
+      - left-pane catalog/button/card/list spacing pressure
+      - oversized right-pane overlay controls
+      - truncation-heavy status-card behavior
+      - missing bottom-row `Menu` exit path
+      - cramped top-right field/header spacing
+    - the keep/resize/reflow map is now explicit before visual edits resume
+    - next boundary was `PS4D-UIF1`:
+      - compact the right-pane overlay controls first
+  - `PS4D-UIF1` slice 1 is now complete:
+    - right-pane overlay controls now use a tighter two-row solve:
+      - `Dynamic` / `Static` / `Reset Vel`
+      - `X+` / `Y+` / `Z+` / `X-` / `Y-` / `Z-`
+    - overlay button heights are now smaller than the general scene-action buttons
+    - the status lane now starts higher because the old tall overlay stack is gone
+    - next boundary was `PS4D-UIF2`:
+      - wrap and clarify the status card without re-expanding the control block
+  - `PS4D-UIF2` slice 1 is now complete:
+    - retained-scene status now wraps overlay apply and scene save messaging into bounded multi-line text
+    - status-card height now scales from wrapped content instead of assuming one truncated line per message
+    - next boundary was `PS4D-UIF3`:
+      - clean up left-pane spacing between the catalog summary, action buttons, selected-object card, and object-list title
+  - `PS4D-UIF3` slice 1 is now complete:
+    - left-pane action rows now start lower so the catalog summary keeps its own lane under `Scene Controls`
+    - retained selected-object card height and card-to-list spacing are now content-driven instead of broader fixed offsets
+    - next boundary was `PS4D-UIF4`:
+      - split the bottom action row into explicit `Cancel` and `Menu` exits
+  - `PS4D-UIF4` slice 1 is now complete:
+    - the bottom action row now uses explicit `Cancel` and `Menu` buttons instead of one full-width cancel lane
+    - the editor now exposes a clearer return-to-menu affordance without changing the apply/save lane above it
+    - next boundary was `PS4D-UIF5`:
+      - do the visual/manual closeout check across the retained-scene editor cleanup lane
+  - `PS4D-UIF5` closeout is now complete:
+    - the retained-scene editor cleanup lane is closed for the current scope
+    - the stabilized editor baseline now includes:
+      - compact overlay controls
+      - readable bounded status messaging
+      - cleaner left-pane separation
+      - explicit `Cancel` and `Menu` exits
+    - next boundary moves back to deeper retained-scene physics behavior rather than another editor-shell cleanup slice
   - `TP-S5` interop fixture validation is active:
     - compile shared authoring fixture -> physics overlay writeback -> apply
     - validates preservation of non-physics namespaces (`line_drawing`, `ray_tracing`)
