@@ -15,10 +15,11 @@
 #include "app/data_paths.h"
 #include "config/config_loader.h"
 #include "font_paths.h"
+#include "render/text_upload_policy.h"
 #include "vk_renderer.h"
 #include "render/vk_shared_device.h"
 
-static TTF_Font *load_font(const AppConfig *cfg, int size) {
+static TTF_Font *load_font(const AppConfig *cfg, int size, SDL_Renderer *renderer) {
     const char *paths[] = {
         FONT_BODY_PATH_1,
         FONT_BODY_PATH_2,
@@ -26,6 +27,7 @@ static TTF_Font *load_font(const AppConfig *cfg, int size) {
         FONT_TITLE_PATH_2
     };
     int scaled_size = app_config_scale_text_point_size(cfg, size, 6);
+    scaled_size = physics_sim_text_raster_point_size(renderer, scaled_size, 6);
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
         TTF_Font *font = TTF_OpenFont(paths[i], scaled_size);
         if (font) return font;
@@ -34,12 +36,13 @@ static TTF_Font *load_font(const AppConfig *cfg, int size) {
 }
 
 static bool structural_reload_fonts(StructuralController *ctrl,
-                                    const AppConfig *cfg) {
+                                    const AppConfig *cfg,
+                                    SDL_Renderer *renderer) {
     TTF_Font *small = NULL;
     TTF_Font *hud = NULL;
     if (!ctrl || !cfg) return false;
-    small = load_font(cfg, 12);
-    hud = load_font(cfg, 14);
+    small = load_font(cfg, 12, renderer);
+    hud = load_font(cfg, 14, renderer);
     if (!small || !hud) {
         if (small) TTF_CloseFont(small);
         if (hud) TTF_CloseFont(hud);
@@ -54,7 +57,8 @@ static bool structural_reload_fonts(StructuralController *ctrl,
 
 static bool structural_apply_text_zoom_shortcut(const InputCommands *cmds,
                                                 AppConfig *cfg,
-                                                StructuralController *ctrl) {
+                                                StructuralController *ctrl,
+                                                SDL_Renderer *renderer) {
     int next_step = 0;
     const char *runtime_config_path = physics_sim_runtime_config_path();
     if (!cmds || !cfg || !ctrl) return false;
@@ -78,7 +82,7 @@ static bool structural_apply_text_zoom_shortcut(const InputCommands *cmds,
         fprintf(stderr, "[struct] Failed to persist runtime config to %s\n",
                 runtime_config_path);
     }
-    if (!structural_reload_fonts(ctrl, cfg)) {
+    if (!structural_reload_fonts(ctrl, cfg, renderer)) {
         fprintf(stderr, "[struct] Failed to reload fonts after zoom update.\n");
     }
     return true;
@@ -412,8 +416,8 @@ int structural_controller_run(AppConfig *cfg,
     ctrl.newmark_beta = 0.25f;
     ctrl.newmark_gamma = 0.5f;
     ctrl.gravity_ramp_duration = 1.0f;
-    ctrl.font_small = load_font(cfg, 12);
-    ctrl.font_hud = load_font(cfg, 14);
+    ctrl.font_small = load_font(cfg, 12, renderer);
+    ctrl.font_hud = load_font(cfg, 14, renderer);
     ctrl.running = true;
     SDL_GetWindowSize(window, &ctrl.window_w, &ctrl.window_h);
     vk_renderer_set_logical_size((VkRenderer *)renderer,
@@ -446,7 +450,7 @@ int structural_controller_run(AppConfig *cfg,
         if (!running || cmds.quit) {
             ctrl.running = false;
         }
-        (void)structural_apply_text_zoom_shortcut(&cmds, cfg, &ctrl);
+        (void)structural_apply_text_zoom_shortcut(&cmds, cfg, &ctrl, renderer);
 
         Uint32 now = SDL_GetTicks();
         float dt = (float)(now - last_ticks) / 1000.0f;

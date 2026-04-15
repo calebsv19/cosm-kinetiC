@@ -6,6 +6,7 @@
 
 static SpaceMode s_scene_editor_canvas_space_mode = SPACE_MODE_2D;
 static SpaceMode s_scene_editor_canvas_projection_mode = SPACE_MODE_2D;
+static SceneEditorViewportState s_scene_editor_canvas_viewport = {0};
 
 static float clampf_local(float value, float min_v, float max_v) {
     if (value < min_v) return min_v;
@@ -22,6 +23,9 @@ static float object_depth_visual_scale(const PresetObject *obj) {
 void scene_editor_canvas_set_space_mode(SpaceMode mode) {
     s_scene_editor_canvas_space_mode = space_mode_adapter_resolve(mode);
     s_scene_editor_canvas_projection_mode = SPACE_MODE_2D;
+    scene_editor_viewport_set_modes(&s_scene_editor_canvas_viewport,
+                                    s_scene_editor_canvas_space_mode,
+                                    s_scene_editor_canvas_projection_mode);
 }
 
 void scene_editor_canvas_set_mode_route(const SimModeRoute *route) {
@@ -32,6 +36,14 @@ void scene_editor_canvas_set_mode_route(const SimModeRoute *route) {
                                                                                             1);
     s_scene_editor_canvas_space_mode = view_ctx.requested_mode;
     s_scene_editor_canvas_projection_mode = view_ctx.projection_mode;
+    scene_editor_viewport_set_modes(&s_scene_editor_canvas_viewport,
+                                    s_scene_editor_canvas_space_mode,
+                                    s_scene_editor_canvas_projection_mode);
+}
+
+void scene_editor_canvas_set_viewport_state(const SceneEditorViewportState *viewport) {
+    if (!viewport) return;
+    s_scene_editor_canvas_viewport = *viewport;
 }
 
 float scene_editor_canvas_object_visual_radius_px(const PresetObject *obj, int canvas_w) {
@@ -96,14 +108,15 @@ void scene_editor_canvas_project(int canvas_x,
                                  float py,
                                  int *out_x,
                                  int *out_y) {
-    SpaceModeViewContext view_ctx = space_mode_adapter_build_canvas_view_context_ex(
-        s_scene_editor_canvas_space_mode,
-        s_scene_editor_canvas_projection_mode,
-        canvas_x,
-        canvas_y,
-        canvas_w,
-        canvas_h);
-    space_mode_adapter_world_to_screen(&view_ctx, px, py, out_x, out_y);
+    scene_editor_viewport_world_to_screen(&s_scene_editor_canvas_viewport,
+                                          canvas_x,
+                                          canvas_y,
+                                          canvas_w,
+                                          canvas_h,
+                                          px,
+                                          py,
+                                          out_x,
+                                          out_y);
 }
 
 void scene_editor_canvas_to_normalized(int canvas_x,
@@ -114,14 +127,17 @@ void scene_editor_canvas_to_normalized(int canvas_x,
                                        int sy,
                                        float *out_x,
                                        float *out_y) {
-    SpaceModeViewContext view_ctx = space_mode_adapter_build_canvas_view_context_ex(
-        s_scene_editor_canvas_space_mode,
-        s_scene_editor_canvas_projection_mode,
-        canvas_x,
-        canvas_y,
-        canvas_w,
-        canvas_h);
-    space_mode_adapter_screen_to_world_clamped(&view_ctx, sx, sy, out_x, out_y);
+    scene_editor_viewport_screen_to_world(&s_scene_editor_canvas_viewport,
+                                          canvas_x,
+                                          canvas_y,
+                                          canvas_w,
+                                          canvas_h,
+                                          sx,
+                                          sy,
+                                          out_x,
+                                          out_y);
+    if (out_x) *out_x = clampf_local(*out_x, 0.0f, 1.0f);
+    if (out_y) *out_y = clampf_local(*out_y, 0.0f, 1.0f);
 }
 
 void scene_editor_canvas_to_import_normalized(int canvas_x,
@@ -132,14 +148,15 @@ void scene_editor_canvas_to_import_normalized(int canvas_x,
                                               int sy,
                                               float *out_x,
                                               float *out_y) {
-    SpaceModeViewContext view_ctx = space_mode_adapter_build_canvas_view_context_ex(
-        s_scene_editor_canvas_space_mode,
-        s_scene_editor_canvas_projection_mode,
-        canvas_x,
-        canvas_y,
-        canvas_w,
-        canvas_h);
-    space_mode_adapter_screen_to_import_world_clamped(&view_ctx, sx, sy, out_x, out_y);
+    scene_editor_viewport_screen_to_world(&s_scene_editor_canvas_viewport,
+                                          canvas_x,
+                                          canvas_y,
+                                          canvas_w,
+                                          canvas_h,
+                                          sx,
+                                          sy,
+                                          out_x,
+                                          out_y);
 }
 
 static bool import_hit_oriented_box(const ImportedShape *imp,

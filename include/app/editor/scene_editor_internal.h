@@ -7,6 +7,11 @@
 
 #include "app/app_config.h"
 #include "app/editor/scene_editor_canvas.h"
+#include "app/editor/scene_editor_pane_host.h"
+#include "app/editor/scene_editor_retained_document.h"
+#include "app/editor/scene_editor_scene_library.h"
+#include "app/editor/scene_editor_session.h"
+#include "app/editor/scene_editor_viewport.h"
 #include "app/editor/scene_editor_widgets.h"
 #include "app/editor/scene_editor_scroll.h"
 #include "app/preset_io.h"
@@ -20,13 +25,6 @@
 #define DEFAULT_BOUNDARY_STRENGTH 25.0f
 #define MAX_IMPORT_FILES 256
 
-typedef enum EditorSelectionKind {
-    SELECTION_NONE = 0,
-    SELECTION_EMITTER,
-    SELECTION_OBJECT,
-    SELECTION_IMPORT
-} EditorSelectionKind;
-
 typedef struct SceneEditorState {
     SDL_Window   *window;
     SDL_Renderer *renderer;
@@ -38,6 +36,19 @@ typedef struct SceneEditorState {
     AppConfig    *cfg_live;
     FluidScenePreset working;
     FluidScenePreset *target;
+    PhysicsSimEditorSession session;
+    PhysicsSimEditorSceneLibrary scene_library;
+    SceneEditorViewportState viewport;
+    SceneEditorPaneHost pane_host;
+    char *retained_runtime_scene_json;
+    char retained_runtime_scene_source_path[512];
+    char retained_runtime_scene_path[512];
+    char retained_scene_provenance_id[128];
+    char *last_applied_overlay_json;
+    char overlay_apply_diagnostics[256];
+    bool overlay_apply_success;
+    char save_scene_diagnostics[256];
+    bool save_scene_success;
     InputContextManager *context_mgr;
     bool owns_context_mgr;
     char *name_buffer;
@@ -60,6 +71,13 @@ typedef struct SceneEditorState {
     int canvas_width;
     int canvas_height;
     SDL_Rect panel_rect;
+    SDL_Rect center_pane_rect;
+    SDL_Rect center_title_rect;
+    SDL_Rect center_name_rect;
+    SDL_Rect center_summary_rect;
+    SDL_Rect viewport_surface_rect;
+    SDL_Rect right_panel_rect;
+    SDL_Rect overlay_summary_rect;
     SDL_Rect width_rect;
     SDL_Rect height_rect;
     int layout_win_w;
@@ -85,6 +103,7 @@ typedef struct SceneEditorState {
     Uint32 last_canvas_click;
 
     EditorButton btn_save;
+    EditorButton btn_apply_overlay;
     EditorButton btn_cancel;
     EditorButton btn_add_source;
     EditorButton btn_add_jet;
@@ -93,6 +112,15 @@ typedef struct SceneEditorState {
     EditorButton btn_import_back;
     EditorButton btn_import_delete;
     EditorButton btn_boundary;
+    EditorButton btn_overlay_dynamic;
+    EditorButton btn_overlay_static;
+    EditorButton btn_overlay_vel_x_neg;
+    EditorButton btn_overlay_vel_x_pos;
+    EditorButton btn_overlay_vel_y_neg;
+    EditorButton btn_overlay_vel_y_pos;
+    EditorButton btn_overlay_vel_z_neg;
+    EditorButton btn_overlay_vel_z_pos;
+    EditorButton btn_overlay_vel_reset;
 
     NumericField radius_field;
     NumericField strength_field;
@@ -118,6 +146,7 @@ typedef struct SceneEditorState {
     int   emitter_object_map[MAX_FLUID_EMITTERS];
     int   emitter_import_map[MAX_FLUID_EMITTERS];
     SDL_Rect list_rect;
+    SDL_Rect object_info_rect;
     SDL_Rect import_rect;
     char import_files[MAX_IMPORT_FILES][256];
     int  import_file_count;
@@ -149,10 +178,16 @@ float sanitize_domain_dimension(float value);
 void editor_update_dimension_rects(SceneEditorState *state);
 void editor_update_canvas_layout(SceneEditorState *state);
 SDL_Rect editor_name_rect(const SceneEditorState *state);
+SDL_Rect editor_active_viewport_rect(const SceneEditorState *state);
 void editor_begin_name_edit(SceneEditorState *state);
 void editor_finish_name_edit(SceneEditorState *state, bool apply);
 void editor_begin_dimension_edit(SceneEditorState *state, bool editing_width);
 void editor_finish_dimension_edit(SceneEditorState *state, bool editing_width, bool apply);
+void editor_frame_viewport_to_scene(SceneEditorState *state);
+bool editor_load_runtime_scene_fixture(SceneEditorState *state,
+                                       const char *runtime_scene_path,
+                                       char *out_diagnostics,
+                                       size_t out_diagnostics_size);
 float clamp01(float v);
 void canvas_to_normalized_unclamped(const SceneEditorState *state,
                                     int sx,

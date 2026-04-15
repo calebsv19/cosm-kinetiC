@@ -14,6 +14,19 @@ void commit_field_edit(SceneEditorState *state);
 bool field_handle_key(SceneEditorState *state, SDL_Keycode key);
 
 void nudge_selected(SceneEditorState *state, float dx, float dy);
+void scene_editor_sync_selection_session(SceneEditorState *state);
+void scene_editor_set_selection(SceneEditorState *state,
+                                EditorSelectionKind kind,
+                                int emitter_index,
+                                int object_index,
+                                int import_index);
+void scene_editor_select_none(SceneEditorState *state);
+void scene_editor_select_emitter(SceneEditorState *state,
+                                 int emitter_index,
+                                 int object_index,
+                                 int import_index);
+void scene_editor_select_object(SceneEditorState *state, int object_index);
+void scene_editor_select_import(SceneEditorState *state, int import_index);
 
 const char *emitter_type_name(FluidEmitterType type);
 const char *boundary_edge_name(int edge);

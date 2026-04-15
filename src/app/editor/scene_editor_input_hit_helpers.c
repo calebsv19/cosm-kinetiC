@@ -39,33 +39,21 @@ void scene_editor_input_select_from_hit(SceneEditorState *state, const SceneEdit
     if (!state || !hit) return;
     switch (hit->kind) {
     case HIT_EMITTER:
-        state->selection_kind = SELECTION_EMITTER;
-        state->selected_emitter = hit->index;
-        state->selected_object = -1;
-        state->selected_row = -1;
+        scene_editor_select_emitter(state, hit->index, -1, -1);
         break;
     case HIT_OBJECT:
     case HIT_OBJECT_HANDLE:
-        state->selection_kind = SELECTION_OBJECT;
-        state->selected_object = hit->index;
-        state->selected_emitter = -1;
-        state->selected_row = -1;
+        scene_editor_select_object(state, hit->index);
         break;
     case HIT_IMPORT:
     case HIT_IMPORT_HANDLE:
-        state->selection_kind = SELECTION_IMPORT;
-        state->selected_row = hit->index;
-        state->selected_object = -1;
-        state->selected_emitter = -1;
+        scene_editor_select_import(state, hit->index);
         break;
     case HIT_BOUNDARY_EDGE:
         state->boundary_selected_edge = hit->boundary_edge;
         break;
     default:
-        state->selection_kind = SELECTION_NONE;
-        state->selected_emitter = -1;
-        state->selected_object = -1;
-        state->selected_row = -1;
+        scene_editor_select_none(state);
         break;
     }
 }
@@ -186,7 +174,7 @@ void scene_editor_input_prepare_drag_for_hit(SceneEditorState *state,
             if (attached_imp < 0) attached_imp = state->working.emitters[hit->index].attached_import;
             if (hit->drag_mode == DRAG_POSITION && attached_obj >= 0 &&
                 attached_obj < (int)state->working.object_count) {
-                state->selected_object = attached_obj;
+                scene_editor_select_emitter(state, hit->index, attached_obj, -1);
                 state->dragging_object = true;
                 state->pointer_drag_started = true;
                 PresetObject *obj = &state->working.objects[attached_obj];
@@ -201,12 +189,9 @@ void scene_editor_input_prepare_drag_for_hit(SceneEditorState *state,
                                                   &ny);
                 state->object_drag_offset_x = nx - obj->position_x;
                 state->object_drag_offset_y = ny - obj->position_y;
-                state->selected_emitter = hit->index;
-                state->selection_kind = SELECTION_EMITTER;
             } else if (hit->drag_mode == DRAG_POSITION && attached_imp >= 0 &&
                        attached_imp < (int)state->working.import_shape_count) {
-                state->selected_row = attached_imp;
-                state->selection_kind = SELECTION_IMPORT;
+                scene_editor_select_import(state, attached_imp);
                 state->dragging_import_body = true;
                 state->pointer_drag_started = true;
                 float nx = 0.0f, ny = 0.0f;
@@ -221,8 +206,8 @@ void scene_editor_input_prepare_drag_for_hit(SceneEditorState *state,
                 ImportedShape *imp = &state->working.import_shapes[attached_imp];
                 state->import_body_drag_off_x = nx - imp->position_x;
                 state->import_body_drag_off_y = ny - imp->position_y;
-                state->selected_emitter = hit->index;
             } else {
+                scene_editor_select_emitter(state, hit->index, -1, -1);
                 state->drag_mode = hit->drag_mode;
                 state->dragging = true;
                 state->pointer_drag_started = true;

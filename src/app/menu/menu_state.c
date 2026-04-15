@@ -8,6 +8,8 @@
 #include "app/quality_profiles.h"
 #include "app/scene_controller.h"
 #include "app/data_paths.h"
+#include "import/runtime_scene_bridge.h"
+#include "render/text_upload_policy.h"
 
 static int quality_count(void) {
     return quality_profile_count();
@@ -19,6 +21,7 @@ static int menu_preset_row_height(const SceneMenuInteraction *ctx) {
     {
         int font_h = TTF_FontHeight(ctx->font);
         if (font_h > 0) {
+            font_h = physics_sim_text_logical_pixels(ctx->renderer, font_h);
             int scaled = font_h + 24;
             if (scaled > row_height) row_height = scaled;
         }
@@ -131,6 +134,38 @@ static FluidSceneDomainType current_domain(const SceneMenuInteraction *ctx) {
     return domain_for_mode(menu_normalize_sim_mode(ctx->active_mode));
 }
 
+bool menu_showing_retained_catalog(const SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return false;
+    return menu_normalize_space_mode(ctx->cfg->space_mode) == SPACE_MODE_3D;
+}
+
+void menu_refresh_scene_library(SceneMenuInteraction *ctx) {
+    const char *current_path = NULL;
+    int retained_index = -1;
+    if (!ctx) return;
+    current_path = ctx->retained_runtime_scene_path[0] ? ctx->retained_runtime_scene_path : NULL;
+    physics_sim_editor_scene_library_refresh(&ctx->scene_library,
+                                             ctx->active_preset ? ctx->active_preset : ctx->preset_output,
+                                             NULL,
+                                             physics_sim_default_runtime_scene_sample_dir(),
+                                             current_path);
+    ctx->scene_library.mode = menu_showing_retained_catalog(ctx)
+                                  ? PHYSICS_SIM_SCENE_LIBRARY_MODE_3D
+                                  : PHYSICS_SIM_SCENE_LIBRARY_MODE_2D;
+    if (ctx->selection && menu_showing_retained_catalog(ctx)) {
+        retained_index = physics_sim_editor_scene_library_find_retained_index_by_path(&ctx->scene_library,
+                                                                                      current_path);
+        if (retained_index >= 0) {
+            ctx->selection->retained_scene_index = retained_index;
+            ctx->scene_library.retained_scenes.selected_index = retained_index;
+        } else if (ctx->scene_library.retained_scenes.selected_index >= 0) {
+            ctx->selection->retained_scene_index = ctx->scene_library.retained_scenes.selected_index;
+        } else {
+            ctx->selection->retained_scene_index = -1;
+        }
+    }
+}
+
 const char *menu_mode_label(SimulationMode mode) {
     switch (mode) {
     case SIM_MODE_WIND_TUNNEL:
@@ -190,6 +225,14 @@ int menu_visible_slot_count(const SceneMenuInteraction *ctx) {
     return visible;
 }
 
+int menu_visible_entry_count(const SceneMenuInteraction *ctx) {
+    if (!ctx) return 0;
+    if (menu_showing_retained_catalog(ctx)) {
+        return ctx->scene_library.retained_scenes.count;
+    }
+    return menu_visible_slot_count(ctx);
+}
+
 int menu_slot_index_from_visible_row(const SceneMenuInteraction *ctx, int row_index) {
     if (!ctx || !ctx->library || row_index < 0) return -1;
     FluidSceneDomainType domain = current_domain(ctx);
@@ -245,12 +288,14 @@ int menu_visible_row_from_slot(const SceneMenuInteraction *ctx, int slot_index) 
 
 float menu_preset_total_height(const SceneMenuInteraction *ctx) {
     int row_height = menu_preset_row_height(ctx);
+    int count = 0;
     if (!ctx) return (float)row_height;
-    int count = menu_visible_slot_count(ctx);
+    count = menu_visible_entry_count(ctx);
     if (count < 0) count = 0;
-    return (float)count * (float)row_height +
-           ADD_ENTRY_GAP +
-           (float)row_height;
+    if (menu_showing_retained_catalog(ctx)) {
+        return (float)count * (float)row_height;
+    }
+    return (float)count * (float)row_height + ADD_ENTRY_GAP + (float)row_height;
 }
 
 int menu_preset_index_from_point(SceneMenuInteraction *ctx,
@@ -266,13 +311,15 @@ int menu_preset_index_from_point(SceneMenuInteraction *ctx,
     int row_height = menu_preset_row_height(ctx);
     float local_y = (float)(y - ctx->list_rect.y) + scrollbar_offset(&ctx->scrollbar);
     if (local_y < 0.0f) local_y = 0.0f;
-    int count = menu_visible_slot_count(ctx);
-    float add_start = (float)count * (float)row_height + (float)ADD_ENTRY_GAP;
-    float add_end = add_start + (float)row_height;
-    if (local_y >= add_start) {
-        bool inside_add = local_y < add_end;
-        if (is_add_entry) *is_add_entry = inside_add;
-        return inside_add ? count : -1;
+    int count = menu_visible_entry_count(ctx);
+    if (!menu_showing_retained_catalog(ctx)) {
+        float add_start = (float)count * (float)row_height + (float)ADD_ENTRY_GAP;
+        float add_end = add_start + (float)row_height;
+        if (local_y >= add_start) {
+            bool inside_add = local_y < add_end;
+            if (is_add_entry) *is_add_entry = inside_add;
+            return inside_add ? count : -1;
+        }
     }
 
     int row = (int)(local_y / (float)row_height);
@@ -360,10 +407,79 @@ void menu_select_custom(SceneMenuInteraction *ctx, int slot_index) {
     ctx->library->active_slot = slot_index;
     ctx->selection->last_mode_slot[ctx->active_mode] = slot_index;
     ctx->active_preset = &slot->preset;
+    menu_refresh_scene_library(ctx);
+}
+
+bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_index) {
+    const PhysicsSimSceneLibraryEntry *entry = NULL;
+    RuntimeSceneBridgePreflight summary = {0};
+    AppConfig cfg_copy = {0};
+    FluidScenePreset projected = {0};
+    PhysicsSimRetainedRuntimeScene retained = {0};
+
+    if (!ctx || !ctx->cfg || !ctx->selection) return false;
+    if (ctx->scene_library.retained_scenes.count <= 0) {
+        ctx->selection->retained_scene_index = -1;
+        ctx->editor_bootstrap.has_retained_scene = false;
+        ctx->retained_runtime_scene_path[0] = '\0';
+        menu_refresh_scene_library(ctx);
+        return false;
+    }
+    if (retained_scene_index < 0 ||
+        retained_scene_index >= ctx->scene_library.retained_scenes.count) {
+        retained_scene_index = ctx->scene_library.retained_scenes.selected_index;
+    }
+    if (retained_scene_index < 0 ||
+        retained_scene_index >= ctx->scene_library.retained_scenes.count) {
+        retained_scene_index = 0;
+    }
+
+    entry = &ctx->scene_library.retained_scenes.entries[retained_scene_index];
+    cfg_copy = *ctx->cfg;
+    projected = ctx->preset_output ? *ctx->preset_output : ctx->preview_preset;
+    if (!runtime_scene_bridge_apply_file(entry->source_path,
+                                         &cfg_copy,
+                                         &projected,
+                                         &summary)) {
+        menu_set_status(ctx, summary.diagnostics[0] ? summary.diagnostics : "Failed to open retained scene.", true);
+        return false;
+    }
+    runtime_scene_bridge_get_last_retained_scene(&retained);
+    if (!retained.valid_contract) {
+        menu_set_status(ctx,
+                        retained.diagnostics[0] ? retained.diagnostics : "Retained scene contract invalid.",
+                        true);
+        return false;
+    }
+
+    ctx->selection->retained_scene_index = retained_scene_index;
+    ctx->scene_library.retained_scenes.selected_index = retained_scene_index;
+    ctx->preview_preset = projected;
+    ctx->active_preset = &ctx->preview_preset;
+    memset(&ctx->editor_bootstrap, 0, sizeof(ctx->editor_bootstrap));
+    ctx->editor_bootstrap.has_retained_scene = true;
+    ctx->editor_bootstrap.retained_scene = retained;
+    snprintf(ctx->editor_bootstrap.retained_runtime_scene_path,
+             sizeof(ctx->editor_bootstrap.retained_runtime_scene_path),
+             "%s",
+             entry->source_path);
+    snprintf(ctx->retained_runtime_scene_path,
+             sizeof(ctx->retained_runtime_scene_path),
+             "%s",
+             entry->source_path);
+    menu_refresh_scene_library(ctx);
+    return true;
 }
 
 void menu_ensure_slot_for_mode(SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->library) return;
+    if (menu_showing_retained_catalog(ctx)) {
+        menu_refresh_scene_library(ctx);
+        if (ctx->scene_library.retained_scenes.count > 0) {
+            (void)menu_select_retained_scene(ctx, ctx->selection ? ctx->selection->retained_scene_index : -1);
+        }
+        return;
+    }
     if (menu_visible_slot_count(ctx) > 0) return;
     char default_name[CUSTOM_PRESET_NAME_MAX];
     int slot_count = preset_library_count(ctx->library);
@@ -394,6 +510,17 @@ void menu_switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode) {
     ctx->active_mode = normalized;
     if (ctx->cfg) ctx->cfg->sim_mode = normalized;
     if (ctx->selection) ctx->selection->sim_mode = normalized;
+    menu_refresh_scene_library(ctx);
+    if (menu_showing_retained_catalog(ctx)) {
+        (void)menu_select_retained_scene(ctx,
+                                         ctx->selection ? ctx->selection->retained_scene_index : -1);
+        scrollbar_set_offset(&ctx->scrollbar, 0.0f);
+        ctx->hover_slot = -1;
+        ctx->hover_retained_scene_index = -1;
+        ctx->hover_add_entry = false;
+        ctx->last_clicked_slot = -1;
+        return;
+    }
     menu_ensure_slot_for_mode(ctx);
     int preferred = -1;
     if (ctx->selection &&
@@ -403,6 +530,27 @@ void menu_switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode) {
     menu_select_custom(ctx, preferred);
     scrollbar_set_offset(&ctx->scrollbar, 0.0f);
     ctx->hover_slot = -1;
+    ctx->hover_retained_scene_index = -1;
+    ctx->hover_add_entry = false;
+    ctx->last_clicked_slot = -1;
+}
+
+void menu_switch_space_mode(SceneMenuInteraction *ctx, SpaceMode new_mode) {
+    SpaceMode normalized = menu_normalize_space_mode(new_mode);
+    if (!ctx || !ctx->cfg) return;
+    if (menu_normalize_space_mode(ctx->cfg->space_mode) == normalized) return;
+    ctx->cfg->space_mode = normalized;
+    menu_refresh_scene_library(ctx);
+    if (menu_showing_retained_catalog(ctx)) {
+        (void)menu_select_retained_scene(ctx,
+                                         ctx->selection ? ctx->selection->retained_scene_index : -1);
+    } else {
+        menu_ensure_slot_for_mode(ctx);
+        menu_select_custom(ctx, ctx->selection ? ctx->selection->custom_slot_index : -1);
+    }
+    scrollbar_set_offset(&ctx->scrollbar, 0.0f);
+    ctx->hover_slot = -1;
+    ctx->hover_retained_scene_index = -1;
     ctx->hover_add_entry = false;
     ctx->last_clicked_slot = -1;
 }

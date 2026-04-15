@@ -3,6 +3,7 @@
 #include "timer_hud/time_scope.h"
 #include "timer_hud/timer_hud_backend.h"
 #include "font_paths.h"
+#include "render/text_upload_policy.h"
 #include "render/renderer_sdl.h"
 #include "vk_renderer.h"
 
@@ -23,9 +24,11 @@ static const char* FONT_PATHS[] = {
 };
 
 static bool ensure_font_loaded(void) {
+    int point_size = 16;
     if (g_timer_hud_font) return true;
+    point_size = physics_sim_text_raster_point_size(g_timer_hud_renderer, 16, 8);
     for (size_t i = 0; i < sizeof(FONT_PATHS) / sizeof(FONT_PATHS[0]); ++i) {
-        g_timer_hud_font = TTF_OpenFont(FONT_PATHS[i], 16);
+        g_timer_hud_font = TTF_OpenFont(FONT_PATHS[i], point_size);
         if (g_timer_hud_font) return true;
     }
     fprintf(stderr, "[TimerHUD] Failed to load fallback font for HUD text.\n");
@@ -60,14 +63,20 @@ static int timer_hud_get_screen_size(int* out_w, int* out_h) {
 }
 
 static int timer_hud_measure_text(const char* text, int* out_w, int* out_h) {
+    int raster_w = 0;
+    int raster_h = 0;
     if (!text || !ensure_font_loaded()) return 0;
-    if (TTF_SizeUTF8(g_timer_hud_font, text, out_w, out_h) != 0) return 0;
+    if (TTF_SizeUTF8(g_timer_hud_font, text, &raster_w, &raster_h) != 0) return 0;
+    if (out_w) *out_w = physics_sim_text_logical_pixels(g_timer_hud_renderer, raster_w);
+    if (out_h) *out_h = physics_sim_text_logical_pixels(g_timer_hud_renderer, raster_h);
     return 1;
 }
 
 static int timer_hud_line_height(void) {
+    int raster_h = 0;
     if (!ensure_font_loaded()) return 0;
-    return TTF_FontHeight(g_timer_hud_font);
+    raster_h = TTF_FontHeight(g_timer_hud_font);
+    return physics_sim_text_logical_pixels(g_timer_hud_renderer, raster_h);
 }
 
 static void timer_hud_draw_rect(int x, int y, int w, int h, TimerHUDColor color) {
@@ -98,18 +107,20 @@ static void timer_hud_draw_text(const char* text, int x, int y, int align_flags,
                                                   (SDL_Color){color.r, color.g, color.b, color.a});
     if (!surface) return;
 
-    SDL_Rect dst = {x, y, surface->w, surface->h};
+    int logical_w = physics_sim_text_logical_pixels(g_timer_hud_renderer, surface->w);
+    int logical_h = physics_sim_text_logical_pixels(g_timer_hud_renderer, surface->h);
+    SDL_Rect dst = {x, y, logical_w, logical_h};
 
-    if (align_flags & TIMER_HUD_ALIGN_CENTER)  dst.x -= surface->w / 2;
-    if (align_flags & TIMER_HUD_ALIGN_RIGHT)   dst.x -= surface->w;
-    if (align_flags & TIMER_HUD_ALIGN_MIDDLE)  dst.y -= surface->h / 2;
-    if (align_flags & TIMER_HUD_ALIGN_BOTTOM)  dst.y -= surface->h;
+    if (align_flags & TIMER_HUD_ALIGN_CENTER)  dst.x -= logical_w / 2;
+    if (align_flags & TIMER_HUD_ALIGN_RIGHT)   dst.x -= logical_w;
+    if (align_flags & TIMER_HUD_ALIGN_MIDDLE)  dst.y -= logical_h / 2;
+    if (align_flags & TIMER_HUD_ALIGN_BOTTOM)  dst.y -= logical_h;
 
     VkRendererTexture texture = {0};
     if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer*)g_timer_hud_renderer,
                                                    surface,
                                                    &texture,
-                                                   VK_FILTER_LINEAR) == VK_SUCCESS) {
+                                                   physics_sim_text_upload_filter(g_timer_hud_renderer)) == VK_SUCCESS) {
         vk_renderer_draw_texture((VkRenderer*)g_timer_hud_renderer, &texture, NULL, &dst);
         vk_renderer_queue_texture_destroy((VkRenderer*)g_timer_hud_renderer, &texture);
     }
@@ -147,5 +158,12 @@ void timer_hud_register_backend(void) {
 }
 
 void timer_hud_bind_renderer(SDL_Renderer* renderer) {
+    if (g_timer_hud_renderer == renderer) {
+        return;
+    }
+    if (g_timer_hud_font) {
+        TTF_CloseFont(g_timer_hud_font);
+        g_timer_hud_font = NULL;
+    }
     g_timer_hud_renderer = renderer;
 }

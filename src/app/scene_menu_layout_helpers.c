@@ -5,16 +5,21 @@
 #include <stdio.h>
 #include <string.h>
 
-int scene_menu_font_height(TTF_Font *font, int fallback) {
+#include "render/text_upload_policy.h"
+
+int scene_menu_font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
     if (!font) return fallback;
     {
         int h = TTF_FontHeight(font);
-        if (h > 0) return h;
+        if (h > 0) {
+            return physics_sim_text_logical_pixels(renderer, h);
+        }
     }
     return fallback;
 }
 
-void scene_menu_fit_text_to_width(TTF_Font *font,
+void scene_menu_fit_text_to_width(SDL_Renderer *renderer,
+                                  TTF_Font *font,
                                   const char *text,
                                   int max_width,
                                   char *out,
@@ -26,7 +31,10 @@ void scene_menu_fit_text_to_width(TTF_Font *font,
     if (!text) return;
     snprintf(out, out_size, "%s", text);
     if (!font || max_width <= 0) return;
-    if (TTF_SizeUTF8(font, out, &w, NULL) == 0 && w <= max_width) return;
+    if (TTF_SizeUTF8(font, out, &w, NULL) == 0) {
+        w = physics_sim_text_logical_pixels(renderer, w);
+        if (w <= max_width) return;
+    }
 
     len = strlen(out);
     while (len > 0) {
@@ -35,9 +43,12 @@ void scene_menu_fit_text_to_width(TTF_Font *font,
         {
             char candidate[256];
             snprintf(candidate, sizeof(candidate), "%s...", out);
-            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0 && w <= max_width) {
-                snprintf(out, out_size, "%s", candidate);
-                return;
+            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0) {
+                w = physics_sim_text_logical_pixels(renderer, w);
+                if (w <= max_width) {
+                    snprintf(out, out_size, "%s", candidate);
+                    return;
+                }
             }
         }
     }
@@ -79,9 +90,9 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     int row_gap = 8;
     if (!ctx) return;
 
-    title_h = scene_menu_font_height(ctx->font_title, 32);
-    body_h = scene_menu_font_height(ctx->font, 22);
-    small_h = scene_menu_font_height(ctx->font_small ? ctx->font_small : ctx->font, 18);
+    title_h = scene_menu_font_height(ctx->renderer, ctx->font_title, 32);
+    body_h = scene_menu_font_height(ctx->renderer, ctx->font, 22);
+    small_h = scene_menu_font_height(ctx->renderer, ctx->font_small ? ctx->font_small : ctx->font, 18);
     control_h = body_h + 16;
     if (control_h < 38) control_h = 38;
     compact_h = small_h + 14;

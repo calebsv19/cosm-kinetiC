@@ -14,6 +14,27 @@ static const char *k_runtime_preset_path = "data/runtime/custom_preset.txt";
 static const char *k_default_shape_asset_dir = "config/objects";
 static const char *k_default_import_dir = "import";
 static const char *k_default_snapshot_dir = "data/snapshots";
+#ifdef PHYSICS_SIM_REPO_ROOT
+static const char *k_default_runtime_scene_sample_dir =
+    PHYSICS_SIM_REPO_ROOT "/config/samples";
+#else
+static const char *k_default_runtime_scene_sample_dir =
+    "config/samples";
+#endif
+#ifdef PHYSICS_SIM_REPO_ROOT
+static const char *k_default_runtime_scene_user_dir =
+    PHYSICS_SIM_REPO_ROOT "/data/runtime/scenes";
+#else
+static const char *k_default_runtime_scene_user_dir =
+    "data/runtime/scenes";
+#endif
+#ifdef PHYSICS_SIM_REPO_ROOT
+static const char *k_default_runtime_scene_visual_test_path =
+    PHYSICS_SIM_REPO_ROOT "/config/samples/ps4d_runtime_scene_visual_test.json";
+#else
+static const char *k_default_runtime_scene_visual_test_path =
+    "config/samples/ps4d_runtime_scene_visual_test.json";
+#endif
 
 static bool physics_sim_file_exists(const char *path) {
     FILE *f = NULL;
@@ -54,6 +75,18 @@ const char *physics_sim_default_import_dir(void) {
 
 const char *physics_sim_default_snapshot_dir(void) {
     return k_default_snapshot_dir;
+}
+
+const char *physics_sim_default_runtime_scene_sample_dir(void) {
+    return k_default_runtime_scene_sample_dir;
+}
+
+const char *physics_sim_default_runtime_scene_user_dir(void) {
+    return k_default_runtime_scene_user_dir;
+}
+
+const char *physics_sim_default_runtime_scene_visual_test_path(void) {
+    return k_default_runtime_scene_visual_test_path;
 }
 
 const char *physics_sim_resolve_config_load_path(void) {
@@ -152,6 +185,9 @@ bool physics_sim_ensure_runtime_dirs(void) {
         return false;
     }
     if (mkdir("data/runtime", 0755) != 0 && errno != EEXIST) {
+        return false;
+    }
+    if (mkdir("data/runtime/scenes", 0755) != 0 && errno != EEXIST) {
         return false;
     }
     if (mkdir("data/snapshots", 0755) != 0 && errno != EEXIST) {

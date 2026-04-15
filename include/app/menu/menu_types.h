@@ -6,13 +6,16 @@
 #include <stdbool.h>
 
 #include "app/scene_menu.h"
+#include "app/editor/scene_editor_scene_library.h"
 #include "input/input.h"
 #include "ui/text_input.h"
 #include "ui/scrollbar.h"
 #include "vk_renderer.h"
 
-#define MENU_WIDTH 1024
-#define MENU_HEIGHT 760
+#define MENU_WIDTH 1360
+#define MENU_HEIGHT 860
+#define MENU_MIN_WIDTH 1120
+#define MENU_MIN_HEIGHT 720
 #define PRESET_ROW_HEIGHT 60
 #define PRESET_LIST_WIDTH 360
 #define PRESET_LIST_MARGIN_X 40
@@ -38,6 +41,9 @@ typedef struct SceneMenuInteraction {
     FluidScenePreset *preset_output;
     FluidScenePreset preview_preset;
     FluidScenePreset *active_preset;
+    PhysicsSimEditorSceneLibrary scene_library;
+    SceneEditorBootstrap editor_bootstrap;
+    char retained_runtime_scene_path[512];
     SDL_Window *window;
     SDL_Renderer *renderer;
     VkRenderer renderer_storage;
@@ -75,6 +81,7 @@ typedef struct SceneMenuInteraction {
     ScrollBar scrollbar;
     bool scrollbar_dragging;
     int hover_slot;
+    int hover_retained_scene_index;
     bool hover_add_entry;
     int quality_index;
     bool headless_pending;

@@ -25,6 +25,8 @@ int menu_visible_slot_count(const SceneMenuInteraction *ctx);
 int menu_slot_index_from_visible_row(const SceneMenuInteraction *ctx, int row_index);
 int menu_visible_row_from_slot(const SceneMenuInteraction *ctx, int slot_index);
 bool menu_slot_matches_current_mode(const SceneMenuInteraction *ctx, int slot_index);
+bool menu_showing_retained_catalog(const SceneMenuInteraction *ctx);
+int menu_visible_entry_count(const SceneMenuInteraction *ctx);
 float menu_preset_total_height(const SceneMenuInteraction *ctx);
 
 int menu_preset_index_from_point(SceneMenuInteraction *ctx,
@@ -38,8 +40,11 @@ bool menu_preset_row_rect(SceneMenuInteraction *ctx,
 SDL_Rect menu_preset_delete_button_rect(const SDL_Rect *row_rect);
 
 void menu_select_custom(SceneMenuInteraction *ctx, int slot_index);
+bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_index);
+void menu_refresh_scene_library(SceneMenuInteraction *ctx);
 void menu_ensure_slot_for_mode(SceneMenuInteraction *ctx);
 void menu_switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode);
+void menu_switch_space_mode(SceneMenuInteraction *ctx, SpaceMode new_mode);
 void menu_scroll_to_row(SceneMenuInteraction *ctx, int row_index);
 void menu_scroll_to_slot(SceneMenuInteraction *ctx, int slot_index);
 void menu_add_new_preset(SceneMenuInteraction *ctx);

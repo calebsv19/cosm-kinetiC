@@ -272,6 +272,61 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         if (ctx->rename_input.active) {
             menu_finish_rename(ctx, true);
         }
+        if (menu_showing_retained_catalog(ctx)) {
+            FluidScenePreset target = ctx->active_preset ? *ctx->active_preset : ctx->preview_preset;
+            SceneEditorResult result = {0};
+            if (!ctx->editor_bootstrap.has_retained_scene) {
+                if (!menu_select_retained_scene(ctx,
+                                                ctx->selection ? ctx->selection->retained_scene_index : -1)) {
+                    return;
+                }
+                target = ctx->active_preset ? *ctx->active_preset : target;
+            }
+            if (scene_editor_run(ctx->window,
+                                 ctx->renderer,
+                                 ctx->font,
+                                 ctx->font_small,
+                                 ctx->cfg,
+                                 &target,
+                                 &ctx->editor_bootstrap,
+                                 &result,
+                                 ctx->context_mgr,
+                                 ctx->shape_library,
+                                 NULL,
+                                 0u)) {
+                ctx->preview_preset = target;
+                ctx->active_preset = &ctx->preview_preset;
+                if (result.has_retained_scene && result.retained_runtime_scene_path[0]) {
+                    snprintf(ctx->retained_runtime_scene_path,
+                             sizeof(ctx->retained_runtime_scene_path),
+                             "%s",
+                             result.retained_runtime_scene_path);
+                    snprintf(ctx->editor_bootstrap.retained_runtime_scene_path,
+                             sizeof(ctx->editor_bootstrap.retained_runtime_scene_path),
+                             "%s",
+                             result.retained_runtime_scene_path);
+                }
+                menu_refresh_scene_library(ctx);
+                if (menu_showing_retained_catalog(ctx)) {
+                    int retained_index =
+                        physics_sim_editor_scene_library_find_retained_index_by_path(&ctx->scene_library,
+                                                                                     ctx->retained_runtime_scene_path);
+                    if (retained_index < 0) {
+                        retained_index = ctx->scene_library.retained_scenes.selected_index;
+                    }
+                    if (retained_index >= 0) {
+                        (void)menu_select_retained_scene(ctx, retained_index);
+                    }
+                }
+            }
+            (void)menu_reload_fonts(ctx);
+            menu_update_scrollbar(ctx);
+            SDL_FlushEvent(SDL_MOUSEBUTTONDOWN);
+            SDL_FlushEvent(SDL_MOUSEBUTTONUP);
+            SDL_FlushEvent(SDL_MOUSEMOTION);
+            ctx->suppress_pointer_until_up = true;
+            return;
+        }
         CustomPresetSlot *slot = preset_library_get_slot(
             ctx->library, ctx->selection->custom_slot_index);
         if (!slot) return;
@@ -311,12 +366,16 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
             FluidScenePreset *target = &slot->preset;
             char *name_buffer = slot->name;
             size_t name_capacity = sizeof(slot->name);
+            SceneEditorBootstrap editor_bootstrap = {0};
+            SceneEditorResult result = {0};
             if (scene_editor_run(ctx->window,
                                  ctx->renderer,
                                  ctx->font,
                                  ctx->font_small,
                                  ctx->cfg,
                                  target,
+                                 &editor_bootstrap,
+                                 &result,
                                  ctx->context_mgr,
                                  ctx->shape_library,
                                  name_buffer,
@@ -385,7 +444,8 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
     if (menu_point_in_rect(x, y, &ctx->space_toggle_button.rect)) {
         if (ctx->cfg) {
             SpaceMode current = menu_normalize_space_mode(ctx->cfg->space_mode);
-            ctx->cfg->space_mode = (current == SPACE_MODE_2D) ? SPACE_MODE_3D : SPACE_MODE_2D;
+            menu_switch_space_mode(ctx, (current == SPACE_MODE_2D) ? SPACE_MODE_3D : SPACE_MODE_2D);
+            menu_update_scrollbar(ctx);
             menu_persist_runtime_config(ctx->cfg);
         }
         return;
@@ -413,6 +473,15 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
 
     if (is_add) {
         menu_add_new_preset(ctx);
+        return;
+    }
+
+    if (menu_showing_retained_catalog(ctx)) {
+        if (row < 0 || row >= ctx->scene_library.retained_scenes.count) return;
+        ctx->last_clicked_slot = -1;
+        ctx->last_click_ticks = now;
+        (void)menu_select_retained_scene(ctx, row);
+        menu_scroll_to_row(ctx, row);
         return;
     }
 
@@ -467,12 +536,19 @@ void menu_pointer_move(void *user, const InputPointerState *state) {
     }
     bool is_add = false;
     int row = menu_preset_index_from_point(ctx, state->x, state->y, &is_add);
-    int visible_count = menu_visible_slot_count(ctx);
+    int visible_count = menu_visible_entry_count(ctx);
     if (!is_add && row >= 0 && row < visible_count) {
-        ctx->hover_slot = menu_slot_index_from_visible_row(ctx, row);
+        if (menu_showing_retained_catalog(ctx)) {
+            ctx->hover_retained_scene_index = row;
+            ctx->hover_slot = -1;
+        } else {
+            ctx->hover_slot = menu_slot_index_from_visible_row(ctx, row);
+            ctx->hover_retained_scene_index = -1;
+        }
         ctx->hover_add_entry = false;
     } else {
         ctx->hover_slot = -1;
+        ctx->hover_retained_scene_index = -1;
         ctx->hover_add_entry = (is_add && row == visible_count);
     }
 }

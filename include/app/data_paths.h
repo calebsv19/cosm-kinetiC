@@ -12,6 +12,9 @@ const char *physics_sim_runtime_preset_path(void);
 const char *physics_sim_default_shape_asset_dir(void);
 const char *physics_sim_default_import_dir(void);
 const char *physics_sim_default_snapshot_dir(void);
+const char *physics_sim_default_runtime_scene_sample_dir(void);
+const char *physics_sim_default_runtime_scene_user_dir(void);
+const char *physics_sim_default_runtime_scene_visual_test_path(void);
 
 const char *physics_sim_resolve_config_load_path(void);
 const char *physics_sim_resolve_preset_load_path(void);

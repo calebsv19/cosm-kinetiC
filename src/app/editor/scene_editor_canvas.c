@@ -5,6 +5,7 @@
 #include "geo/shape_asset.h"
 #include "app/shape_lookup.h"
 #include "render/import_project.h"
+#include "render/text_upload_policy.h"
 #include "physics/math/math2d.h"
 #include "vk_renderer.h"
 
@@ -33,6 +34,12 @@ static void refresh_canvas_theme(void) {
 
 static void draw_circle(SDL_Renderer *renderer, int cx, int cy, int radius, SDL_Color color);
 static void draw_polyline(SDL_Renderer *renderer, const SDL_Point *pts, int count);
+static void scene_editor_canvas_draw_retained_object(SDL_Renderer *renderer,
+                                                     const SceneEditorState *state,
+                                                     const CoreSceneObjectContract *object,
+                                                     SDL_Color color);
+static SDL_Color retained_object_base_color(const CoreSceneObjectContract *object,
+                                            const PhysicsSimObjectOverlay *overlay);
 
 static inline float import_pos_to_unit_canvas(float pos, float span) {
     float min = 0.5f - span;
@@ -73,6 +80,25 @@ static SDL_Color lighten_color(SDL_Color color, float factor) {
     result.g = (Uint8)(color.g + (Uint8)((255 - color.g) * factor));
     result.b = (Uint8)(color.b + (Uint8)((255 - color.b) * factor));
     return result;
+}
+
+static SDL_Color retained_object_base_color(const CoreSceneObjectContract *object,
+                                            const PhysicsSimObjectOverlay *overlay) {
+    SDL_Color dynamic_color = {255, 184, 90, 255};
+    SDL_Color static_color = {96, 172, 255, 255};
+    SDL_Color color = dynamic_color;
+
+    if (overlay && overlay->motion_mode == PHYSICS_SIM_OVERLAY_MOTION_STATIC) {
+        color = static_color;
+    }
+    if (object && object->kind == CORE_SCENE_OBJECT_KIND_PLANE_PRIMITIVE) {
+        color = lighten_color(color, 0.12f);
+    } else if (object && object->kind == CORE_SCENE_OBJECT_KIND_RECT_PRISM_PRIMITIVE) {
+        color = lighten_color(color, 0.04f);
+    } else if (object) {
+        color = lighten_color(color, 0.08f);
+    }
+    return color;
 }
 
 static void draw_asset_outline(SDL_Renderer *renderer,
@@ -256,7 +282,8 @@ void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
                                          int canvas_h,
                                          bool preview_active,
                                          float preview_x_norm,
-                                         float preview_y_norm) {
+                                         float preview_y_norm,
+                                         bool draw_legacy_grid) {
     if (!renderer || canvas_w <= 0 || canvas_h <= 0) return;
     refresh_canvas_theme();
     SDL_Rect rect = {canvas_x, canvas_y, canvas_w, canvas_h};
@@ -267,26 +294,38 @@ void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
                            COLOR_CANVAS.a);
     SDL_RenderFillRect(renderer, &rect);
 
-    int grid_steps = 10;
-    if (grid_steps < 1) grid_steps = 1;
-    SDL_SetRenderDrawColor(renderer,
-                           COLOR_GRID_LINE.r,
-                           COLOR_GRID_LINE.g,
-                           COLOR_GRID_LINE.b,
-                           255);
-    for (int i = 1; i < grid_steps; ++i) {
-        int offset_x = (int)((float)canvas_w / (float)grid_steps * (float)i);
-        int offset_y = (int)((float)canvas_h / (float)grid_steps * (float)i);
-        SDL_RenderDrawLine(renderer,
-                           canvas_x + offset_x,
-                           canvas_y,
-                           canvas_x + offset_x,
-                           canvas_y + canvas_h);
-    SDL_RenderDrawLine(renderer,
-                       canvas_x,
-                       canvas_y + offset_y,
-                       canvas_x + canvas_w,
-                       canvas_y + offset_y);
+    if (draw_legacy_grid) {
+        int grid_steps = 10;
+        if (grid_steps < 1) grid_steps = 1;
+        SDL_SetRenderDrawColor(renderer,
+                               COLOR_GRID_LINE.r,
+                               COLOR_GRID_LINE.g,
+                               COLOR_GRID_LINE.b,
+                               255);
+        for (int i = 0; i <= grid_steps; ++i) {
+            float t = (float)i / (float)grid_steps;
+            int line_x = 0;
+            int line_y = 0;
+            scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
+                                        t, 0.0f, &line_x, &line_y);
+            if (line_x >= canvas_x && line_x <= canvas_x + canvas_w) {
+                SDL_RenderDrawLine(renderer,
+                                   line_x,
+                                   canvas_y,
+                                   line_x,
+                                   canvas_y + canvas_h);
+            }
+
+            scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
+                                        0.0f, t, &line_x, &line_y);
+            if (line_y >= canvas_y && line_y <= canvas_y + canvas_h) {
+                SDL_RenderDrawLine(renderer,
+                                   canvas_x,
+                                   line_y,
+                                   canvas_x + canvas_w,
+                                   line_y);
+            }
+        }
     }
 
     SDL_SetRenderDrawColor(renderer,
@@ -330,6 +369,248 @@ static void draw_polyline(SDL_Renderer *renderer, const SDL_Point *pts, int coun
         SDL_RenderDrawLine(renderer,
                            pts[i - 1].x, pts[i - 1].y,
                            pts[i].x, pts[i].y);
+    }
+}
+
+static SDL_Rect retained_viewport_rect(const SceneEditorState *state) {
+    SDL_Rect rect = {0};
+    if (!state) return rect;
+    rect = editor_active_viewport_rect(state);
+    if (rect.w <= 0 || rect.h <= 0) {
+        rect.x = state->canvas_x;
+        rect.y = state->canvas_y;
+        rect.w = state->canvas_width;
+        rect.h = state->canvas_height;
+    }
+    return rect;
+}
+
+static CoreObjectVec3 vec3_add_scaled(CoreObjectVec3 base,
+                                      CoreObjectVec3 axis,
+                                      double scale) {
+    CoreObjectVec3 result = base;
+    result.x += axis.x * scale;
+    result.y += axis.y * scale;
+    result.z += axis.z * scale;
+    return result;
+}
+
+static void draw_retained_segment(SDL_Renderer *renderer,
+                                  const SceneEditorState *state,
+                                  CoreObjectVec3 a,
+                                  CoreObjectVec3 b,
+                                  SDL_Color color) {
+    SDL_Rect rect = {0};
+    int ax = 0;
+    int ay = 0;
+    int bx = 0;
+    int by = 0;
+    if (!renderer || !state) return;
+    rect = retained_viewport_rect(state);
+    scene_editor_viewport_project_point3(&state->viewport,
+                                         rect.x,
+                                         rect.y,
+                                         rect.w,
+                                         rect.h,
+                                         (float)a.x,
+                                         (float)a.y,
+                                         (float)a.z,
+                                         &ax,
+                                         &ay);
+    scene_editor_viewport_project_point3(&state->viewport,
+                                         rect.x,
+                                         rect.y,
+                                         rect.w,
+                                         rect.h,
+                                         (float)b.x,
+                                         (float)b.y,
+                                         (float)b.z,
+                                         &bx,
+                                         &by);
+    draw_line(renderer, ax, ay, bx, by, color);
+}
+
+static void draw_retained_origin_axes(SDL_Renderer *renderer,
+                                      const SceneEditorState *state) {
+    CoreObjectVec3 origin = {0};
+    CoreObjectVec3 axis_x = {0};
+    CoreObjectVec3 axis_y = {0};
+    CoreObjectVec3 axis_z = {0};
+    float scene_dx = 0.0f;
+    float scene_dy = 0.0f;
+    float scene_dz = 0.0f;
+    float scene_span = 0.0f;
+    double axis_length = 1.0;
+    SDL_Color x_color = {232, 84, 79, 255};
+    SDL_Color y_color = {92, 194, 108, 255};
+    SDL_Color z_color = {84, 156, 255, 255};
+    SDL_Color origin_color = {236, 240, 245, 210};
+    SDL_Rect rect = {0};
+    int ox = 0;
+    int oy = 0;
+    if (!renderer || !state) return;
+
+    if (state->viewport.has_scene_bounds) {
+        scene_dx = fabsf(state->viewport.scene_max_x - state->viewport.scene_min_x);
+        scene_dy = fabsf(state->viewport.scene_max_y - state->viewport.scene_min_y);
+        scene_dz = fabsf(state->viewport.scene_max_z - state->viewport.scene_min_z);
+        scene_span = fmaxf(scene_dx, fmaxf(scene_dy, scene_dz));
+    }
+    if (scene_span > 0.001f) {
+        axis_length = (double)scene_span * 0.18;
+    }
+    if (axis_length < 0.75) axis_length = 0.75;
+    if (axis_length > 4.0) axis_length = 4.0;
+
+    axis_x.x = axis_length;
+    axis_y.y = axis_length;
+    axis_z.z = axis_length;
+
+    draw_retained_segment(renderer, state, origin, axis_x, x_color);
+    draw_retained_segment(renderer, state, origin, axis_y, y_color);
+    draw_retained_segment(renderer, state, origin, axis_z, z_color);
+
+    rect = retained_viewport_rect(state);
+    scene_editor_viewport_project_point3(&state->viewport,
+                                         rect.x,
+                                         rect.y,
+                                         rect.w,
+                                         rect.h,
+                                         0.0f,
+                                         0.0f,
+                                         0.0f,
+                                         &ox,
+                                         &oy);
+    draw_circle(renderer, ox, oy, 3, origin_color);
+}
+
+static void draw_retained_plane(SDL_Renderer *renderer,
+                                const SceneEditorState *state,
+                                const CoreScenePlanePrimitive *plane,
+                                SDL_Color color) {
+    CoreObjectVec3 origin = {0};
+    CoreObjectVec3 u_plus = {0};
+    CoreObjectVec3 u_minus = {0};
+    CoreObjectVec3 corners[4];
+    double half_width = 0.0;
+    double half_height = 0.0;
+    if (!renderer || !state || !plane) return;
+
+    half_width = plane->width * 0.5;
+    half_height = plane->height * 0.5;
+    origin = plane->frame.origin;
+    u_plus = vec3_add_scaled(origin, plane->frame.axis_u, half_width);
+    u_minus = vec3_add_scaled(origin, plane->frame.axis_u, -half_width);
+
+    corners[0] = vec3_add_scaled(u_minus, plane->frame.axis_v, -half_height);
+    corners[1] = vec3_add_scaled(u_plus, plane->frame.axis_v, -half_height);
+    corners[2] = vec3_add_scaled(u_plus, plane->frame.axis_v, half_height);
+    corners[3] = vec3_add_scaled(u_minus, plane->frame.axis_v, half_height);
+
+    draw_retained_segment(renderer, state, corners[0], corners[1], color);
+    draw_retained_segment(renderer, state, corners[1], corners[2], color);
+    draw_retained_segment(renderer, state, corners[2], corners[3], color);
+    draw_retained_segment(renderer, state, corners[3], corners[0], color);
+}
+
+static void draw_retained_prism(SDL_Renderer *renderer,
+                                const SceneEditorState *state,
+                                const CoreSceneRectPrismPrimitive *prism,
+                                SDL_Color color) {
+    CoreObjectVec3 corners[8];
+    CoreObjectVec3 base = prism->frame.origin;
+    double half_width = 0.0;
+    double half_height = 0.0;
+    double half_depth = 0.0;
+    int edges[12][2] = {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0},
+        {4, 5}, {5, 6}, {6, 7}, {7, 4},
+        {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    };
+    int i = 0;
+    if (!renderer || !state || !prism) return;
+
+    half_width = prism->width * 0.5;
+    half_height = prism->height * 0.5;
+    half_depth = prism->depth * 0.5;
+
+    corners[0] = vec3_add_scaled(vec3_add_scaled(vec3_add_scaled(base, prism->frame.axis_u, -half_width), prism->frame.axis_v, -half_height), prism->frame.normal, -half_depth);
+    corners[1] = vec3_add_scaled(vec3_add_scaled(vec3_add_scaled(base, prism->frame.axis_u, half_width), prism->frame.axis_v, -half_height), prism->frame.normal, -half_depth);
+    corners[2] = vec3_add_scaled(vec3_add_scaled(vec3_add_scaled(base, prism->frame.axis_u, half_width), prism->frame.axis_v, half_height), prism->frame.normal, -half_depth);
+    corners[3] = vec3_add_scaled(vec3_add_scaled(vec3_add_scaled(base, prism->frame.axis_u, -half_width), prism->frame.axis_v, half_height), prism->frame.normal, -half_depth);
+    corners[4] = vec3_add_scaled(vec3_add_scaled(vec3_add_scaled(base, prism->frame.axis_u, -half_width), prism->frame.axis_v, -half_height), prism->frame.normal, half_depth);
+    corners[5] = vec3_add_scaled(vec3_add_scaled(vec3_add_scaled(base, prism->frame.axis_u, half_width), prism->frame.axis_v, -half_height), prism->frame.normal, half_depth);
+    corners[6] = vec3_add_scaled(vec3_add_scaled(vec3_add_scaled(base, prism->frame.axis_u, half_width), prism->frame.axis_v, half_height), prism->frame.normal, half_depth);
+    corners[7] = vec3_add_scaled(vec3_add_scaled(vec3_add_scaled(base, prism->frame.axis_u, -half_width), prism->frame.axis_v, half_height), prism->frame.normal, half_depth);
+
+    for (i = 0; i < 12; ++i) {
+        draw_retained_segment(renderer, state, corners[edges[i][0]], corners[edges[i][1]], color);
+    }
+}
+
+static void scene_editor_canvas_draw_retained_object(SDL_Renderer *renderer,
+                                                     const SceneEditorState *state,
+                                                     const CoreSceneObjectContract *object,
+                                                     SDL_Color color) {
+    SDL_Rect rect = {0};
+    CoreObjectVec3 position = {0};
+    int x = 0;
+    int y = 0;
+    if (!renderer || !state || !object) return;
+    rect = retained_viewport_rect(state);
+
+    switch (object->kind) {
+        case CORE_SCENE_OBJECT_KIND_PLANE_PRIMITIVE:
+            if (object->has_plane_primitive) {
+                draw_retained_plane(renderer, state, &object->plane_primitive, color);
+            }
+            break;
+        case CORE_SCENE_OBJECT_KIND_RECT_PRISM_PRIMITIVE:
+            if (object->has_rect_prism_primitive) {
+                draw_retained_prism(renderer, state, &object->rect_prism_primitive, color);
+            }
+            break;
+        default:
+            position = object->object.transform.position;
+            scene_editor_viewport_project_point3(&state->viewport,
+                                                 rect.x,
+                                                 rect.y,
+                                                 rect.w,
+                                                 rect.h,
+                                                 (float)position.x,
+                                                 (float)position.y,
+                                                 (float)position.z,
+                                                 &x,
+                                                 &y);
+            draw_circle(renderer, x, y, 5, color);
+            break;
+    }
+}
+
+void scene_editor_canvas_draw_retained_scene(SDL_Renderer *renderer,
+                                             const SceneEditorState *state) {
+    int i = 0;
+    const PhysicsSimRetainedRuntimeScene *retained = NULL;
+    if (!renderer || !state) return;
+    if (!physics_sim_editor_session_has_retained_scene(&state->session)) return;
+
+    retained = &state->session.retained_scene;
+    if (state->viewport.requested_mode == SPACE_MODE_3D) {
+        draw_retained_origin_axes(renderer, state);
+    }
+    for (i = 0; i < retained->retained_object_count; ++i) {
+        const PhysicsSimObjectOverlay *overlay =
+            physics_sim_editor_session_object_overlay_at(&state->session, i);
+        SDL_Color color = retained_object_base_color(&retained->objects[i], overlay);
+        if (state->session.selection.retained_object_index == i) {
+            color = lighten_color(color, 0.28f);
+        } else {
+            color.a = 228;
+        }
+        scene_editor_canvas_draw_retained_object(renderer,
+                                                 state,
+                                                 &retained->objects[i],
+                                                 color);
     }
 }
 
@@ -674,16 +955,18 @@ void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
     for (int i = 0; i < line_count; ++i) {
         SDL_Surface *surf = surfaces[i];
         if (!surf) continue;
-        SDL_Rect dst = {rect.x + padding, y_cursor, surf->w, surf->h};
+        int logical_w = physics_sim_text_logical_pixels(renderer, surf->w);
+        int logical_h = physics_sim_text_logical_pixels(renderer, surf->h);
+        SDL_Rect dst = {rect.x + padding, y_cursor, logical_w, logical_h};
         VkRendererTexture tex = {0};
         if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
                                                        surf,
                                                        &tex,
-                                                       VK_FILTER_LINEAR) == VK_SUCCESS) {
+                                                       physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
             vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
             vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
         }
-        y_cursor += surf->h + spacing;
+        y_cursor += logical_h + spacing;
     }
 
     for (int i = 0; i < line_count; ++i) {
@@ -692,64 +975,57 @@ void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
 }
 
 void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
-                                   int canvas_x,
-                                   int canvas_y,
-                                   int canvas_w,
-                                   int canvas_h,
+                                   const SDL_Rect *rect,
                                    TTF_Font *font_main,
                                    TTF_Font *font_small,
                                    const char *name,
                                    bool renaming,
                                    const TextInputField *input) {
-    if (!renderer) return;
+    if (!renderer || !rect || rect->w <= 0 || rect->h <= 0) return;
     refresh_canvas_theme();
-    (void)canvas_h;
-    SDL_Rect rect = {
-        .x = canvas_x,
-        .y = canvas_y - 50,
-        .w = canvas_w,
-        .h = 36
-    };
-    if (rect.y < 20) rect.y = 20;
 
     if (renaming && input && font_main) {
         SDL_SetRenderDrawColor(renderer, COLOR_CANVAS.r, COLOR_CANVAS.g, COLOR_CANVAS.b, 240);
-        SDL_RenderFillRect(renderer, &rect);
+        SDL_RenderFillRect(renderer, rect);
         SDL_SetRenderDrawColor(renderer, COLOR_SELECTED.r, COLOR_SELECTED.g, COLOR_SELECTED.b, 255);
-        SDL_RenderDrawRect(renderer, &rect);
+        SDL_RenderDrawRect(renderer, rect);
         const char *text = text_input_value(input);
         SDL_Surface *surf = TTF_RenderUTF8_Blended(font_main, text, COLOR_TEXT);
         int text_w = 0;
         if (surf) {
-            text_w = surf->w;
-            SDL_Rect dst = {rect.x + 8, rect.y + rect.h / 2 - surf->h / 2,
-                            surf->w, surf->h};
+            int text_h = 0;
+            text_w = physics_sim_text_logical_pixels(renderer, surf->w);
+            text_h = physics_sim_text_logical_pixels(renderer, surf->h);
+            SDL_Rect dst = {rect->x + 8, rect->y + rect->h / 2 - text_h / 2,
+                            text_w, text_h};
             VkRendererTexture tex = {0};
             if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
                                                            surf,
                                                            &tex,
-                                                           VK_FILTER_LINEAR) == VK_SUCCESS) {
+                                                           physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
                 vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
                 vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
             }
             SDL_FreeSurface(surf);
         }
         if (input->caret_visible) {
-            int caret_x = rect.x + 8 + text_w + 2;
+            int caret_x = rect->x + 8 + text_w + 2;
             SDL_SetRenderDrawColor(renderer, COLOR_SELECTED.r, COLOR_SELECTED.g, COLOR_SELECTED.b, 255);
-            SDL_RenderDrawLine(renderer, caret_x, rect.y + 6,
-                               caret_x, rect.y + rect.h - 6);
+            SDL_RenderDrawLine(renderer, caret_x, rect->y + 6,
+                               caret_x, rect->y + rect->h - 6);
         }
     } else if (font_main) {
         const char *title = (name && name[0]) ? name : "Untitled Preset";
         SDL_Surface *surf = TTF_RenderUTF8_Blended(font_main, title, COLOR_TEXT);
         if (surf) {
-            SDL_Rect dst = {rect.x, rect.y, surf->w, surf->h};
+            int logical_w = physics_sim_text_logical_pixels(renderer, surf->w);
+            int logical_h = physics_sim_text_logical_pixels(renderer, surf->h);
+            SDL_Rect dst = {rect->x, rect->y, logical_w, logical_h};
             VkRendererTexture tex = {0};
             if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
                                                            surf,
                                                            &tex,
-                                                           VK_FILTER_LINEAR) == VK_SUCCESS) {
+                                                           physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
                 vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
                 vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
             }

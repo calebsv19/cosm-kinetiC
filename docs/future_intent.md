@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-04-10
+Last updated: 2026-04-13
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -106,6 +106,137 @@ Last updated: 2026-04-10
   - `TP-S5` complete:
     - fixture-driven round-trip interop checks landed across `ray_tracing` + `physics_sim`
     - nondestructive namespace-preservation behavior validated for both app overlays
+
+- consumer 3D backend rollout:
+  - `PS4D-0/1` complete:
+    - bridge now preserves additive retained runtime-scene state instead of collapsing immediately to preset/emitter lanes only
+    - retained scene currently includes canonical root/object/primitive metadata plus line-drawing `scene3d` root snapshot
+    - legacy `AppConfig` + `FluidScenePreset` mapping remains active as the downstream compatibility adapter
+    - focused retained primitive coverage added to `test-runtime-scene-bridge-contract`
+  - `PS4D-2A` slice 1 complete:
+    - scene editor now owns a first app-local editor-session seam above retained runtime-scene intake
+    - retained-scene bootstrap is explicit at `scene_editor_run(...)`
+    - legacy preset editing remains active as the compatibility adapter
+  - `PS4D-2A` slice 2 complete:
+    - editor selection mutation now routes through centralized selection helpers
+    - editor session mirrors legacy selection state in addition to retained-scene bootstrap state
+    - current editor UI shows a session-backed legacy selection summary so selection ownership is visible
+  - `PS4D-2B` slice 1 complete:
+    - editor shell now solves explicit left/center/right panes
+    - shared `core_pane` is adopted for pane geometry semantics
+    - current controls/list/inspector/save lanes are redistributed across the new shell without starting viewport camera behavior yet
+  - `PS4D-2C` slice 1 complete:
+    - center pane now owns a dedicated viewport-state contract
+    - 2D orthographic zoom/pan and 3D scaffold orbit/dolly state are explicit editor-owned behaviors
+    - viewport navigation is center-pane-only and no longer scattered across ad hoc canvas assumptions
+  - `PS4D-2D` slice 1 complete:
+    - center pane now renders retained canonical plane/prism primitives directly from editor-session scene truth
+    - bundled visual verification scene can now be opened through the retained-scene library seam in the editor
+    - retained-scene center-pane interaction is intentionally read-only in this slice
+  - `PS4D-R1` slice 1 complete:
+    - center pane now owns a dedicated viewport-surface rect above the legacy canvas compatibility lane
+    - retained-scene projection/rendering is routed through that surface
+    - clip/scissor is now enforced on the active renderer path so retained 3D wireframes stay inside the center viewport
+  - `PS4D-R2` slice 1 complete:
+    - center pane now owns explicit title/name/summary overlay bands above the viewport surface
+    - legacy 2D canvas layout now solves inside the viewport surface instead of reserving title/name space inside its own render area
+  - `PS4D-R3` host-window pre-step complete:
+    - the shared menu/editor window now opens larger by default and is resizable
+    - minimum-size guardrails are now active before projection/framing cleanup resumes
+  - `PS4D-R3` slice 1 complete:
+    - retained-scene bounds now use actual primitive geometry and framing now fits the active viewport surface dimensions
+    - retained-scene center/orbit behavior now stays aligned to framed scene bounds instead of drifting back toward the old normalized unit-space defaults
+  - `PS4D-R4` slice 1 complete:
+    - left/right panes now speak retained-scene truth at the basic list-and-inspector level
+    - retained object selection is now available from the left pane without relying on legacy preset object indices
+  - `PS4D-R5` slice 1 complete:
+    - retained-scene mode is now explicitly read-only in the current shell
+    - legacy mutation controls, shortcuts, and save/apply affordances are disabled while retained scene truth is active
+  - `PS4D-R5` slice 2 complete:
+    - retained-scene zoom-out/framing has more headroom for large scenes
+    - retained-scene hover/HUD response now respects the active viewport surface boundary
+  - `PS4D-R5` slice 3 complete:
+    - `Alt + mouse move` now provides orbit without requiring a held mouse button
+    - far zoom-out range is widened again for tiny full-scene inspection
+  - `PS4D-R5` slice 4 complete:
+    - retained 3D mode no longer reuses the old legacy hash-grid background
+    - world-origin `X/Y/Z` axis cues are now rendered inside the clipped viewport
+  - `PS4D-3` slice 1 complete:
+    - legacy solver-domain projection is now isolated in `src/import/runtime_scene_solver_projection.c`
+    - `runtime_scene_bridge` keeps retained-scene capture/validation ownership and dispatches the old preset/app mapping through that seam
+    - direct stable coverage now exists for the extracted mapping unit
+  - `PS4D-3` slice 2 complete:
+    - solver projection now prefers retained canonical plane/prism payloads when retained objects are available
+    - generic runtime-object scenes still map through a compatibility fallback when no retained canonical objects exist
+    - bridge contract coverage now asserts primitive-aware solver projection for retained fixture scenes
+  - `PS4D-4` slice 1 complete:
+    - editor session now owns a first app-local physics overlay model over retained objects
+    - overlay defaults are seeded from retained object flags and start with zero initial velocity
+    - inspector now exposes the selected retained object overlay in read-only form
+  - `PS4D-4` slice 2 complete:
+    - right-pane overlay controls now mutate motion mode and initial velocity for the selected retained object
+    - layout of the new controls is integrated into the existing pane/font sizing contract instead of overlapping prior inspector controls
+  - `PS4D-4` slice 3 complete:
+    - retained-scene mode now has an explicit `Apply Overlay` action backed by cached runtime-scene JSON + bridge writeback merge
+    - editor-session overlay JSON generation is now test-covered and produces `extensions.physics_sim` payloads keyed by retained `object_id`
+    - apply state/diagnostics are now visible in the right-pane summary instead of leaving overlay writeback implicit
+  - `PS4D-4` slice 4 complete:
+    - retained-scene viewport objects now color relative to local overlay motion mode (`Dynamic` vs `Static`)
+    - selection/highlight still dominates visually so state-coloring stays subordinate to direct selection cues
+  - `PS4D-4` slice 5 complete:
+    - applied `extensions.physics_sim.object_overlays` motion mode now affects the current solver/projection compatibility lane
+    - retained canonical-object projection and generic runtime-object fallback both honor overlay overrides by `object_id`
+    - `initial_velocity` remains deferred because the current legacy runtime path still has no honest per-object sink for it
+  - `PS4D-5A` slice 1 complete:
+    - the editor now owns a real app-local scene-library model split between 2D preset entries and retained 3D runtime-scene entries
+    - retained-scene discovery currently scans `physics_sim/config/samples/*.json`
+    - the retained-scene open affordance now routes through the selected catalog entry instead of a hardcoded fixture-only path
+  - `PS4D-5B` slice 1 complete:
+    - the top-level menu now splits `2D` custom presets vs retained `3D` runtime-scene entries by `space_mode`
+    - retained-scene row selection now prepares full editor bootstrap data before launch
+    - `Edit Preset` in `3D` mode now enters retained-scene editor state directly instead of requiring a second open action inside the editor
+    - the temporary in-editor retained-scene open button is removed so the editor no longer exposes a stale duplicate open path
+  - `PS4D-5C` slice 1 complete:
+    - retained-scene mode now separates `Apply Overlay` from true file persistence
+    - `Save Scene` writes retained runtime-scene JSON into `physics_sim/data/runtime/scenes`
+    - 3D scene-library discovery now includes both shipped samples and saved runtime scenes
+    - saved retained scenes can now re-enter the normal 3D catalog flow after save
+  - current shell polish:
+    - menu and scene-editor buttons now share visible hover feedback so active controls no longer read as inert dark panels
+  - `PS4D-UIR1` slice 1 complete:
+    - the right inspector now defaults to compact editing context instead of a long debug/scaffold summary
+    - apply/save messaging now lives in a dedicated status card with readable state coloring
+  - `PS4D-UIR2` slice 1 complete:
+    - selected-object read details now live in a left-pane info card instead of the right inspector
+    - the right inspector remains control/status focused instead of growing back into a detail dump
+  - `PS4D-UIR3` slice 1 complete:
+    - the selected-object info card now appears above the retained-scene object list for faster left-pane scanning
+    - overlay velocity controls are now compacted into horizontal `X/Y/Z` positive and negative rows plus centered reset
+  - `PS4D-5D` slice 1 complete:
+    - retained-scene editor closeout now hands the saved runtime-scene path back to the top-level menu
+    - the 3D catalog now prefers the saved runtime-scene entry over the shipped sample when both share the same `scene_id`
+    - open -> edit -> apply -> save -> reopen is now structurally closed for the current retained-scene scope
+  - `PS4D-SAVE1` slice 1 complete:
+    - retained-scene editor identity is now explicitly split between source path, current save path, editable name, and provenance `scene_id`
+    - retained naming/save-path rules are now direct-test-covered
+    - the stale duplicate retained-document seeding call is removed so provenance seeding happens only after retained root identity is known
+  - `PS4D-SAVE2` slice 1 complete:
+    - retained-scene save status now distinguishes first-save branching from later updates to an existing runtime-scene document
+    - pending save target is now surfaced after retained-scene load and retained-scene name edits
+    - save success/failure messaging now reports the actual target filename more clearly
+  - `PS4D-SAVE3` slice 1 complete:
+    - retained 3D scene-library rows are now path-keyed instead of collapsing primarily by `scene_id`
+    - saved runtime-scene rows and shipped sample rows can now coexist while active reopen still prefers the selected saved path
+  - `PS4D-SAVE4` slice 1 complete:
+    - menu/editor retained-scene return now reselects by exact saved path after editor close
+    - retained menu selection is resynchronized during library refresh instead of relying on stale retained row indexes
+  - `PS4D-SAVE5` slice 1 complete:
+    - saved retained-scene overlay state now hydrates back into a fresh editor session on reopen instead of falling back to seeded defaults
+    - reopen hydration restores persisted `motion_mode`, `initial_velocity`, and the `physics_sim` producer logical clock
+    - retained overlay mutation now clears `derived_defaults` before save so reopened scenes read as edited documents, not untouched scaffolds
+    - file-based round-trip validation now exists in `runtime_scene_bridge_contract_test`
+  - next:
+    - return to the deferred `PS4D-UIF0+` pane/layout cleanup phase on top of the now-stable retained-scene save/reopen flow
 
 - connection-pass lane:
   - completed:

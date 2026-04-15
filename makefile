@@ -77,6 +77,7 @@ WARN      := -Wall -Wextra -Wpedantic
 DEBUG     := -g
 
 CFLAGS    := $(CSTD) $(WARN) $(DEBUG) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools
+CFLAGS    += -DPHYSICS_SIM_REPO_ROOT=\"$(abspath .)\"
 LDFLAGS   :=
 LIBS      :=
 
@@ -195,10 +196,13 @@ CORE_DATA_DIR := ../shared/core/core_data
 CORE_PACK_DIR := ../shared/core/core_pack
 CORE_SCENE_DIR := ../shared/core/core_scene
 CORE_SCENE_COMPILE_DIR := ../shared/core/core_scene_compile
+CORE_OBJECT_DIR := ../shared/core/core_object
+CORE_UNITS_DIR := ../shared/core/core_units
+CORE_PANE_DIR := ../shared/core/core_pane
 CORE_TRACE_DIR := ../shared/core/core_trace
 CORE_THEME_DIR := ../shared/core/core_theme
 CORE_FONT_DIR := ../shared/core/core_font
-CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include
+CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include
 
 CORE_BASE_SRCS := $(CORE_BASE_DIR)/src/core_base.c
 CORE_IO_SRCS := $(CORE_IO_DIR)/src/core_io.c
@@ -206,6 +210,9 @@ CORE_DATA_SRCS := $(CORE_DATA_DIR)/src/core_data.c
 CORE_PACK_SRCS := $(CORE_PACK_DIR)/src/core_pack.c $(CORE_PACK_DIR)/src/core_pack_vf2d.c
 CORE_SCENE_SRCS := $(CORE_SCENE_DIR)/src/core_scene.c
 CORE_SCENE_COMPILE_SRCS := $(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c
+CORE_OBJECT_SRCS := $(CORE_OBJECT_DIR)/src/core_object.c
+CORE_UNITS_SRCS := $(CORE_UNITS_DIR)/src/core_units.c
+CORE_PANE_SRCS := $(CORE_PANE_DIR)/src/core_pane.c
 CORE_TRACE_SRCS := $(CORE_TRACE_DIR)/src/core_trace.c
 CORE_THEME_SRCS := $(CORE_THEME_DIR)/src/core_theme.c
 CORE_FONT_SRCS := $(CORE_FONT_DIR)/src/core_font.c
@@ -216,11 +223,14 @@ CORE_DATA_OBJS := $(patsubst $(CORE_DATA_DIR)/src/%.c,$(BUILD_DIR)/core_data/%.o
 CORE_PACK_OBJS := $(patsubst $(CORE_PACK_DIR)/src/%.c,$(BUILD_DIR)/core_pack/%.o,$(CORE_PACK_SRCS))
 CORE_SCENE_OBJS := $(patsubst $(CORE_SCENE_DIR)/src/%.c,$(BUILD_DIR)/core_scene/%.o,$(CORE_SCENE_SRCS))
 CORE_SCENE_COMPILE_OBJS := $(patsubst $(CORE_SCENE_COMPILE_DIR)/src/%.c,$(BUILD_DIR)/core_scene_compile/%.o,$(CORE_SCENE_COMPILE_SRCS))
+CORE_OBJECT_OBJS := $(patsubst $(CORE_OBJECT_DIR)/src/%.c,$(BUILD_DIR)/core_object/%.o,$(CORE_OBJECT_SRCS))
+CORE_UNITS_OBJS := $(patsubst $(CORE_UNITS_DIR)/src/%.c,$(BUILD_DIR)/core_units/%.o,$(CORE_UNITS_SRCS))
+CORE_PANE_OBJS := $(patsubst $(CORE_PANE_DIR)/src/%.c,$(BUILD_DIR)/core_pane/%.o,$(CORE_PANE_SRCS))
 CORE_TRACE_OBJS := $(patsubst $(CORE_TRACE_DIR)/src/%.c,$(BUILD_DIR)/core_trace/%.o,$(CORE_TRACE_SRCS))
 CORE_THEME_OBJS := $(patsubst $(CORE_THEME_DIR)/src/%.c,$(BUILD_DIR)/core_theme/%.o,$(CORE_THEME_SRCS))
 CORE_FONT_OBJS := $(patsubst $(CORE_FONT_DIR)/src/%.c,$(BUILD_DIR)/core_font/%.o,$(CORE_FONT_SRCS))
 KIT_VIZ_OBJS := $(patsubst $(KIT_VIZ_DIR)/src/%.c,$(BUILD_DIR)/kit_viz/%.o,$(KIT_VIZ_SRCS))
-OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(KIT_VIZ_OBJS)
+OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_OBJECT_OBJS) $(CORE_UNITS_OBJS) $(CORE_PANE_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(KIT_VIZ_OBJS)
 DEPS := $(OBJS:.o=.d)
 CORE_PACK_TOOL_SRCS := \
 	$(VF2D_PACK_TOOL_SRC) \
@@ -228,8 +238,10 @@ CORE_PACK_TOOL_SRCS := \
 	$(CORE_PACK_DIR)/src/core_pack_vf2d.c \
 	$(CORE_IO_DIR)/src/core_io.c \
 	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c
-CORE_PACK_TOOL_INCS := -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include
+CORE_PACK_TOOL_INCS := -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include
 VF2D_DATASET_TOOL_SRCS := \
 	$(VF2D_DATASET_TOOL_SRC) \
 	$(SRC_DIR)/export/volume_frames.c \
@@ -239,9 +251,11 @@ VF2D_DATASET_TOOL_SRCS := \
 	$(CORE_PACK_DIR)/src/core_pack_vf2d.c \
 	$(CORE_IO_DIR)/src/core_io.c \
 	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(TIMER_HUD_DIR)/external/cJSON.c
-VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(TIMER_HUD_DIR)/external $(SDL_CFLAGS)
+VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(TIMER_HUD_DIR)/external $(SDL_CFLAGS)
 ifeq ($(UNAME_S),Darwin)
 VF2D_DATASET_TOOL_INCS += -I/opt/homebrew/include -D_THREAD_SAFE
 endif
@@ -251,9 +265,11 @@ PHYSICS_TRACE_TOOL_SRCS := \
 	$(CORE_PACK_DIR)/src/core_pack.c \
 	$(CORE_IO_DIR)/src/core_io.c \
 	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(TIMER_HUD_DIR)/external/cJSON.c
-PHYSICS_TRACE_TOOL_INCS := -I$(CORE_TRACE_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(TIMER_HUD_DIR)/external
+PHYSICS_TRACE_TOOL_INCS := -I$(CORE_TRACE_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(TIMER_HUD_DIR)/external
 
 # Shared ShapeLib/import pieces reused by the CLI
 SHAPE_SHARED_SRCS := \
@@ -275,13 +291,18 @@ STABLE_TEST_TARGETS := \
 	test-kitviz-field-adapter \
 	test-sim-mode-route-contract \
 	test-preset-io-dimensional-contract \
+	test-scene-editor-retained-document-contract \
+	test-scene-editor-scene-library-contract \
+	test-scene-editor-pane-host-contract \
+	test-scene-editor-viewport-contract \
+	test-runtime-scene-solver-projection-contract \
 	test-runtime-scene-bridge-contract \
 	test-structural-runtime-split-contract
 
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -333,18 +354,49 @@ SIM_MODE_ROUTE_CONTRACT_TEST_SRCS := \
 RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	tests/runtime_scene_bridge_contract_test.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
+	$(SRC_DIR)/app/editor/scene_editor_session.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
+	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_IO_DIR)/src/core_io.c \
 	$(CORE_BASE_DIR)/src/core_base.c
+
+RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS := \
+	tests/runtime_scene_solver_projection_contract_test.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
+	$(SRC_DIR)/app/scene_presets.c
 
 STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS := \
 	tests/structural_runtime_split_contract_test.c \
 	$(SRC_DIR)/app/structural/structural_controller_runtime.c \
 	$(SRC_DIR)/physics/structural/structural_scene.c \
 	$(SRC_DIR)/physics/structural/structural_solver.c
+
+SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS := \
+	tests/scene_editor_scene_library_contract_test.c \
+	$(SRC_DIR)/app/editor/scene_editor_scene_library.c \
+	$(SRC_DIR)/app/data_paths.c \
+	$(SRC_DIR)/app/scene_presets.c
+
+SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS := \
+	tests/scene_editor_retained_document_contract_test.c \
+	$(SRC_DIR)/app/editor/scene_editor_retained_document.c
+
+SCENE_EDITOR_PANE_HOST_TEST_SRCS := \
+	tests/scene_editor_pane_host_contract_test.c \
+	$(SRC_DIR)/app/editor/scene_editor_pane_host.c \
+	$(CORE_PANE_DIR)/src/core_pane.c
+
+SCENE_EDITOR_VIEWPORT_TEST_SRCS := \
+	tests/scene_editor_viewport_contract_test.c \
+	$(SRC_DIR)/app/editor/scene_editor_viewport.c
 
 ifeq ($(UNAME_S),Darwin)
 STRUCTURAL_RUNTIME_SPLIT_TEST_PLATFORM_CFLAGS := -I/opt/homebrew/include -D_THREAD_SAFE
@@ -366,11 +418,50 @@ test-preset-io-dimensional-contract: $(PRESET_IO_DIMENSIONAL_TEST_SRCS)
 		-o $(BUILD_DIR)/preset_io_dimensional_contract_test $(PRESET_IO_DIMENSIONAL_TEST_SRCS) -lm
 	$(BUILD_DIR)/preset_io_dimensional_contract_test
 
+test-scene-editor-retained-document-contract: $(SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/scene_editor_retained_document_contract_test $(SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS) -lm
+	$(BUILD_DIR)/scene_editor_retained_document_contract_test
+
+test-scene-editor-scene-library-contract: $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/scene_editor_scene_library_contract_test $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS) -lm
+	$(BUILD_DIR)/scene_editor_scene_library_contract_test
+
+test-scene-editor-pane-host-contract: $(SCENE_EDITOR_PANE_HOST_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_PANE_DIR)/include \
+		-o $(BUILD_DIR)/scene_editor_pane_host_contract_test $(SCENE_EDITOR_PANE_HOST_TEST_SRCS) -lm
+	$(BUILD_DIR)/scene_editor_pane_host_contract_test
+
+test-scene-editor-viewport-contract: $(SCENE_EDITOR_VIEWPORT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/scene_editor_viewport_contract_test $(SCENE_EDITOR_VIEWPORT_TEST_SRCS) -lm
+	$(BUILD_DIR)/scene_editor_viewport_contract_test
+
+test-runtime-scene-solver-projection-contract: $(RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I/opt/homebrew/Cellar/json-c/0.18/include -I/opt/homebrew/Cellar/json-c/0.18/include/json-c \
+		-o $(BUILD_DIR)/runtime_scene_solver_projection_contract_test $(RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS) $(JSON_LIBS) -lm
+	$(BUILD_DIR)/runtime_scene_solver_projection_contract_test
+
 test-runtime-scene-bridge-contract: $(RUNTIME_SCENE_BRIDGE_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
 		-I$(INC_DIR) -I$(SRC_DIR) \
-		-I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include \
+		-I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include \
+		-I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include \
 		$(JSON_CFLAGS) \
 		-o $(BUILD_DIR)/runtime_scene_bridge_contract_test $(RUNTIME_SCENE_BRIDGE_TEST_SRCS) $(JSON_LIBS) -lm
 	$(BUILD_DIR)/runtime_scene_bridge_contract_test
@@ -473,6 +564,18 @@ $(BUILD_DIR)/core_scene/%.o: $(CORE_SCENE_DIR)/src/%.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/core_scene_compile/%.o: $(CORE_SCENE_COMPILE_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/core_object/%.o: $(CORE_OBJECT_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/core_units/%.o: $(CORE_UNITS_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/core_pane/%.o: $(CORE_PANE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 

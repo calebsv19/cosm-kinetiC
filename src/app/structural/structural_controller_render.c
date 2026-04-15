@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "app/structural/structural_render.h"
+#include "render/text_upload_policy.h"
 #include "vk_renderer.h"
 
 static void render_text(SDL_Renderer *renderer, TTF_Font *font,
@@ -14,12 +15,17 @@ static void render_text(SDL_Renderer *renderer, TTF_Font *font,
         SDL_Surface *surface = TTF_RenderUTF8_Blended(font, text, color);
         if (!surface) return;
         {
-            SDL_Rect dst = {x, y, surface->w, surface->h};
+            SDL_Rect dst = {
+                x,
+                y,
+                physics_sim_text_logical_pixels(renderer, surface->w),
+                physics_sim_text_logical_pixels(renderer, surface->h)
+            };
             VkRendererTexture texture = {0};
             if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
                                                            surface,
                                                            &texture,
-                                                           VK_FILTER_LINEAR) == VK_SUCCESS) {
+                                                           physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
                 vk_renderer_draw_texture((VkRenderer *)renderer, &texture, NULL, &dst);
                 vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &texture);
             }
@@ -41,6 +47,14 @@ static bool render_hud_line_limited(SDL_Renderer *renderer,
     render_text(renderer, font, x, *y, color, text);
     *y += step;
     return true;
+}
+
+static int structural_font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
+    int font_h = 0;
+    if (!font) return fallback;
+    font_h = TTF_FontHeight(font);
+    if (font_h <= 0) return fallback;
+    return physics_sim_text_logical_pixels(renderer, font_h);
 }
 
 static void draw_circle(SDL_Renderer *renderer, float cx, float cy, float radius) {
@@ -527,7 +541,7 @@ void structural_controller_render_scene(SDL_Renderer *renderer, StructuralContro
             int hud_y = 16;
             if (ctrl->font_hud) {
                 int hud_limit_y = (ctrl->window_h > 0) ? (ctrl->window_h - 20) : 1000000;
-                int hud_line_step = TTF_FontHeight(ctrl->font_hud) + 4;
+                int hud_line_step = structural_font_height(renderer, ctrl->font_hud, 14) + 4;
                 char line[128];
                 if (hud_line_step < 18) hud_line_step = 18;
                 snprintf(line, sizeof(line), "Mode: Structural");
@@ -604,7 +618,7 @@ void structural_controller_render_scene(SDL_Renderer *renderer, StructuralContro
                 char line[160];
                 int tx = ctrl->pointer_x + 12;
                 int ty = ctrl->pointer_y + 12;
-                int tip_line_step = TTF_FontHeight(ctrl->font_small) + 2;
+                int tip_line_step = structural_font_height(renderer, ctrl->font_small, 14) + 2;
                 int line_w1 = 0;
                 int line_w2 = 0;
                 int line_w3 = 0;
@@ -616,15 +630,27 @@ void structural_controller_render_scene(SDL_Renderer *renderer, StructuralContro
                     SDL_Color dim = {180, 190, 200, 255};
                     snprintf(line, sizeof(line), "Edge %d (A %d, B %d)",
                              best_edge->id, best_a->id, best_b->id);
-                    if (TTF_SizeUTF8(ctrl->font_small, line, &line_w1, NULL) != 0) line_w1 = 0;
+                    if (TTF_SizeUTF8(ctrl->font_small, line, &line_w1, NULL) != 0) {
+                        line_w1 = 0;
+                    } else {
+                        line_w1 = physics_sim_text_logical_pixels(renderer, line_w1);
+                    }
                     snprintf(line, sizeof(line), "Axial: %.3f  Shear: %.3f",
                              best_edge->axial_stress,
                              0.5f * (best_edge->shear_force_a + best_edge->shear_force_b));
-                    if (TTF_SizeUTF8(ctrl->font_small, line, &line_w2, NULL) != 0) line_w2 = 0;
+                    if (TTF_SizeUTF8(ctrl->font_small, line, &line_w2, NULL) != 0) {
+                        line_w2 = 0;
+                    } else {
+                        line_w2 = physics_sim_text_logical_pixels(renderer, line_w2);
+                    }
                     snprintf(line, sizeof(line), "Moment A: %.3f  B: %.3f",
                              best_edge->bending_moment_a,
                              best_edge->bending_moment_b);
-                    if (TTF_SizeUTF8(ctrl->font_small, line, &line_w3, NULL) != 0) line_w3 = 0;
+                    if (TTF_SizeUTF8(ctrl->font_small, line, &line_w3, NULL) != 0) {
+                        line_w3 = 0;
+                    } else {
+                        line_w3 = physics_sim_text_logical_pixels(renderer, line_w3);
+                    }
                     max_w = line_w1;
                     if (line_w2 > max_w) max_w = line_w2;
                     if (line_w3 > max_w) max_w = line_w3;

@@ -51,5 +51,7 @@ SDL_Color menu_color_panel(void);
 SDL_Color menu_color_text(void);
 SDL_Color menu_color_text_dim(void);
 SDL_Color menu_color_accent(void);
+SDL_Color menu_color_button_bg(void);
+SDL_Color menu_color_button_bg_active(void);
 
 #endif

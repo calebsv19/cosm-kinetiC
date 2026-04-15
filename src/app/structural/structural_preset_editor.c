@@ -15,6 +15,7 @@
 #include "input/input.h"
 #include "physics/structural/structural_scene.h"
 #include "physics/structural/structural_solver.h"
+#include "render/text_upload_policy.h"
 #include "vk_renderer.h"
 #include "render/vk_shared_device.h"
 
@@ -67,9 +68,15 @@ static void update_layout(StructuralPresetEditor *editor) {
     int margin = 16;
     if (editor->font_small) {
         small_h = TTF_FontHeight(editor->font_small);
+        if (small_h > 0) {
+            small_h = physics_sim_text_logical_pixels(editor->renderer, small_h);
+        }
     }
     if (editor->font_main) {
         main_h = TTF_FontHeight(editor->font_main);
+        if (main_h > 0) {
+            main_h = physics_sim_text_logical_pixels(editor->renderer, main_h);
+        }
     }
     if (small_h < 14) small_h = 14;
     if (main_h < 18) main_h = 18;

@@ -167,8 +167,7 @@ bool scene_editor_input_add_import_from_picker(SceneEditorState *state, int row)
         imp->friction = 0.2f;
         imp->is_static = true;
         imp->enabled = true;
-        state->selected_row = (int)state->working.import_shape_count - 1;
-        state->selection_kind = SELECTION_IMPORT;
+        scene_editor_select_import(state, (int)state->working.import_shape_count - 1);
         fprintf(stderr, "[editor] Added import row %zu: %s\n",
                 state->working.import_shape_count - 1, store_path);
         resolve_import_shape_id(state, imp);
@@ -200,5 +199,6 @@ void scene_editor_input_remove_import_at(SceneEditorState *state, int index) {
     if (state->selected_row >= (int)state->working.import_shape_count) {
         state->selected_row = (int)state->working.import_shape_count - 1;
     }
+    scene_editor_sync_selection_session(state);
     set_dirty(state);
 }

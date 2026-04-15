@@ -14,6 +14,51 @@ static NumericField *current_field(SceneEditorState *state) {
 
 static void normalize_direction(FluidEmitter *em);
 
+void scene_editor_sync_selection_session(SceneEditorState *state) {
+    if (!state) return;
+    physics_sim_editor_session_set_legacy_selection(&state->session,
+                                                    state->selection_kind,
+                                                    state->selected_emitter,
+                                                    state->selected_object,
+                                                    state->selected_row);
+}
+
+void scene_editor_set_selection(SceneEditorState *state,
+                                EditorSelectionKind kind,
+                                int emitter_index,
+                                int object_index,
+                                int import_index) {
+    if (!state) return;
+    state->selection_kind = kind;
+    state->selected_emitter = emitter_index;
+    state->selected_object = object_index;
+    state->selected_row = import_index;
+    scene_editor_sync_selection_session(state);
+}
+
+void scene_editor_select_none(SceneEditorState *state) {
+    scene_editor_set_selection(state, SELECTION_NONE, -1, -1, -1);
+}
+
+void scene_editor_select_emitter(SceneEditorState *state,
+                                 int emitter_index,
+                                 int object_index,
+                                 int import_index) {
+    scene_editor_set_selection(state,
+                               SELECTION_EMITTER,
+                               emitter_index,
+                               object_index,
+                               import_index);
+}
+
+void scene_editor_select_object(SceneEditorState *state, int object_index) {
+    scene_editor_set_selection(state, SELECTION_OBJECT, -1, object_index, -1);
+}
+
+void scene_editor_select_import(SceneEditorState *state, int import_index) {
+    scene_editor_set_selection(state, SELECTION_IMPORT, -1, -1, import_index);
+}
+
 void adjust_emitter_radius(FluidEmitter *em, float scale) {
     if (!em) return;
     float new_radius = em->radius * scale;
@@ -392,6 +437,7 @@ void remove_emitter_at(SceneEditorState *state, int em_idx) {
         state->selected_emitter--;
         if (state->selected_emitter < 0) state->selected_emitter = -1;
     }
+    scene_editor_sync_selection_session(state);
 }
 
 int ensure_emitter_for_object(SceneEditorState *state,
@@ -513,13 +559,14 @@ void add_emitter(SceneEditorState *state, FluidEmitterType type) {
         break;
     }
     state->working.emitters[state->working.emitter_count] = emitter;
-    state->selected_emitter = (int)state->working.emitter_count;
     state->emitter_object_map[state->working.emitter_count] = -1;
     state->emitter_import_map[state->working.emitter_count] = -1;
-    state->working.emitter_count++;
-    normalize_direction(&state->working.emitters[state->selected_emitter]);
-    state->selection_kind = SELECTION_EMITTER;
-    state->selected_object = -1;
+    {
+        int selected_emitter = (int)state->working.emitter_count;
+        state->working.emitter_count++;
+        normalize_direction(&state->working.emitters[selected_emitter]);
+        scene_editor_select_emitter(state, selected_emitter, -1, -1);
+    }
     set_dirty(state);
 }
 
@@ -539,14 +586,14 @@ void remove_selected(SceneEditorState *state) {
     cancel_field_edit(state);
     set_dirty(state);
     if (state->working.emitter_count > 0) {
-        state->selection_kind = SELECTION_EMITTER;
+        scene_editor_select_emitter(state, state->selected_emitter, state->selected_object, state->selected_row);
     } else if (state->working.object_count > 0) {
-        state->selection_kind = SELECTION_OBJECT;
         if (state->selected_object < 0) {
             state->selected_object = 0;
         }
+        scene_editor_select_object(state, state->selected_object);
     } else {
-        state->selection_kind = SELECTION_NONE;
+        scene_editor_select_none(state);
     }
 }
 
@@ -565,14 +612,17 @@ void remove_selected_object(SceneEditorState *state) {
         state->working.object_count--;
     }
     if (state->working.object_count == 0) {
-        state->selected_object = -1;
-        state->selection_kind = SELECTION_NONE;
         if (state->working.emitter_count > 0) {
-            state->selection_kind = SELECTION_EMITTER;
             if (state->selected_emitter < 0) state->selected_emitter = 0;
+            scene_editor_select_emitter(state, state->selected_emitter, -1, -1);
+        } else {
+            scene_editor_select_none(state);
         }
     } else if (state->selected_object >= (int)state->working.object_count) {
         state->selected_object = (int)state->working.object_count - 1;
+        scene_editor_select_object(state, state->selected_object);
+    } else {
+        scene_editor_sync_selection_session(state);
     }
     state->dragging_object = false;
     state->dragging_object_handle = false;

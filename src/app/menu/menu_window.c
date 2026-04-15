@@ -3,6 +3,7 @@
 #include "app/menu/menu_render.h"
 #include "app/menu/shared_theme_font_adapter.h"
 #include "font_paths.h"
+#include "render/text_upload_policy.h"
 #include <SDL2/SDL_vulkan.h>
 #include <stdio.h>
 
@@ -13,6 +14,14 @@ static int menu_scaled_font_size(const SceneMenuInteraction *ctx,
                                  int min_point_size) {
     const AppConfig *cfg = (ctx && ctx->cfg) ? ctx->cfg : NULL;
     return app_config_scale_text_point_size(cfg, base_point_size, min_point_size);
+}
+
+static int menu_rasterized_font_size(const SceneMenuInteraction *ctx,
+                                     int base_point_size,
+                                     int min_point_size) {
+    int scaled_point_size = menu_scaled_font_size(ctx, base_point_size, min_point_size);
+    SDL_Renderer *renderer = (ctx && ctx->renderer) ? ctx->renderer : NULL;
+    return physics_sim_text_raster_point_size(renderer, scaled_point_size, min_point_size);
 }
 
 static void menu_close_fonts(SceneMenuInteraction *ctx) {
@@ -44,12 +53,12 @@ static bool menu_open_fonts_resolved(const SceneMenuInteraction *ctx,
         char shared_path[256];
         int shared_size = 32;
         if (physics_sim_shared_font_resolve_menu_title(shared_path, sizeof(shared_path), &shared_size)) {
-            shared_size = menu_scaled_font_size(ctx, shared_size, 8);
+            shared_size = menu_rasterized_font_size(ctx, shared_size, 8);
             font_title = TTF_OpenFont(shared_path, shared_size);
         }
     }
     if (!font_title) {
-        int fallback_size = menu_scaled_font_size(ctx, 32, 8);
+        int fallback_size = menu_rasterized_font_size(ctx, 32, 8);
         font_title = TTF_OpenFont(FONT_TITLE_PATH_1, fallback_size);
         if (!font_title) {
             font_title = TTF_OpenFont(FONT_TITLE_PATH_2, fallback_size);
@@ -63,12 +72,12 @@ static bool menu_open_fonts_resolved(const SceneMenuInteraction *ctx,
         char shared_path[256];
         int shared_size = 22;
         if (physics_sim_shared_font_resolve_menu_body(shared_path, sizeof(shared_path), &shared_size)) {
-            shared_size = menu_scaled_font_size(ctx, shared_size, 6);
+            shared_size = menu_rasterized_font_size(ctx, shared_size, 6);
             font_body = TTF_OpenFont(shared_path, shared_size);
         }
     }
     if (!font_body) {
-        int fallback_size = menu_scaled_font_size(ctx, 22, 6);
+        int fallback_size = menu_rasterized_font_size(ctx, 22, 6);
         font_body = TTF_OpenFont(FONT_BODY_PATH_1, fallback_size);
         if (!font_body) {
             font_body = TTF_OpenFont(FONT_BODY_PATH_2, fallback_size);
@@ -82,12 +91,12 @@ static bool menu_open_fonts_resolved(const SceneMenuInteraction *ctx,
         char shared_path[256];
         int shared_size = 18;
         if (physics_sim_shared_font_resolve_menu_small(shared_path, sizeof(shared_path), &shared_size)) {
-            shared_size = menu_scaled_font_size(ctx, shared_size, 6);
+            shared_size = menu_rasterized_font_size(ctx, shared_size, 6);
             font_small = TTF_OpenFont(shared_path, shared_size);
         }
     }
     if (!font_small) {
-        int fallback_size = menu_scaled_font_size(ctx, 18, 6);
+        int fallback_size = menu_rasterized_font_size(ctx, 18, 6);
         font_small = TTF_OpenFont(FONT_BODY_PATH_1, fallback_size);
         if (!font_small) {
             font_small = TTF_OpenFont(FONT_BODY_PATH_2, fallback_size);
@@ -126,6 +135,8 @@ static bool menu_open_fonts(SceneMenuInteraction *ctx) {
 }
 
 bool menu_create_window(SceneMenuInteraction *ctx) {
+    int win_w = MENU_WIDTH;
+    int win_h = MENU_HEIGHT;
     if (!ctx) return false;
 
     physics_sim_shared_theme_load_persisted();
@@ -134,12 +145,15 @@ bool menu_create_window(SceneMenuInteraction *ctx) {
         "Physics Sim - Scene Editor",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         MENU_WIDTH, MENU_HEIGHT,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN
+        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
     );
     if (!window) {
         fprintf(stderr, "Failed to create menu window: %s\n", SDL_GetError());
         return false;
     }
+
+    SDL_SetWindowMinimumSize(window, MENU_MIN_WIDTH, MENU_MIN_HEIGHT);
+    SDL_GetWindowSize(window, &win_w, &win_h);
 
     ctx->window = window;
     ctx->renderer = (SDL_Renderer *)&ctx->renderer_storage;
@@ -178,7 +192,7 @@ bool menu_create_window(SceneMenuInteraction *ctx) {
         }
     }
 
-    vk_renderer_set_logical_size((VkRenderer *)ctx->renderer, (float)MENU_WIDTH, (float)MENU_HEIGHT);
+    vk_renderer_set_logical_size((VkRenderer *)ctx->renderer, (float)win_w, (float)win_h);
 
     {
         PhysicsSimMenuThemePalette shared_palette = {0};

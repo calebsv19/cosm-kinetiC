@@ -1,6 +1,7 @@
 #include "app/editor/scene_editor_input.h"
 #include "app/editor/scene_editor_internal.h"
 #include "app/editor/scene_editor_canvas.h"
+#include "app/editor/scene_editor_input_common.h"
 #include "app/editor/scene_editor_input_hit_helpers.h"
 #include "app/editor/scene_editor_import.h"
 #include "app/editor/scene_editor_input_import_helpers.h"
@@ -13,95 +14,29 @@
 #include <string.h>
 
 static const int DRAG_THRESHOLD_PX = 4;
+static const double OVERLAY_VELOCITY_STEP = 0.25;
 
-static bool point_in_rect(const SDL_Rect *rect, int x, int y) {
-    if (!rect) return false;
-    return x >= rect->x && x < rect->x + rect->w &&
-           y >= rect->y && y < rect->y + rect->h;
+static bool editor_retained_scene_read_only(const SceneEditorState *state) {
+    return state && physics_sim_editor_session_has_retained_scene(&state->session);
 }
 
-// Helper to trace and choose which object/import (if any) should receive an emitter when
-// clicking Source/Jet/Sink. Logs selection state for debugging.
-static void pick_target_for_emitter(SceneEditorState *state, int *out_obj, int *out_imp) {
-    if (out_obj) *out_obj = -1;
-    if (out_imp) *out_imp = -1;
+static void editor_clear_viewport_hover_state(SceneEditorState *state) {
     if (!state) return;
-
-    int target_obj = state->selected_object;
-    int target_imp = (state->selection_kind == SELECTION_IMPORT) ? state->selected_row : -1;
-    int attached_obj = -1;
-    int attached_imp = -1;
-    if (state->selected_emitter >= 0 &&
-        state->selected_emitter < (int)state->working.emitter_count) {
-        attached_obj = state->emitter_object_map[state->selected_emitter];
-        if (attached_obj < 0) attached_obj = state->working.emitters[state->selected_emitter].attached_object;
-        attached_imp = state->emitter_import_map[state->selected_emitter];
-        if (attached_imp < 0) attached_imp = state->working.emitters[state->selected_emitter].attached_import;
-        if (target_obj < 0 && attached_obj >= 0) target_obj = attached_obj;
-        if (target_imp < 0 && attached_imp >= 0) target_imp = attached_imp;
-    }
-    if (target_obj < 0) target_obj = state->hover_object;
-    if (target_imp < 0) target_imp = state->hover_import_row;
-    if (target_obj < 0 && state->working.object_count == 1) target_obj = 0;
-    if (target_imp < 0 && state->working.import_shape_count == 1) target_imp = 0;
-
-    SDL_Log("editor: emitter button target pick sel_kind=%d sel_obj=%d sel_em=%d attached_obj=%d attached_imp=%d hover_obj=%d hover_imp=%d obj_count=%zu imp_count=%zu -> target_obj=%d target_imp=%d",
-            state->selection_kind,
-            state->selected_object,
-            state->selected_emitter,
-            attached_obj,
-            attached_imp,
-            state->hover_object,
-            state->hover_import_row,
-            state->working.object_count,
-            state->working.import_shape_count,
-            target_obj,
-            target_imp);
-
-    if (out_obj) *out_obj = target_obj;
-    if (out_imp) *out_imp = target_imp;
-}
-
-static void finish_and_apply(SceneEditorState *state) {
-    if (!state) return;
-    commit_field_edit(state);
-    if (state->editing_width) {
-        editor_finish_dimension_edit(state, true, true);
-    }
-    if (state->editing_height) {
-        editor_finish_dimension_edit(state, false, true);
-    }
-    state->applied = true;
-    state->running = false;
-}
-
-static void cancel_and_close(SceneEditorState *state) {
-    if (!state) return;
-    if (state->editing_width) {
-        editor_finish_dimension_edit(state, true, false);
-    }
-    if (state->editing_height) {
-        editor_finish_dimension_edit(state, false, false);
-    }
-    scene_editor_input_clear_drag_flags(state);
-    state->pointer_down_in_canvas = false;
-    state->pointer_drag_started = false;
-    state->dirty = false;
-    state->applied = false;
-    state->running = false;
+    state->hover_emitter = -1;
+    state->hover_object = -1;
+    state->boundary_hover_edge = -1;
 }
 
 void editor_pointer_down(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !ptr) return;
-    if (ptr->button != SDL_BUTTON_LEFT) return;
     int x = ptr->x;
     int y = ptr->y;
 
     state->pointer_x = x;
     state->pointer_y = y;
-    SDL_Rect canvas_rect = {state->canvas_x, state->canvas_y, state->canvas_width, state->canvas_height};
-    bool in_canvas = point_in_rect(&canvas_rect, x, y);
+    SDL_Rect viewport_rect = editor_active_viewport_rect(state);
+    bool in_canvas = scene_editor_input_point_in_rect(&viewport_rect, x, y);
     state->pointer_down_in_canvas = in_canvas;
     state->pointer_drag_started = false;
     state->hit_stack_count = 0;
@@ -111,9 +46,15 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         state->pointer_down_y = y;
     }
 
+    if (scene_editor_input_try_begin_viewport_navigation(state, ptr)) {
+        return;
+    }
+
+    if (ptr->button != SDL_BUTTON_LEFT) return;
+
     if (state->name_edit_ptr) {
         SDL_Rect name_rect = editor_name_rect(state);
-        if (point_in_rect(&name_rect, x, y)) {
+        if (scene_editor_input_point_in_rect(&name_rect, x, y)) {
             Uint32 now = SDL_GetTicks();
             bool double_click =
                 (now - state->last_name_click) <= DOUBLE_CLICK_MS;
@@ -128,12 +69,13 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
     }
 
     if (state->active_field &&
-        !point_in_rect(&state->active_field->rect, x, y)) {
+        !scene_editor_input_point_in_rect(&state->active_field->rect, x, y)) {
         commit_field_edit(state);
     }
 
-    if (state->width_rect.w > 0 && state->width_rect.h > 0) {
-        if (point_in_rect(&state->width_rect, x, y)) {
+    if (!editor_retained_scene_read_only(state) &&
+        state->width_rect.w > 0 && state->width_rect.h > 0) {
+        if (scene_editor_input_point_in_rect(&state->width_rect, x, y)) {
             Uint32 now = SDL_GetTicks();
             bool double_click = (now - state->last_width_click) <= DOUBLE_CLICK_MS;
             state->last_width_click = now;
@@ -146,8 +88,9 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         }
     }
 
-    if (state->height_rect.w > 0 && state->height_rect.h > 0) {
-        if (point_in_rect(&state->height_rect, x, y)) {
+    if (!editor_retained_scene_read_only(state) &&
+        state->height_rect.w > 0 && state->height_rect.h > 0) {
+        if (scene_editor_input_point_in_rect(&state->height_rect, x, y)) {
             Uint32 now = SDL_GetTicks();
             bool double_click = (now - state->last_height_click) <= DOUBLE_CLICK_MS;
             state->last_height_click = now;
@@ -161,6 +104,7 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
     }
 
     EditorButton *buttons[] = {
+        &state->btn_apply_overlay,
         &state->btn_save,
         &state->btn_cancel,
         &state->btn_add_source,
@@ -169,22 +113,33 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         &state->btn_add_import,
         &state->btn_import_back,
         &state->btn_import_delete,
-        &state->btn_boundary
+        &state->btn_boundary,
+        &state->btn_overlay_dynamic,
+        &state->btn_overlay_static,
+        &state->btn_overlay_vel_x_neg,
+        &state->btn_overlay_vel_x_pos,
+        &state->btn_overlay_vel_y_neg,
+        &state->btn_overlay_vel_y_pos,
+        &state->btn_overlay_vel_z_neg,
+        &state->btn_overlay_vel_z_pos,
+        &state->btn_overlay_vel_reset
     };
     for (size_t i = 0; i < sizeof(buttons) / sizeof(buttons[0]); ++i) {
         EditorButton *btn = buttons[i];
         if (!btn->enabled) continue;
-        if (point_in_rect(&btn->rect, x, y)) {
-            if (btn == &state->btn_save) {
-                finish_and_apply(state);
+        if (scene_editor_input_point_in_rect(&btn->rect, x, y)) {
+            if (btn == &state->btn_apply_overlay) {
+                (void)scene_editor_input_apply_retained_overlay(state);
+            } else if (btn == &state->btn_save) {
+                scene_editor_input_finish_and_apply(state);
             } else if (btn == &state->btn_cancel) {
-                cancel_and_close(state);
+                scene_editor_input_cancel_and_close(state);
             } else if (btn == &state->btn_add_source ||
                        btn == &state->btn_add_jet ||
                        btn == &state->btn_add_sink) {
                 int target_obj = -1;
                 int target_imp = -1;
-                pick_target_for_emitter(state, &target_obj, &target_imp);
+                scene_editor_input_pick_target_for_emitter(state, &target_obj, &target_imp);
 
                 FluidEmitterType type = EMITTER_DENSITY_SOURCE;
                 if (btn == &state->btn_add_jet) {
@@ -198,18 +153,21 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
                                                        target_obj,
                                                        type,
                                                        true);
-                    state->selected_emitter = em;
-                    state->selection_kind = (em >= 0) ? SELECTION_EMITTER : SELECTION_OBJECT;
-                    // Keep object selection so the user still sees the association.
-                    state->selected_object = target_obj;
+                    if (em >= 0) {
+                        scene_editor_select_emitter(state, em, target_obj, -1);
+                    } else {
+                        scene_editor_select_object(state, target_obj);
+                    }
                 } else if (target_imp >= 0 && target_imp < (int)state->working.import_shape_count) {
                     int em = ensure_emitter_for_import(state,
                                                        target_imp,
                                                        type,
                                                        true);
-                    state->selected_emitter = em;
-                    state->selection_kind = (em >= 0) ? SELECTION_EMITTER : SELECTION_IMPORT;
-                    state->selected_row = target_imp;
+                    if (em >= 0) {
+                        scene_editor_select_emitter(state, em, -1, target_imp);
+                    } else {
+                        scene_editor_select_import(state, target_imp);
+                    }
                 } else {
                     add_emitter(state, type);
                 }
@@ -223,30 +181,64 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
             } else if (btn == &state->btn_import_delete) {
                 if (state->selected_row >= 0 &&
                     state->selected_row < (int)state->working.import_shape_count) {
-                    int idx = state->selected_row;
-                    for (int j = idx; j + 1 < (int)state->working.import_shape_count; ++j) {
-                        state->working.import_shapes[j] = state->working.import_shapes[j + 1];
-                    }
-                    state->working.import_shape_count--;
-                    if (state->selected_row >= (int)state->working.import_shape_count) {
-                        state->selected_row = (int)state->working.import_shape_count - 1;
-                    }
-                    set_dirty(state);
+                    scene_editor_input_remove_import_at(state, state->selected_row);
                 }
             } else if (btn == &state->btn_boundary) {
                 state->boundary_mode = !state->boundary_mode;
                 state->boundary_selected_edge = -1;
                 state->boundary_hover_edge = -1;
+            } else if (btn == &state->btn_overlay_dynamic) {
+                if (physics_sim_editor_session_set_selected_motion_mode(&state->session,
+                                                                        PHYSICS_SIM_OVERLAY_MOTION_DYNAMIC)) {
+                    set_dirty(state);
+                }
+            } else if (btn == &state->btn_overlay_static) {
+                if (physics_sim_editor_session_set_selected_motion_mode(&state->session,
+                                                                        PHYSICS_SIM_OVERLAY_MOTION_STATIC)) {
+                    set_dirty(state);
+                }
+            } else if (btn == &state->btn_overlay_vel_x_neg) {
+                if (physics_sim_editor_session_nudge_selected_velocity(&state->session,
+                                                                       -OVERLAY_VELOCITY_STEP, 0.0, 0.0)) {
+                    set_dirty(state);
+                }
+            } else if (btn == &state->btn_overlay_vel_x_pos) {
+                if (physics_sim_editor_session_nudge_selected_velocity(&state->session,
+                                                                       OVERLAY_VELOCITY_STEP, 0.0, 0.0)) {
+                    set_dirty(state);
+                }
+            } else if (btn == &state->btn_overlay_vel_y_neg) {
+                if (physics_sim_editor_session_nudge_selected_velocity(&state->session,
+                                                                       0.0, -OVERLAY_VELOCITY_STEP, 0.0)) {
+                    set_dirty(state);
+                }
+            } else if (btn == &state->btn_overlay_vel_y_pos) {
+                if (physics_sim_editor_session_nudge_selected_velocity(&state->session,
+                                                                       0.0, OVERLAY_VELOCITY_STEP, 0.0)) {
+                    set_dirty(state);
+                }
+            } else if (btn == &state->btn_overlay_vel_z_neg) {
+                if (physics_sim_editor_session_nudge_selected_velocity(&state->session,
+                                                                       0.0, 0.0, -OVERLAY_VELOCITY_STEP)) {
+                    set_dirty(state);
+                }
+            } else if (btn == &state->btn_overlay_vel_z_pos) {
+                if (physics_sim_editor_session_nudge_selected_velocity(&state->session,
+                                                                       0.0, 0.0, OVERLAY_VELOCITY_STEP)) {
+                    set_dirty(state);
+                }
+            } else if (btn == &state->btn_overlay_vel_reset) {
+                if (physics_sim_editor_session_reset_selected_velocity(&state->session)) {
+                    set_dirty(state);
+                }
             }
             return;
         }
     }
 
     if (state->showing_import_picker &&
-        point_in_rect(&state->import_rect, x, y)) {
-        state->selection_kind = SELECTION_NONE;
-        state->selected_object = -1;
-        state->selected_emitter = -1;
+        scene_editor_input_point_in_rect(&state->import_rect, x, y)) {
+        scene_editor_select_none(state);
         int row = editor_list_view_row_at(&state->import_view,
                                           x, y,
                                           state->import_rect.x, state->import_rect.y,
@@ -267,26 +259,48 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
     }
 
     if (!state->showing_import_picker &&
-        point_in_rect(&state->list_rect, x, y)) {
-        state->selection_kind = SELECTION_OBJECT;
-        state->selected_emitter = -1;
+        scene_editor_input_point_in_rect(&state->list_rect, x, y)) {
         int row = editor_list_view_row_at(&state->list_view,
                                           x, y,
                                           state->list_rect.x, state->list_rect.y,
                                           state->list_rect.w, state->list_rect.h);
-        if (row >= 0 && row < (int)state->working.object_count) {
-            state->selected_object = row;
-            state->hover_object = row;
+        if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+            int retained_count = physics_sim_editor_session_retained_object_count(&state->session);
+            if (row >= 0 && row < retained_count) {
+                physics_sim_editor_session_select_retained_index(&state->session, row);
+                scene_editor_select_none(state);
+                state->hover_row = row;
+            } else {
+                physics_sim_editor_session_select_retained_index(&state->session, -1);
+                scene_editor_select_none(state);
+            }
+        } else {
+            if (row >= 0 && row < (int)state->working.object_count) {
+                scene_editor_select_object(state, row);
+                state->hover_object = row;
+            } else {
+                scene_editor_select_none(state);
+            }
         }
         return;
     }
 
-    NumericField *fields[] = {&state->radius_field, &state->strength_field};
-    for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); ++i) {
-        if (point_in_rect(&fields[i]->rect, x, y)) {
-            begin_field_edit(state, fields[i]);
-            return;
+    if (!editor_retained_scene_read_only(state)) {
+        NumericField *fields[] = {&state->radius_field, &state->strength_field};
+        for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); ++i) {
+            if (scene_editor_input_point_in_rect(&fields[i]->rect, x, y)) {
+                begin_field_edit(state, fields[i]);
+                return;
+            }
         }
+    }
+
+    if (in_canvas && physics_sim_editor_session_has_retained_scene(&state->session)) {
+        scene_editor_input_clear_drag_flags(state);
+        state->boundary_hover_edge = -1;
+        state->hit_stack_count = 0;
+        state->hit_stack_base = 0;
+        return;
     }
 
     int edge_hit = scene_editor_canvas_hit_edge(state->canvas_x,
@@ -309,7 +323,7 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         Uint32 now = SDL_GetTicks();
         bool double_click = (now - state->last_canvas_click) <= DOUBLE_CLICK_MS;
         state->last_canvas_click = now;
-        if (double_click) {
+        if (double_click && !physics_sim_editor_session_has_retained_scene(&state->session)) {
             bool precision_dirty = false;
             int selected_obj = state->selected_object;
             int selected_imp = (state->selection_kind == SELECTION_IMPORT) ? state->selected_row : -1;
@@ -329,12 +343,12 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
                                            state->font_small,
                                            state->font_main,
                                            &precision_dirty)) {
-                state->selected_object = selected_obj;
                 if (selected_imp >= 0) {
-                    state->selection_kind = SELECTION_IMPORT;
-                    state->selected_row = selected_imp;
+                    scene_editor_select_import(state, selected_imp);
                 } else if (selected_obj >= 0) {
-                    state->selection_kind = SELECTION_OBJECT;
+                    scene_editor_select_object(state, selected_obj);
+                } else {
+                    scene_editor_select_none(state);
                 }
                 if (precision_dirty) set_dirty(state);
                 editor_update_canvas_layout(state);
@@ -347,7 +361,7 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         }
     }
 
-    if (!point_in_rect(&state->panel_rect, x, y)) {
+    if (!scene_editor_input_point_in_editor_side_panels(state, x, y)) {
         if (in_canvas) {
             int max_hits = (int)(sizeof(state->hit_stack) / sizeof(state->hit_stack[0]));
             state->hit_stack_count = scene_editor_canvas_collect_hits(&state->working,
@@ -388,6 +402,11 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
 void editor_pointer_up(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !ptr) return;
+    if (state->viewport.navigation_active) {
+        scene_editor_viewport_end_navigation(&state->viewport);
+        scene_editor_canvas_set_viewport_state(&state->viewport);
+        return;
+    }
     if (ptr->button != SDL_BUTTON_LEFT) return;
     bool cycle_selection = false;
     SceneEditorHit next_hit = {0};
@@ -404,7 +423,7 @@ void editor_pointer_up(void *user, const InputPointerState *ptr) {
         state->dragging_import_new = false;
         if (state->dragging_import_index >= 0 &&
             state->dragging_import_index < state->import_file_count &&
-            point_in_rect(&(SDL_Rect){state->canvas_x, state->canvas_y, state->canvas_width, state->canvas_height},
+            scene_editor_input_point_in_rect(&(SDL_Rect){state->canvas_x, state->canvas_y, state->canvas_width, state->canvas_height},
                           state->pointer_x, state->pointer_y)) {
             char full_path[256];
             snprintf(full_path, sizeof(full_path), "%s", state->import_files[state->dragging_import_index]);
@@ -412,7 +431,7 @@ void editor_pointer_up(void *user, const InputPointerState *ptr) {
             for (size_t i = 0; i < state->working.import_shape_count; ++i) {
                 if (strcmp(state->working.import_shapes[i].path, full_path) == 0) {
                     exists = true;
-                    state->selected_row = (int)i;
+                    scene_editor_select_import(state, (int)i);
                     break;
                 }
             }
@@ -441,8 +460,7 @@ void editor_pointer_up(void *user, const InputPointerState *ptr) {
                 imp->friction = 0.2f;
                 imp->is_static = true;
                 imp->enabled = true;
-                state->selected_row = (int)state->working.import_shape_count - 1;
-                state->selection_kind = SELECTION_IMPORT;
+                scene_editor_select_import(state, (int)state->working.import_shape_count - 1);
                 set_dirty(state);
             }
         }
@@ -469,6 +487,27 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
     if (!state || !ptr) return;
     state->pointer_x = ptr->x;
     state->pointer_y = ptr->y;
+    if (state->viewport.navigation_active) {
+        SDL_Rect viewport_rect = editor_active_viewport_rect(state);
+        if (scene_editor_viewport_update_navigation(&state->viewport,
+                                                    ptr->x,
+                                                    ptr->y,
+                                                    viewport_rect.w,
+                                                    viewport_rect.h)) {
+            scene_editor_canvas_set_viewport_state(&state->viewport);
+        }
+        return;
+    }
+    if (state->viewport.requested_mode == SPACE_MODE_3D &&
+        state->viewport.alt_modifier_down &&
+        !ptr->down &&
+        scene_editor_input_point_in_editor_active_viewport(state, ptr->x, ptr->y)) {
+        scene_editor_viewport_begin_navigation(&state->viewport,
+                                               SCENE_EDITOR_VIEWPORT_NAV_ORBIT,
+                                               ptr->x,
+                                               ptr->y);
+        return;
+    }
     if (state->pointer_down_in_canvas && !state->pointer_drag_started) {
         int dx = ptr->x - state->pointer_down_x;
         int dy = ptr->y - state->pointer_down_y;
@@ -502,7 +541,18 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
                                                    ptr->x, ptr->y,
                                                    state->list_rect.x, state->list_rect.y,
                                                    state->list_rect.w, state->list_rect.h);
-        state->hover_object = state->hover_row;
+        if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+            state->hover_object = -1;
+        } else {
+            state->hover_object = state->hover_row;
+        }
+    }
+    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+        editor_clear_viewport_hover_state(state);
+        if (scene_editor_input_point_in_editor_active_viewport(state, ptr->x, ptr->y)) {
+            return;
+        }
+        return;
     }
     if (state->dragging_object_handle &&
         allow_drag &&
@@ -636,7 +686,7 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
         return;
     }
     if (state->dragging_import_new) {
-        if (point_in_rect(&(SDL_Rect){state->canvas_x, state->canvas_y, state->canvas_width, state->canvas_height},
+        if (scene_editor_input_point_in_rect(&(SDL_Rect){state->canvas_x, state->canvas_y, state->canvas_width, state->canvas_height},
                           ptr->x, ptr->y)) {
             float nx, ny;
             canvas_to_normalized_unclamped(state, ptr->x, ptr->y, &nx, &ny);
@@ -736,6 +786,12 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
 void editor_on_wheel(void *user, const InputWheelState *wheel) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !wheel) return;
+    if (scene_editor_input_point_in_editor_active_viewport(state, state->pointer_x, state->pointer_y)) {
+        if (scene_editor_viewport_apply_wheel(&state->viewport, wheel->y)) {
+            scene_editor_canvas_set_viewport_state(&state->viewport);
+        }
+        return;
+    }
     if (state->showing_import_picker) {
         editor_list_view_handle_wheel(&state->import_view,
                                       state->pointer_x, state->pointer_y,
@@ -767,6 +823,7 @@ void editor_text_input(void *user, const char *text) {
 void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state) return;
+    state->viewport.alt_modifier_down = (mod & KMOD_ALT) != 0;
     if (state->renaming_name) {
         if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
             editor_finish_name_edit(state, true);
@@ -798,11 +855,10 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         return;
     }
     if (key == SDLK_ESCAPE) {
-        state->selected_object = -1;
-        state->selected_emitter = -1;
+        scene_editor_select_none(state);
+        physics_sim_editor_session_select_retained_index(&state->session, -1);
         state->hover_object = -1;
         state->hover_emitter = -1;
-        state->selected_row = -1;
         state->selected_import_row = -1;
         state->dragging = false;
         state->dragging_object = false;
@@ -815,17 +871,22 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     if (key == SDLK_e && state->selected_object >= 0) {
         int em_idx = emitter_index_for_object(state, state->selected_object);
         if (em_idx >= 0) {
-            size_t count = state->working.emitter_count;
-            for (size_t i = (size_t)em_idx; i + 1 < count; ++i) {
-                state->working.emitters[i] = state->working.emitters[i + 1];
-            }
-            state->working.emitter_count--;
-            state->selected_emitter = -1;
+            remove_emitter_at(state, em_idx);
+            scene_editor_select_object(state, state->selected_object);
             set_dirty(state);
         }
         return;
     }
     if (field_handle_key(state, key)) {
+        return;
+    }
+
+    if (key == SDLK_f) {
+        editor_frame_viewport_to_scene(state);
+        return;
+    }
+
+    if (editor_retained_scene_read_only(state)) {
         return;
     }
 
@@ -850,11 +911,11 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         if (state->showing_import_picker && state->selected_import_row >= 0) {
             scene_editor_input_add_import_from_picker(state, state->selected_import_row);
         } else {
-            finish_and_apply(state);
+            scene_editor_input_finish_and_apply(state);
         }
         break;
     case SDLK_ESCAPE:
-        cancel_and_close(state);
+        scene_editor_input_cancel_and_close(state);
         break;
     case SDLK_TAB: {
         if (state->working.emitter_count == 0) break;
@@ -863,9 +924,7 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         int next = state->selected_emitter + dir;
         if (next < 0) next = (int)state->working.emitter_count - 1;
         if (next >= (int)state->working.emitter_count) next = 0;
-        state->selected_emitter = next;
-        state->selection_kind = SELECTION_EMITTER;
-        state->selected_object = -1;
+        scene_editor_select_emitter(state, next, -1, -1);
         break;
     }
     case SDLK_DELETE:
@@ -970,7 +1029,13 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
 }
 
 void editor_key_up(void *user, SDL_Keycode key, SDL_Keymod mod) {
-    (void)user;
+    SceneEditorState *state = (SceneEditorState *)user;
     (void)key;
-    (void)mod;
+    if (!state) return;
+    state->viewport.alt_modifier_down = (mod & KMOD_ALT) != 0;
+    if (!state->viewport.alt_modifier_down &&
+        state->viewport.navigation_active &&
+        state->viewport.navigation_mode == SCENE_EDITOR_VIEWPORT_NAV_ORBIT) {
+        scene_editor_viewport_end_navigation(&state->viewport);
+    }
 }

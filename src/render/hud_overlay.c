@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "font_paths.h"
+#include "render/text_upload_policy.h"
 #include "vk_renderer.h"
 
 static SDL_Renderer *g_hud_renderer = NULL;
@@ -17,9 +18,10 @@ static TTF_Font *load_hud_font(void) {
         FONT_TITLE_PATH_1,  // extra fallbacks if body fonts fail
         FONT_TITLE_PATH_2
     };
+    int point_size = physics_sim_text_raster_point_size(g_hud_renderer, 12, 8);
 
     for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
-        TTF_Font *font = TTF_OpenFont(paths[i], 12);
+        TTF_Font *font = TTF_OpenFont(paths[i], point_size);
         if (font) {
             return font;
         }
@@ -63,8 +65,8 @@ static void render_hud_text_line(const char *text,
         *w = *h = 0;
         return;
     }
-    *w = (*surface)->w;
-    *h = (*surface)->h;
+    *w = physics_sim_text_logical_pixels(g_hud_renderer, (*surface)->w);
+    *h = physics_sim_text_logical_pixels(g_hud_renderer, (*surface)->h);
 }
 
 static void append_token(char *dst, size_t dst_size, const char *token) {
@@ -276,7 +278,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer*)g_hud_renderer,
                                                        surfaces[i],
                                                        &texture,
-                                                       VK_FILTER_LINEAR) == VK_SUCCESS) {
+                                                       physics_sim_text_upload_filter(g_hud_renderer)) == VK_SUCCESS) {
             vk_renderer_draw_texture((VkRenderer*)g_hud_renderer, &texture, NULL, &dst);
             vk_renderer_queue_texture_destroy((VkRenderer*)g_hud_renderer, &texture);
         }

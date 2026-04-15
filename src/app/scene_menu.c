@@ -15,6 +15,7 @@
 #include "app/scene_menu_layout_helpers.h"
 #include "config/config_loader.h"
 #include "input/input.h"
+#include "render/text_upload_policy.h"
 #include "render/vk_shared_device.h"
 #include "vk_renderer.h"
 
@@ -141,6 +142,9 @@ restart_menu:
             current_selection.last_mode_slot[mode] = -1;
         }
     }
+    if (current_selection.retained_scene_index < 0) {
+        current_selection.retained_scene_index = 0;
+    }
     SimulationMode selection_mode = menu_normalize_sim_mode(cfg->sim_mode);
     SpaceMode selection_space_mode = menu_normalize_space_mode(cfg->space_mode);
     current_selection.sim_mode = selection_mode;
@@ -174,6 +178,8 @@ restart_menu:
         .preset_output = preset_state,
         .preview_preset = *preset_state,
         .active_preset = preset_state,
+        .scene_library = {0},
+        .editor_bootstrap = {0},
         .window = NULL,
         .renderer = NULL,
         .font = NULL,
@@ -203,6 +209,7 @@ restart_menu:
         .last_clicked_slot = -1,
         .scrollbar_dragging = false,
         .hover_slot = -1,
+        .hover_retained_scene_index = -1,
         .hover_add_entry = false,
         .headless_pending = false,
         .headless_running = false,
@@ -232,6 +239,7 @@ restart_menu:
 
     ctx.list_rect = menu_preset_list_rect();
     scrollbar_init(&ctx.scrollbar);
+    menu_refresh_scene_library(&ctx);
     menu_update_scrollbar(&ctx);
 
     InputContextManager context_mgr;
@@ -247,7 +255,11 @@ restart_menu:
     }
 
     menu_ensure_slot_for_mode(&ctx);
-    menu_select_custom(&ctx, current_selection.custom_slot_index);
+    if (menu_showing_retained_catalog(&ctx)) {
+        (void)menu_select_retained_scene(&ctx, current_selection.retained_scene_index);
+    } else {
+        menu_select_custom(&ctx, current_selection.custom_slot_index);
+    }
     *selection = current_selection;
 
     InputContext menu_ctx = {
@@ -368,8 +380,8 @@ restart_menu:
         SDL_RenderFillRect(ctx.renderer, &clear_rect);
 
         {
-            int body_h = scene_menu_font_height(ctx.font, 22);
-            int small_h = scene_menu_font_height(ctx.font_small ? ctx.font_small : ctx.font, 18);
+            int body_h = scene_menu_font_height(ctx.renderer, ctx.font, 22);
+            int small_h = scene_menu_font_height(ctx.renderer, ctx.font_small ? ctx.font_small : ctx.font, 18);
             int title_y = 40;
             if (ctx.font_title) {
                 menu_draw_text(ctx.renderer,
@@ -408,7 +420,8 @@ restart_menu:
                     int hint_x = ctx.config_panel_rect.x;
                     int hint_y = ctx.mode_toggle_button.rect.y + ctx.mode_toggle_button.rect.h + 6;
                     int hint_w = ctx.config_panel_rect.w;
-                    scene_menu_fit_text_to_width(toggle_font,
+                    scene_menu_fit_text_to_width(ctx.renderer,
+                                           toggle_font,
                                            scaffold_hint,
                                            hint_w,
                                            scaffold_hint_fit,
@@ -467,7 +480,7 @@ restart_menu:
             int quality_x = ctx.quality_prev_button.rect.x + ctx.quality_prev_button.rect.w + 8;
             int quality_w = ctx.quality_next_button.rect.x - 8 - quality_x;
             if (quality_w < 10) quality_w = 10;
-            scene_menu_fit_text_to_width(ctx.font, quality_name, quality_w, quality_buf, sizeof(quality_buf));
+            scene_menu_fit_text_to_width(ctx.renderer, ctx.font, quality_name, quality_w, quality_buf, sizeof(quality_buf));
             menu_draw_text(ctx.renderer,
                            ctx.font,
                            quality_buf,
@@ -508,7 +521,8 @@ restart_menu:
                 char frames_label[64];
                 char frames_fit[64];
                 snprintf(frames_label, sizeof(frames_label), "Frames: %d", ctx.cfg->headless_frame_count);
-                scene_menu_fit_text_to_width(ctx.font,
+                scene_menu_fit_text_to_width(ctx.renderer,
+                                       ctx.font,
                                        frames_label,
                                        ctx.headless_frames_rect.w - 16,
                                        frames_fit,
@@ -531,7 +545,8 @@ restart_menu:
                 char viscosity_label[64];
                 char viscosity_fit[64];
                 snprintf(viscosity_label, sizeof(viscosity_label), "Viscosity: %.6g", ctx.cfg->velocity_damping);
-                scene_menu_fit_text_to_width(ctx.font_small,
+                scene_menu_fit_text_to_width(ctx.renderer,
+                                       ctx.font_small,
                                        viscosity_label,
                                        ctx.viscosity_rect.w - 16,
                                        viscosity_fit,
@@ -554,7 +569,8 @@ restart_menu:
                 char inflow_label[64];
                 char inflow_fit[64];
                 snprintf(inflow_label, sizeof(inflow_label), "Inflow: %.3f", ctx.cfg->tunnel_inflow_speed);
-                scene_menu_fit_text_to_width(ctx.font_small,
+                scene_menu_fit_text_to_width(ctx.renderer,
+                                       ctx.font_small,
                                        inflow_label,
                                        ctx.inflow_rect.w - 16,
                                        inflow_fit,
@@ -598,7 +614,8 @@ restart_menu:
                                                  ? ctx.cfg->input_root
                                                  : physics_sim_default_input_root();
                     snprintf(input_label, sizeof(input_label), "Input Root: %s", input_root);
-                    scene_menu_fit_text_to_width(ctx.font_small ? ctx.font_small : ctx.font,
+                    scene_menu_fit_text_to_width(ctx.renderer,
+                                           ctx.font_small ? ctx.font_small : ctx.font,
                                            input_label,
                                            path_rect.w - 16,
                                            input_fit,
@@ -643,7 +660,8 @@ restart_menu:
                                                   ? ctx.cfg->headless_output_dir
                                                   : physics_sim_default_snapshot_dir();
                     snprintf(output_label, sizeof(output_label), "Output Root: %s", output_root);
-                    scene_menu_fit_text_to_width(ctx.font_small ? ctx.font_small : ctx.font,
+                    scene_menu_fit_text_to_width(ctx.renderer,
+                                           ctx.font_small ? ctx.font_small : ctx.font,
                                            output_label,
                                            path_rect.w - 16,
                                            output_fit,
@@ -674,8 +692,15 @@ restart_menu:
             int max_text_w = win_w - status_x - 20;
             if (max_text_w < 10) max_text_w = 10;
             char status_buf[128];
-            scene_menu_fit_text_to_width(ctx.font, ctx.status_text, max_text_w, status_buf, sizeof(status_buf));
+            scene_menu_fit_text_to_width(ctx.renderer,
+                                         ctx.font,
+                                         ctx.status_text,
+                                         max_text_w,
+                                         status_buf,
+                                         sizeof(status_buf));
             TTF_SizeUTF8(ctx.font, status_buf, &text_w, &text_h);
+            text_w = physics_sim_text_logical_pixels(ctx.renderer, text_w);
+            text_h = physics_sim_text_logical_pixels(ctx.renderer, text_h);
             int max_x = win_w - text_w - 20;
             if (status_x > max_x) status_x = max_x;
             if (status_x < 20) status_x = 20;

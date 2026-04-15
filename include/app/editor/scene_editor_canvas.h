@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #include "app/app_config.h"
+#include "app/editor/scene_editor_viewport.h"
 #include "app/scene_presets.h"
 #include "app/sim_mode.h"
 #include "geo/shape_library.h"
@@ -50,6 +51,7 @@ struct SceneEditorState;
 
 void scene_editor_canvas_set_space_mode(SpaceMode mode);
 void scene_editor_canvas_set_mode_route(const SimModeRoute *route);
+void scene_editor_canvas_set_viewport_state(const SceneEditorViewportState *viewport);
 
 void scene_editor_canvas_project(int canvas_x,
                                  int canvas_y,
@@ -84,11 +86,14 @@ void scene_editor_canvas_draw_background(SDL_Renderer *renderer,
                                          int canvas_h,
                                          bool preview_active,
                                          float preview_x_norm,
-                                         float preview_y_norm);
+                                         float preview_y_norm,
+                                         bool draw_legacy_grid);
 
 // Draw polyline-based imported assets as outlines.
 void scene_editor_canvas_draw_imports(SDL_Renderer *renderer,
                                       const SceneEditorState *state);
+void scene_editor_canvas_draw_retained_scene(SDL_Renderer *renderer,
+                                             const SceneEditorState *state);
 
 int scene_editor_canvas_hit_test(const FluidScenePreset *preset,
                                  int canvas_x,
@@ -198,10 +203,7 @@ void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
                                       int line_count);
 
 void scene_editor_canvas_draw_name(SDL_Renderer *renderer,
-                                   int canvas_x,
-                                   int canvas_y,
-                                   int canvas_w,
-                                   int canvas_h,
+                                   const SDL_Rect *rect,
                                    TTF_Font *font_main,
                                    TTF_Font *font_small,
                                    const char *name,

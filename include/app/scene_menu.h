@@ -15,6 +15,7 @@ typedef struct SceneMenuResult {
 
 typedef struct SceneMenuSelection {
     int  custom_slot_index;
+    int  retained_scene_index;
     int  quality_index;
     int  headless_frame_count;
     SimulationMode sim_mode;

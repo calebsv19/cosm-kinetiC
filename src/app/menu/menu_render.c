@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "app/menu/menu_state.h"
+#include "render/text_upload_policy.h"
 
 static SDL_Color COLOR_BG       = {18, 18, 22, 255};
 static SDL_Color COLOR_PANEL    = {32, 36, 40, 255};
@@ -66,6 +67,28 @@ static SDL_Color border_for_background(SDL_Color background) {
     return (SDL_Color){0, 0, 0, 180};
 }
 
+static SDL_Color lighten_color(SDL_Color color, float factor) {
+    if (factor < 0.0f) factor = 0.0f;
+    if (factor > 1.0f) factor = 1.0f;
+    return (SDL_Color){
+        (Uint8)(color.r + (Uint8)((255 - color.r) * factor)),
+        (Uint8)(color.g + (Uint8)((255 - color.g) * factor)),
+        (Uint8)(color.b + (Uint8)((255 - color.b) * factor)),
+        color.a
+    };
+}
+
+static bool menu_rect_is_hovered(const SDL_Rect *rect) {
+    int mouse_x = 0;
+    int mouse_y = 0;
+    if (!rect) return false;
+    SDL_GetMouseState(&mouse_x, &mouse_y);
+    return mouse_x >= rect->x &&
+           mouse_x < (rect->x + rect->w) &&
+           mouse_y >= rect->y &&
+           mouse_y < (rect->y + rect->h);
+}
+
 void menu_set_theme_palette(const MenuThemePalette *palette) {
     if (!palette) return;
     COLOR_BG = palette->background;
@@ -100,8 +123,13 @@ void menu_draw_text(SDL_Renderer *renderer,
     if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
                                                    surf,
                                                    &tex,
-                                                   VK_FILTER_LINEAR) == VK_SUCCESS) {
-        SDL_Rect dst = {x, y, surf->w, surf->h};
+                                                   physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
+        SDL_Rect dst = {
+            x,
+            y,
+            physics_sim_text_logical_pixels(renderer, surf->w),
+            physics_sim_text_logical_pixels(renderer, surf->h)
+        };
         vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
         vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
     }
@@ -113,16 +141,19 @@ void menu_draw_panel(SDL_Renderer *renderer, const SDL_Rect *rect) {
     SDL_RenderFillRect(renderer, rect);
 }
 
-static int menu_font_height(TTF_Font *font, int fallback) {
+static int menu_font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
     if (!font) return fallback;
     {
         int h = TTF_FontHeight(font);
-        if (h > 0) return h;
+        if (h > 0) {
+            return physics_sim_text_logical_pixels(renderer, h);
+        }
     }
     return fallback;
 }
 
-static void menu_fit_text_to_width(TTF_Font *font,
+static void menu_fit_text_to_width(SDL_Renderer *renderer,
+                                   TTF_Font *font,
                                    const char *text,
                                    int max_width,
                                    char *out,
@@ -134,7 +165,10 @@ static void menu_fit_text_to_width(TTF_Font *font,
     if (!text) return;
     snprintf(out, out_size, "%s", text);
     if (!font || max_width <= 0) return;
-    if (TTF_SizeUTF8(font, out, &w, NULL) == 0 && w <= max_width) return;
+    if (TTF_SizeUTF8(font, out, &w, NULL) == 0) {
+        w = physics_sim_text_logical_pixels(renderer, w);
+        if (w <= max_width) return;
+    }
 
     len = strlen(out);
     while (len > 0) {
@@ -143,9 +177,12 @@ static void menu_fit_text_to_width(TTF_Font *font,
         {
             char candidate[256];
             snprintf(candidate, sizeof(candidate), "%s...", out);
-            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0 && w <= max_width) {
-                snprintf(out, out_size, "%s", candidate);
-                return;
+            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0) {
+                w = physics_sim_text_logical_pixels(renderer, w);
+                if (w <= max_width) {
+                    snprintf(out, out_size, "%s", candidate);
+                    return;
+                }
             }
         }
     }
@@ -177,7 +214,12 @@ void menu_draw_button(SDL_Renderer *renderer,
     char label_fit[256];
     const char *draw_label = label;
     if (!renderer || !rect || !label || !font) return;
+    bool hovered = menu_rect_is_hovered(rect);
     SDL_Color color = selected ? COLOR_BUTTON_BG_ACTIVE : COLOR_BUTTON_BG;
+    if (hovered) {
+        color = selected ? lighten_color(color, 0.10f)
+                         : lighten_color(color, 0.18f);
+    }
     SDL_Color border = border_for_background(color);
     SDL_Color text = choose_readable_text(color, COLOR_TEXT);
     if (selected) {
@@ -192,11 +234,14 @@ void menu_draw_button(SDL_Renderer *renderer,
     if (font && label) {
         int max_label_w = rect->w - 16;
         if (max_label_w < 8) max_label_w = 8;
-        menu_fit_text_to_width(font, label, max_label_w, label_fit, sizeof(label_fit));
+        menu_fit_text_to_width(renderer, font, label, max_label_w, label_fit, sizeof(label_fit));
         draw_label = label_fit[0] ? label_fit : label;
         if (TTF_SizeUTF8(font, draw_label, &text_w, &text_h) != 0) {
             text_w = 0;
-            text_h = menu_font_height(font, rect->h / 2);
+            text_h = menu_font_height(renderer, font, rect->h / 2);
+        } else {
+            text_w = physics_sim_text_logical_pixels(renderer, text_w);
+            text_h = physics_sim_text_logical_pixels(renderer, text_h);
         }
         if (text_w > 0 && text_w <= rect->w - 16) {
             inset_x = (rect->w - text_w) / 2;
@@ -217,7 +262,7 @@ void menu_draw_text_input(SDL_Renderer *renderer,
                           const TextInputField *field) {
     int text_h = 12;
     if (!renderer || !font || !rect || !field) return;
-    text_h = menu_font_height(font, rect->h - 12);
+    text_h = menu_font_height(renderer, font, rect->h - 12);
     SDL_Color fill = ensure_fill_contrast(COLOR_BUTTON_BG, COLOR_TEXT, COLOR_PANEL);
     SDL_Color border = ensure_fill_contrast(COLOR_ACCENT, COLOR_TEXT, COLOR_PANEL);
     SDL_Color text_color = choose_readable_text(fill, COLOR_TEXT);
@@ -231,19 +276,21 @@ void menu_draw_text_input(SDL_Renderer *renderer,
     char value_fit[256];
     int max_value_w = rect->w - 16;
     if (max_value_w < 8) max_value_w = 8;
-    menu_fit_text_to_width(font, value, max_value_w, value_fit, sizeof(value_fit));
+    menu_fit_text_to_width(renderer, font, value, max_value_w, value_fit, sizeof(value_fit));
     if (!value_fit[0]) snprintf(value_fit, sizeof(value_fit), "%s", value ? value : "");
     SDL_Surface *surf = TTF_RenderUTF8_Blended(font, value_fit, text_color);
     int text_w = 0;
+    int text_h_logical = 0;
     if (surf) {
-        text_w = surf->w;
-        SDL_Rect dst = {rect->x + 8, rect->y + rect->h / 2 - surf->h / 2,
-                        surf->w, surf->h};
+        text_w = physics_sim_text_logical_pixels(renderer, surf->w);
+        text_h_logical = physics_sim_text_logical_pixels(renderer, surf->h);
+        SDL_Rect dst = {rect->x + 8, rect->y + rect->h / 2 - text_h_logical / 2,
+                        text_w, text_h_logical};
         VkRendererTexture tex = {0};
         if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
                                                        surf,
                                                        &tex,
-                                                       VK_FILTER_LINEAR) == VK_SUCCESS) {
+                                                       physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
             vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
             vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
         }
@@ -270,7 +317,7 @@ void menu_draw_toggle(SDL_Renderer *renderer,
     char label_fit[256];
     const char *draw_label = label;
     if (!renderer || !rect || !label || !font) return;
-    text_h = menu_font_height(font, rect->h / 2);
+    text_h = menu_font_height(renderer, font, rect->h / 2);
     text_x = rect->x + 10;
     SDL_Color fill = enabled ? COLOR_ACCENT : COLOR_PANEL;
     SDL_Color text_color;
@@ -288,10 +335,14 @@ void menu_draw_toggle(SDL_Renderer *renderer,
     {
         int max_label_w = rect->w - 20;
         if (max_label_w < 8) max_label_w = 8;
-        menu_fit_text_to_width(font, label, max_label_w, label_fit, sizeof(label_fit));
+        menu_fit_text_to_width(renderer, font, label, max_label_w, label_fit, sizeof(label_fit));
         draw_label = label_fit[0] ? label_fit : label;
     }
-    if (TTF_SizeUTF8(font, draw_label, &text_w, &text_h) == 0 && text_w > 0 && text_w <= rect->w - 20) {
+    if (TTF_SizeUTF8(font, draw_label, &text_w, &text_h) == 0) {
+        text_w = physics_sim_text_logical_pixels(renderer, text_w);
+        text_h = physics_sim_text_logical_pixels(renderer, text_h);
+    }
+    if (text_w > 0 && text_w <= rect->w - 20) {
         text_x = rect->x + (rect->w - text_w) / 2;
     }
     menu_draw_text(renderer,
@@ -300,16 +351,6 @@ void menu_draw_toggle(SDL_Renderer *renderer,
                    text_x,
                    rect->y + (rect->h - text_h) / 2,
                    text_color);
-}
-
-static SDL_Color lighten_color(SDL_Color color, float factor) {
-    if (factor < 0.0f) factor = 0.0f;
-    if (factor > 1.0f) factor = 1.0f;
-    SDL_Color result = color;
-    result.r = (Uint8)(color.r + (Uint8)((255 - color.r) * factor));
-    result.g = (Uint8)(color.g + (Uint8)((255 - color.g) * factor));
-    result.b = (Uint8)(color.b + (Uint8)((255 - color.b) * factor));
-    return result;
 }
 
 void menu_draw_preset_list(SceneMenuInteraction *ctx) {
@@ -329,19 +370,27 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
     };
     SDL_RenderSetClipRect(renderer, &clip);
 
-    int count = menu_visible_slot_count(ctx);
-    int total_rows = count + 1;
+    bool retained_catalog = menu_showing_retained_catalog(ctx);
+    int count = menu_visible_entry_count(ctx);
+    int total_rows = count + (retained_catalog ? 0 : 1);
 
     for (int row = 0; row < total_rows; ++row) {
-        bool is_add_entry = (row == count);
+        bool is_add_entry = (!retained_catalog && row == count);
         SDL_Rect row_rect;
         if (!menu_preset_row_rect(ctx, row, is_add_entry, &row_rect)) continue;
         int slot_index = is_add_entry ? -1 : menu_slot_index_from_visible_row(ctx, row);
-        bool selected = (!is_add_entry &&
-                         slot_index >= 0 &&
-                         ctx->selection->custom_slot_index == slot_index);
-        bool hovered = (!is_add_entry && slot_index >= 0 && ctx->hover_slot == slot_index) ||
-                       (is_add_entry && ctx->hover_add_entry);
+        int retained_scene_index = is_add_entry ? -1 : row;
+        bool selected = false;
+        bool hovered = false;
+        if (!is_add_entry && retained_catalog) {
+            selected = ctx->selection && ctx->selection->retained_scene_index == retained_scene_index;
+            hovered = ctx->hover_retained_scene_index == retained_scene_index;
+        } else if (!is_add_entry) {
+            selected = slot_index >= 0 && ctx->selection->custom_slot_index == slot_index;
+            hovered = slot_index >= 0 && ctx->hover_slot == slot_index;
+        } else {
+            hovered = ctx->hover_add_entry;
+        }
 
         if (!is_add_entry) {
             SDL_Color row_color = COLOR_PANEL;
@@ -371,14 +420,27 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
             if (ctx->rename_input.active && slot_index >= 0 && ctx->renaming_slot == slot_index) {
                 menu_draw_text_input(renderer, ctx->font, &label_rect, &ctx->rename_input);
             } else {
-                const CustomPresetSlot *slot =
-                    preset_library_get_slot_const(ctx->library, slot_index);
-                const char *label = (slot && slot->name[0] != '\0')
-                                        ? slot->name
-                                        : "Untitled Preset";
+                const char *label = "Untitled Preset";
                 char label_buf[256];
-                int label_h = menu_font_height(ctx->font, 16);
-                menu_fit_text_to_width(ctx->font,
+                int label_h = menu_font_height(renderer, ctx->font, 16);
+                if (retained_catalog) {
+                    const PhysicsSimSceneLibraryEntry *entry =
+                        (retained_scene_index >= 0 &&
+                         retained_scene_index < ctx->scene_library.retained_scenes.count)
+                            ? &ctx->scene_library.retained_scenes.entries[retained_scene_index]
+                            : NULL;
+                    label = (entry && entry->display_name[0] != '\0')
+                                ? entry->display_name
+                                : "Untitled 3D Scene";
+                } else {
+                    const CustomPresetSlot *slot =
+                        preset_library_get_slot_const(ctx->library, slot_index);
+                    label = (slot && slot->name[0] != '\0')
+                                ? slot->name
+                                : "Untitled Preset";
+                }
+                menu_fit_text_to_width(renderer,
+                                       ctx->font,
                                        label,
                                        label_rect.w - 6,
                                        label_buf,
@@ -389,23 +451,28 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                                text_color);
             }
 
-            SDL_Rect delete_rect = menu_preset_delete_button_rect(&row_rect);
-            SDL_Color del_color = hovered ? (SDL_Color){200, 110, 110, 255}
-                                          : COLOR_TEXT_DIM;
-            SDL_SetRenderDrawColor(renderer, del_color.r, del_color.g, del_color.b, del_color.a);
-            SDL_RenderDrawRect(renderer, &delete_rect);
-            if (small_font) {
-                int x_w = 0;
-                int x_h = menu_font_height(small_font, delete_rect.h - 8);
-                if (TTF_SizeUTF8(small_font, "x", &x_w, &x_h) != 0) {
-                    x_w = delete_rect.w / 2;
+            if (!retained_catalog) {
+                SDL_Rect delete_rect = menu_preset_delete_button_rect(&row_rect);
+                SDL_Color del_color = hovered ? (SDL_Color){200, 110, 110, 255}
+                                              : COLOR_TEXT_DIM;
+                SDL_SetRenderDrawColor(renderer, del_color.r, del_color.g, del_color.b, del_color.a);
+                SDL_RenderDrawRect(renderer, &delete_rect);
+                if (small_font) {
+                    int x_w = 0;
+                    int x_h = menu_font_height(renderer, small_font, delete_rect.h - 8);
+                    if (TTF_SizeUTF8(small_font, "x", &x_w, &x_h) != 0) {
+                        x_w = delete_rect.w / 2;
+                    } else {
+                        x_w = physics_sim_text_logical_pixels(renderer, x_w);
+                        x_h = physics_sim_text_logical_pixels(renderer, x_h);
+                    }
+                    menu_draw_text(renderer,
+                                   small_font,
+                                   "x",
+                                   delete_rect.x + (delete_rect.w - x_w) / 2,
+                                   delete_rect.y + (delete_rect.h - x_h) / 2,
+                                   del_color);
                 }
-                menu_draw_text(renderer,
-                               small_font,
-                               "x",
-                               delete_rect.x + (delete_rect.w - x_w) / 2,
-                               delete_rect.y + (delete_rect.h - x_h) / 2,
-                               del_color);
             }
         } else {
             SDL_Color text_color = hovered ? COLOR_TEXT : COLOR_TEXT_DIM;
@@ -413,12 +480,15 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
             char add_buf[64];
             snprintf(label, sizeof(label), "+ Add %s preset", menu_mode_label(ctx->active_mode));
             if (small_font) {
-                int add_h = menu_font_height(small_font, 16);
+                int add_h = menu_font_height(renderer, small_font, 16);
                 int add_w = 0;
                 int add_x = row_rect.x + 12;
-                menu_fit_text_to_width(small_font, label, row_rect.w - 24, add_buf, sizeof(add_buf));
-                if (TTF_SizeUTF8(small_font, add_buf, &add_w, &add_h) == 0 &&
-                    add_w > 0 && add_w < row_rect.w - 24) {
+                menu_fit_text_to_width(renderer, small_font, label, row_rect.w - 24, add_buf, sizeof(add_buf));
+                if (TTF_SizeUTF8(small_font, add_buf, &add_w, &add_h) == 0) {
+                    add_w = physics_sim_text_logical_pixels(renderer, add_w);
+                    add_h = physics_sim_text_logical_pixels(renderer, add_h);
+                }
+                if (add_w > 0 && add_w < row_rect.w - 24) {
                     add_x = row_rect.x + (row_rect.w - add_w) / 2;
                 }
                 menu_draw_text(renderer,
@@ -453,4 +523,12 @@ SDL_Color menu_color_text_dim(void) {
 
 SDL_Color menu_color_accent(void) {
     return COLOR_ACCENT;
+}
+
+SDL_Color menu_color_button_bg(void) {
+    return COLOR_BUTTON_BG;
+}
+
+SDL_Color menu_color_button_bg_active(void) {
+    return COLOR_BUTTON_BG_ACTIVE;
 }
