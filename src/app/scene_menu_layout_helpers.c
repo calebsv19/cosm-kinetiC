@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "app/menu/menu_state.h"
 #include "render/text_upload_policy.h"
 
 int scene_menu_font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
@@ -82,6 +83,7 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     int top_controls_y = 0;
     int top_controls_gap = 8;
     int top_controls_w = 0;
+    bool retained_catalog = false;
     int top_hint_h = 0;
     int io_rows_h = 0;
     int io_panel_h = 0;
@@ -89,6 +91,7 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     int row_y = 0;
     int row_gap = 8;
     if (!ctx) return;
+    retained_catalog = menu_showing_retained_catalog(ctx);
 
     title_h = scene_menu_font_height(ctx->renderer, ctx->font_title, 32);
     body_h = scene_menu_font_height(ctx->renderer, ctx->font, 22);
@@ -147,7 +150,7 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     ctx->space_toggle_button.rect.w = panel_x + panel_w - ctx->space_toggle_button.rect.x;
     ctx->space_toggle_button.rect.h = compact_h;
 
-    action_w = (panel_w - ui_gap) / 2;
+    action_w = retained_catalog ? (panel_w - ui_gap * 2) / 3 : (panel_w - ui_gap) / 2;
     if (action_w < 130) action_w = 130;
     if (action_w > 220) action_w = 220;
     ctx->start_button.rect.w = action_w;
@@ -159,10 +162,21 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     ctx->edit_button.rect.h = control_h;
     ctx->edit_button.rect.x = ctx->start_button.rect.x - ctx->edit_button.rect.w - ui_gap;
     ctx->edit_button.rect.y = ctx->start_button.rect.y;
-    if (ctx->edit_button.rect.x < panel_x) {
+    if (!retained_catalog && ctx->edit_button.rect.x < panel_x) {
         ctx->edit_button.rect.x = panel_x;
         ctx->edit_button.rect.w = ctx->start_button.rect.x - ui_gap - ctx->edit_button.rect.x;
         if (ctx->edit_button.rect.w < 110) ctx->edit_button.rect.w = 110;
+    }
+
+    ctx->duplicate_button.rect.w = action_w;
+    ctx->duplicate_button.rect.h = control_h;
+    ctx->duplicate_button.rect.x = ctx->edit_button.rect.x - ctx->duplicate_button.rect.w - ui_gap;
+    ctx->duplicate_button.rect.y = ctx->start_button.rect.y;
+    if (!retained_catalog) {
+        ctx->duplicate_button.rect.w = 0;
+        ctx->duplicate_button.rect.h = 0;
+    } else if (ctx->duplicate_button.rect.x < panel_x) {
+        ctx->duplicate_button.rect.x = panel_x;
     }
 
     ctx->quit_button.rect.w = 120;

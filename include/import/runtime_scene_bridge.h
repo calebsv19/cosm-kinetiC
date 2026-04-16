@@ -53,6 +53,13 @@ typedef struct PhysicsSimRetainedRuntimeScene {
     CoreSceneObjectContract objects[PHYSICS_SIM_RUNTIME_SCENE_MAX_OBJECTS];
 } PhysicsSimRetainedRuntimeScene;
 
+typedef struct PhysicsSimRuntimeVisualBootstrap {
+    bool valid;
+    PhysicsSimRetainedRuntimeScene retained_scene;
+    PhysicsSimRuntimeSceneBounds scene_domain;
+    bool scene_domain_authored;
+} PhysicsSimRuntimeVisualBootstrap;
+
 bool runtime_scene_bridge_preflight_json(const char *runtime_scene_json,
                                          RuntimeSceneBridgePreflight *out_preflight);
 bool runtime_scene_bridge_preflight_file(const char *runtime_scene_path,
@@ -68,6 +75,14 @@ bool runtime_scene_bridge_apply_file(const char *runtime_scene_path,
                                      RuntimeSceneBridgePreflight *out_summary);
 
 void runtime_scene_bridge_get_last_retained_scene(PhysicsSimRetainedRuntimeScene *out_scene);
+bool runtime_scene_bridge_load_visual_bootstrap_json(const char *runtime_scene_json,
+                                                     PhysicsSimRuntimeVisualBootstrap *out_bootstrap,
+                                                     char *out_diagnostics,
+                                                     size_t out_diagnostics_size);
+bool runtime_scene_bridge_load_visual_bootstrap_file(const char *runtime_scene_path,
+                                                     PhysicsSimRuntimeVisualBootstrap *out_bootstrap,
+                                                     char *out_diagnostics,
+                                                     size_t out_diagnostics_size);
 
 bool runtime_scene_bridge_writeback_physics_overlay_json(const char *runtime_scene_json,
                                                          const char *overlay_json,

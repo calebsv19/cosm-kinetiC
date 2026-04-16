@@ -18,6 +18,11 @@ typedef struct HeadlessOptions {
     bool preserve_sdl_state;
 } HeadlessOptions;
 
+typedef struct SceneRuntimeLaunch {
+    bool has_retained_scene;
+    char retained_runtime_scene_path[512];
+} SceneRuntimeLaunch;
+
 typedef enum SceneControllerInvalidationReasonBits {
     SCENE_CONTROLLER_INVALIDATION_INPUT = 1u << 0,
     SCENE_CONTROLLER_INVALIDATION_COMMAND = 1u << 1,
@@ -111,6 +116,7 @@ typedef struct SceneControllerRenderDeriveFrame {
 // steps physics/rendering until the user quits.
 int scene_controller_run(const AppConfig *initial_cfg,
                          const FluidScenePreset *preset,
+                         const SceneRuntimeLaunch *runtime_launch,
                          const ShapeAssetLibrary *shape_library,
                          const char *snapshot_dir,
                          const HeadlessOptions *headless);

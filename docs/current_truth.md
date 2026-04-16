@@ -450,7 +450,96 @@ Legacy test lane:
       - merged back into cached runtime-scene JSON
       - re-applied through the bridge
       - and then influence projected solver object state deterministically
-    - `initial_velocity` remains deferred at the solver-compatibility boundary because the current legacy runtime path still lacks an honest per-object sink for it
+  - `PS4D-ROC0` and `PS4D-ROC1` are now complete:
+    - runtime-overlay consumption is frozen into an honest field-by-field contract
+    - editor/save/reopen preserve:
+      - `motion_mode`
+      - `initial_velocity`
+      - `derived_defaults`
+      - `logical_clock`
+    - the runtime sink contract now explicitly separates:
+      - runtime-active behavior
+      - persistence-only bookkeeping
+      - still-deferred runtime semantics
+  - `PS4D-ROC2` slice 1 is now complete:
+    - overlay `initial_velocity` now survives the compatibility projection lane instead of stopping at editor/save metadata
+    - `PresetObject` now carries reduced runtime-bootstrap initial-velocity fields:
+      - `initial_velocity_x`
+      - `initial_velocity_y`
+      - `initial_velocity_z`
+    - dynamic preset-object runtime bootstrap is no longer a no-op:
+      - `scene_objects_add_presets(...)` now creates runtime rigid bodies for dynamic preset objects
+      - runtime body bootstrap now seeds:
+        - position
+        - angle
+        - gravity flag
+        - XY body velocity from projected initial velocity
+    - current honest runtime boundary is now:
+      - `motion_mode` is runtime-active
+      - `initial_velocity.x/y` are runtime-active through the reduced 2D compatibility lane
+      - `initial_velocity.z` remains persisted/carried compatibility metadata, not active runtime behavior
+  - `PS4D-ROC3` slice 1 is now complete:
+    - runtime-scene bridge validation now proves overlay `initial_velocity` can survive bridge apply and reach actual runtime-body bootstrap
+    - `runtime_scene_bridge_contract_test` now covers the bridge -> preset -> runtime-body path directly
+    - retained-scene selected-object info now states the reduced runtime sink explicitly:
+      - motion mode runtime-active
+      - XY velocity runtime-active
+      - Z saved only
+  - `PS4D-ROC4` is now complete:
+    - the retained-scene runtime-overlay-consumption lane is now closed for the current compatibility scope
+    - the locked runtime-active subset is:
+      - `motion_mode`
+      - `initial_velocity.x`
+      - `initial_velocity.y`
+    - the locked persisted-only subset remains explicit:
+      - `initial_velocity.z`
+      - overlay bookkeeping such as `derived_defaults` and `logical_clock`
+  - `PS4D-REA2` slice 1 is now complete:
+    - retained-scene object overlays now include nested emitter authoring state:
+      - `active`
+      - `type`
+      - `radius`
+      - `strength`
+      - `direction`
+    - the existing left-pane `Source` / `Jet` / `Sink` buttons now target the selected retained object when retained-scene mode is active
+    - the selected-object card now shows emitter attachment state directly and states that runtime emitter behavior is still pending
+    - retained emitter state now survives the current overlay JSON/apply/save/reopen seam instead of being editor-only local state
+  - `PS4D-REA3` slice 1 is now complete:
+    - retained emitter authoring is now explicitly validated across the full document lifecycle:
+      - `Apply Overlay` merges nested emitter payload into runtime-scene overlay JSON
+      - `Save Scene` writes that payload into the saved runtime-scene document
+      - reopen hydrates the saved emitter payload back into the editor session
+    - round-trip validation now checks emitter payload both in merged JSON before save and in reopened saved-file JSON before session hydration
+  - `PS4D-REA4` slice 1 is now complete:
+    - retained-object emitter overlay payload now projects into runtime compatibility emitters
+    - projected emitters now carry:
+      - type
+      - radius
+      - strength
+      - direction
+      - attached compatibility object index
+      - object-derived emitter position
+    - `lights[]` emitter seeding is now fallback-only when no retained emitter overlays are authored
+  - `PS4D-REA4` slice 2 is now complete:
+    - retained 3D object coloring now gives emitter overlay state precedence over motion-mode tint
+    - retained emitter-authored objects now reuse the 2D emitter palette directly:
+      - `Source` orange
+      - `Jet` cyan
+      - `Sink` purple
+    - assigning an emitter currently forces the retained object overlay to `Dynamic`
+  - `PS4D-REA4` slice 3 is now complete:
+    - emitter palette is now refined to separate emitter-authored objects from normal motion-state colors:
+      - `Source` bright yellow
+      - `Jet` vivid green
+      - `Sink` red-violet
+    - the retained 3D overlay lane and 2D emitter tint lane reuse the same updated palette
+  - `PS4D-REA4` slice 4 is now complete:
+    - retained-scene library rows now read the real runtime-scene `scene_id` from JSON instead of deriving identity only from the filename
+    - duplicate retained-scene rows now collapse by shared `scene_id` with explicit precedence:
+      - exact current runtime-scene path
+      - user-runtime scene over shipped sample
+      - newer modified file over older sibling
+    - this closes the stale-sibling reopen failure where emitter-authored saves could appear to revert even though the newer saved file already contained the emitter payload
   - `PS4D-5A` slice 1 is now complete:
     - the editor now owns a first real app-local scene-library model in front of the later open/save overhaul
     - scene-library ownership is now split explicitly between:
@@ -853,3 +942,102 @@ Legacy test lane:
     - `./bin/run_trio_scene_pipeline.sh` -> PASS
   - lane status:
     - `PS3D-0` through `PS3D-4` complete
+
+## Retained Scene Save Semantics
+- retained-scene save is now overwrite-oriented by document identity:
+  - if the editor is already on a user runtime-scene path, `Save Scene` reuses that exact file
+  - if the editor started from a sample path but a user runtime-scene file already exists for the same retained `scene_id`, `Save Scene` reuses that existing user file instead of creating a sibling duplicate
+- retained-scene branching is now explicit at the menu layer:
+  - the 3D catalog exposes a `Duplicate` button to the left of `Edit Preset`
+  - duplicate creates a `_copy` scene under `data/runtime/scenes`
+  - duplicate rewrites top-level retained `scene_id` so the copy is a distinct retained document
+- verification snapshot (2026-04-15):
+  - `make -C /Users/calebsv/Desktop/CodeWork/physics_sim package-desktop-refresh` -> PASS
+  - `make -C /Users/calebsv/Desktop/CodeWork/physics_sim test-stable` -> PASS
+  - `bash /Users/calebsv/Desktop/CodeWork/bin/run_trio_scene_pipeline.sh` -> PASS
+
+## Retained Emitter Lane Status
+- `PS4D-REA*` is now closed for the current compatibility scope.
+- retained-object emitter authoring now exists end-to-end:
+  - author in editor
+  - apply into overlay JSON
+  - save into retained runtime-scene files
+  - reopen and hydrate back into session state
+  - project into runtime compatibility emitters
+- `lights[]` emitter derivation now remains only as fallback compatibility behavior when no retained emitter overlays are authored.
+- emitter authoring is no longer the blocker for deeper retained-scene simulation work.
+- `PS4D-DB0` is now complete:
+  - retained `scene3d.bounds` already exists as imported provenance and viewport-framing input
+  - current `physics_sim` overlay/save contract is still object-only, so scene-level domain state is the next real retained-scene contract gap
+  - current runtime still only has honest 2D compatibility carriers for domain behavior:
+    - `FluidScenePreset.domain`
+    - `domain_width`
+    - `domain_height`
+- `PS4D-DB1` is now complete:
+  - authored scene-level domain state is now locked as `extensions.physics_sim.scene_domain`
+  - retained `scene3d.bounds` remains provenance/default input rather than the authored `physics_sim` source of truth
+  - `PhysicsSimSceneOverlay` is now explicitly required to grow from object-only state into scene-plus-object overlay state before later domain implementation slices can land
+- `PS4D-DB2` is now complete:
+  - retained-scene mode now exposes explicit scene-domain `Width` / `Height` / `Depth` authoring instead of pretending the old legacy dimension fields still describe retained 3D scene bounds
+  - retained scene-domain state now survives the existing overlay JSON/apply/save/reopen lifecycle through `extensions.physics_sim.scene_domain`
+  - retained viewport now renders a distinct wireframe scene-domain box:
+    - derived-from-provenance bounds read muted blue-grey
+    - manually overridden bounds read muted green
+  - retained framing now prefers the current scene-domain overlay over raw retained provenance/object extents
+- `PS4D-DB4` is now complete:
+  - runtime projection now resolves scene-domain precedence in this order:
+    - authored `extensions.physics_sim.scene_domain`
+    - retained `scene3d.bounds`
+    - old preset compatibility defaults
+  - current runtime-active subset is still reduced and honest:
+    - retained scene-domain `width/height` now drive `FluidScenePreset.domain_width` / `domain_height`
+    - retained scene-domain uses retained `world_scale` during projection so domain compatibility size matches retained object projection scale
+    - retained `depth` / Z-domain limits remain persisted-only for now
+  - retained scene-domain projection now marks the compatibility preset as `SCENE_DOMAIN_STRUCTURAL` when retained scene-domain state is active
+- `PS4D-DB5` is now complete:
+  - bridge coverage now proves retained-bounds fallback through the real file-apply path, not only the lower projection unit test
+  - retained save/reopen coverage now proves authored manual scene-domain overrides survive:
+    - saved JSON
+    - reopened session hydration
+    - runtime apply back into compatibility preset fields
+  - retained editor summary now states the runtime truth directly:
+    - `Runtime domain: XY active; depth saved only`
+- `PS4D-DB6` is now complete:
+  - the retained scene-domain lane is now closed for the current compatibility scope
+  - the frozen lane boundary is:
+    - scene-domain is scene-level solver policy
+    - scene-domain is not fake wall geometry
+    - XY domain subset is runtime-active today
+    - depth/Z remains persisted-only for now
+- `PS4D-RP1` is now complete:
+  - runtime now carries retained 3D scene selection into launch state
+  - runtime bootstrap recovers retained scene contract + authored `physics_sim.scene_domain` from the saved runtime-scene file
+  - retained objects, emitter-authored tinting, origin axes, and retained scene-domain now render in the runtime 3D scaffold view
+  - retained 3D runtime bootstrap now suppresses the normal 2D field/particle presentation instead of blending both modes
+- `PS4D-RP2` is now complete:
+  - retained runtime 3D view now keeps persistent viewport state in `SceneState`
+  - runtime retained-scene inspection controls are now active:
+    - `Alt+LMB` orbit
+    - `MMB` pan
+    - wheel zoom
+    - `F` frame
+  - retained runtime 3D scaffold now suppresses normal brush/stroke input so camera inspection does not inject legacy 2D edits
+  - runtime HUD now shows the retained-view control hint directly
+- `PS4D-RP3` is now complete:
+  - retained runtime 3D scenes now show the current `Fluid2D` density result as a reduced XY slice inside the retained 3D scaffold
+  - retained emitters, retained domain, and retained object startup now have a visible running result instead of only static retained bootstrap geometry
+  - runtime HUD now states the honest playback boundary directly:
+    - `Runtime fluid: reduced XY slice in 3D scaffold`
+- `PS4D-RP4A` is now complete:
+  - retained-object and retained-emitter runtime projection now normalize XY against the active authored/retained scene-domain before entering the reduced `Fluid2D` compatibility lane
+  - bounded retained scenes therefore stop treating raw retained world-space centers as if they were normalized solver-space positions
+- `PS4D-RP4` is now complete:
+  - retained runtime now includes an explicit XY slice-plane cue inside the 3D scaffold
+  - emitter projection guides now make the reduced XY playback relation readable instead of implicit
+  - bundled TimerHUD is now disabled by default via `physics_sim/config/timer_hud_settings.json`
+  - retained runtime wording is now tighter and explicit about the current compatibility boundary:
+    - retained 3D view controls
+    - XY slice-only playback
+    - Z scaffold-only
+- next boundary:
+  - `PS4D-RP5` true 3D fluid gap audit before any volumetric solver lane is claimed

@@ -18,6 +18,7 @@
 #include "input/stroke_buffer.h"
 #include "physics/fluid2d/fluid2d.h"
 #include "render/renderer_sdl.h"
+#include "render/retained_runtime_scene_overlay.h"
 #include "render/vk_shared_device.h"
 #include "export/volume_frames.h"
 #include "export/render_frames.h"
@@ -57,6 +58,84 @@ typedef struct SceneControllerIr1DiagTotals {
     uint64_t routed_fallback_total;
     uint64_t invalidation_reason_bits_total;
 } SceneControllerIr1DiagTotals;
+
+static bool scene_controller_retained_runtime_view_active(const SceneState *scene) {
+    return retained_runtime_scene_overlay_active(scene);
+}
+
+static void scene_controller_runtime_pointer_down(void *user,
+                                                  const InputPointerState *state) {
+    SceneState *scene = (SceneState *)user;
+    if (!scene || !state || !scene_controller_retained_runtime_view_active(scene)) return;
+
+    if (state->button == SDL_BUTTON_MIDDLE) {
+        (void)scene_editor_viewport_begin_navigation(&scene->runtime_viewport,
+                                                     SCENE_EDITOR_VIEWPORT_NAV_PAN,
+                                                     state->x,
+                                                     state->y);
+    } else if (state->button == SDL_BUTTON_LEFT && scene->runtime_viewport.alt_modifier_down) {
+        (void)scene_editor_viewport_begin_navigation(&scene->runtime_viewport,
+                                                     SCENE_EDITOR_VIEWPORT_NAV_ORBIT,
+                                                     state->x,
+                                                     state->y);
+    }
+}
+
+static void scene_controller_runtime_pointer_up(void *user,
+                                                const InputPointerState *state) {
+    SceneState *scene = (SceneState *)user;
+    if (!scene || !state || !scene_controller_retained_runtime_view_active(scene)) return;
+    if (!scene->runtime_viewport.navigation_active) return;
+    if (state->button == SDL_BUTTON_LEFT || state->button == SDL_BUTTON_MIDDLE) {
+        scene_editor_viewport_end_navigation(&scene->runtime_viewport);
+    }
+}
+
+static void scene_controller_runtime_pointer_move(void *user,
+                                                  const InputPointerState *state) {
+    SceneState *scene = (SceneState *)user;
+    if (!scene || !state || !scene_controller_retained_runtime_view_active(scene)) return;
+    if (!scene->runtime_viewport.navigation_active) return;
+    (void)scene_editor_viewport_update_navigation(&scene->runtime_viewport,
+                                                  state->x,
+                                                  state->y,
+                                                  scene->config ? scene->config->window_w : 1,
+                                                  scene->config ? scene->config->window_h : 1);
+}
+
+static void scene_controller_runtime_wheel(void *user,
+                                           const InputWheelState *wheel) {
+    SceneState *scene = (SceneState *)user;
+    if (!scene || !wheel || !scene_controller_retained_runtime_view_active(scene)) return;
+    (void)scene_editor_viewport_apply_wheel(&scene->runtime_viewport, wheel->y);
+}
+
+static void scene_controller_runtime_key_down(void *user,
+                                              SDL_Keycode key,
+                                              SDL_Keymod mod) {
+    SceneState *scene = (SceneState *)user;
+    if (!scene || !scene_controller_retained_runtime_view_active(scene)) return;
+    scene->runtime_viewport.alt_modifier_down = (mod & KMOD_ALT) != 0;
+    if (key == SDLK_f) {
+        (void)retained_runtime_scene_overlay_frame_view(scene,
+                                                        scene->config ? scene->config->window_w : 1,
+                                                        scene->config ? scene->config->window_h : 1);
+    }
+}
+
+static void scene_controller_runtime_key_up(void *user,
+                                            SDL_Keycode key,
+                                            SDL_Keymod mod) {
+    SceneState *scene = (SceneState *)user;
+    (void)key;
+    if (!scene || !scene_controller_retained_runtime_view_active(scene)) return;
+    scene->runtime_viewport.alt_modifier_down = (mod & KMOD_ALT) != 0;
+    if (!scene->runtime_viewport.alt_modifier_down &&
+        scene->runtime_viewport.navigation_active &&
+        scene->runtime_viewport.navigation_mode == SCENE_EDITOR_VIEWPORT_NAV_ORBIT) {
+        scene_editor_viewport_end_navigation(&scene->runtime_viewport);
+    }
+}
 
 static const double DEFAULT_SAMPLE_RATE = 240.0;
 static const float  DEFAULT_SAMPLE_SPACING = 3.0f;
@@ -414,9 +493,11 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
         frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_INPUT;
     }
 
-    scene_apply_input(scene, &input_frame->effective_commands);
-    stroke_sampler_capture(sampler, &input_frame->effective_commands, dt);
-    stroke_sampler_apply(sampler, scene, MAX_SAMPLES_PER_FRAME);
+    if (!scene_controller_retained_runtime_view_active(scene)) {
+        scene_apply_input(scene, &input_frame->effective_commands);
+        stroke_sampler_capture(sampler, &input_frame->effective_commands, dt);
+        stroke_sampler_apply(sampler, scene, MAX_SAMPLES_PER_FRAME);
+    }
 
     {
         size_t max_commands = (cfg->command_batch_limit > 0)
@@ -563,6 +644,7 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .kit_viz_particles_enabled = renderer_sdl_kit_viz_particles_enabled(),
         .kit_viz_particles_active = renderer_sdl_particles_using_kit_viz(),
         .objects_gravity_enabled = scene->objects_gravity_enabled,
+        .retained_runtime_visual_active = scene_controller_retained_runtime_view_active(scene),
         .quality_name = quality_label ? quality_label : "Custom",
         .solver_iterations = cfg->fluid_solver_iterations,
         .physics_substeps = cfg->physics_substeps
@@ -614,6 +696,7 @@ static void scene_controller_render_submit_phase(const SceneState *scene,
 
 int scene_controller_run(const AppConfig *initial_cfg,
                         const FluidScenePreset *preset,
+                        const SceneRuntimeLaunch *runtime_launch,
                         const ShapeAssetLibrary *shape_library,
                         const char *snapshot_dir,
                         const HeadlessOptions *headless) {
@@ -652,6 +735,14 @@ int scene_controller_run(const AppConfig *initial_cfg,
     }
 
     SceneState scene = scene_create(&cfg, &runtime_preset, shape_library, &mode_route);
+    if (runtime_launch &&
+        runtime_launch->has_retained_scene &&
+        runtime_launch->retained_runtime_scene_path[0] &&
+        mode_route.requested_space_mode == SPACE_MODE_3D) {
+        (void)scene_load_runtime_visual_bootstrap(&scene,
+                                                  runtime_launch->retained_runtime_scene_path);
+        (void)retained_runtime_scene_overlay_frame_view(&scene, cfg.window_w, cfg.window_h);
+    }
     if (!scene.smoke) {
         fprintf(stderr, "[scene] Fluid grid failed to initialize.\n");
     }
@@ -670,6 +761,18 @@ int scene_controller_run(const AppConfig *initial_cfg,
 
     InputContextManager ctx_mgr;
     input_context_manager_init(&ctx_mgr);
+    if (scene_controller_retained_runtime_view_active(&scene)) {
+        InputContext runtime_view_ctx = {
+            .on_pointer_down = scene_controller_runtime_pointer_down,
+            .on_pointer_up = scene_controller_runtime_pointer_up,
+            .on_pointer_move = scene_controller_runtime_pointer_move,
+            .on_wheel = scene_controller_runtime_wheel,
+            .on_key_down = scene_controller_runtime_key_down,
+            .on_key_up = scene_controller_runtime_key_up,
+            .user_data = &scene
+        };
+        input_context_manager_push(&ctx_mgr, &runtime_view_ctx);
+    }
 
     bool running = true;
     bool aborted = false;

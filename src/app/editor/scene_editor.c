@@ -185,7 +185,9 @@ static void editor_layout_controls(SceneEditorState *state) {
     velocity_button_h = small_h + 6;
     if (velocity_button_h < 26) velocity_button_h = 26;
 
-    inspector_top = state->height_rect.y + state->height_rect.h + 20;
+    inspector_top = physics_sim_editor_session_has_retained_scene(&state->session)
+                        ? (state->depth_rect.y + state->depth_rect.h + 20)
+                        : (state->height_rect.y + state->height_rect.h + 20);
     state->radius_field.rect = (SDL_Rect){right_x, inspector_top + 24, right_field_w, field_h};
     state->radius_field.label = "Radius";
     state->radius_field.target = FIELD_RADIUS;
@@ -328,7 +330,7 @@ static void editor_layout_controls(SceneEditorState *state) {
     info_line_step = small_h + 6;
     if (info_line_step < 18) info_line_step = 18;
     info_card_h = physics_sim_editor_session_has_retained_scene(&state->session)
-                      ? (16 + info_line_step * 6)
+                      ? (16 + info_line_step * 8)
                       : 0;
     if (info_card_h > 0) {
         state->object_info_rect = (SDL_Rect){left_x, list_top, left_field_w, info_card_h};
@@ -353,7 +355,7 @@ static void editor_reflow_layout(SceneEditorState *state) {
 static bool editor_text_entry_active(const SceneEditorState *state) {
     if (!state) return false;
     if (state->renaming_name) return true;
-    if (state->editing_width || state->editing_height) return true;
+    if (state->editing_width || state->editing_height || state->editing_depth) return true;
     if (state->active_field && state->active_field->editing) return true;
     return false;
 }
@@ -586,6 +588,8 @@ bool scene_editor_run(SDL_Window *window,
         SimModeRoute editor_route = sim_mode_resolve_route(state.cfg.sim_mode, state.cfg.space_mode);
         bool retained_scene_active = physics_sim_editor_session_has_retained_scene(&state.session);
         bool overlay_object_active = physics_sim_editor_session_selected_object_overlay(&state.session) != NULL;
+        const PhysicsSimEmitterOverlay *selected_retained_emitter =
+            physics_sim_editor_session_selected_object_emitter(&state.session);
         scene_editor_viewport_set_modes(&state.viewport,
                                         editor_route.requested_space_mode,
                                         editor_route.projection_space_mode);
@@ -597,6 +601,7 @@ bool scene_editor_run(SDL_Window *window,
         text_input_update(&state.name_input, dt);
         text_input_update(&state.width_input, dt);
         text_input_update(&state.height_input, dt);
+        text_input_update(&state.depth_input, dt);
 
         InputCommands cmds;
         if (!input_poll_events(&cmds, NULL, state.context_mgr)) {
@@ -609,12 +614,30 @@ bool scene_editor_run(SDL_Window *window,
         }
         (void)editor_apply_text_zoom_shortcut(&state, &cmds);
 
-        state.btn_add_source.enabled = !retained_scene_active &&
-                                       state.working.emitter_count < MAX_FLUID_EMITTERS;
-        state.btn_add_jet.enabled = !retained_scene_active &&
-                                    state.working.emitter_count < MAX_FLUID_EMITTERS;
-        state.btn_add_sink.enabled = !retained_scene_active &&
-                                     state.working.emitter_count < MAX_FLUID_EMITTERS;
+        state.btn_add_source.enabled = retained_scene_active
+                                           ? overlay_object_active
+                                           : (state.working.emitter_count < MAX_FLUID_EMITTERS);
+        state.btn_add_jet.enabled = retained_scene_active
+                                        ? overlay_object_active
+                                        : (state.working.emitter_count < MAX_FLUID_EMITTERS);
+        state.btn_add_sink.enabled = retained_scene_active
+                                         ? overlay_object_active
+                                         : (state.working.emitter_count < MAX_FLUID_EMITTERS);
+        state.btn_add_source.label = (retained_scene_active &&
+                                      selected_retained_emitter &&
+                                      selected_retained_emitter->type == EMITTER_DENSITY_SOURCE)
+                                         ? "Source*"
+                                         : "Source";
+        state.btn_add_jet.label = (retained_scene_active &&
+                                   selected_retained_emitter &&
+                                   selected_retained_emitter->type == EMITTER_VELOCITY_JET)
+                                      ? "Jet*"
+                                      : "Jet";
+        state.btn_add_sink.label = (retained_scene_active &&
+                                    selected_retained_emitter &&
+                                    selected_retained_emitter->type == EMITTER_SINK)
+                                       ? "Sink*"
+                                       : "Sink";
         state.btn_add_import.enabled = !retained_scene_active;
         state.btn_import_back.enabled = !retained_scene_active;
         state.btn_import_delete.enabled = !retained_scene_active &&

@@ -61,10 +61,13 @@ typedef struct SceneEditorState {
     Uint32 last_name_click;
     bool editing_width;
     bool editing_height;
+    bool editing_depth;
     Uint32 last_width_click;
     Uint32 last_height_click;
+    Uint32 last_depth_click;
     TextInputField width_input;
     TextInputField height_input;
+    TextInputField depth_input;
 
     int canvas_x;
     int canvas_y;
@@ -80,6 +83,7 @@ typedef struct SceneEditorState {
     SDL_Rect overlay_summary_rect;
     SDL_Rect width_rect;
     SDL_Rect height_rect;
+    SDL_Rect depth_rect;
     int layout_win_w;
     int layout_win_h;
 
@@ -174,6 +178,12 @@ typedef struct SceneEditorState {
     const ShapeAssetLibrary *shape_library;
 } SceneEditorState;
 
+typedef enum SceneEditorDimensionField {
+    SCENE_EDITOR_DIMENSION_WIDTH = 0,
+    SCENE_EDITOR_DIMENSION_HEIGHT,
+    SCENE_EDITOR_DIMENSION_DEPTH
+} SceneEditorDimensionField;
+
 void set_dirty(SceneEditorState *state);
 float sanitize_domain_dimension(float value);
 void editor_update_dimension_rects(SceneEditorState *state);
@@ -182,8 +192,8 @@ SDL_Rect editor_name_rect(const SceneEditorState *state);
 SDL_Rect editor_active_viewport_rect(const SceneEditorState *state);
 void editor_begin_name_edit(SceneEditorState *state);
 void editor_finish_name_edit(SceneEditorState *state, bool apply);
-void editor_begin_dimension_edit(SceneEditorState *state, bool editing_width);
-void editor_finish_dimension_edit(SceneEditorState *state, bool editing_width, bool apply);
+void editor_begin_dimension_edit(SceneEditorState *state, SceneEditorDimensionField field);
+void editor_finish_dimension_edit(SceneEditorState *state, SceneEditorDimensionField field, bool apply);
 void editor_frame_viewport_to_scene(SceneEditorState *state);
 bool editor_load_runtime_scene_fixture(SceneEditorState *state,
                                        const char *runtime_scene_path,

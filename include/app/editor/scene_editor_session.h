@@ -38,18 +38,42 @@ typedef enum PhysicsSimOverlayMotionMode {
     PHYSICS_SIM_OVERLAY_MOTION_STATIC
 } PhysicsSimOverlayMotionMode;
 
+typedef enum PhysicsSimDomainShape {
+    PHYSICS_SIM_DOMAIN_SHAPE_BOX = 0
+} PhysicsSimDomainShape;
+
+typedef struct PhysicsSimEmitterOverlay {
+    bool active;
+    FluidEmitterType type;
+    float radius;
+    float strength;
+    CoreObjectVec3 direction;
+} PhysicsSimEmitterOverlay;
+
+typedef struct PhysicsSimDomainOverlay {
+    bool active;
+    PhysicsSimDomainShape shape;
+    CoreObjectVec3 min;
+    CoreObjectVec3 max;
+    bool seeded_from_retained_bounds;
+    bool derived_defaults;
+    int logical_clock;
+} PhysicsSimDomainOverlay;
+
 typedef struct PhysicsSimObjectOverlay {
     bool active;
     int retained_object_index;
     char object_id[64];
     PhysicsSimOverlayMotionMode motion_mode;
     CoreObjectVec3 initial_velocity;
+    PhysicsSimEmitterOverlay emitter;
 } PhysicsSimObjectOverlay;
 
 typedef struct PhysicsSimSceneOverlay {
     bool active;
     bool derived_defaults;
     int logical_clock;
+    PhysicsSimDomainOverlay scene_domain;
     int object_overlay_count;
     PhysicsSimObjectOverlay object_overlays[PHYSICS_SIM_RUNTIME_SCENE_MAX_OBJECTS];
 } PhysicsSimSceneOverlay;
@@ -86,8 +110,23 @@ const CoreSceneObjectContract *physics_sim_editor_session_selected_object(const 
 const PhysicsSimObjectOverlay *physics_sim_editor_session_object_overlay_at(const PhysicsSimEditorSession *session,
                                                                             int index);
 const PhysicsSimObjectOverlay *physics_sim_editor_session_selected_object_overlay(const PhysicsSimEditorSession *session);
+const PhysicsSimEmitterOverlay *physics_sim_editor_session_object_emitter_at(const PhysicsSimEditorSession *session,
+                                                                              int index);
+const PhysicsSimEmitterOverlay *physics_sim_editor_session_selected_object_emitter(const PhysicsSimEditorSession *session);
+const PhysicsSimDomainOverlay *physics_sim_editor_session_scene_domain(const PhysicsSimEditorSession *session);
+void physics_sim_editor_session_scene_domain_dimensions(const PhysicsSimEditorSession *session,
+                                                        double *out_width,
+                                                        double *out_height,
+                                                        double *out_depth);
 bool physics_sim_editor_session_set_selected_motion_mode(PhysicsSimEditorSession *session,
                                                          PhysicsSimOverlayMotionMode mode);
+bool physics_sim_editor_session_set_selected_emitter_type(PhysicsSimEditorSession *session,
+                                                          FluidEmitterType type,
+                                                          bool toggle_clear);
+bool physics_sim_editor_session_set_scene_domain_size(PhysicsSimEditorSession *session,
+                                                      double width,
+                                                      double height,
+                                                      double depth);
 bool physics_sim_editor_session_nudge_selected_velocity(PhysicsSimEditorSession *session,
                                                         double dx,
                                                         double dy,
@@ -104,6 +143,7 @@ bool physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(PhysicsS
 bool physics_sim_editor_session_mark_overlay_applied(PhysicsSimEditorSession *session);
 const char *physics_sim_editor_session_object_kind_label(CoreSceneObjectKind kind);
 const char *physics_sim_editor_session_motion_mode_label(PhysicsSimOverlayMotionMode mode);
+const char *physics_sim_editor_session_emitter_type_label(FluidEmitterType type);
 const char *physics_sim_editor_session_legacy_selection_summary(const PhysicsSimEditorSession *session,
                                                                 char *buffer,
                                                                 size_t buffer_size);

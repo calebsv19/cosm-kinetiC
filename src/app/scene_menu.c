@@ -188,6 +188,7 @@ restart_menu:
         .vk_cfg = vk_cfg,
         .use_shared_device = use_shared_device,
         .start_button = {.rect = {MENU_WIDTH - 220, MENU_HEIGHT - 80, 180, 50}, .label = "Start"},
+        .duplicate_button = {.rect = {MENU_WIDTH - 620, MENU_HEIGHT - 80, 180, 50}, .label = "Duplicate"},
         .edit_button = {.rect = {MENU_WIDTH - 420, MENU_HEIGHT - 80, 180, 50}, .label = "Edit Preset"},
         .quit_button = {.rect = {20, MENU_HEIGHT - 70, 120, 40}, .label = "Quit"},
         .grid_dec_button = {.rect = {MENU_WIDTH - 260, 180, 40, 40}, .label = "-"},
@@ -682,6 +683,9 @@ restart_menu:
                              cfg->headless_enabled);
         }
         menu_draw_button(ctx.renderer, &ctx.start_button.rect, ctx.start_button.label, ctx.font, false);
+        if (menu_showing_retained_catalog(&ctx)) {
+            menu_draw_button(ctx.renderer, &ctx.duplicate_button.rect, ctx.duplicate_button.label, ctx.font, false);
+        }
         menu_draw_button(ctx.renderer, &ctx.edit_button.rect, ctx.edit_button.label, ctx.font, false);
         menu_draw_button(ctx.renderer, &ctx.quit_button.rect, ctx.quit_button.label, ctx.font, false);
 

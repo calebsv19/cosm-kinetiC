@@ -17,6 +17,7 @@
 #include "render/debug_draw_objects.h"
 #include "render/velocity_overlay.h"
 #include "render/particle_overlay.h"
+#include "render/retained_runtime_scene_overlay.h"
 #include "render/vk_shared_device.h"
 #include "vk_renderer.h"
 
@@ -271,11 +272,15 @@ static bool renderer_upload_scene(const SceneState *scene) {
     }
     g_scene_pitch = w * 4;
 
-    for (size_t i = 0; i < cell_count; ++i) {
-        float norm = scene->smoke->density[i] * DENSITY_VISUAL_SCALE;
-        if (norm < 0.0f) norm = 0.0f;
-        if (norm > 1.0f) norm = 1.0f;
-        g_density_tmp[i] = norm;
+    if (retained_runtime_scene_overlay_active(scene)) {
+        memset(g_density_tmp, 0, cell_count * sizeof(float));
+    } else {
+        for (size_t i = 0; i < cell_count; ++i) {
+            float norm = scene->smoke->density[i] * DENSITY_VISUAL_SCALE;
+            if (norm < 0.0f) norm = 0.0f;
+            if (norm > 1.0f) norm = 1.0f;
+            g_density_tmp[i] = norm;
+        }
     }
 
     bool blur_enabled = (scene->config && scene->config->enable_render_blur);
@@ -340,24 +345,32 @@ static bool renderer_upload_scene(const SceneState *scene) {
 }
 
 bool renderer_sdl_render_scene(const SceneState *scene) {
+    bool retained_runtime_3d = retained_runtime_scene_overlay_active(scene);
     if (!renderer_upload_scene(scene)) return false;
 
-    FieldOverlayConfig overlay_cfg = {
-        .draw_vorticity = g_draw_vorticity,
-        .draw_pressure  = g_draw_pressure,
-        .prefer_kit_viz_vorticity = g_use_kit_viz_vorticity,
-        .prefer_kit_viz_pressure = g_use_kit_viz_pressure
-    };
-    FieldOverlayResult field_result = field_overlay_apply_adapter_first(
-        scene, g_scene_pixels, g_scene_pitch, &overlay_cfg);
-    g_last_pressure_render_source_kit_viz =
-        g_draw_pressure ? field_result.pressure_used_kit_viz : false;
-    g_last_vorticity_render_source_kit_viz =
-        g_draw_vorticity ? field_result.vorticity_used_kit_viz : false;
+    if (!retained_runtime_3d) {
+        FieldOverlayConfig overlay_cfg = {
+            .draw_vorticity = g_draw_vorticity,
+            .draw_pressure  = g_draw_pressure,
+            .prefer_kit_viz_vorticity = g_use_kit_viz_vorticity,
+            .prefer_kit_viz_pressure = g_use_kit_viz_pressure
+        };
+        FieldOverlayResult field_result = field_overlay_apply_adapter_first(
+            scene, g_scene_pixels, g_scene_pitch, &overlay_cfg);
+        g_last_pressure_render_source_kit_viz =
+            g_draw_pressure ? field_result.pressure_used_kit_viz : false;
+        g_last_vorticity_render_source_kit_viz =
+            g_draw_vorticity ? field_result.vorticity_used_kit_viz : false;
 
-    {
-        double dt = (scene) ? scene->dt : (1.0 / 60.0);
-        particle_overlay_update(scene, dt, g_draw_flow_particles);
+        {
+            double dt = (scene) ? scene->dt : (1.0 / 60.0);
+            particle_overlay_update(scene, dt, g_draw_flow_particles);
+        }
+    } else {
+        g_last_pressure_render_source_kit_viz = false;
+        g_last_vorticity_render_source_kit_viz = false;
+        g_last_velocity_render_source_kit_viz = false;
+        g_last_particles_render_source_kit_viz = false;
     }
 
     if (!g_window || !g_renderer) return false;
@@ -432,8 +445,12 @@ bool renderer_sdl_render_scene(const SceneState *scene) {
     SDL_Rect dst_rect = {0, 0, g_window_w, g_window_h};
     vk_renderer_draw_texture((VkRenderer *)g_renderer, &scene_tex, NULL, &dst_rect);
     vk_renderer_queue_texture_destroy((VkRenderer *)g_renderer, &scene_tex);
-    debug_draw_object_borders(scene, g_renderer, g_window_w, g_window_h);
-    if (g_draw_velocity_vectors) {
+    if (retained_runtime_3d) {
+        retained_runtime_scene_overlay_draw(scene, g_renderer, g_window_w, g_window_h);
+    } else {
+        debug_draw_object_borders(scene, g_renderer, g_window_w, g_window_h);
+    }
+    if (!retained_runtime_3d && g_draw_velocity_vectors) {
         VelocityOverlayConfig vel_cfg = {
             .sample_stride = 4,
             .vector_scale = 0.8f,
@@ -447,7 +464,7 @@ bool renderer_sdl_render_scene(const SceneState *scene) {
     } else {
         g_last_velocity_render_source_kit_viz = false;
     }
-    if (g_draw_flow_particles) {
+    if (!retained_runtime_3d && g_draw_flow_particles) {
         ParticleOverlayRenderSource source = particle_overlay_draw_adapter_first(
             scene, g_renderer, g_window_w, g_window_h, g_use_kit_viz_particles);
         g_last_particles_render_source_kit_viz = (source == PARTICLE_OVERLAY_SOURCE_KIT_VIZ);

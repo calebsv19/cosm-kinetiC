@@ -62,6 +62,9 @@ typedef struct PresetObject {
     float angle;
     bool  is_static;
     bool  gravity_enabled;
+    float initial_velocity_x; // reduced compatibility carrier for runtime body bootstrap
+    float initial_velocity_y; // reduced compatibility carrier for runtime body bootstrap
+    float initial_velocity_z; // additive dimensional carry-through; current runtime ignores z
 } PresetObject;
 
 #define MAX_PRESET_OBJECTS 64

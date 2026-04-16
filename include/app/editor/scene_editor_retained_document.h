@@ -19,4 +19,11 @@ bool scene_editor_retained_document_resolve_save_path(const char *runtime_dir,
                                                       char *out_path,
                                                       size_t out_path_size);
 
+bool scene_editor_retained_document_duplicate_scene_file(const char *source_path,
+                                                         const char *runtime_dir,
+                                                         char *out_path,
+                                                         size_t out_path_size,
+                                                         char *out_diagnostics,
+                                                         size_t out_diagnostics_size);
+
 #endif

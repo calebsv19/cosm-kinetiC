@@ -89,6 +89,8 @@ SceneState scene_create(const AppConfig *cfg,
         s.emitter_masks[i].min_x = s.emitter_masks[i].min_y = 0;
         s.emitter_masks[i].max_x = s.emitter_masks[i].max_y = -1;
     }
+    memset(&s.runtime_visual, 0, sizeof(s.runtime_visual));
+    scene_editor_viewport_init(&s.runtime_viewport, SPACE_MODE_3D, SPACE_MODE_3D);
 
     scene_objects_init(&s);
     s.shape_library = shape_library;
@@ -196,6 +198,26 @@ void scene_set_emitters_enabled(SceneState *scene, bool enabled) {
 
 void scene_rasterize_dynamic_obstacles(SceneState *scene) {
     scene_masks_rasterize_dynamic(scene);
+}
+
+bool scene_load_runtime_visual_bootstrap(SceneState *scene,
+                                         const char *runtime_scene_path) {
+    PhysicsSimRuntimeVisualBootstrap bootstrap = {0};
+    char diagnostics[256];
+    if (!scene || !runtime_scene_path || !runtime_scene_path[0]) return false;
+    if (!runtime_scene_bridge_load_visual_bootstrap_file(runtime_scene_path,
+                                                         &bootstrap,
+                                                         diagnostics,
+                                                         sizeof(diagnostics))) {
+        fprintf(stderr, "[scene] Retained runtime bootstrap failed: %s\n", diagnostics);
+        return false;
+    }
+    if (!bootstrap.valid || !bootstrap.retained_scene.valid_contract) {
+        fprintf(stderr, "[scene] Retained runtime bootstrap invalid.\n");
+        return false;
+    }
+    scene->runtime_visual = bootstrap;
+    return true;
 }
 
 // --- snapshot format ---

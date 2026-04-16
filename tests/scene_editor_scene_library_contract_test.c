@@ -57,12 +57,13 @@ static bool test_scene_library_prefers_saved_runtime_scene_for_active_duplicate(
     const PhysicsSimSceneLibraryEntry *retained_entry = NULL;
     const char *user_dir = physics_sim_default_runtime_scene_user_dir();
     char saved_path[512];
+    int matching_scene_id_count = 0;
     const char *runtime_json =
         "{"
         "\"schema_family\":\"codework_scene\","
         "\"schema_variant\":\"scene_runtime_v1\","
         "\"schema_version\":1,"
-        "\"scene_id\":\"ps4d_runtime_scene_visual_test\","
+        "\"scene_id\":\"scene_ps4d_visual_test\","
         "\"space_mode_default\":\"3d\","
         "\"unit_system\":\"meters\","
         "\"world_scale\":1.0,"
@@ -92,17 +93,13 @@ static bool test_scene_library_prefers_saved_runtime_scene_for_active_duplicate(
     snprintf(session.retained_scene.root.scene_id,
              sizeof(session.retained_scene.root.scene_id),
              "%s",
-             "ps4d_runtime_scene_visual_test");
+             "scene_ps4d_visual_test");
 
     physics_sim_editor_scene_library_refresh(&library,
                                              &preset,
                                              &session,
                                              "config/samples",
                                              saved_path);
-    if (library.retained_scenes.count < 2) {
-        remove(saved_path);
-        return false;
-    }
     retained_entry = physics_sim_editor_scene_library_selected_retained(&library);
     if (!retained_entry) {
         remove(saved_path);
@@ -116,24 +113,85 @@ static bool test_scene_library_prefers_saved_runtime_scene_for_active_duplicate(
         remove(saved_path);
         return false;
     }
-    {
-        bool found_sample = false;
-        bool found_saved = false;
-        for (int i = 0; i < library.retained_scenes.count; ++i) {
-            const PhysicsSimSceneLibraryEntry *entry = &library.retained_scenes.entries[i];
-            if (strcmp(entry->source_path, saved_path) == 0) found_saved = true;
-            if (strcmp(entry->source_path, "config/samples/ps4d_runtime_scene_visual_test.json") == 0) {
-                found_sample = true;
-            }
+    for (int i = 0; i < library.retained_scenes.count; ++i) {
+        const PhysicsSimSceneLibraryEntry *entry = &library.retained_scenes.entries[i];
+        if (strcmp(entry->scene_id, "scene_ps4d_visual_test") == 0) {
+            matching_scene_id_count++;
         }
-        if (!found_sample || !found_saved) {
-            remove(saved_path);
-            return false;
-        }
+    }
+    if (matching_scene_id_count != 1) {
+        remove(saved_path);
+        return false;
     }
 
     remove(saved_path);
     return true;
+}
+
+static bool test_scene_library_prefers_exact_current_path_for_duplicate_user_scene_ids(void) {
+    PhysicsSimEditorSceneLibrary library = {0};
+    PhysicsSimEditorSession session = {0};
+    FluidScenePreset preset = {0};
+    const char *user_dir = physics_sim_default_runtime_scene_user_dir();
+    char path_a[512];
+    char path_b[512];
+    int matching_scene_id_count = 0;
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"dup_scene_runtime_contract\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{}"
+        "}";
+
+    if (!physics_sim_ensure_runtime_dirs()) return false;
+    if (snprintf(path_a, sizeof(path_a), "%s/%s", user_dir, "dup_scene_runtime_contract_a.json") >= (int)sizeof(path_a)) {
+        return false;
+    }
+    if (snprintf(path_b, sizeof(path_b), "%s/%s", user_dir, "dup_scene_runtime_contract_b.json") >= (int)sizeof(path_b)) {
+        return false;
+    }
+    if (!write_text_file(path_a, runtime_json) || !write_text_file(path_b, runtime_json)) {
+        remove(path_a);
+        remove(path_b);
+        return false;
+    }
+
+    preset.name = "Tunnel Draft";
+    session.has_retained_scene = true;
+    snprintf(session.retained_scene.root.scene_id,
+             sizeof(session.retained_scene.root.scene_id),
+             "%s",
+             "dup_scene_runtime_contract");
+
+    physics_sim_editor_scene_library_refresh(&library,
+                                             &preset,
+                                             &session,
+                                             "config/samples",
+                                             path_b);
+    for (int i = 0; i < library.retained_scenes.count; ++i) {
+        const PhysicsSimSceneLibraryEntry *entry = &library.retained_scenes.entries[i];
+        if (strcmp(entry->scene_id, "dup_scene_runtime_contract") == 0) {
+            matching_scene_id_count++;
+            if (strcmp(entry->source_path, path_b) != 0) {
+                remove(path_a);
+                remove(path_b);
+                return false;
+            }
+        }
+    }
+    remove(path_a);
+    remove(path_b);
+    return matching_scene_id_count == 1;
 }
 
 static bool test_scene_library_can_find_retained_row_by_exact_path(void) {
@@ -172,6 +230,10 @@ int main(void) {
     }
     if (!test_scene_library_can_find_retained_row_by_exact_path()) {
         fprintf(stderr, "scene_editor_scene_library_contract_test: path lookup failed\n");
+        return 1;
+    }
+    if (!test_scene_library_prefers_exact_current_path_for_duplicate_user_scene_ids()) {
+        fprintf(stderr, "scene_editor_scene_library_contract_test: duplicate user scene-id preference failed\n");
         return 1;
     }
     fprintf(stdout, "scene_editor_scene_library_contract_test: success\n");

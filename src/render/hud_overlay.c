@@ -196,6 +196,20 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         gravity_line[0] = '\0';
     }
 
+    char retained_runtime_line[112];
+    char retained_runtime_mode_line[96];
+    if (hud->retained_runtime_visual_active) {
+        snprintf(retained_runtime_line,
+                 sizeof(retained_runtime_line),
+                 "Retained 3D view: Alt+LMB orbit  MMB pan  Wheel zoom  F frame");
+        snprintf(retained_runtime_mode_line,
+                 sizeof(retained_runtime_mode_line),
+                 "Runtime fluid: XY slice only; Z remains scaffold-only");
+    } else {
+        retained_runtime_line[0] = '\0';
+        retained_runtime_mode_line[0] = '\0';
+    }
+
     const char *hint_line_a = "Keys: P/C/E Esc 1/2  V/B/S/L  Shift+S";
     const char *hint_line_b = "Paths: K/J  Shift+V/B/L  G grav  H elastic";
 
@@ -221,9 +235,13 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         lines[line_count++] = path_warn_buf;
     }
     if (gravity_line[0]) lines[line_count++] = gravity_line;
-    lines[line_count++] = hint_line_a;
-    if (hud->paused || path_warn_line[0] || overlays_line[0]) {
-        lines[line_count++] = hint_line_b;
+    if (retained_runtime_line[0]) lines[line_count++] = retained_runtime_line;
+    if (retained_runtime_mode_line[0]) lines[line_count++] = retained_runtime_mode_line;
+    if (!hud->retained_runtime_visual_active) {
+        lines[line_count++] = hint_line_a;
+        if (hud->paused || path_warn_line[0] || overlays_line[0]) {
+            lines[line_count++] = hint_line_b;
+        }
     }
 
     SDL_Surface *surfaces[MAX_HUD_LINES];

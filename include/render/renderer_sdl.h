@@ -37,6 +37,7 @@ typedef struct RendererHudInfo {
     bool        kit_viz_particles_enabled;
     bool        kit_viz_particles_active;
     bool        objects_gravity_enabled;
+    bool        retained_runtime_visual_active;
     const char *quality_name;
     int         solver_iterations;
     int         physics_substeps;

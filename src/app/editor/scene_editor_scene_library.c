@@ -3,12 +3,29 @@
 
 #include <dirent.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 static void scene_library_catalog_clear(PhysicsSimSceneLibraryCatalog *catalog) {
     if (!catalog) return;
     memset(catalog, 0, sizeof(*catalog));
     catalog->selected_index = -1;
+}
+
+static bool scene_library_path_is_under_dir(const char *dir, const char *path) {
+    size_t dir_len = 0;
+    if (!dir || !dir[0] || !path || !path[0]) return false;
+    dir_len = strlen(dir);
+    if (strncmp(dir, path, dir_len) != 0) return false;
+    return path[dir_len] == '\0' || path[dir_len] == '/';
+}
+
+static long long scene_library_path_modified_unix(const char *path) {
+    struct stat st = {0};
+    if (!path || !path[0]) return 0;
+    if (stat(path, &st) != 0) return 0;
+    return (long long)st.st_mtime;
 }
 
 static bool scene_library_has_json_suffix(const char *name) {
@@ -37,32 +54,118 @@ static void scene_library_display_name_from_filename(const char *filename,
     out[len] = '\0';
 }
 
+static bool scene_library_entry_load_scene_id(const char *path,
+                                              char *out_scene_id,
+                                              size_t out_scene_id_size) {
+    FILE *f = NULL;
+    long file_size = 0;
+    char *json_text = NULL;
+    const char *key = "\"scene_id\"";
+    char *cursor = NULL;
+    char *value = NULL;
+    size_t value_len = 0;
+    bool ok = false;
+
+    if (!out_scene_id || out_scene_id_size == 0) return false;
+    out_scene_id[0] = '\0';
+    if (!path || !path[0]) return false;
+
+    f = fopen(path, "rb");
+    if (!f) return false;
+    if (fseek(f, 0, SEEK_END) != 0) goto cleanup;
+    file_size = ftell(f);
+    if (file_size <= 0) goto cleanup;
+    if (fseek(f, 0, SEEK_SET) != 0) goto cleanup;
+
+    json_text = (char *)malloc((size_t)file_size + 1u);
+    if (!json_text) goto cleanup;
+    if (fread(json_text, 1, (size_t)file_size, f) != (size_t)file_size) goto cleanup;
+    json_text[file_size] = '\0';
+
+    cursor = strstr(json_text, key);
+    if (!cursor) goto cleanup;
+    cursor += strlen(key);
+    while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n') cursor++;
+    if (*cursor != ':') goto cleanup;
+    cursor++;
+    while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n') cursor++;
+    if (*cursor != '\"') goto cleanup;
+    cursor++;
+    value = cursor;
+    while (*cursor != '\0' && *cursor != '\"') {
+        if (*cursor == '\\' && cursor[1] != '\0') {
+            cursor += 2;
+        } else {
+            cursor++;
+        }
+    }
+    if (*cursor != '\"') goto cleanup;
+    value_len = (size_t)(cursor - value);
+    if (value_len + 1u > out_scene_id_size) {
+        value_len = out_scene_id_size - 1u;
+    }
+    memcpy(out_scene_id, value, value_len);
+    out_scene_id[value_len] = '\0';
+    ok = out_scene_id[0] != '\0';
+
+cleanup:
+    free(json_text);
+    if (f) fclose(f);
+    return ok;
+}
+
+static int scene_library_entry_compare_by_name(const void *lhs, const void *rhs) {
+    const PhysicsSimSceneLibraryEntry *a = (const PhysicsSimSceneLibraryEntry *)lhs;
+    const PhysicsSimSceneLibraryEntry *b = (const PhysicsSimSceneLibraryEntry *)rhs;
+    int by_name = strcmp(a->display_name, b->display_name);
+    if (by_name != 0) return by_name;
+    return strcmp(a->source_path, b->source_path);
+}
+
+static bool scene_library_entry_should_replace(const PhysicsSimSceneLibraryEntry *existing,
+                                               const PhysicsSimSceneLibraryEntry *candidate,
+                                               const char *current_runtime_scene_path) {
+    if (!existing || !candidate) return false;
+    if (current_runtime_scene_path && current_runtime_scene_path[0]) {
+        bool existing_current = strcmp(existing->source_path, current_runtime_scene_path) == 0;
+        bool candidate_current = strcmp(candidate->source_path, current_runtime_scene_path) == 0;
+        if (existing_current != candidate_current) return candidate_current;
+    }
+    if (existing->user_scene != candidate->user_scene) return candidate->user_scene;
+    if (existing->modified_unix != candidate->modified_unix) {
+        return candidate->modified_unix > existing->modified_unix;
+    }
+    return strcmp(candidate->display_name, existing->display_name) < 0;
+}
+
 static void scene_library_insert_entry_sorted(PhysicsSimSceneLibraryCatalog *catalog,
-                                              const PhysicsSimSceneLibraryEntry *entry) {
+                                              const PhysicsSimSceneLibraryEntry *entry,
+                                              const char *current_runtime_scene_path) {
     int existing_index = -1;
-    int insert_index = 0;
     if (!catalog || !entry) return;
     for (int i = 0; i < catalog->count; ++i) {
         if (strcmp(catalog->entries[i].source_path, entry->source_path) == 0) {
             existing_index = i;
             break;
         }
+        if (entry->scene_id[0] &&
+            catalog->entries[i].scene_id[0] &&
+            strcmp(catalog->entries[i].scene_id, entry->scene_id) == 0) {
+            existing_index = i;
+            break;
+        }
     }
     if (existing_index >= 0) {
-        catalog->entries[existing_index] = *entry;
-        if (catalog->selected_index == existing_index || entry->active) {
-            catalog->selected_index = existing_index;
+        if (strcmp(catalog->entries[existing_index].source_path, entry->source_path) == 0 ||
+            scene_library_entry_should_replace(&catalog->entries[existing_index],
+                                               entry,
+                                               current_runtime_scene_path)) {
+            catalog->entries[existing_index] = *entry;
         }
         return;
     }
     if (catalog->count >= PHYSICS_SIM_SCENE_LIBRARY_MAX_ENTRIES) return;
-    insert_index = catalog->count;
-    while (insert_index > 0 &&
-           strcmp(entry->display_name, catalog->entries[insert_index - 1].display_name) < 0) {
-        catalog->entries[insert_index] = catalog->entries[insert_index - 1];
-        insert_index--;
-    }
-    catalog->entries[insert_index] = *entry;
+    catalog->entries[catalog->count] = *entry;
     catalog->count++;
 }
 
@@ -119,12 +222,18 @@ static void scene_library_seed_retained_catalog(PhysicsSimSceneLibraryCatalog *c
                 scene_library_display_name_from_filename(dent->d_name,
                                                          entry.display_name,
                                                          sizeof(entry.display_name));
-                snprintf(entry.scene_id, sizeof(entry.scene_id), "%s", entry.display_name);
                 snprintf(entry.source_path, sizeof(entry.source_path), "%s/%s", runtime_scene_dir, dent->d_name);
+                entry.user_scene = scene_library_path_is_under_dir(runtime_scene_user_dir, entry.source_path);
+                entry.modified_unix = scene_library_path_modified_unix(entry.source_path);
+                if (!scene_library_entry_load_scene_id(entry.source_path,
+                                                       entry.scene_id,
+                                                       sizeof(entry.scene_id))) {
+                    snprintf(entry.scene_id, sizeof(entry.scene_id), "%s", entry.display_name);
+                }
                 entry.active = scene_library_entry_is_active(session,
                                                              current_runtime_scene_path,
                                                              &entry);
-                scene_library_insert_entry_sorted(catalog, &entry);
+                scene_library_insert_entry_sorted(catalog, &entry, current_runtime_scene_path);
             }
             closedir(dir);
         }
@@ -143,12 +252,18 @@ static void scene_library_seed_retained_catalog(PhysicsSimSceneLibraryCatalog *c
                 scene_library_display_name_from_filename(dent->d_name,
                                                          entry.display_name,
                                                          sizeof(entry.display_name));
-                snprintf(entry.scene_id, sizeof(entry.scene_id), "%s", entry.display_name);
                 snprintf(entry.source_path, sizeof(entry.source_path), "%s/%s", runtime_scene_user_dir, dent->d_name);
+                entry.user_scene = true;
+                entry.modified_unix = scene_library_path_modified_unix(entry.source_path);
+                if (!scene_library_entry_load_scene_id(entry.source_path,
+                                                       entry.scene_id,
+                                                       sizeof(entry.scene_id))) {
+                    snprintf(entry.scene_id, sizeof(entry.scene_id), "%s", entry.display_name);
+                }
                 entry.active = scene_library_entry_is_active(session,
                                                              current_runtime_scene_path,
                                                              &entry);
-                scene_library_insert_entry_sorted(catalog, &entry);
+                scene_library_insert_entry_sorted(catalog, &entry, current_runtime_scene_path);
             }
             closedir(dir);
         }
@@ -158,6 +273,10 @@ static void scene_library_seed_retained_catalog(PhysicsSimSceneLibraryCatalog *c
         catalog->selected_index = -1;
         return;
     }
+    qsort(catalog->entries,
+          (size_t)catalog->count,
+          sizeof(catalog->entries[0]),
+          scene_library_entry_compare_by_name);
     for (int i = 0; i < catalog->count; ++i) {
         if (catalog->entries[i].active) {
             catalog->selected_index = i;

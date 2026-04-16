@@ -21,10 +21,12 @@ typedef enum PhysicsSimSceneLibraryEntryKind {
 typedef struct PhysicsSimSceneLibraryEntry {
     PhysicsSimSceneLibraryEntryKind kind;
     bool active;
+    bool user_scene;
     char display_name[128];
     char source_path[512];
     char scene_id[128];
     int object_count;
+    long long modified_unix;
 } PhysicsSimSceneLibraryEntry;
 
 typedef struct PhysicsSimSceneLibraryCatalog {

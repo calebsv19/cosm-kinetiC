@@ -13,6 +13,8 @@
 #include "app/sim_mode.h"
 #include "physics/objects/object_manager.h"
 #include "geo/shape_library.h"
+#include "import/runtime_scene_bridge.h"
+#include "app/editor/scene_editor_viewport.h"
 
 typedef struct SceneState {
     double time;
@@ -55,6 +57,9 @@ typedef struct SceneState {
     float import_start_pos_x[MAX_IMPORTED_SHAPES];
     float import_start_pos_y[MAX_IMPORTED_SHAPES];
     float import_start_rot_deg[MAX_IMPORTED_SHAPES];
+
+    PhysicsSimRuntimeVisualBootstrap runtime_visual;
+    SceneEditorViewportState runtime_viewport;
 } SceneState;
 
 SceneState scene_create(const AppConfig *cfg,
@@ -72,6 +77,8 @@ void scene_enforce_boundary_flows(SceneState *scene);
 void scene_set_emitters_enabled(SceneState *scene, bool enabled);
 void scene_enforce_obstacles(SceneState *scene);
 void scene_rasterize_dynamic_obstacles(SceneState *scene);
+bool scene_load_runtime_visual_bootstrap(SceneState *scene,
+                                         const char *runtime_scene_path);
 
 // Snapshot export (Phase 1 basic implementation)
 bool scene_export_snapshot(const SceneState *scene, const char *path);

@@ -53,6 +53,7 @@ typedef struct SceneMenuInteraction {
     VkRendererConfig vk_cfg;
     bool use_shared_device;
     MenuButton start_button;
+    MenuButton duplicate_button;
     MenuButton edit_button;
     MenuButton quit_button;
     MenuButton grid_dec_button;

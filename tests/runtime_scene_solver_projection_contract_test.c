@@ -223,6 +223,190 @@ static bool test_solver_projection_overlay_motion_mode_overrides_solver_object_s
     if (preset.objects[0].gravity_enabled) return false;
     if (preset.objects[1].is_static) return false;
     if (!preset.objects[1].gravity_enabled) return false;
+    if (fabsf(preset.objects[0].initial_velocity_x - 1.0f) > 1e-6f) return false;
+    if (fabsf(preset.objects[1].initial_velocity_y - 2.0f) > 1e-6f) return false;
+    if (fabsf(preset.objects[1].initial_velocity_z - 0.0f) > 1e-6f) return false;
+    return true;
+}
+
+static bool test_solver_projection_retained_emitter_overlay_projects_to_solver_emitters(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_solver_projection_emitter_overlay\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[{\"position\":{\"x\":9.0,\"y\":9.0,\"z\":9.0},\"intensity\":99.0}],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{"
+          "\"physics_sim\":{"
+            "\"object_overlays\":["
+              "{"
+                "\"object_id\":\"obj_emitter\","
+                "\"motion_mode\":\"Dynamic\","
+                "\"emitter\":{"
+                  "\"active\":true,"
+                  "\"type\":\"Jet\","
+                  "\"radius\":0.25,"
+                  "\"strength\":18.0,"
+                  "\"direction\":{\"x\":1.0,\"y\":0.0,\"z\":-0.5}"
+                "}"
+              "}"
+            "]"
+          "}"
+        "}"
+        "}";
+    json_object *root = json_tokener_parse(runtime_json);
+    RuntimeSceneBridgePreflight summary = {0};
+    PhysicsSimRetainedRuntimeScene retained = {0};
+    AppConfig cfg = app_config_default();
+    const FluidScenePreset *base = scene_presets_get_default();
+    FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
+    bool ok = false;
+    if (!root || !json_object_is_type(root, json_type_object)) {
+        if (root) json_object_put(root);
+        return false;
+    }
+
+    retained.root.space_mode_default = CORE_SCENE_SPACE_MODE_3D;
+    retained.root.world_scale = 1.0;
+    retained.has_line_drawing_scene3d = true;
+    retained.bounds.enabled = true;
+    retained.bounds.min = (CoreObjectVec3){-2.5, -4.0, -1.0};
+    retained.bounds.max = (CoreObjectVec3){2.5, 4.0, 1.0};
+    retained.retained_object_count = 1;
+    snprintf(retained.objects[0].object.object_id,
+             sizeof(retained.objects[0].object.object_id),
+             "obj_emitter");
+    retained.objects[0].kind = CORE_SCENE_OBJECT_KIND_RECT_PRISM_PRIMITIVE;
+    retained.objects[0].has_rect_prism_primitive = true;
+    retained.objects[0].rect_prism_primitive.width = 1.0;
+    retained.objects[0].rect_prism_primitive.height = 1.0;
+    retained.objects[0].rect_prism_primitive.depth = 1.0;
+    retained.objects[0].rect_prism_primitive.frame.origin = (CoreObjectVec3){1.5, -2.0, 0.75};
+
+    ok = runtime_scene_solver_projection_apply_runtime(&retained, root, &cfg, &preset, &summary);
+    json_object_put(root);
+    if (!ok) return false;
+
+    if (preset.emitter_count != 1) return false;
+    if (preset.emitters[0].type != EMITTER_VELOCITY_JET) return false;
+    if (fabsf(preset.emitters[0].position_x - 0.8f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].position_y - 0.25f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].position_z - 0.75f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].radius - 0.05f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].strength - 18.0f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].dir_x - 1.0f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].dir_z - (-0.5f)) > 1e-6f) return false;
+    if (preset.emitters[0].attached_object != 0) return false;
+    if (preset.emitters[0].attached_import != -1) return false;
+    return true;
+}
+
+static bool test_solver_projection_scene_domain_overlay_overrides_retained_bounds(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_solver_projection_scene_domain_overlay\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":2.0,"
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{"
+          "\"physics_sim\":{"
+            "\"scene_domain\":{"
+              "\"active\":true,"
+              "\"shape\":\"box\","
+              "\"min\":{\"x\":-3.0,\"y\":-2.0,\"z\":-1.0},"
+              "\"max\":{\"x\":4.0,\"y\":5.0,\"z\":6.0}"
+            "}"
+          "}"
+        "}"
+        "}";
+    json_object *root = json_tokener_parse(runtime_json);
+    RuntimeSceneBridgePreflight summary = {0};
+    PhysicsSimRetainedRuntimeScene retained = {0};
+    AppConfig cfg = app_config_default();
+    const FluidScenePreset *base = scene_presets_get_default();
+    FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
+    bool ok = false;
+    if (!root || !json_object_is_type(root, json_type_object)) {
+        if (root) json_object_put(root);
+        return false;
+    }
+
+    retained.root.space_mode_default = CORE_SCENE_SPACE_MODE_3D;
+    retained.root.world_scale = 2.0;
+    retained.has_line_drawing_scene3d = true;
+    retained.bounds.enabled = true;
+    retained.bounds.min = (CoreObjectVec3){-10.0, -10.0, -10.0};
+    retained.bounds.max = (CoreObjectVec3){10.0, 10.0, 10.0};
+
+    ok = runtime_scene_solver_projection_apply_runtime(&retained, root, &cfg, &preset, &summary);
+    json_object_put(root);
+    if (!ok) return false;
+
+    if (preset.domain != SCENE_DOMAIN_STRUCTURAL) return false;
+    if (fabsf(preset.domain_width - 14.0f) > 1e-6f) return false;
+    if (fabsf(preset.domain_height - 14.0f) > 1e-6f) return false;
+    return true;
+}
+
+static bool test_solver_projection_scene_domain_falls_back_to_retained_bounds(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_solver_projection_scene_domain_bounds\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{}"
+        "}";
+    json_object *root = json_tokener_parse(runtime_json);
+    RuntimeSceneBridgePreflight summary = {0};
+    PhysicsSimRetainedRuntimeScene retained = {0};
+    AppConfig cfg = app_config_default();
+    const FluidScenePreset *base = scene_presets_get_default();
+    FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
+    bool ok = false;
+    if (!root || !json_object_is_type(root, json_type_object)) {
+        if (root) json_object_put(root);
+        return false;
+    }
+
+    retained.root.space_mode_default = CORE_SCENE_SPACE_MODE_3D;
+    retained.root.world_scale = 1.0;
+    retained.has_line_drawing_scene3d = true;
+    retained.bounds.enabled = true;
+    retained.bounds.min = (CoreObjectVec3){-6.0, -4.0, -2.0};
+    retained.bounds.max = (CoreObjectVec3){8.0, 7.0, 3.0};
+
+    ok = runtime_scene_solver_projection_apply_runtime(&retained, root, &cfg, &preset, &summary);
+    json_object_put(root);
+    if (!ok) return false;
+
+    if (preset.domain != SCENE_DOMAIN_STRUCTURAL) return false;
+    if (fabsf(preset.domain_width - 14.0f) > 1e-6f) return false;
+    if (fabsf(preset.domain_height - 11.0f) > 1e-6f) return false;
     return true;
 }
 
@@ -237,6 +421,18 @@ int main(void) {
     }
     if (!test_solver_projection_overlay_motion_mode_overrides_solver_object_state()) {
         fprintf(stderr, "runtime_scene_solver_projection_contract_test: overlay motion-mode override failed\n");
+        return 1;
+    }
+    if (!test_solver_projection_retained_emitter_overlay_projects_to_solver_emitters()) {
+        fprintf(stderr, "runtime_scene_solver_projection_contract_test: retained emitter overlay projection failed\n");
+        return 1;
+    }
+    if (!test_solver_projection_scene_domain_overlay_overrides_retained_bounds()) {
+        fprintf(stderr, "runtime_scene_solver_projection_contract_test: scene-domain overlay precedence failed\n");
+        return 1;
+    }
+    if (!test_solver_projection_scene_domain_falls_back_to_retained_bounds()) {
+        fprintf(stderr, "runtime_scene_solver_projection_contract_test: retained-bounds fallback failed\n");
         return 1;
     }
     fprintf(stdout, "runtime_scene_solver_projection_contract_test: success\n");

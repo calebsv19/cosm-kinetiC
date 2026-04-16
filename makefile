@@ -291,6 +291,7 @@ STABLE_TEST_TARGETS := \
 	test-kitviz-field-adapter \
 	test-sim-mode-route-contract \
 	test-preset-io-dimensional-contract \
+	test-scene-objects-runtime-contract \
 	test-scene-editor-retained-document-contract \
 	test-scene-editor-scene-library-contract \
 	test-scene-editor-pane-host-contract \
@@ -302,7 +303,7 @@ STABLE_TEST_TARGETS := \
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -355,10 +356,14 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	tests/runtime_scene_bridge_contract_test.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
+	$(SRC_DIR)/app/scene_objects.c \
 	$(SRC_DIR)/app/editor/scene_editor_session.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
+	$(SRC_DIR)/physics/objects/object_manager.c \
+	$(SRC_DIR)/physics/rigid/rigid2d.c \
+	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
 	$(CORE_OBJECT_DIR)/src/core_object.c \
@@ -372,6 +377,13 @@ RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS := \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c
+
+SCENE_OBJECTS_RUNTIME_TEST_SRCS := \
+	tests/scene_objects_runtime_contract_test.c \
+	$(SRC_DIR)/app/scene_objects.c \
+	$(SRC_DIR)/physics/objects/object_manager.c \
+	$(SRC_DIR)/physics/rigid/rigid2d.c \
+	$(SRC_DIR)/physics/rigid/rigid2d_collision.c
 
 STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS := \
 	tests/structural_runtime_split_contract_test.c \
@@ -418,6 +430,12 @@ test-preset-io-dimensional-contract: $(PRESET_IO_DIMENSIONAL_TEST_SRCS)
 		-o $(BUILD_DIR)/preset_io_dimensional_contract_test $(PRESET_IO_DIMENSIONAL_TEST_SRCS) -lm
 	$(BUILD_DIR)/preset_io_dimensional_contract_test
 
+test-scene-objects-runtime-contract: $(SCENE_OBJECTS_RUNTIME_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-o $(BUILD_DIR)/scene_objects_runtime_contract_test $(SCENE_OBJECTS_RUNTIME_TEST_SRCS) -lm
+	$(BUILD_DIR)/scene_objects_runtime_contract_test
+
 test-scene-editor-retained-document-contract: $(SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
@@ -457,12 +475,7 @@ test-runtime-scene-solver-projection-contract: $(RUNTIME_SCENE_SOLVER_PROJECTION
 
 test-runtime-scene-bridge-contract: $(RUNTIME_SCENE_BRIDGE_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
-		-I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include \
-		-I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
-		-I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include \
-		$(JSON_CFLAGS) \
+	$(CC) $(CFLAGS) \
 		-o $(BUILD_DIR)/runtime_scene_bridge_contract_test $(RUNTIME_SCENE_BRIDGE_TEST_SRCS) $(JSON_LIBS) -lm
 	$(BUILD_DIR)/runtime_scene_bridge_contract_test
 

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/editor/scene_editor_retained_document.h"
 #include "app/quality_profiles.h"
 #include "app/scene_controller.h"
 #include "app/data_paths.h"
@@ -80,11 +81,24 @@ void menu_run_headless_batch(SceneMenuInteraction *ctx) {
         .ignore_input = false,
         .preserve_sdl_state = true
     };
+    SceneRuntimeLaunch runtime_launch = {0};
     const char *output_dir = physics_sim_resolve_snapshot_output_dir(cfg_copy.headless_output_dir);
     CustomPresetSlot *slot = preset_library_get_slot(ctx->library,
                                                      ctx->selection->custom_slot_index);
     FluidScenePreset preset_copy = slot ? slot->preset : ctx->preview_preset;
-    int result = scene_controller_run(&cfg_copy, &preset_copy, ctx->shape_library, output_dir, &opts);
+    if (menu_showing_retained_catalog(ctx) && ctx->retained_runtime_scene_path[0]) {
+        runtime_launch.has_retained_scene = true;
+        snprintf(runtime_launch.retained_runtime_scene_path,
+                 sizeof(runtime_launch.retained_runtime_scene_path),
+                 "%s",
+                 ctx->retained_runtime_scene_path);
+    }
+    int result = scene_controller_run(&cfg_copy,
+                                      &preset_copy,
+                                      runtime_launch.has_retained_scene ? &runtime_launch : NULL,
+                                      ctx->shape_library,
+                                      output_dir,
+                                      &opts);
     if (result == 2) {
         menu_set_status(ctx, "Headless run canceled.", true);
     } else {
@@ -420,6 +434,7 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
     if (!ctx || !ctx->cfg || !ctx->selection) return false;
     if (ctx->scene_library.retained_scenes.count <= 0) {
         ctx->selection->retained_scene_index = -1;
+        ctx->selection->retained_runtime_scene_path[0] = '\0';
         ctx->editor_bootstrap.has_retained_scene = false;
         ctx->retained_runtime_scene_path[0] = '\0';
         menu_refresh_scene_library(ctx);
@@ -453,6 +468,10 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
     }
 
     ctx->selection->retained_scene_index = retained_scene_index;
+    snprintf(ctx->selection->retained_runtime_scene_path,
+             sizeof(ctx->selection->retained_runtime_scene_path),
+             "%s",
+             entry->source_path);
     ctx->scene_library.retained_scenes.selected_index = retained_scene_index;
     ctx->preview_preset = projected;
     ctx->active_preset = &ctx->preview_preset;
@@ -468,6 +487,53 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
              "%s",
              entry->source_path);
     menu_refresh_scene_library(ctx);
+    return true;
+}
+
+bool menu_duplicate_retained_scene(SceneMenuInteraction *ctx) {
+    const PhysicsSimSceneLibraryEntry *entry = NULL;
+    char duplicate_path[512];
+    char diagnostics[256];
+    int retained_index = -1;
+    if (!ctx) return false;
+    if (!menu_showing_retained_catalog(ctx)) return false;
+    if (ctx->scene_library.retained_scenes.count <= 0) return false;
+    retained_index = ctx->selection ? ctx->selection->retained_scene_index : -1;
+    if (retained_index < 0 || retained_index >= ctx->scene_library.retained_scenes.count) {
+        retained_index = ctx->scene_library.retained_scenes.selected_index;
+    }
+    if (retained_index < 0 || retained_index >= ctx->scene_library.retained_scenes.count) {
+        return false;
+    }
+    entry = &ctx->scene_library.retained_scenes.entries[retained_index];
+    if (!physics_sim_ensure_runtime_dirs()) {
+        menu_set_status(ctx, "Failed to ensure runtime scene directories.", true);
+        return false;
+    }
+    if (!scene_editor_retained_document_duplicate_scene_file(entry->source_path,
+                                                             physics_sim_default_runtime_scene_user_dir(),
+                                                             duplicate_path,
+                                                             sizeof(duplicate_path),
+                                                             diagnostics,
+                                                             sizeof(diagnostics))) {
+        menu_set_status(ctx,
+                        diagnostics[0] ? diagnostics : "Failed to duplicate retained scene.",
+                        true);
+        return false;
+    }
+    snprintf(ctx->retained_runtime_scene_path,
+             sizeof(ctx->retained_runtime_scene_path),
+             "%s",
+             duplicate_path);
+    menu_refresh_scene_library(ctx);
+    retained_index = physics_sim_editor_scene_library_find_retained_index_by_path(&ctx->scene_library,
+                                                                                  duplicate_path);
+    if (retained_index >= 0) {
+        (void)menu_select_retained_scene(ctx, retained_index);
+    }
+    menu_set_status(ctx,
+                    diagnostics[0] ? diagnostics : "Retained scene duplicated.",
+                    false);
     return true;
 }
 

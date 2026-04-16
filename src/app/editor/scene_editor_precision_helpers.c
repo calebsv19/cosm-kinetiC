@@ -208,9 +208,9 @@ void scene_editor_precision_draw_import_outline(SDL_Renderer *renderer,
 
 SDL_Color scene_editor_precision_emitter_color(const FluidEmitter *em) {
     switch (em->type) {
-    case EMITTER_DENSITY_SOURCE: return (SDL_Color){252, 163, 17, 255};
-    case EMITTER_VELOCITY_JET:   return (SDL_Color){64, 201, 255, 255};
-    case EMITTER_SINK:           return (SDL_Color){200, 80, 255, 255};
+    case EMITTER_DENSITY_SOURCE: return (SDL_Color){246, 233, 90, 255};
+    case EMITTER_VELOCITY_JET:   return (SDL_Color){74, 232, 124, 255};
+    case EMITTER_SINK:           return (SDL_Color){232, 96, 136, 255};
     default:                     return (SDL_Color){255, 255, 255, 255};
     }
 }

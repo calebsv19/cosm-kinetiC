@@ -1,4 +1,5 @@
 #include "import/runtime_scene_bridge.h"
+#include "app/scene_objects.h"
 #include "app/editor/scene_editor_session.h"
 #include "core_scene_compile.h"
 
@@ -181,6 +182,88 @@ static bool test_runtime_scene_bridge_apply_uses_world_scale_mapping(void) {
     return true;
 }
 
+static bool test_runtime_scene_bridge_overlay_velocity_bootstraps_runtime_body(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_runtime_velocity_bootstrap\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[{"
+          "\"object_id\":\"obj_runtime_body\","
+          "\"object_type\":\"box\","
+          "\"transform\":{"
+             "\"position\":{\"x\":0.25,\"y\":0.40,\"z\":0.0},"
+             "\"scale\":{\"x\":0.10,\"y\":0.20,\"z\":0.05}"
+          "},"
+          "\"flags\":{\"locked\":false}"
+        "}],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{"
+          "\"physics_sim\":{"
+            "\"object_overlays\":[{"
+              "\"object_id\":\"obj_runtime_body\","
+              "\"motion_mode\":\"Dynamic\","
+              "\"initial_velocity\":{\"x\":0.50,\"y\":-0.25,\"z\":1.50}"
+            "}]"
+          "}"
+        "}"
+        "}";
+    RuntimeSceneBridgePreflight summary;
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SceneState scene = {0};
+
+    cfg.window_w = 800;
+    cfg.window_h = 600;
+
+    if (!runtime_scene_bridge_apply_json(runtime_json, &cfg, &preset, &summary)) return false;
+    if (!summary.valid_contract) return false;
+    if (cfg.space_mode != SPACE_MODE_3D) return false;
+    if (preset.dimension_mode != SCENE_DIMENSION_MODE_3D) return false;
+    if (preset.object_count != 1) return false;
+    if (preset.objects[0].is_static) return false;
+    if (!preset.objects[0].gravity_enabled) return false;
+    if (fabsf(preset.objects[0].initial_velocity_x - 0.50f) > 1e-6f) return false;
+    if (fabsf(preset.objects[0].initial_velocity_y - (-0.25f)) > 1e-6f) return false;
+    if (fabsf(preset.objects[0].initial_velocity_z - 1.50f) > 1e-6f) return false;
+
+    scene.config = &cfg;
+    scene.preset = &preset;
+    scene_objects_init(&scene);
+    scene_objects_add_presets(&scene);
+
+    if (scene.objects.count != 1) {
+        scene_objects_shutdown(&scene);
+        return false;
+    }
+    if (fabsf(scene.objects.objects[0].body.position.x - 200.0f) > 1e-6f) {
+        scene_objects_shutdown(&scene);
+        return false;
+    }
+    if (fabsf(scene.objects.objects[0].body.position.y - 240.0f) > 1e-6f) {
+        scene_objects_shutdown(&scene);
+        return false;
+    }
+    if (fabsf(scene.objects.objects[0].body.velocity.x - 400.0f) > 1e-6f) {
+        scene_objects_shutdown(&scene);
+        return false;
+    }
+    if (fabsf(scene.objects.objects[0].body.velocity.y - (-150.0f)) > 1e-6f) {
+        scene_objects_shutdown(&scene);
+        return false;
+    }
+
+    scene_objects_shutdown(&scene);
+    return true;
+}
+
 static bool test_runtime_scene_bridge_apply_compile_output_sets_3d(void) {
     const char *authoring_json =
         "{"
@@ -279,11 +362,11 @@ static bool test_runtime_scene_bridge_apply_retains_canonical_primitives(void) {
     if (cfg.space_mode != SPACE_MODE_3D) return false;
     if (preset.dimension_mode != SCENE_DIMENSION_MODE_3D) return false;
     if (preset.object_count != 2) return false;
-    if (fabsf(preset.objects[0].position_y - 0.5f) > 1e-6f) return false;
-    if (fabsf(preset.objects[0].size_x - 4.5f) > 1e-6f) return false;
+    if (fabsf(preset.objects[0].position_y - ((0.5f + 10.0f) / 20.0f)) > 1e-6f) return false;
+    if (fabsf(preset.objects[0].size_x - (2.25f / 24.0f)) > 1e-6f) return false;
     if (fabsf(preset.objects[0].size_z - 0.02f) > 1e-6f) return false;
-    if (fabsf(preset.objects[1].position_x - 2.75f) > 1e-6f) return false;
-    if (fabsf(preset.objects[1].size_x - 3.0f) > 1e-6f) return false;
+    if (fabsf(preset.objects[1].position_x - ((2.75f + 12.0f) / 24.0f)) > 1e-6f) return false;
+    if (fabsf(preset.objects[1].size_x - (1.5f / 24.0f)) > 1e-6f) return false;
     if (fabsf(preset.objects[1].size_z - 1.5f) > 1e-6f) return false;
     if (preset.emitter_count != 0) return false;
     return true;
@@ -312,10 +395,98 @@ static bool test_runtime_scene_bridge_apply_visual_test_scene_fixture(void) {
     if (fabs(retained.bounds.max.z - 4.0) > 1e-9) return false;
     if (cfg.space_mode != SPACE_MODE_3D) return false;
     if (preset.dimension_mode != SCENE_DIMENSION_MODE_3D) return false;
+    if (preset.domain != SCENE_DOMAIN_STRUCTURAL) return false;
+    if (fabsf(preset.domain_width - 12.0f) > 1e-6f) return false;
+    if (fabsf(preset.domain_height - 10.0f) > 1e-6f) return false;
     if (preset.object_count != 3) return false;
-    if (fabsf(preset.objects[0].size_x - 8.0f) > 1e-6f) return false;
-    if (fabsf(preset.objects[0].size_y - 6.0f) > 1e-6f) return false;
-    if (fabsf(preset.objects[1].size_x - 2.0f) > 1e-6f) return false;
+    if (fabsf(preset.objects[0].size_x - (4.0f / 12.0f)) > 1e-6f) return false;
+    if (fabsf(preset.objects[0].size_y - (3.0f / 10.0f)) > 1e-6f) return false;
+    if (fabsf(preset.objects[1].size_x - (1.0f / 12.0f)) > 1e-6f) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_visual_bootstrap_uses_authored_scene_domain(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_runtime_visual_bootstrap_authored\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[{"
+          "\"object_id\":\"obj_runtime_visual\","
+          "\"object_type\":\"rect_prism\","
+          "\"primitive\":{"
+             "\"kind\":\"rect_prism\","
+             "\"width\":2.0,"
+             "\"height\":3.0,"
+             "\"depth\":4.0,"
+             "\"frame\":{"
+                "\"origin\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},"
+                "\"axis_u\":{\"x\":1.0,\"y\":0.0,\"z\":0.0},"
+                "\"axis_v\":{\"x\":0.0,\"y\":1.0,\"z\":0.0},"
+                "\"normal\":{\"x\":0.0,\"y\":0.0,\"z\":1.0}"
+             "}"
+          "}"
+        "}],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{"
+          "\"line_drawing\":{"
+            "\"scene3d\":{"
+              "\"bounds\":{"
+                "\"enabled\":true,"
+                "\"min\":{\"x\":-4.0,\"y\":-4.0,\"z\":-4.0},"
+                "\"max\":{\"x\":4.0,\"y\":4.0,\"z\":4.0}"
+              "}"
+            "}"
+          "},"
+          "\"physics_sim\":{"
+            "\"scene_domain\":{"
+              "\"active\":true,"
+              "\"shape\":\"box\","
+              "\"min\":{\"x\":-7.0,\"y\":-5.0,\"z\":-3.0},"
+              "\"max\":{\"x\":7.0,\"y\":5.0,\"z\":3.0}"
+            "}"
+          "}"
+        "}"
+        "}";
+    PhysicsSimRuntimeVisualBootstrap bootstrap = {0};
+    char diagnostics[256];
+    if (!runtime_scene_bridge_load_visual_bootstrap_json(runtime_json,
+                                                         &bootstrap,
+                                                         diagnostics,
+                                                         sizeof(diagnostics))) {
+        return false;
+    }
+    if (!bootstrap.valid) return false;
+    if (!bootstrap.retained_scene.valid_contract) return false;
+    if (!bootstrap.scene_domain.enabled) return false;
+    if (!bootstrap.scene_domain_authored) return false;
+    if (fabs(bootstrap.scene_domain.min.x - (-7.0)) > 1e-9) return false;
+    if (fabs(bootstrap.scene_domain.max.z - 3.0) > 1e-9) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_visual_bootstrap_falls_back_to_retained_bounds(void) {
+    PhysicsSimRuntimeVisualBootstrap bootstrap = {0};
+    char diagnostics[256];
+    if (!runtime_scene_bridge_load_visual_bootstrap_file("config/samples/ps4d_runtime_scene_visual_test.json",
+                                                         &bootstrap,
+                                                         diagnostics,
+                                                         sizeof(diagnostics))) {
+        return false;
+    }
+    if (!bootstrap.valid) return false;
+    if (!bootstrap.retained_scene.valid_contract) return false;
+    if (!bootstrap.scene_domain.enabled) return false;
+    if (bootstrap.scene_domain_authored) return false;
+    if (fabs(bootstrap.scene_domain.min.x - (-6.0)) > 1e-9) return false;
+    if (fabs(bootstrap.scene_domain.max.z - 4.0) > 1e-9) return false;
     return true;
 }
 
@@ -349,6 +520,7 @@ static bool test_scene_editor_session_bootstrap_preserves_retained_scene(void) {
 
     const CoreSceneObjectContract *selected = physics_sim_editor_session_selected_object(&session);
     const PhysicsSimObjectOverlay *selected_overlay = physics_sim_editor_session_selected_object_overlay(&session);
+    const PhysicsSimDomainOverlay *scene_domain = physics_sim_editor_session_scene_domain(&session);
     if (!selected) return false;
     if (strcmp(selected->object.object_id, "obj3d_1") != 0) return false;
     if (selected->kind != CORE_SCENE_OBJECT_KIND_PLANE_PRIMITIVE) return false;
@@ -360,6 +532,10 @@ static bool test_scene_editor_session_bootstrap_preserves_retained_scene(void) {
     if (fabs(selected_overlay->initial_velocity.x) > 1e-9) return false;
     if (fabs(selected_overlay->initial_velocity.y) > 1e-9) return false;
     if (fabs(selected_overlay->initial_velocity.z) > 1e-9) return false;
+    if (!scene_domain || !scene_domain->active) return false;
+    if (!scene_domain->seeded_from_retained_bounds) return false;
+    if (fabs(scene_domain->min.x - (-12.0)) > 1e-9) return false;
+    if (fabs(scene_domain->max.z - 8.0) > 1e-9) return false;
 
     return true;
 }
@@ -415,23 +591,36 @@ static bool test_scene_editor_session_overlay_mutation_updates_selected_object(v
     if (!physics_sim_editor_session_nudge_selected_velocity(&session, 0.25, -0.50, 1.25)) {
         return false;
     }
+    if (!physics_sim_editor_session_set_selected_emitter_type(&session, EMITTER_VELOCITY_JET, true)) {
+        return false;
+    }
 
     {
         const PhysicsSimObjectOverlay *selected_overlay = physics_sim_editor_session_selected_object_overlay(&session);
+        const PhysicsSimEmitterOverlay *selected_emitter = physics_sim_editor_session_selected_object_emitter(&session);
         if (!selected_overlay) return false;
-        if (selected_overlay->motion_mode != PHYSICS_SIM_OVERLAY_MOTION_STATIC) return false;
+        if (selected_overlay->motion_mode != PHYSICS_SIM_OVERLAY_MOTION_DYNAMIC) return false;
         if (fabs(selected_overlay->initial_velocity.x - 0.25) > 1e-9) return false;
         if (fabs(selected_overlay->initial_velocity.y - (-0.50)) > 1e-9) return false;
         if (fabs(selected_overlay->initial_velocity.z - 1.25) > 1e-9) return false;
+        if (!selected_emitter) return false;
+        if (selected_emitter->type != EMITTER_VELOCITY_JET) return false;
+        if (fabs(selected_emitter->strength - 40.0) > 1e-9) return false;
+        if (strcmp(physics_sim_editor_session_emitter_type_label(selected_emitter->type), "Jet") != 0) return false;
     }
 
     if (!physics_sim_editor_session_reset_selected_velocity(&session)) return false;
+    if (!physics_sim_editor_session_set_selected_emitter_type(&session, EMITTER_VELOCITY_JET, true)) {
+        return false;
+    }
     {
         const PhysicsSimObjectOverlay *selected_overlay = physics_sim_editor_session_selected_object_overlay(&session);
+        const PhysicsSimEmitterOverlay *selected_emitter = physics_sim_editor_session_selected_object_emitter(&session);
         if (!selected_overlay) return false;
         if (fabs(selected_overlay->initial_velocity.x) > 1e-9) return false;
         if (fabs(selected_overlay->initial_velocity.y) > 1e-9) return false;
         if (fabs(selected_overlay->initial_velocity.z) > 1e-9) return false;
+        if (selected_emitter) return false;
     }
 
     return true;
@@ -442,6 +631,7 @@ static bool test_scene_editor_session_overlay_json_build_and_merge(void) {
     PhysicsSimRetainedRuntimeScene retained = {0};
     SceneEditorBootstrap bootstrap = {0};
     PhysicsSimEditorSession session = {0};
+    PhysicsSimEditorSession rehydrated = {0};
     AppConfig cfg = app_config_default();
     const FluidScenePreset *base = scene_presets_get_default();
     FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
@@ -479,6 +669,14 @@ static bool test_scene_editor_session_overlay_json_build_and_merge(void) {
         free(runtime_json);
         return false;
     }
+    if (!physics_sim_editor_session_set_selected_emitter_type(&session, EMITTER_VELOCITY_JET, true)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_set_scene_domain_size(&session, 18.0, 12.0, 6.0)) {
+        free(runtime_json);
+        return false;
+    }
     if (!physics_sim_editor_session_build_overlay_json(&session,
                                                        &overlay_json,
                                                        diagnostics,
@@ -499,16 +697,49 @@ static bool test_scene_editor_session_overlay_json_build_and_merge(void) {
         return false;
     }
 
+    physics_sim_editor_session_init(&rehydrated, &preset, &bootstrap);
+    if (!physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(&rehydrated,
+                                                                            merged_json,
+                                                                            diagnostics,
+                                                                            sizeof(diagnostics))) {
+        free(overlay_json);
+        free(merged_json);
+        return false;
+    }
+
     ok = strstr(overlay_json, "\"overlay_variant\"") != NULL &&
          strstr(overlay_json, "retained_object_overlay_v1") != NULL &&
+         strstr(overlay_json, "\"scene_domain\"") != NULL &&
+         strstr(overlay_json, "\"seeded_from_retained_bounds\":false") != NULL &&
          strstr(overlay_json, "\"object_id\"") != NULL &&
          strstr(overlay_json, "obj3d_2") != NULL &&
          strstr(overlay_json, "\"motion_mode\"") != NULL &&
-         strstr(overlay_json, "Static") != NULL &&
+         strstr(overlay_json, "Dynamic") != NULL &&
+         strstr(overlay_json, "\"emitter\"") != NULL &&
+         strstr(overlay_json, "\"type\"") != NULL &&
+         strstr(overlay_json, "Jet") != NULL &&
          strstr(overlay_json, "\"logical_clock\"") != NULL &&
          strstr(merged_json, "\"physics_sim\"") != NULL &&
+         strstr(merged_json, "\"scene_domain\"") != NULL &&
          strstr(merged_json, "\"object_overlays\"") != NULL &&
          strstr(merged_json, "obj3d_2") != NULL;
+
+    if (ok) {
+        const PhysicsSimDomainOverlay *scene_domain = physics_sim_editor_session_scene_domain(&rehydrated);
+        double width = 0.0;
+        double height = 0.0;
+        double depth = 0.0;
+        if (!scene_domain || scene_domain->seeded_from_retained_bounds) {
+            ok = false;
+        } else {
+            physics_sim_editor_session_scene_domain_dimensions(&rehydrated, &width, &height, &depth);
+            if (fabs(width - 18.0) > 1e-9 ||
+                fabs(height - 12.0) > 1e-9 ||
+                fabs(depth - 6.0) > 1e-9) {
+                ok = false;
+            }
+        }
+    }
 
     free(overlay_json);
     free(merged_json);
@@ -591,6 +822,149 @@ static bool test_runtime_scene_bridge_apply_merged_overlay_affects_solver_mappin
     return true;
 }
 
+static bool test_runtime_scene_bridge_apply_merged_scene_domain_affects_solver_domain(void) {
+    RuntimeSceneBridgePreflight summary = {0};
+    PhysicsSimRetainedRuntimeScene retained = {0};
+    SceneEditorBootstrap bootstrap = {0};
+    PhysicsSimEditorSession session = {0};
+    AppConfig cfg = app_config_default();
+    const FluidScenePreset *base = scene_presets_get_default();
+    FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
+    char *runtime_json = NULL;
+    char *overlay_json = NULL;
+    char *merged_json = NULL;
+    char diagnostics[256];
+    size_t runtime_size = 0;
+    bool ok = false;
+
+    runtime_json = read_text_file_alloc("tests/fixtures/runtime_scene_primitive_retained.json", &runtime_size);
+    if (!runtime_json || runtime_size == 0) {
+        free(runtime_json);
+        return false;
+    }
+    if (!runtime_scene_bridge_apply_json(runtime_json, &cfg, &preset, &summary)) {
+        free(runtime_json);
+        return false;
+    }
+    runtime_scene_bridge_get_last_retained_scene(&retained);
+    if (!retained.valid_contract) {
+        free(runtime_json);
+        return false;
+    }
+
+    bootstrap.has_retained_scene = true;
+    bootstrap.retained_scene = retained;
+    physics_sim_editor_session_init(&session, &preset, &bootstrap);
+    if (!physics_sim_editor_session_set_scene_domain_size(&session, 18.0, 12.0, 6.0)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_build_overlay_json(&session,
+                                                       &overlay_json,
+                                                       diagnostics,
+                                                       sizeof(diagnostics))) {
+        free(runtime_json);
+        free(overlay_json);
+        return false;
+    }
+    if (!runtime_scene_bridge_writeback_physics_overlay_json(runtime_json,
+                                                             overlay_json,
+                                                             &merged_json,
+                                                             diagnostics,
+                                                             sizeof(diagnostics))) {
+        free(runtime_json);
+        free(overlay_json);
+        free(merged_json);
+        return false;
+    }
+    cfg = app_config_default();
+    preset = base ? *base : (FluidScenePreset){0};
+    ok = runtime_scene_bridge_apply_json(merged_json, &cfg, &preset, &summary);
+    free(runtime_json);
+    free(overlay_json);
+    free(merged_json);
+    if (!ok) return false;
+    if (preset.domain != SCENE_DOMAIN_STRUCTURAL) return false;
+    if (fabsf(preset.domain_width - 18.0f) > 1e-6f) return false;
+    if (fabsf(preset.domain_height - 12.0f) > 1e-6f) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_apply_merged_emitter_overlay_affects_solver_emitters(void) {
+    RuntimeSceneBridgePreflight summary = {0};
+    PhysicsSimRetainedRuntimeScene retained = {0};
+    SceneEditorBootstrap bootstrap = {0};
+    PhysicsSimEditorSession session = {0};
+    AppConfig cfg = app_config_default();
+    const FluidScenePreset *base = scene_presets_get_default();
+    FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
+    char *runtime_json = NULL;
+    char *overlay_json = NULL;
+    char *merged_json = NULL;
+    char diagnostics[256];
+    size_t runtime_size = 0;
+    bool ok = false;
+
+    runtime_json = read_text_file_alloc("config/samples/ps4d_runtime_scene_visual_test.json", &runtime_size);
+    if (!runtime_json || runtime_size == 0) {
+        free(runtime_json);
+        return false;
+    }
+    if (!runtime_scene_bridge_apply_json(runtime_json, &cfg, &preset, &summary)) {
+        free(runtime_json);
+        return false;
+    }
+    runtime_scene_bridge_get_last_retained_scene(&retained);
+    if (!retained.valid_contract) {
+        free(runtime_json);
+        return false;
+    }
+
+    bootstrap.has_retained_scene = true;
+    bootstrap.retained_scene = retained;
+    physics_sim_editor_session_init(&session, &preset, &bootstrap);
+    physics_sim_editor_session_select_retained_index(&session, 1);
+    if (!physics_sim_editor_session_set_selected_emitter_type(&session, EMITTER_VELOCITY_JET, true)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_build_overlay_json(&session,
+                                                       &overlay_json,
+                                                       diagnostics,
+                                                       sizeof(diagnostics))) {
+        free(runtime_json);
+        free(overlay_json);
+        return false;
+    }
+    if (!runtime_scene_bridge_writeback_physics_overlay_json(runtime_json,
+                                                             overlay_json,
+                                                             &merged_json,
+                                                             diagnostics,
+                                                             sizeof(diagnostics))) {
+        free(runtime_json);
+        free(overlay_json);
+        free(merged_json);
+        return false;
+    }
+
+    cfg = app_config_default();
+    preset = base ? *base : (FluidScenePreset){0};
+    ok = runtime_scene_bridge_apply_json(merged_json, &cfg, &preset, &summary);
+    free(runtime_json);
+    free(overlay_json);
+    free(merged_json);
+    if (!ok) return false;
+    if (preset.emitter_count != 1) return false;
+    if (preset.emitters[0].type != EMITTER_VELOCITY_JET) return false;
+    if (preset.emitters[0].attached_object != 1) return false;
+    if (preset.emitters[0].attached_import != -1) return false;
+    if (fabsf(preset.emitters[0].strength - 40.0f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].position_x - 0.5f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].position_y - 0.5f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].position_z - 0.25f) > 1e-6f) return false;
+    return true;
+}
+
 static bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void) {
     const char *saved_path = "/tmp/physics_sim_save5_roundtrip_scene.json";
     RuntimeSceneBridgePreflight summary = {0};
@@ -638,6 +1012,14 @@ static bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(vo
         free(runtime_json);
         return false;
     }
+    if (!physics_sim_editor_session_set_selected_emitter_type(&saved_session, EMITTER_VELOCITY_JET, true)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_set_scene_domain_size(&saved_session, 14.0, 9.0, 5.0)) {
+        free(runtime_json);
+        return false;
+    }
     if (!physics_sim_editor_session_build_overlay_json(&saved_session,
                                                        &overlay_json,
                                                        diagnostics,
@@ -651,6 +1033,16 @@ static bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(vo
                                                              &merged_json,
                                                              diagnostics,
                                                              sizeof(diagnostics))) {
+        free(runtime_json);
+        free(overlay_json);
+        free(merged_json);
+        return false;
+    }
+    if (strstr(merged_json, "\"emitter\"") == NULL ||
+        strstr(merged_json, "\"type\"") == NULL ||
+        strstr(merged_json, "Jet") == NULL ||
+        strstr(merged_json, "\"strength\"") == NULL ||
+        strstr(merged_json, "\"scene_domain\"") == NULL) {
         free(runtime_json);
         free(overlay_json);
         free(merged_json);
@@ -688,6 +1080,18 @@ static bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(vo
         free(reopened_json);
         return false;
     }
+    if (strstr(reopened_json, "\"emitter\"") == NULL ||
+        strstr(reopened_json, "\"type\"") == NULL ||
+        strstr(reopened_json, "Jet") == NULL ||
+        strstr(reopened_json, "\"strength\"") == NULL ||
+        strstr(reopened_json, "\"scene_domain\"") == NULL) {
+        remove(saved_path);
+        free(runtime_json);
+        free(overlay_json);
+        free(merged_json);
+        free(reopened_json);
+        return false;
+    }
 
     bootstrap.retained_scene = retained;
     physics_sim_editor_session_init(&reopened_session, &reopened_preset, &bootstrap);
@@ -706,11 +1110,30 @@ static bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(vo
     {
         const PhysicsSimObjectOverlay *selected_overlay =
             physics_sim_editor_session_selected_object_overlay(&reopened_session);
+        const PhysicsSimEmitterOverlay *selected_emitter =
+            physics_sim_editor_session_selected_object_emitter(&reopened_session);
+        const PhysicsSimDomainOverlay *scene_domain =
+            physics_sim_editor_session_scene_domain(&reopened_session);
+        double width = 0.0;
+        double height = 0.0;
+        double depth = 0.0;
+        physics_sim_editor_session_scene_domain_dimensions(&reopened_session, &width, &height, &depth);
         ok = selected_overlay &&
-             selected_overlay->motion_mode == PHYSICS_SIM_OVERLAY_MOTION_STATIC &&
+             selected_emitter &&
+             scene_domain &&
+             selected_overlay->motion_mode == PHYSICS_SIM_OVERLAY_MOTION_DYNAMIC &&
              fabs(selected_overlay->initial_velocity.x - 0.50) <= 1e-9 &&
              fabs(selected_overlay->initial_velocity.y - (-1.25)) <= 1e-9 &&
              fabs(selected_overlay->initial_velocity.z - 2.00) <= 1e-9 &&
+             selected_emitter->type == EMITTER_VELOCITY_JET &&
+             fabs(selected_emitter->strength - 40.0) <= 1e-9 &&
+             !scene_domain->seeded_from_retained_bounds &&
+             fabs(width - 14.0) <= 1e-9 &&
+             fabs(height - 9.0) <= 1e-9 &&
+             fabs(depth - 5.0) <= 1e-9 &&
+             reopened_preset.domain == SCENE_DOMAIN_STRUCTURAL &&
+             fabsf(reopened_preset.domain_width - 14.0f) <= 1e-6f &&
+             fabsf(reopened_preset.domain_height - 9.0f) <= 1e-6f &&
              reopened_session.physics_overlay.logical_clock == 1 &&
              !reopened_session.physics_overlay.derived_defaults;
     }
@@ -1389,6 +1812,10 @@ int main(int argc, char **argv) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: world-scale mapping failed\n");
         return 1;
     }
+    if (!test_runtime_scene_bridge_overlay_velocity_bootstraps_runtime_body()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: runtime-body velocity bootstrap failed\n");
+        return 1;
+    }
     if (!test_runtime_scene_bridge_apply_compile_output_sets_3d()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: compile/apply mapping failed\n");
         return 1;
@@ -1399,6 +1826,14 @@ int main(int argc, char **argv) {
     }
     if (!test_runtime_scene_bridge_apply_visual_test_scene_fixture()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: visual test scene fixture apply failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_visual_bootstrap_uses_authored_scene_domain()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: visual bootstrap authored domain failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_visual_bootstrap_falls_back_to_retained_bounds()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: visual bootstrap retained-bounds fallback failed\n");
         return 1;
     }
     if (!test_scene_editor_session_bootstrap_preserves_retained_scene()) {
@@ -1419,6 +1854,14 @@ int main(int argc, char **argv) {
     }
     if (!test_runtime_scene_bridge_apply_merged_overlay_affects_solver_mapping()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: merged overlay apply mapping failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_apply_merged_scene_domain_affects_solver_domain()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: merged scene-domain apply failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_apply_merged_emitter_overlay_affects_solver_emitters()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: merged emitter overlay apply failed\n");
         return 1;
     }
     if (!test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay()) {

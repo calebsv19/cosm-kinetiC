@@ -41,6 +41,7 @@ SDL_Rect menu_preset_delete_button_rect(const SDL_Rect *row_rect);
 
 void menu_select_custom(SceneMenuInteraction *ctx, int slot_index);
 bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_index);
+bool menu_duplicate_retained_scene(SceneMenuInteraction *ctx);
 void menu_refresh_scene_library(SceneMenuInteraction *ctx);
 void menu_ensure_slot_for_mode(SceneMenuInteraction *ctx);
 void menu_switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode);

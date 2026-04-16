@@ -252,10 +252,13 @@ void scene_editor_input_finish_and_apply(SceneEditorState *state) {
     if (!state) return;
     commit_field_edit(state);
     if (state->editing_width) {
-        editor_finish_dimension_edit(state, true, true);
+        editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_WIDTH, true);
     }
     if (state->editing_height) {
-        editor_finish_dimension_edit(state, false, true);
+        editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_HEIGHT, true);
+    }
+    if (state->editing_depth) {
+        editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_DEPTH, true);
     }
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
         (void)scene_editor_input_save_retained_scene(state);
@@ -268,10 +271,13 @@ void scene_editor_input_finish_and_apply(SceneEditorState *state) {
 void scene_editor_input_cancel_and_close(SceneEditorState *state) {
     if (!state) return;
     if (state->editing_width) {
-        editor_finish_dimension_edit(state, true, false);
+        editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_WIDTH, false);
     }
     if (state->editing_height) {
-        editor_finish_dimension_edit(state, false, false);
+        editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_HEIGHT, false);
+    }
+    if (state->editing_depth) {
+        editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_DEPTH, false);
     }
     scene_editor_input_clear_drag_flags(state);
     state->pointer_down_in_canvas = false;

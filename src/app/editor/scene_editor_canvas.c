@@ -13,9 +13,9 @@
 #include <string.h>
 
 static SDL_Color COLOR_CANVAS    = {12, 14, 18, 255};
-static SDL_Color COLOR_SOURCE    = {252, 163, 17, 255};
-static SDL_Color COLOR_JET       = {64, 201, 255, 255};
-static SDL_Color COLOR_SINK      = {200, 80, 255, 255};
+static SDL_Color COLOR_SOURCE    = {246, 233, 90, 255};
+static SDL_Color COLOR_JET       = {74, 232, 124, 255};
+static SDL_Color COLOR_SINK      = {232, 96, 136, 255};
 static SDL_Color COLOR_TEXT      = {245, 247, 250, 255};
 static SDL_Color COLOR_TEXT_DIM  = {180, 186, 195, 220};
 static SDL_Color COLOR_SELECTED  = {255, 255, 255, 255};
@@ -88,7 +88,11 @@ static SDL_Color retained_object_base_color(const CoreSceneObjectContract *objec
     SDL_Color static_color = {96, 172, 255, 255};
     SDL_Color color = dynamic_color;
 
-    if (overlay && overlay->motion_mode == PHYSICS_SIM_OVERLAY_MOTION_STATIC) {
+    if (overlay && overlay->emitter.active) {
+        FluidEmitter emitter = {0};
+        emitter.type = overlay->emitter.type;
+        color = emitter_color(&emitter);
+    } else if (overlay && overlay->motion_mode == PHYSICS_SIM_OVERLAY_MOTION_STATIC) {
         color = static_color;
     }
     if (object && object->kind == CORE_SCENE_OBJECT_KIND_PLANE_PRIMITIVE) {
@@ -484,6 +488,41 @@ static void draw_retained_origin_axes(SDL_Renderer *renderer,
     draw_circle(renderer, ox, oy, 3, origin_color);
 }
 
+static void draw_retained_domain_box(SDL_Renderer *renderer,
+                                     const SceneEditorState *state,
+                                     const PhysicsSimDomainOverlay *domain) {
+    CoreObjectVec3 corners[8];
+    SDL_Color edge_color = {132, 164, 188, 170};
+    static const int edges[12][2] = {
+        {0, 1}, {1, 3}, {3, 2}, {2, 0},
+        {4, 5}, {5, 7}, {7, 6}, {6, 4},
+        {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    };
+    int index = 0;
+    if (!renderer || !state || !domain || !domain->active) return;
+    if (!domain->seeded_from_retained_bounds) {
+        edge_color = (SDL_Color){138, 198, 154, 188};
+    }
+    for (int sx = 0; sx <= 1; ++sx) {
+        for (int sy = 0; sy <= 1; ++sy) {
+            for (int sz = 0; sz <= 1; ++sz) {
+                corners[index++] = (CoreObjectVec3){
+                    sx ? domain->max.x : domain->min.x,
+                    sy ? domain->max.y : domain->min.y,
+                    sz ? domain->max.z : domain->min.z
+                };
+            }
+        }
+    }
+    for (int i = 0; i < 12; ++i) {
+        draw_retained_segment(renderer,
+                              state,
+                              corners[edges[i][0]],
+                              corners[edges[i][1]],
+                              edge_color);
+    }
+}
+
 static void draw_retained_plane(SDL_Renderer *renderer,
                                 const SceneEditorState *state,
                                 const CoreScenePlanePrimitive *plane,
@@ -598,6 +637,9 @@ void scene_editor_canvas_draw_retained_scene(SDL_Renderer *renderer,
     if (state->viewport.requested_mode == SPACE_MODE_3D) {
         draw_retained_origin_axes(renderer, state);
     }
+    draw_retained_domain_box(renderer,
+                             state,
+                             physics_sim_editor_session_scene_domain(&state->session));
     for (i = 0; i < retained->retained_object_count; ++i) {
         const PhysicsSimObjectOverlay *overlay =
             physics_sim_editor_session_object_overlay_at(&state->session, i);

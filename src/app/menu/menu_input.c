@@ -395,6 +395,12 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         return;
     }
 
+    if (menu_showing_retained_catalog(ctx) &&
+        menu_point_in_rect(x, y, &ctx->duplicate_button.rect)) {
+        (void)menu_duplicate_retained_scene(ctx);
+        return;
+    }
+
     if (menu_point_in_rect(x, y, &ctx->quit_button.rect)) {
         *ctx->running = false;
         return;

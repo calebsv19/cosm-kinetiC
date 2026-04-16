@@ -202,8 +202,21 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
             .ignore_input = false,
             .preserve_sdl_state = false
         };
+        SceneRuntimeLaunch runtime_launch = {0};
         const char *output_dir = physics_sim_resolve_snapshot_output_dir(cfg.headless_output_dir);
-        scene_controller_run(&cfg, preset_to_run, &shape_lib, output_dir, &headless_opts);
+        if (cfg.space_mode == SPACE_MODE_3D && selection.retained_runtime_scene_path[0]) {
+            runtime_launch.has_retained_scene = true;
+            snprintf(runtime_launch.retained_runtime_scene_path,
+                     sizeof(runtime_launch.retained_runtime_scene_path),
+                     "%s",
+                     selection.retained_runtime_scene_path);
+        }
+        scene_controller_run(&cfg,
+                             preset_to_run,
+                             runtime_launch.has_retained_scene ? &runtime_launch : NULL,
+                             &shape_lib,
+                             output_dir,
+                             &headless_opts);
 
         preset_library_save(preset_save_path, &library);
         config_loader_save(&cfg, config_save_path);
@@ -230,8 +243,17 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
             structural_controller_run(&cfg, &shape_lib, preset_path);
         } else {
             const char *output_dir = physics_sim_resolve_snapshot_output_dir(cfg.headless_output_dir);
+            SceneRuntimeLaunch runtime_launch = {0};
+            if (cfg.space_mode == SPACE_MODE_3D && selection.retained_runtime_scene_path[0]) {
+                runtime_launch.has_retained_scene = true;
+                snprintf(runtime_launch.retained_runtime_scene_path,
+                         sizeof(runtime_launch.retained_runtime_scene_path),
+                         "%s",
+                         selection.retained_runtime_scene_path);
+            }
             scene_controller_run(&cfg,
                                  preset_to_run,
+                                 runtime_launch.has_retained_scene ? &runtime_launch : NULL,
                                  &shape_lib,
                                  output_dir,
                                  NULL);

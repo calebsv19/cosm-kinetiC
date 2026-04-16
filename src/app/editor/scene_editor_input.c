@@ -73,33 +73,45 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         commit_field_edit(state);
     }
 
-    if (!editor_retained_scene_read_only(state) &&
-        state->width_rect.w > 0 && state->width_rect.h > 0) {
+    if (state->width_rect.w > 0 && state->width_rect.h > 0) {
         if (scene_editor_input_point_in_rect(&state->width_rect, x, y)) {
             Uint32 now = SDL_GetTicks();
             bool double_click = (now - state->last_width_click) <= DOUBLE_CLICK_MS;
             state->last_width_click = now;
             if (double_click) {
-                editor_begin_dimension_edit(state, true);
+                editor_begin_dimension_edit(state, SCENE_EDITOR_DIMENSION_WIDTH);
                 return;
             }
         } else if (state->editing_width) {
-            editor_finish_dimension_edit(state, true, false);
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_WIDTH, false);
         }
     }
 
-    if (!editor_retained_scene_read_only(state) &&
-        state->height_rect.w > 0 && state->height_rect.h > 0) {
+    if (state->height_rect.w > 0 && state->height_rect.h > 0) {
         if (scene_editor_input_point_in_rect(&state->height_rect, x, y)) {
             Uint32 now = SDL_GetTicks();
             bool double_click = (now - state->last_height_click) <= DOUBLE_CLICK_MS;
             state->last_height_click = now;
             if (double_click) {
-                editor_begin_dimension_edit(state, false);
+                editor_begin_dimension_edit(state, SCENE_EDITOR_DIMENSION_HEIGHT);
                 return;
             }
         } else if (state->editing_height) {
-            editor_finish_dimension_edit(state, false, false);
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_HEIGHT, false);
+        }
+    }
+
+    if (state->depth_rect.w > 0 && state->depth_rect.h > 0) {
+        if (scene_editor_input_point_in_rect(&state->depth_rect, x, y)) {
+            Uint32 now = SDL_GetTicks();
+            bool double_click = (now - state->last_depth_click) <= DOUBLE_CLICK_MS;
+            state->last_depth_click = now;
+            if (double_click) {
+                editor_begin_dimension_edit(state, SCENE_EDITOR_DIMENSION_DEPTH);
+                return;
+            }
+        } else if (state->editing_depth) {
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_DEPTH, false);
         }
     }
 
@@ -140,6 +152,18 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
             } else if (btn == &state->btn_add_source ||
                        btn == &state->btn_add_jet ||
                        btn == &state->btn_add_sink) {
+                if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+                    FluidEmitterType type = EMITTER_DENSITY_SOURCE;
+                    if (btn == &state->btn_add_jet) {
+                        type = EMITTER_VELOCITY_JET;
+                    } else if (btn == &state->btn_add_sink) {
+                        type = EMITTER_SINK;
+                    }
+                    if (physics_sim_editor_session_set_selected_emitter_type(&state->session, type, true)) {
+                        set_dirty(state);
+                    }
+                    return;
+                }
                 int target_obj = -1;
                 int target_imp = -1;
                 scene_editor_input_pick_target_for_emitter(state, &target_obj, &target_imp);
@@ -821,6 +845,10 @@ void editor_text_input(void *user, const char *text) {
         text_input_handle_text(&state->height_input, text);
         return;
     }
+    if (state->editing_depth) {
+        text_input_handle_text(&state->depth_input, text);
+        return;
+    }
 }
 
 void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
@@ -839,9 +867,9 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     }
     if (state->editing_width) {
         if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
-            editor_finish_dimension_edit(state, true, true);
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_WIDTH, true);
         } else if (key == SDLK_ESCAPE) {
-            editor_finish_dimension_edit(state, true, false);
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_WIDTH, false);
         } else {
             text_input_handle_key(&state->width_input, key);
         }
@@ -849,11 +877,21 @@ void editor_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     }
     if (state->editing_height) {
         if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
-            editor_finish_dimension_edit(state, false, true);
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_HEIGHT, true);
         } else if (key == SDLK_ESCAPE) {
-            editor_finish_dimension_edit(state, false, false);
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_HEIGHT, false);
         } else {
             text_input_handle_key(&state->height_input, key);
+        }
+        return;
+    }
+    if (state->editing_depth) {
+        if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_DEPTH, true);
+        } else if (key == SDLK_ESCAPE) {
+            editor_finish_dimension_edit(state, SCENE_EDITOR_DIMENSION_DEPTH, false);
+        } else {
+            text_input_handle_key(&state->depth_input, key);
         }
         return;
     }

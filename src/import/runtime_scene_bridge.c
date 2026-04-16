@@ -17,6 +17,8 @@ static bool parse_vec3(json_object *obj,
                        double *out_x,
                        double *out_y,
                        double *out_z);
+static bool parse_scene_domain_overlay(json_object *root,
+                                       PhysicsSimRuntimeSceneBounds *out_bounds);
 
 static void preflight_reset(RuntimeSceneBridgePreflight *out_preflight) {
     if (!out_preflight) return;
@@ -447,6 +449,43 @@ static bool parse_vec3(json_object *obj,
     return true;
 }
 
+static bool parse_scene_domain_overlay(json_object *root,
+                                       PhysicsSimRuntimeSceneBounds *out_bounds) {
+    json_object *extensions = NULL;
+    json_object *physics_sim = NULL;
+    json_object *scene_domain = NULL;
+    bool active = false;
+    if (!root || !out_bounds) return false;
+    memset(out_bounds, 0, sizeof(*out_bounds));
+    if (!json_object_object_get_ex(root, "extensions", &extensions) ||
+        !json_object_is_type(extensions, json_type_object)) {
+        return false;
+    }
+    if (!json_object_object_get_ex(extensions, "physics_sim", &physics_sim) ||
+        !json_object_is_type(physics_sim, json_type_object)) {
+        return false;
+    }
+    if (!json_object_object_get_ex(physics_sim, "scene_domain", &scene_domain) ||
+        !json_object_is_type(scene_domain, json_type_object)) {
+        return false;
+    }
+    if (!parse_json_bool(scene_domain, "active", &active) || !active) {
+        return false;
+    }
+    if (!parse_vec3(scene_domain, "min",
+                    &out_bounds->min.x,
+                    &out_bounds->min.y,
+                    &out_bounds->min.z) ||
+        !parse_vec3(scene_domain, "max",
+                    &out_bounds->max.x,
+                    &out_bounds->max.y,
+                    &out_bounds->max.z)) {
+        return false;
+    }
+    out_bounds->enabled = true;
+    return true;
+}
+
 static bool validate_runtime_scene_root(json_object *root,
                                         RuntimeSceneBridgePreflight *out_preflight) {
     json_object *schema_family = NULL;
@@ -632,6 +671,84 @@ bool runtime_scene_bridge_apply_json(const char *runtime_scene_json,
 void runtime_scene_bridge_get_last_retained_scene(PhysicsSimRetainedRuntimeScene *out_scene) {
     if (!out_scene) return;
     *out_scene = g_last_retained_scene;
+}
+
+bool runtime_scene_bridge_load_visual_bootstrap_json(const char *runtime_scene_json,
+                                                     PhysicsSimRuntimeVisualBootstrap *out_bootstrap,
+                                                     char *out_diagnostics,
+                                                     size_t out_diagnostics_size) {
+    json_object *root = NULL;
+    RuntimeSceneBridgePreflight preflight = {0};
+
+    if (out_bootstrap) memset(out_bootstrap, 0, sizeof(*out_bootstrap));
+    bridge_diag(out_diagnostics, out_diagnostics_size, "invalid input");
+    if (!runtime_scene_json || !out_bootstrap) return false;
+
+    root = json_tokener_parse(runtime_scene_json);
+    if (!root || !json_object_is_type(root, json_type_object)) {
+        if (root) json_object_put(root);
+        bridge_diag(out_diagnostics, out_diagnostics_size, "invalid JSON object");
+        return false;
+    }
+    preflight_reset(&preflight);
+    if (!validate_runtime_scene_root(root, &preflight)) {
+        bridge_diag(out_diagnostics, out_diagnostics_size, preflight.diagnostics);
+        json_object_put(root);
+        return false;
+    }
+
+    retained_scene_capture(root, &preflight);
+    out_bootstrap->valid = g_last_retained_scene.valid_contract;
+    out_bootstrap->retained_scene = g_last_retained_scene;
+    if (parse_scene_domain_overlay(root, &out_bootstrap->scene_domain)) {
+        out_bootstrap->scene_domain_authored = true;
+    } else if (g_last_retained_scene.has_line_drawing_scene3d &&
+               g_last_retained_scene.bounds.enabled) {
+        out_bootstrap->scene_domain = g_last_retained_scene.bounds;
+        out_bootstrap->scene_domain_authored = false;
+    }
+
+    bridge_diag(out_diagnostics, out_diagnostics_size, "ok");
+    json_object_put(root);
+    return true;
+}
+
+bool runtime_scene_bridge_load_visual_bootstrap_file(const char *runtime_scene_path,
+                                                     PhysicsSimRuntimeVisualBootstrap *out_bootstrap,
+                                                     char *out_diagnostics,
+                                                     size_t out_diagnostics_size) {
+    CoreBuffer file_data = {0};
+    CoreResult io_result;
+    char *json_text = NULL;
+    bool ok = false;
+
+    if (out_bootstrap) memset(out_bootstrap, 0, sizeof(*out_bootstrap));
+    bridge_diag(out_diagnostics, out_diagnostics_size, "invalid input");
+    if (!runtime_scene_path || !out_bootstrap) return false;
+
+    io_result = core_io_read_all(runtime_scene_path, &file_data);
+    if (io_result.code != CORE_OK || !file_data.data || file_data.size == 0) {
+        bridge_diag(out_diagnostics, out_diagnostics_size, "failed to read runtime scene file");
+        core_io_buffer_free(&file_data);
+        return false;
+    }
+
+    json_text = (char *)malloc(file_data.size + 1u);
+    if (!json_text) {
+        bridge_diag(out_diagnostics, out_diagnostics_size, "out of memory");
+        core_io_buffer_free(&file_data);
+        return false;
+    }
+    memcpy(json_text, file_data.data, file_data.size);
+    json_text[file_data.size] = '\0';
+    core_io_buffer_free(&file_data);
+
+    ok = runtime_scene_bridge_load_visual_bootstrap_json(json_text,
+                                                         out_bootstrap,
+                                                         out_diagnostics,
+                                                         out_diagnostics_size);
+    free(json_text);
+    return ok;
 }
 
 bool runtime_scene_bridge_apply_file(const char *runtime_scene_path,

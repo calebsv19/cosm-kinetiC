@@ -364,6 +364,7 @@ static void draw_retained_object_list(SceneEditorState *state) {
 static void draw_left_object_info_card(SceneEditorState *state) {
     const CoreSceneObjectContract *selected_retained = NULL;
     const PhysicsSimObjectOverlay *selected_overlay = NULL;
+    const PhysicsSimEmitterOverlay *selected_emitter = NULL;
     SDL_Rect rect = {0};
     SDL_Color fill = {0};
     char line_a[160];
@@ -371,6 +372,9 @@ static void draw_left_object_info_card(SceneEditorState *state) {
     char line_c[160];
     char line_d[160];
     char line_e[160];
+    char line_f[160];
+    char line_g[160];
+    char runtime_wrap[2][192];
     char fit[192];
     int x = 0;
     int y = 0;
@@ -384,6 +388,8 @@ static void draw_left_object_info_card(SceneEditorState *state) {
     line_c[0] = '\0';
     line_d[0] = '\0';
     line_e[0] = '\0';
+    line_f[0] = '\0';
+    line_g[0] = '\0';
 
     fill = lighten_color(COLOR_PANEL, 0.05f);
     SDL_SetRenderDrawColor(state->renderer, fill.r, fill.g, fill.b, 255);
@@ -393,6 +399,7 @@ static void draw_left_object_info_card(SceneEditorState *state) {
 
     selected_retained = physics_sim_editor_session_selected_object(&state->session);
     selected_overlay = physics_sim_editor_session_selected_object_overlay(&state->session);
+    selected_emitter = physics_sim_editor_session_selected_object_emitter(&state->session);
     x = rect.x + 8;
     y = rect.y + 8;
     line_step = panel_font_height(state->renderer, state->font_small, 15) + 6;
@@ -419,21 +426,38 @@ static void draw_left_object_info_card(SceneEditorState *state) {
                  sizeof(line_c),
                  "Physics %s",
                  physics_sim_editor_session_motion_mode_label(selected_overlay->motion_mode));
-        snprintf(line_e,
-                 sizeof(line_e),
+        snprintf(line_f,
+                 sizeof(line_f),
                  "Vel %.2f, %.2f, %.2f",
                  selected_overlay->initial_velocity.x,
                  selected_overlay->initial_velocity.y,
                  selected_overlay->initial_velocity.z);
+        snprintf(line_g,
+                 sizeof(line_g),
+                 selected_emitter
+                     ? "Runtime: motion + XY velocity active; emitter runtime pending"
+                     : "Runtime: motion + XY velocity active; Z saved only");
     } else {
         line_c[0] = '\0';
-        line_e[0] = '\0';
+        line_f[0] = '\0';
+        line_g[0] = '\0';
+    }
+
+    if (selected_emitter) {
+        snprintf(line_d,
+                 sizeof(line_d),
+                 "Emitter %s  r=%.2f  s=%.1f",
+                 physics_sim_editor_session_emitter_type_label(selected_emitter->type),
+                 selected_emitter->radius,
+                 selected_emitter->strength);
+    } else {
+        snprintf(line_d, sizeof(line_d), "Emitter none");
     }
 
     if (selected_retained->has_plane_primitive) {
         CoreObjectVec3 position = selected_retained->plane_primitive.frame.origin;
-        snprintf(line_d,
-                 sizeof(line_d),
+        snprintf(line_e,
+                 sizeof(line_e),
                  "Size %.2f x %.2f  Pos %.2f, %.2f, %.2f",
                  selected_retained->plane_primitive.width,
                  selected_retained->plane_primitive.height,
@@ -442,14 +466,14 @@ static void draw_left_object_info_card(SceneEditorState *state) {
                  position.z);
     } else if (selected_retained->has_rect_prism_primitive) {
         CoreObjectVec3 position = selected_retained->rect_prism_primitive.frame.origin;
-        snprintf(line_d,
-                 sizeof(line_d),
+        snprintf(line_e,
+                 sizeof(line_e),
                  "Size %.2f x %.2f x %.2f",
                  selected_retained->rect_prism_primitive.width,
                  selected_retained->rect_prism_primitive.height,
                  selected_retained->rect_prism_primitive.depth);
-        snprintf(line_e,
-                 sizeof(line_e),
+        snprintf(line_f,
+                 sizeof(line_f),
                  "Pos %.2f, %.2f, %.2f%s%.2f, %.2f, %.2f",
                  position.x,
                  position.y,
@@ -460,8 +484,8 @@ static void draw_left_object_info_card(SceneEditorState *state) {
                  selected_overlay ? selected_overlay->initial_velocity.z : 0.0);
     } else {
         CoreObjectVec3 position = selected_retained->object.transform.position;
-        snprintf(line_d,
-                 sizeof(line_d),
+        snprintf(line_e,
+                 sizeof(line_e),
                  "Pos %.2f, %.2f, %.2f",
                  position.x,
                  position.y,
@@ -487,6 +511,27 @@ static void draw_left_object_info_card(SceneEditorState *state) {
     if (line_e[0] && y + line_step <= rect.y + rect.h - 6) {
         fit_text_to_width(state->renderer, state->font_small, line_e, rect.w - 16, fit, sizeof(fit));
         draw_text(state->renderer, state->font_small, fit[0] ? fit : line_e, x, y, COLOR_TEXT_DIM);
+        y += line_step;
+    }
+    if (line_f[0] && y + line_step <= rect.y + rect.h - 6) {
+        fit_text_to_width(state->renderer, state->font_small, line_f, rect.w - 16, fit, sizeof(fit));
+        draw_text(state->renderer, state->font_small, fit[0] ? fit : line_f, x, y, COLOR_TEXT_DIM);
+        y += line_step;
+    }
+    if (line_g[0] && y + line_step <= rect.y + rect.h - 6) {
+        int runtime_line_count = 0;
+        wrap_text_lines(state->renderer,
+                        state->font_small,
+                        line_g,
+                        rect.w - 16,
+                        2,
+                        runtime_wrap,
+                        &runtime_line_count);
+        for (int i = 0; i < runtime_line_count; ++i) {
+            if (y + line_step > rect.y + rect.h - 6) break;
+            draw_text(state->renderer, state->font_small, runtime_wrap[i], x, y, COLOR_TEXT_DIM);
+            y += line_step;
+        }
     }
 }
 
@@ -676,7 +721,35 @@ static void draw_dimension_field(SceneEditorState *state,
 }
 
 static void draw_dimension_fields(SceneEditorState *state) {
+    double domain_width = 0.0;
+    double domain_height = 0.0;
+    double domain_depth = 0.0;
     if (!state) return;
+    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+        physics_sim_editor_session_scene_domain_dimensions(&state->session,
+                                                           &domain_width,
+                                                           &domain_height,
+                                                           &domain_depth);
+        draw_dimension_field(state,
+                             &state->width_rect,
+                             "Width",
+                             (float)domain_width,
+                             state->editing_width,
+                             &state->width_input);
+        draw_dimension_field(state,
+                             &state->height_rect,
+                             "Height",
+                             (float)domain_height,
+                             state->editing_height,
+                             &state->height_input);
+        draw_dimension_field(state,
+                             &state->depth_rect,
+                             "Depth",
+                             (float)domain_depth,
+                             state->editing_depth,
+                             &state->depth_input);
+        return;
+    }
     draw_dimension_field(state,
                          &state->width_rect,
                          "Width",
@@ -821,8 +894,11 @@ static void draw_status_card(SceneEditorState *state,
 static void draw_right_panel_summary(SceneEditorState *state) {
     char selected_line_a[160];
     char selected_line_b[160];
+    char domain_line[160];
+    char domain_runtime_line[160];
     const CoreSceneObjectContract *selected_retained = NULL;
     const PhysicsSimObjectOverlay *selected_overlay = NULL;
+    const PhysicsSimDomainOverlay *scene_domain = NULL;
     int line_y = 0;
     int line_step = 0;
     int x = 0;
@@ -836,6 +912,8 @@ static void draw_right_panel_summary(SceneEditorState *state) {
 
     selected_line_a[0] = '\0';
     selected_line_b[0] = '\0';
+    domain_line[0] = '\0';
+    domain_runtime_line[0] = '\0';
     if (state->selection_kind == SELECTION_EMITTER &&
         state->selected_emitter >= 0 &&
         state->selected_emitter < (int)state->working.emitter_count) {
@@ -902,15 +980,47 @@ static void draw_right_panel_summary(SceneEditorState *state) {
                      physics_sim_editor_session_motion_mode_label(selected_overlay->motion_mode));
         }
     }
+    scene_domain = physics_sim_editor_session_scene_domain(&state->session);
+    if (scene_domain) {
+        double width = 0.0;
+        double height = 0.0;
+        double depth = 0.0;
+        physics_sim_editor_session_scene_domain_dimensions(&state->session, &width, &height, &depth);
+        snprintf(domain_line,
+                 sizeof(domain_line),
+                 "Domain: %s  %.2f x %.2f x %.2f",
+                 scene_domain->seeded_from_retained_bounds ? "derived" : "manual",
+                 width,
+                 height,
+                 depth);
+        snprintf(domain_runtime_line,
+                 sizeof(domain_runtime_line),
+                 "Runtime domain: XY active; depth saved only");
+    }
 
     draw_text(state->renderer, state->font_small, selected_line_a, x, line_y, COLOR_TEXT);
     if (selected_line_b[0]) {
         draw_text(state->renderer, state->font_small, selected_line_b, x, line_y + line_step, COLOR_TEXT_DIM);
     }
+    if (domain_line[0]) {
+        draw_text(state->renderer, state->font_small, domain_line, x, line_y + line_step * 2, COLOR_TEXT_DIM);
+    }
+    if (domain_runtime_line[0]) {
+        draw_text(state->renderer,
+                  state->font_small,
+                  domain_runtime_line,
+                  x,
+                  line_y + line_step * 3,
+                  COLOR_TEXT_DIM);
+    }
     summary_bottom = physics_sim_editor_session_has_retained_scene(&state->session)
                          ? state->btn_apply_overlay.rect.y - 12
                          : state->btn_save.rect.y - 12;
-    draw_status_card(state, x, line_y + line_step * 2, state->overlay_summary_rect.w, summary_bottom);
+    draw_status_card(state,
+                     x,
+                     line_y + line_step * (domain_runtime_line[0] ? 4 : (domain_line[0] ? 3 : 2)),
+                     state->overlay_summary_rect.w,
+                     summary_bottom);
 }
 
 void scene_editor_panel_draw(SceneEditorState *state) {
@@ -1034,7 +1144,7 @@ void scene_editor_panel_draw(SceneEditorState *state) {
               state->right_panel_rect.y + 48,
               COLOR_TEXT);
     draw_text(renderer, state->font_small,
-              "Domain",
+              physics_sim_editor_session_has_retained_scene(&state->session) ? "Scene Domain" : "Domain",
               state->right_panel_rect.x + 12,
               state->right_panel_rect.y + 78,
               COLOR_TEXT_DIM);

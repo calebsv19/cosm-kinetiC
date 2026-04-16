@@ -157,19 +157,60 @@ float sanitize_domain_dimension(float value) {
     return value;
 }
 
+static double editor_retained_scene_domain_value(const SceneEditorState *state,
+                                                 SceneEditorDimensionField field) {
+    double width = 0.0;
+    double height = 0.0;
+    double depth = 0.0;
+    if (!state || !physics_sim_editor_session_has_retained_scene(&state->session)) return 0.0;
+    physics_sim_editor_session_scene_domain_dimensions(&state->session, &width, &height, &depth);
+    switch (field) {
+        case SCENE_EDITOR_DIMENSION_HEIGHT: return height;
+        case SCENE_EDITOR_DIMENSION_DEPTH: return depth;
+        case SCENE_EDITOR_DIMENSION_WIDTH:
+        default: return width;
+    }
+}
+
+static TextInputField *editor_dimension_input(SceneEditorState *state, SceneEditorDimensionField field) {
+    if (!state) return NULL;
+    switch (field) {
+        case SCENE_EDITOR_DIMENSION_HEIGHT: return &state->height_input;
+        case SCENE_EDITOR_DIMENSION_DEPTH: return &state->depth_input;
+        case SCENE_EDITOR_DIMENSION_WIDTH:
+        default: return &state->width_input;
+    }
+}
+
+static bool *editor_dimension_flag(SceneEditorState *state, SceneEditorDimensionField field) {
+    if (!state) return NULL;
+    switch (field) {
+        case SCENE_EDITOR_DIMENSION_HEIGHT: return &state->editing_height;
+        case SCENE_EDITOR_DIMENSION_DEPTH: return &state->editing_depth;
+        case SCENE_EDITOR_DIMENSION_WIDTH:
+        default: return &state->editing_width;
+    }
+}
+
 void editor_update_dimension_rects(SceneEditorState *state) {
     if (!state) return;
     int rect_h = 26;
     int gap = 12;
     int inset = 16;
-    int available_w = state->right_panel_rect.w - inset * 2 - gap;
-    if (available_w < 80) available_w = 80;
-    int field_w = available_w / 2;
-    if (field_w < 60) field_w = 60;
+    int field_count = physics_sim_editor_session_has_retained_scene(&state->session) ? 3 : 2;
+    int available_w = state->right_panel_rect.w - inset * 2 - gap * (field_count - 1);
+    int field_w = 0;
     int rect_y = state->right_panel_rect.y + 52;
     int start_x = state->right_panel_rect.x + inset;
+    if (available_w < field_count * 60) available_w = field_count * 60;
+    field_w = available_w / field_count;
+    if (field_w < 60) field_w = 60;
     state->width_rect = (SDL_Rect){start_x, rect_y, field_w, rect_h};
     state->height_rect = (SDL_Rect){start_x + field_w + gap, rect_y, field_w, rect_h};
+    state->depth_rect = (SDL_Rect){start_x + (field_w + gap) * 2, rect_y, field_w, rect_h};
+    if (!physics_sim_editor_session_has_retained_scene(&state->session)) {
+        state->depth_rect = (SDL_Rect){0};
+    }
 }
 
 void editor_update_canvas_layout(SceneEditorState *state) {
@@ -347,59 +388,77 @@ void editor_finish_name_edit(SceneEditorState *state, bool apply) {
     state->renaming_name = false;
 }
 
-void editor_begin_dimension_edit(SceneEditorState *state, bool editing_width) {
+void editor_begin_dimension_edit(SceneEditorState *state, SceneEditorDimensionField field) {
+    char buffer[32];
+    double value = 0.0;
     if (!state) return;
-    if (editing_width) {
-        if (state->editing_height) {
-            editor_finish_dimension_edit(state, false, false);
-        }
-        char buffer[32];
-        snprintf(buffer, sizeof(buffer), "%.2f", state->working.domain_width);
-        text_input_begin(&state->width_input, buffer, 10);
-        state->editing_width = true;
-    } else {
-        if (state->editing_width) {
-            editor_finish_dimension_edit(state, true, false);
-        }
-        char buffer[32];
-        snprintf(buffer, sizeof(buffer), "%.2f", state->working.domain_height);
-        text_input_begin(&state->height_input, buffer, 10);
-        state->editing_height = true;
+    for (int i = SCENE_EDITOR_DIMENSION_WIDTH; i <= SCENE_EDITOR_DIMENSION_DEPTH; ++i) {
+        SceneEditorDimensionField other = (SceneEditorDimensionField)i;
+        bool *active = editor_dimension_flag(state, other);
+        if (other == field || !active || !(*active)) continue;
+        editor_finish_dimension_edit(state, other, false);
     }
+    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+        value = editor_retained_scene_domain_value(state, field);
+    } else {
+        value = (field == SCENE_EDITOR_DIMENSION_WIDTH)
+                    ? state->working.domain_width
+                    : state->working.domain_height;
+    }
+    snprintf(buffer, sizeof(buffer), "%.2f", value);
+    text_input_begin(editor_dimension_input(state, field), buffer, 10);
+    *editor_dimension_flag(state, field) = true;
 }
 
 void editor_finish_dimension_edit(SceneEditorState *state,
-                                  bool editing_width,
+                                  SceneEditorDimensionField field,
                                   bool apply) {
+    TextInputField *input = NULL;
+    bool *editing = NULL;
     if (!state) return;
-    TextInputField *field = editing_width ? &state->width_input : &state->height_input;
-    if (!field->active) {
-        if (editing_width) state->editing_width = false;
-        else state->editing_height = false;
+    input = editor_dimension_input(state, field);
+    editing = editor_dimension_flag(state, field);
+    if (!input || !editing) return;
+    if (!input->active) {
+        *editing = false;
         return;
     }
     if (apply) {
-        const char *text = text_input_value(field);
+        const char *text = text_input_value(input);
         if (text && text[0]) {
             float value = (float)atof(text);
             value = sanitize_domain_dimension(value);
-            if (editing_width) {
-                if (fabsf(state->working.domain_width - value) > 1e-3f) {
-                    state->working.domain_width = value;
+            if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+                double width = editor_retained_scene_domain_value(state, SCENE_EDITOR_DIMENSION_WIDTH);
+                double height = editor_retained_scene_domain_value(state, SCENE_EDITOR_DIMENSION_HEIGHT);
+                double depth = editor_retained_scene_domain_value(state, SCENE_EDITOR_DIMENSION_DEPTH);
+                switch (field) {
+                    case SCENE_EDITOR_DIMENSION_WIDTH: width = value; break;
+                    case SCENE_EDITOR_DIMENSION_HEIGHT: height = value; break;
+                    case SCENE_EDITOR_DIMENSION_DEPTH: depth = value; break;
+                }
+                if (physics_sim_editor_session_set_scene_domain_size(&state->session, width, height, depth)) {
                     set_dirty(state);
+                    editor_frame_viewport_to_scene(state);
                 }
             } else {
-                if (fabsf(state->working.domain_height - value) > 1e-3f) {
-                    state->working.domain_height = value;
-                    set_dirty(state);
+                if (field == SCENE_EDITOR_DIMENSION_WIDTH) {
+                    if (fabsf(state->working.domain_width - value) > 1e-3f) {
+                        state->working.domain_width = value;
+                        set_dirty(state);
+                    }
+                } else if (field == SCENE_EDITOR_DIMENSION_HEIGHT) {
+                    if (fabsf(state->working.domain_height - value) > 1e-3f) {
+                        state->working.domain_height = value;
+                        set_dirty(state);
+                    }
                 }
+                editor_update_canvas_layout(state);
             }
-            editor_update_canvas_layout(state);
         }
     }
-    text_input_end(field);
-    if (editing_width) state->editing_width = false;
-    else state->editing_height = false;
+    text_input_end(input);
+    *editing = false;
 }
 
 float clamp01(float v) {
@@ -441,6 +500,19 @@ static bool editor_retained_scene_bounds(const SceneEditorState *state,
     bool have = false;
     if (!state || !physics_sim_editor_session_has_retained_scene(&state->session)) return false;
     retained = &state->session.retained_scene;
+    {
+        const PhysicsSimDomainOverlay *scene_domain =
+            physics_sim_editor_session_scene_domain(&state->session);
+        if (scene_domain && scene_domain->active) {
+            *out_min_x = (float)scene_domain->min.x;
+            *out_min_y = (float)scene_domain->min.y;
+            *out_min_z = (float)scene_domain->min.z;
+            *out_max_x = (float)scene_domain->max.x;
+            *out_max_y = (float)scene_domain->max.y;
+            *out_max_z = (float)scene_domain->max.z;
+            return true;
+        }
+    }
     if (retained->has_line_drawing_scene3d && retained->bounds.enabled) {
         *out_min_x = (float)retained->bounds.min.x;
         *out_min_y = (float)retained->bounds.min.y;
