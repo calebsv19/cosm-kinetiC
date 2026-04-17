@@ -241,7 +241,9 @@ bool renderer_sdl_device_lost(void) {
 
 
 static bool renderer_upload_scene(const SceneState *scene) {
-    if (!scene || !scene->smoke || !g_renderer) return false;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene || !g_renderer) return false;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
     const AppConfig *cfg = scene->config;
     if (cfg) {
         int level = cfg->render_black_level;
@@ -252,8 +254,8 @@ static bool renderer_upload_scene(const SceneState *scene) {
         g_base_black_level = 0;
     }
 
-    int w = scene->smoke->w;
-    int h = scene->smoke->h;
+    int w = fluid.width;
+    int h = fluid.height;
     if (w <= 0 || h <= 0) return false;
     g_grid_w = w;
     g_grid_h = h;
@@ -276,7 +278,7 @@ static bool renderer_upload_scene(const SceneState *scene) {
         memset(g_density_tmp, 0, cell_count * sizeof(float));
     } else {
         for (size_t i = 0; i < cell_count; ++i) {
-            float norm = scene->smoke->density[i] * DENSITY_VISUAL_SCALE;
+            float norm = fluid.density[i] * DENSITY_VISUAL_SCALE;
             if (norm < 0.0f) norm = 0.0f;
             if (norm > 1.0f) norm = 1.0f;
             g_density_tmp[i] = norm;

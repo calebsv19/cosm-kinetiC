@@ -41,8 +41,10 @@ static uint8_t *g_field_rgba    = NULL;
 static size_t g_field_rgba_cap  = 0;
 
 static inline float solid_alpha_falloff(const SceneState *scene, size_t id) {
-    if (!scene || !scene->obstacle_distance) return 1.0f;
-    return scene->obstacle_distance[id];
+    SceneObstacleFieldView2D obstacles = {0};
+    if (!scene) return 1.0f;
+    if (!scene_backend_obstacle_view_2d(scene, &obstacles) || !obstacles.distance) return 1.0f;
+    return obstacles.distance[id];
 }
 
 static bool ensure_vorticity_buffers(size_t cell_count) {
@@ -127,10 +129,11 @@ void field_overlay_shutdown(void) {
 static void apply_vorticity_overlay(const SceneState *scene,
                                     uint8_t *pixels,
                                     int pitch) {
-    if (!scene || !scene->smoke || !pixels) return;
-    const Fluid2D *grid = scene->smoke;
-    int w = grid->w;
-    int h = grid->h;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene || !pixels) return;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return;
+    int w = fluid.width;
+    int h = fluid.height;
     if (w < 3 || h < 3) return;
 
     size_t cell_count = (size_t)w * (size_t)h;
@@ -141,8 +144,8 @@ static void apply_vorticity_overlay(const SceneState *scene,
         for (int x = 1; x < w - 1; ++x) {
             size_t id = (size_t)y * (size_t)w + (size_t)x;
 
-            float dvy_dx = (grid->velY[id + 1]     - grid->velY[id - 1]) * 0.5f;
-            float dvx_dy = (grid->velX[id + w]     - grid->velX[id - w]) * 0.5f;
+            float dvy_dx = (fluid.velocity_y[id + 1] - fluid.velocity_y[id - 1]) * 0.5f;
+            float dvx_dy = (fluid.velocity_x[id + w] - fluid.velocity_x[id - w]) * 0.5f;
             float vort   = dvy_dx - dvx_dy;
 
             g_vorticity_tmp[id] = vort;
@@ -245,11 +248,12 @@ static void apply_vorticity_overlay(const SceneState *scene,
 static void apply_pressure_overlay(const SceneState *scene,
                                    uint8_t *pixels,
                                    int pitch) {
-    if (!scene || !scene->smoke || !pixels) return;
-    const Fluid2D *grid = scene->smoke;
-    int w = grid->w;
-    int h = grid->h;
-    if (w < 3 || h < 3 || !grid->pressure) return;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene || !pixels) return;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return;
+    int w = fluid.width;
+    int h = fluid.height;
+    if (w < 3 || h < 3 || !fluid.pressure) return;
 
     size_t cell_count = (size_t)w * (size_t)h;
     if (!ensure_pressure_buffers(cell_count)) return;
@@ -264,7 +268,7 @@ static void apply_pressure_overlay(const SceneState *scene,
     int ref_band = (int)fmaxf(1.0f, (float)w * 0.05f);
     for (int y = 1; y < h - 1; ++y) {
         for (int x = 1; x < ref_band; ++x) {
-            float p = grid->pressure[(size_t)y * (size_t)w + (size_t)x];
+            float p = fluid.pressure[(size_t)y * (size_t)w + (size_t)x];
             if (!isfinite(p)) continue;
             ref_sum += p;
             ++ref_count;
@@ -275,7 +279,7 @@ static void apply_pressure_overlay(const SceneState *scene,
     float max_pos = 0.0f;
     float max_neg = 0.0f;
     for (size_t i = 0; i < cell_count; ++i) {
-        float p = grid->pressure[i];
+        float p = fluid.pressure[i];
         if (!isfinite(p)) {
             g_pressure_tmp[i] = 0.0f;
             continue;
@@ -379,10 +383,11 @@ static void apply_pressure_overlay(const SceneState *scene,
 static bool apply_vorticity_overlay_kit_viz(const SceneState *scene,
                                             uint8_t *pixels,
                                             int pitch) {
-    if (!scene || !scene->smoke || !pixels) return false;
-    const Fluid2D *grid = scene->smoke;
-    int w = grid->w;
-    int h = grid->h;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene || !pixels) return false;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
+    int w = fluid.width;
+    int h = fluid.height;
     if (w < 3 || h < 3 || pitch < w * 4) return false;
 
     size_t cell_count = (size_t)w * (size_t)h;
@@ -392,8 +397,8 @@ static bool apply_vorticity_overlay_kit_viz(const SceneState *scene,
     for (int y = 1; y < h - 1; ++y) {
         for (int x = 1; x < w - 1; ++x) {
             size_t id = (size_t)y * (size_t)w + (size_t)x;
-            float dvy_dx = (grid->velY[id + 1] - grid->velY[id - 1]) * 0.5f;
-            float dvx_dy = (grid->velX[id + w] - grid->velX[id - w]) * 0.5f;
+            float dvy_dx = (fluid.velocity_y[id + 1] - fluid.velocity_y[id - 1]) * 0.5f;
+            float dvx_dy = (fluid.velocity_x[id + w] - fluid.velocity_x[id - w]) * 0.5f;
             g_vorticity_tmp[id] = dvy_dx - dvx_dy;
         }
     }
@@ -488,11 +493,12 @@ static bool apply_vorticity_overlay_kit_viz(const SceneState *scene,
 static bool apply_pressure_overlay_kit_viz(const SceneState *scene,
                                            uint8_t *pixels,
                                            int pitch) {
-    if (!scene || !scene->smoke || !pixels) return false;
-    const Fluid2D *grid = scene->smoke;
-    int w = grid->w;
-    int h = grid->h;
-    if (w < 3 || h < 3 || !grid->pressure || pitch < w * 4) return false;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene || !pixels) return false;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
+    int w = fluid.width;
+    int h = fluid.height;
+    if (w < 3 || h < 3 || !fluid.pressure || pitch < w * 4) return false;
 
     size_t cell_count = (size_t)w * (size_t)h;
     if (!ensure_pressure_buffers(cell_count)) return false;
@@ -508,7 +514,7 @@ static bool apply_pressure_overlay_kit_viz(const SceneState *scene,
     int ref_band = (int)fmaxf(1.0f, (float)w * 0.05f);
     for (int y = 1; y < h - 1; ++y) {
         for (int x = 1; x < ref_band; ++x) {
-            float p = grid->pressure[(size_t)y * (size_t)w + (size_t)x];
+            float p = fluid.pressure[(size_t)y * (size_t)w + (size_t)x];
             if (!isfinite(p)) continue;
             ref_sum += p;
             ++ref_count;
@@ -519,7 +525,7 @@ static bool apply_pressure_overlay_kit_viz(const SceneState *scene,
     float max_pos = 0.0f;
     float max_neg = 0.0f;
     for (size_t i = 0; i < cell_count; ++i) {
-        float p = grid->pressure[i];
+        float p = fluid.pressure[i];
         if (!isfinite(p)) {
             g_pressure_tmp[i] = 0.0f;
             continue;
@@ -612,7 +618,11 @@ void field_overlay_apply(const SceneState *scene,
                          uint8_t *pixels,
                          int pitch,
                          const FieldOverlayConfig *cfg) {
-    if (!scene || !scene->smoke || !pixels || !cfg) return;
+    if (!scene || !pixels || !cfg) return;
+    {
+        SceneFluidFieldView2D fluid = {0};
+        if (!scene_backend_fluid_view_2d(scene, &fluid)) return;
+    }
     if (!cfg->draw_pressure && !cfg->draw_vorticity) return;
 
     if (cfg->draw_pressure) apply_pressure_overlay(scene, pixels, pitch);
@@ -624,7 +634,11 @@ FieldOverlayResult field_overlay_apply_adapter_first(const SceneState *scene,
                                                      int pitch,
                                                      const FieldOverlayConfig *cfg) {
     FieldOverlayResult result = {0};
-    if (!scene || !scene->smoke || !pixels || !cfg) return result;
+    if (!scene || !pixels || !cfg) return result;
+    {
+        SceneFluidFieldView2D fluid = {0};
+        if (!scene_backend_fluid_view_2d(scene, &fluid)) return result;
+    }
     if (!cfg->draw_pressure && !cfg->draw_vorticity) return result;
 
     if (cfg->draw_pressure) {

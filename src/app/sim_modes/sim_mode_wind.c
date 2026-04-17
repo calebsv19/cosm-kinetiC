@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include "app/scene_state.h"
-#include "physics/fluid2d/fluid2d_boundary.h"
+#include "app/sim_runtime_backend.h"
 
 static float clamp_positive(float value, float fallback) {
     if (!isfinite(value) || value <= 0.0f) {
@@ -45,16 +45,11 @@ static void wind_apply_config_tweaks(AppConfig *cfg) {
 }
 
 static void wind_seed_velocity_field(SceneState *scene) {
-    if (!scene || !scene->smoke || !scene->config) return;
+    if (!scene || !scene->config) return;
     if (scene->time > 0.0) return;
-    size_t count = (size_t)scene->smoke->w * (size_t)scene->smoke->h;
-    if (count == 0) return;
     float inflow = clamp_positive(scene->config->tunnel_inflow_speed, 25.0f);
     float vx = inflow * 0.5f;
-    for (size_t i = 0; i < count; ++i) {
-        scene->smoke->velX[i] = vx;
-        scene->smoke->velY[i] = 0.0f;
-    }
+    sim_runtime_backend_seed_uniform_velocity_2d(scene->backend, vx, 0.0f);
 }
 
 static void wind_configure(AppConfig *cfg, FluidScenePreset *preset) {
@@ -79,7 +74,7 @@ static void wind_configure(AppConfig *cfg, FluidScenePreset *preset) {
 static void wind_prepare(SceneState *scene) {
     if (!scene || !scene->config || !scene->preset) return;
     scene_set_emitters_enabled(scene, false);
-    scene->wind_ramp_steps = 0;
+    sim_runtime_backend_reset_transient_state(scene->backend);
     wind_seed_velocity_field(scene);
     wind_apply_default_boundaries(scene->config, (FluidScenePreset *)scene->preset);
 }

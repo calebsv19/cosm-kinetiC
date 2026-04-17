@@ -5,7 +5,6 @@
 #include <string.h>
 #include <time.h>
 
-#include "physics/fluid2d/fluid2d.h"
 #include "physics/math/math2d.h"
 #include "render/kit_viz_field_adapter.h"
 
@@ -77,22 +76,80 @@ static SDL_Color mix_color(SDL_Color a, SDL_Color b, float t) {
 }
 
 static bool point_in_solid(const SceneState *scene, float x, float y) {
-    if (!scene || !scene->config || !scene->obstacle_mask) return false;
-    int w = scene->config->grid_w;
-    int h = scene->config->grid_h;
+    SceneObstacleFieldView2D obstacles = {0};
+    if (!scene || !scene->config) return false;
+    if (!scene_backend_obstacle_view_2d(scene, &obstacles) || !obstacles.solid_mask) return false;
+    int w = obstacles.width;
+    int h = obstacles.height;
     if (w <= 0 || h <= 0) return false;
     int ix = clamp_index((int)lroundf(x), 0, w - 1);
     int iy = clamp_index((int)lroundf(y), 0, h - 1);
-    return scene->obstacle_mask[(size_t)iy * (size_t)w + (size_t)ix] != 0;
+    return obstacles.solid_mask[(size_t)iy * (size_t)w + (size_t)ix] != 0;
+}
+
+static void sample_velocity_bilinear(const SceneFluidFieldView2D *fluid,
+                                     float x,
+                                     float y,
+                                     Vec2 *out_vel) {
+    int x0 = 0;
+    int y0 = 0;
+    int x1 = 0;
+    int y1 = 0;
+    float tx = 0.0f;
+    float ty = 0.0f;
+    size_t i00 = 0;
+    size_t i10 = 0;
+    size_t i01 = 0;
+    size_t i11 = 0;
+    float vx0 = 0.0f;
+    float vx1 = 0.0f;
+    float vy0 = 0.0f;
+    float vy1 = 0.0f;
+
+    if (!fluid || !out_vel || !fluid->velocity_x || !fluid->velocity_y ||
+        fluid->width <= 0 || fluid->height <= 0) {
+        if (out_vel) {
+            out_vel->x = 0.0f;
+            out_vel->y = 0.0f;
+        }
+        return;
+    }
+
+    if (x < 0.0f) x = 0.0f;
+    if (y < 0.0f) y = 0.0f;
+    if (x > (float)(fluid->width - 1)) x = (float)(fluid->width - 1);
+    if (y > (float)(fluid->height - 1)) y = (float)(fluid->height - 1);
+
+    x0 = (int)floorf(x);
+    y0 = (int)floorf(y);
+    x1 = clamp_index(x0 + 1, 0, fluid->width - 1);
+    y1 = clamp_index(y0 + 1, 0, fluid->height - 1);
+    tx = x - (float)x0;
+    ty = y - (float)y0;
+
+    i00 = (size_t)y0 * (size_t)fluid->width + (size_t)x0;
+    i10 = (size_t)y0 * (size_t)fluid->width + (size_t)x1;
+    i01 = (size_t)y1 * (size_t)fluid->width + (size_t)x0;
+    i11 = (size_t)y1 * (size_t)fluid->width + (size_t)x1;
+
+    vx0 = fluid->velocity_x[i00] * (1.0f - tx) + fluid->velocity_x[i10] * tx;
+    vx1 = fluid->velocity_x[i01] * (1.0f - tx) + fluid->velocity_x[i11] * tx;
+    vy0 = fluid->velocity_y[i00] * (1.0f - tx) + fluid->velocity_y[i10] * tx;
+    vy1 = fluid->velocity_y[i01] * (1.0f - tx) + fluid->velocity_y[i11] * tx;
+
+    out_vel->x = vx0 * (1.0f - ty) + vx1 * ty;
+    out_vel->y = vy0 * (1.0f - ty) + vy1 * ty;
 }
 
 static bool sample_velocity_safe(const SceneState *scene,
                                  float x,
                                  float y,
                                  Vec2 *out_vel) {
-    if (!scene || !scene->smoke || !out_vel) return false;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene || !out_vel) return false;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
     if (!point_in_solid(scene, x, y)) {
-        fluid2d_sample_velocity(scene->smoke, x, y, out_vel);
+        sample_velocity_bilinear(&fluid, x, y, out_vel);
         return true;
     }
 
@@ -104,7 +161,7 @@ static bool sample_velocity_safe(const SceneState *scene,
                 int ny = (int)lroundf(y) + dy;
                 if (nx < 0 || ny < 0 || nx >= g_grid_w || ny >= g_grid_h) continue;
                 if (!point_in_solid(scene, (float)nx, (float)ny)) {
-                    fluid2d_sample_velocity(scene->smoke, (float)nx, (float)ny, out_vel);
+                    sample_velocity_bilinear(&fluid, (float)nx, (float)ny, out_vel);
                     return true;
                 }
             }
@@ -334,7 +391,11 @@ static void update_particle(FlowParticle *pt,
 }
 
 void particle_overlay_update(const SceneState *scene, double dt, bool spawn_enabled) {
-    if (!scene || !scene->smoke || !g_particles) return;
+    if (!scene || !g_particles) return;
+    {
+        SceneFluidFieldView2D fluid = {0};
+        if (!scene_backend_fluid_view_2d(scene, &fluid)) return;
+    }
     if (dt <= 0.0) dt = 1.0 / 60.0;
     float fdt = (float)dt;
     float frame_equiv = fdt / (1.0f / 60.0f);
@@ -417,12 +478,13 @@ static bool particle_overlay_draw_kit_viz(const SceneState *scene,
                                           SDL_Renderer *renderer,
                                           int window_w,
                                           int window_h) {
-    if (!scene || !scene->smoke || !renderer || !g_particles) return false;
-    const Fluid2D *grid = scene->smoke;
-    if (grid->w <= 0 || grid->h <= 0) return false;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene || !renderer || !g_particles) return false;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
+    if (fluid.width <= 0 || fluid.height <= 0) return false;
 
-    float scale_x = (float)window_w / (float)grid->w;
-    float scale_y = (float)window_h / (float)grid->h;
+    float scale_x = (float)window_w / (float)fluid.width;
+    float scale_y = (float)window_h / (float)fluid.height;
 #if !USE_VULKAN
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 #endif
@@ -477,13 +539,13 @@ static void particle_overlay_draw_legacy(const SceneState *scene,
                                          SDL_Renderer *renderer,
                                          int window_w,
                                          int window_h) {
-    if (!scene || !scene->smoke || !renderer || !g_particles) return;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene || !renderer || !g_particles) return;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return;
+    if (fluid.width <= 0 || fluid.height <= 0) return;
 
-    const Fluid2D *grid = scene->smoke;
-    if (grid->w <= 0 || grid->h <= 0) return;
-
-    float scale_x = (float)window_w / (float)grid->w;
-    float scale_y = (float)window_h / (float)grid->h;
+    float scale_x = (float)window_w / (float)fluid.width;
+    float scale_y = (float)window_h / (float)fluid.height;
 
 #if !USE_VULKAN
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);

@@ -306,54 +306,31 @@ Last updated: 2026-04-15
       - retained-scene mode now exposes explicit scene-domain `Width` / `Height` / `Depth` authoring instead of pretending the old legacy dimension fields still describe retained 3D scene bounds
       - retained scene-domain state now survives apply/save/reopen through `extensions.physics_sim.scene_domain`
       - retained viewport now renders a distinct wireframe scene-domain box and retained framing now follows that overlay state first
-    - `PS4D-DB4` is now complete:
-      - authored retained `scene_domain` now drives runtime compatibility projection before retained provenance defaults
-      - retained `scene3d.bounds` is now runtime fallback only when no authored `physics_sim` scene-domain override exists
-      - the current runtime-active subset is still reduced and honest:
-        - `FluidScenePreset.domain = SCENE_DOMAIN_STRUCTURAL`
-        - `FluidScenePreset.domain_width`
-        - `FluidScenePreset.domain_height`
-      - retained scene-domain projection now uses retained `world_scale`, so compatibility domain size stays aligned with retained object projection scale
-      - retained `depth` / Z-domain limits remain persisted-only for now
-    - `PS4D-DB5` is now complete:
-      - bridge coverage now proves retained-bounds fallback and manual scene-domain override survival through reopen/runtime apply
-      - retained editor summary now states the honest reduced runtime subset directly:
-        - `Runtime domain: XY active; depth saved only`
-      - full 3D scene-domain persistence remains intact without overstating current solver behavior
-    - `PS4D-DB6` is now complete:
-      - the retained scene-domain lane is now closed for the current compatibility scope
-      - the “domain is not wall geometry” contract is now frozen across editor, persistence, and runtime projection
-      - the current honest runtime boundary remains:
-        - XY active
-        - depth/Z persisted-only
-    - runtime playback planning is now seeded explicitly:
-      - the next lane is split between:
-        - near-term retained-scene runtime playback on the current reduced runtime
-        - later true 3D fluid simulation planning
-      - current runtime ownership is still:
-        - `SceneState`
-        - `Fluid2D`
-        - 2D field/particle runtime overlays
-      - `PS4D-RP1` retained-scene runtime visual bootstrap is now complete:
-        - retained-scene menu selection now reaches runtime launch explicitly
-        - runtime bootstrap now loads retained objects plus authored `physics_sim.scene_domain` from the saved runtime-scene file
-        - retained runtime scenes now render in a 3D scaffold overlay instead of reading like only a 2D field/particle viewer
-    - locked follow-on order:
-      - `PS4D-RP2` minimal runtime camera/view shell is now complete:
-        - retained runtime 3D view now holds persistent viewport state in `SceneState`
-        - runtime retained-scene controls now support `Alt+LMB` orbit, `MMB` pan, wheel zoom, and `F` frame
-        - retained runtime scaffold now suppresses legacy brush/stroke input during retained 3D inspection
-      - `PS4D-RP3` reduced retained-scene playback on the current 2D solver is now complete:
-        - retained runtime 3D scenes now display the current `Fluid2D` result as a reduced XY slice in the 3D scaffold
-        - retained emitter/domain authoring now has a visible runtime effect without claiming true 3D fluid
-      - `PS4D-RP4A` emitter-to-fluid alignment is now complete:
-        - retained-object and retained-emitter runtime projection now normalize XY against the active retained scene-domain before entering the reduced runtime lane
-        - bounded retained scenes no longer treat raw retained world coordinates as normalized solver-space positions
-      - `PS4D-RP4` runtime visibility/clarity lane is now complete:
-        - the retained runtime now shows an explicit slice-plane cue and emitter projection guides
-        - TimerHUD is now disabled by default through `physics_sim/config/timer_hud_settings.json`
-        - retained runtime wording is now tighter and explicitly states that playback is still XY-slice-only
-      - true 3D fluid gap audit and later solver plan
+    - retained scene-domain persistence and precedence remain complete:
+      - authored retained `scene_domain` still drives runtime domain projection before provenance defaults
+      - retained `scene3d.bounds` remains fallback/provenance input only when no authored override exists
+      - scene-domain is still scene-level solver policy, not wall geometry
+    - the old `PS4D-RP*` reduced-runtime compatibility playback lane is now superseded
+    - `PSBU-2` through `PSBU-7E` are now complete:
+      - runtime ownership is now explicitly split:
+        - `2D` keeps the extracted regression backend
+        - `3D` owns a dense `XYZ` backend with volumetric emitters, volumetric obstacles/bounds, and a conservative first-pass `XYZ` solver
+      - retained runtime `3D` scenes now read from the real backend through:
+        - one live selected `XY` slice
+        - ghost slices around the active slice
+        - retained overlay guides aligned to backend-compatible spatial truth
+      - pre-`PSBU-7E` hardening is complete:
+        - one spatial authority
+        - one attached-anchor authority
+        - one world-first footprint authority
+        - one cross-boundary proof lock across projection, backend, and overlay
+      - honest limitations remain explicit:
+        - the view is still debug playback, not final volumetric rendering
+        - solver numerics are still first-pass and conservative
+        - dense-volume performance work is still pending
+    - next locked follow-on order:
+      - first, solver quality and performance work on the stabilized truthful `3D` architecture
+      - second, richer `3D` playback, interaction, and rendering once solver/runtime truth remains stable
 
 - connection-pass lane:
   - completed:

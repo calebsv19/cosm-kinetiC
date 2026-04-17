@@ -255,7 +255,7 @@ VF2D_DATASET_TOOL_SRCS := \
 	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(TIMER_HUD_DIR)/external/cJSON.c
-VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(TIMER_HUD_DIR)/external $(SDL_CFLAGS)
+VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(TIMER_HUD_DIR)/external -DVOLUME_FRAMES_DATASET_TOOL_ONLY=1 $(SDL_CFLAGS)
 ifeq ($(UNAME_S),Darwin)
 VF2D_DATASET_TOOL_INCS += -I/opt/homebrew/include -D_THREAD_SAFE
 endif
@@ -290,12 +290,28 @@ STABLE_TEST_TARGETS := \
 	test-trio-scene-contract-diff \
 	test-kitviz-field-adapter \
 	test-sim-mode-route-contract \
+	test-sim-runtime-emitter-contract \
+	test-sim-runtime-obstacle-contract \
+	test-sim-runtime-backend-3d-emitter-contract \
+	test-sim-runtime-backend-3d-attached-emitter-contract \
+	test-sim-runtime-backend-3d-obstacle-contract \
+	test-sim-runtime-backend-3d-retained-obstacle-contract \
+	test-sim-runtime-3d-anchor-contract \
+	test-sim-runtime-3d-footprint-contract \
+	test-sim-runtime-3d-space-contract \
+	test-sim-runtime-3d-domain-contract \
+	test-sim-runtime-3d-solver-contract \
+	test-sim-runtime-backend-reporting-contract \
+	test-sim-runtime-backend-dispatch-contract \
 	test-preset-io-dimensional-contract \
 	test-scene-objects-runtime-contract \
 	test-scene-editor-retained-document-contract \
 	test-scene-editor-scene-library-contract \
 	test-scene-editor-pane-host-contract \
 	test-scene-editor-viewport-contract \
+	test-retained-runtime-scene-overlay-geom-contract \
+	test-retained-runtime-scene-overlay-space-contract \
+	test-runtime-scene-3d-truth-contract \
 	test-runtime-scene-solver-projection-contract \
 	test-runtime-scene-bridge-contract \
 	test-structural-runtime-split-contract
@@ -303,7 +319,7 @@ STABLE_TEST_TARGETS := \
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-sim-runtime-emitter-contract test-sim-runtime-obstacle-contract test-sim-runtime-backend-3d-emitter-contract test-sim-runtime-backend-3d-attached-emitter-contract test-sim-runtime-backend-3d-obstacle-contract test-sim-runtime-backend-3d-retained-obstacle-contract test-sim-runtime-3d-anchor-contract test-sim-runtime-3d-footprint-contract test-sim-runtime-3d-space-contract test-sim-runtime-3d-domain-contract test-sim-runtime-3d-solver-contract test-sim-runtime-backend-reporting-contract test-sim-runtime-backend-dispatch-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-retained-runtime-scene-overlay-geom-contract test-retained-runtime-scene-overlay-space-contract test-runtime-scene-3d-truth-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -352,15 +368,140 @@ SIM_MODE_ROUTE_CONTRACT_TEST_SRCS := \
 	tests/sim_mode_route_contract_test.c \
 	$(SRC_DIR)/app/sim_modes/sim_mode_dispatch.c
 
+SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS := \
+	tests/sim_runtime_emitter_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c
+
+SIM_RUNTIME_OBSTACLE_CONTRACT_TEST_SRCS := \
+	tests/sim_runtime_obstacle_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c
+
+SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS := \
+	tests/sim_runtime_backend_3d_emitter_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c
+
+SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
+	tests/sim_runtime_backend_3d_attached_emitter_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c
+
+SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
+	tests/sim_runtime_backend_3d_obstacle_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c
+
+SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS := \
+	tests/sim_runtime_backend_3d_retained_obstacle_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c
+
+SIM_RUNTIME_BACKEND_DISPATCH_TEST_SRCS := \
+	tests/sim_runtime_backend_dispatch_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c
+
+SIM_RUNTIME_BACKEND_REPORTING_TEST_SRCS := \
+	tests/sim_runtime_backend_reporting_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c
+
+SIM_RUNTIME_3D_ANCHOR_TEST_SRCS := \
+	tests/sim_runtime_3d_anchor_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c
+
+SIM_RUNTIME_3D_FOOTPRINT_TEST_SRCS := \
+	tests/sim_runtime_3d_footprint_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_3d_footprint.c
+
+SIM_RUNTIME_3D_SPACE_TEST_SRCS := \
+	tests/sim_runtime_3d_space_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c
+
+SIM_RUNTIME_3D_DOMAIN_TEST_SRCS := \
+	tests/sim_runtime_3d_domain_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c
+
+SIM_RUNTIME_3D_SOLVER_TEST_SRCS := \
+	tests/sim_runtime_3d_solver_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c
+
 RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	tests/runtime_scene_bridge_contract_test.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_emitters.c \
 	$(SRC_DIR)/app/scene_objects.c \
 	$(SRC_DIR)/app/editor/scene_editor_session.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/physics/objects/object_manager.c \
 	$(SRC_DIR)/physics/rigid/rigid2d.c \
 	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \
@@ -374,9 +515,40 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS := \
 	tests/runtime_scene_solver_projection_contract_test.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_emitters.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
-	$(SRC_DIR)/app/scene_presets.c
+	$(SRC_DIR)/app/scene_presets.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c
+
+RUNTIME_SCENE_3D_TRUTH_TEST_SRCS := \
+	tests/runtime_scene_3d_truth_contract_test.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
+	$(SRC_DIR)/import/runtime_scene_solver_projection_emitters.c \
+	$(SRC_DIR)/render/retained_runtime_scene_overlay_space.c \
+	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
+	$(SRC_DIR)/app/scene_presets.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c
 
 SCENE_OBJECTS_RUNTIME_TEST_SRCS := \
 	tests/scene_objects_runtime_contract_test.c \
@@ -410,9 +582,22 @@ SCENE_EDITOR_VIEWPORT_TEST_SRCS := \
 	tests/scene_editor_viewport_contract_test.c \
 	$(SRC_DIR)/app/editor/scene_editor_viewport.c
 
+RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_SRCS := \
+	tests/retained_runtime_scene_overlay_geom_contract_test.c \
+	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c
+
+RETAINED_RUNTIME_SCENE_OVERLAY_SPACE_TEST_SRCS := \
+	tests/retained_runtime_scene_overlay_space_contract_test.c \
+	$(SRC_DIR)/render/retained_runtime_scene_overlay_space.c \
+	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c
+
 ifeq ($(UNAME_S),Darwin)
+RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_PLATFORM_CFLAGS := -I/opt/homebrew/include -D_THREAD_SAFE
 STRUCTURAL_RUNTIME_SPLIT_TEST_PLATFORM_CFLAGS := -I/opt/homebrew/include -D_THREAD_SAFE
 else
+RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_PLATFORM_CFLAGS := $(if $(SDL_CFLAGS),$(SDL_CFLAGS),-I/usr/include/SDL2)
 STRUCTURAL_RUNTIME_SPLIT_TEST_PLATFORM_CFLAGS := $(if $(SDL_CFLAGS),$(SDL_CFLAGS),-I/usr/include/SDL2)
 endif
 
@@ -422,6 +607,99 @@ test-sim-mode-route-contract: $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS)
 		-I$(INC_DIR) -I$(SRC_DIR) \
 		-o $(BUILD_DIR)/sim_mode_route_contract_test $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_mode_route_contract_test
+
+test-sim-runtime-emitter-contract: $(SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/sim_runtime_emitter_contract_test $(SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_emitter_contract_test
+
+test-sim-runtime-obstacle-contract: $(SIM_RUNTIME_OBSTACLE_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/sim_runtime_obstacle_contract_test $(SIM_RUNTIME_OBSTACLE_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_obstacle_contract_test
+
+test-sim-runtime-backend-3d-emitter-contract: $(SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_backend_3d_emitter_contract_test $(SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_3d_emitter_contract_test
+
+test-sim-runtime-backend-3d-attached-emitter-contract: $(SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_backend_3d_attached_emitter_contract_test $(SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_3d_attached_emitter_contract_test
+
+test-sim-runtime-backend-3d-obstacle-contract: $(SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_backend_3d_obstacle_contract_test $(SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_3d_obstacle_contract_test
+
+test-sim-runtime-backend-3d-retained-obstacle-contract: $(SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_backend_3d_retained_obstacle_contract_test $(SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_3d_retained_obstacle_contract_test
+
+test-sim-runtime-3d-anchor-contract: $(SIM_RUNTIME_3D_ANCHOR_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_3d_anchor_contract_test $(SIM_RUNTIME_3D_ANCHOR_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_3d_anchor_contract_test
+
+test-sim-runtime-3d-footprint-contract: $(SIM_RUNTIME_3D_FOOTPRINT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/sim_runtime_3d_footprint_contract_test $(SIM_RUNTIME_3D_FOOTPRINT_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_3d_footprint_contract_test
+
+test-sim-runtime-3d-space-contract: $(SIM_RUNTIME_3D_SPACE_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_3d_space_contract_test $(SIM_RUNTIME_3D_SPACE_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_3d_space_contract_test
+
+test-sim-runtime-3d-domain-contract: $(SIM_RUNTIME_3D_DOMAIN_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_3d_domain_contract_test $(SIM_RUNTIME_3D_DOMAIN_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_3d_domain_contract_test
+
+test-sim-runtime-3d-solver-contract: $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_3d_solver_contract_test $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_3d_solver_contract_test
+
+test-sim-runtime-backend-reporting-contract: $(SIM_RUNTIME_BACKEND_REPORTING_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_backend_reporting_contract_test $(SIM_RUNTIME_BACKEND_REPORTING_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_reporting_contract_test
+
+test-sim-runtime-backend-dispatch-contract: $(SIM_RUNTIME_BACKEND_DISPATCH_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-o $(BUILD_DIR)/sim_runtime_backend_dispatch_contract_test $(SIM_RUNTIME_BACKEND_DISPATCH_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_dispatch_contract_test
 
 test-preset-io-dimensional-contract: $(PRESET_IO_DIMENSIONAL_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
@@ -464,10 +742,31 @@ test-scene-editor-viewport-contract: $(SCENE_EDITOR_VIEWPORT_TEST_SRCS)
 		-o $(BUILD_DIR)/scene_editor_viewport_contract_test $(SCENE_EDITOR_VIEWPORT_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_viewport_contract_test
 
+test-retained-runtime-scene-overlay-geom-contract: $(RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/retained_runtime_scene_overlay_geom_contract_test $(RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_SRCS) -lm
+	$(BUILD_DIR)/retained_runtime_scene_overlay_geom_contract_test
+
+test-retained-runtime-scene-overlay-space-contract: $(RETAINED_RUNTIME_SCENE_OVERLAY_SPACE_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/retained_runtime_scene_overlay_space_contract_test $(RETAINED_RUNTIME_SCENE_OVERLAY_SPACE_TEST_SRCS) -lm
+	$(BUILD_DIR)/retained_runtime_scene_overlay_space_contract_test
+
+test-runtime-scene-3d-truth-contract: $(RUNTIME_SCENE_3D_TRUTH_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I/opt/homebrew/Cellar/json-c/0.18/include -I/opt/homebrew/Cellar/json-c/0.18/include/json-c \
+		-o $(BUILD_DIR)/runtime_scene_3d_truth_contract_test $(RUNTIME_SCENE_3D_TRUTH_TEST_SRCS) $(JSON_LIBS) -lm
+	$(BUILD_DIR)/runtime_scene_3d_truth_contract_test
+
 test-runtime-scene-solver-projection-contract: $(RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+	$(CC) $(CFLAGS) \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-I/opt/homebrew/Cellar/json-c/0.18/include -I/opt/homebrew/Cellar/json-c/0.18/include/json-c \
 		-o $(BUILD_DIR)/runtime_scene_solver_projection_contract_test $(RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS) $(JSON_LIBS) -lm

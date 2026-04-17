@@ -29,11 +29,11 @@ static bool test_route_3d_controlled_lane(void) {
     if (route.requested_space_mode != SPACE_MODE_3D) return false;
     if (route.projection_space_mode != SPACE_MODE_2D) return false;
     if (route.backend_lane != SIM_BACKEND_CONTROLLED_3D) return false;
-    if (!route.backend_uses_canonical_2d_solver) return false;
+    if (route.backend_uses_canonical_2d_solver) return false;
     if (!route.fallback_to_2d_projection) return false;
-    if (!route.constrained_3d_solver_scaffold) return false;
-    if (route.constrained_3d_min_substeps < 2) return false;
-    if (route.constrained_3d_buoyancy_scale <= 1.0f) return false;
+    if (route.constrained_3d_solver_scaffold) return false;
+    if (route.constrained_3d_min_substeps != 1) return false;
+    if (route.constrained_3d_buoyancy_scale != 1.0f) return false;
     if (!route.hooks) return false;
     return true;
 }
@@ -60,9 +60,9 @@ static bool test_step_policy_activation_rules(void) {
     if (p2d.min_substeps != 1) return false;
     if (p2d.buoyancy_scale != 1.0f) return false;
     if (p3d_wrong_dim.constrained_3d_active) return false;
-    if (!p3d.constrained_3d_active) return false;
-    if (p3d.min_substeps < 2) return false;
-    if (p3d.buoyancy_scale <= 1.0f) return false;
+    if (p3d.constrained_3d_active) return false;
+    if (p3d.min_substeps != 1) return false;
+    if (p3d.buoyancy_scale != 1.0f) return false;
     return true;
 }
 

@@ -39,10 +39,10 @@ SimModeRoute sim_mode_resolve_route(SimulationMode mode, SpaceMode space_mode) {
         route.backend_lane = SIM_BACKEND_CONTROLLED_3D;
         route.projection_space_mode = SPACE_MODE_2D;
         route.fallback_to_2d_projection = true;
-        route.backend_uses_canonical_2d_solver = true;
-        route.constrained_3d_solver_scaffold = true;
-        route.constrained_3d_min_substeps = 2;
-        route.constrained_3d_buoyancy_scale = 1.15f;
+        route.backend_uses_canonical_2d_solver = false;
+        route.constrained_3d_solver_scaffold = false;
+        route.constrained_3d_min_substeps = 1;
+        route.constrained_3d_buoyancy_scale = 1.0f;
     }
 
     return route;

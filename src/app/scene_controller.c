@@ -12,11 +12,11 @@
 #include "app/scene_state.h"
 #include "app/scene_presets.h"
 #include "app/sim_mode.h"
+#include "app/sim_runtime_backend.h"
 #include "app/quality_profiles.h"
 #include "app/data_paths.h"
 #include "input/input.h"
 #include "input/stroke_buffer.h"
-#include "physics/fluid2d/fluid2d.h"
 #include "render/renderer_sdl.h"
 #include "render/retained_runtime_scene_overlay.h"
 #include "render/vk_shared_device.h"
@@ -120,6 +120,10 @@ static void scene_controller_runtime_key_down(void *user,
         (void)retained_runtime_scene_overlay_frame_view(scene,
                                                         scene->config ? scene->config->window_w : 1,
                                                         scene->config ? scene->config->window_h : 1);
+    } else if (key == SDLK_LEFTBRACKET) {
+        (void)scene_backend_step_compatibility_slice(scene, -1);
+    } else if (key == SDLK_RIGHTBRACKET) {
+        (void)scene_backend_step_compatibility_slice(scene, 1);
     }
 }
 
@@ -310,34 +314,6 @@ static void stroke_sampler_apply(StrokeSampler *sampler,
            stroke_buffer_pop(&sampler->buffer, &sample)) {
         scene_apply_brush_sample(scene, &sample);
         ++processed;
-    }
-}
-
-static void inject_object_motion_into_fluid(SceneState *scene) {
-    if (!scene || !scene->smoke || !scene->config) return;
-    const AppConfig *cfg = scene->config;
-    if (cfg->window_w <= 0 || cfg->window_h <= 0 || cfg->grid_w <= 0 || cfg->grid_h <= 0) return;
-
-    const float vel_scale = 0.01f; // small coupling to fluid
-    for (int i = 0; i < scene->objects.count; ++i) {
-        SceneObject *obj = &scene->objects.objects[i];
-        if (!obj) continue;
-        if (obj->body.is_static || obj->body.locked) continue;
-
-        float sx = obj->body.position.x / (float)cfg->window_w;
-        float sy = obj->body.position.y / (float)cfg->window_h;
-        int gx = (int)lroundf(sx * (float)cfg->grid_w);
-        int gy = (int)lroundf(sy * (float)cfg->grid_h);
-        if (gx < 0) gx = 0;
-        if (gx >= cfg->grid_w) gx = cfg->grid_w - 1;
-        if (gy < 0) gy = 0;
-        if (gy >= cfg->grid_h) gy = cfg->grid_h - 1;
-
-        fluid2d_add_velocity(scene->smoke,
-                             gx,
-                             gy,
-                             obj->body.velocity.x * vel_scale,
-                             obj->body.velocity.y * vel_scale);
     }
 }
 
@@ -537,14 +513,10 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
 
                 ts_start_timer("fluid_step");
                 {
-                    const BoundaryFlow *flows = scene->preset ? scene->preset->boundary_flows : NULL;
-                    fluid2d_step(scene->smoke,
-                                 sub_dt,
-                                 &step_cfg,
-                                 flows,
-                                 scene->obstacle_mask,
-                                 scene->obstacle_velX,
-                                 scene->obstacle_velY);
+                    sim_runtime_backend_step(scene->backend,
+                                             scene,
+                                             &step_cfg,
+                                             sub_dt);
                 }
                 ts_stop_timer("fluid_step");
 
@@ -565,8 +537,8 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
                     scene->import_shapes[ii].rotation_deg = b->angle * 180.0f / (float)M_PI;
                 }
                 scene_rasterize_dynamic_obstacles(scene);
-                inject_object_motion_into_fluid(scene);
-                scene->obstacle_mask_dirty = true;
+                sim_runtime_backend_inject_object_motion(scene->backend, scene);
+                scene_backend_mark_obstacles_dirty(scene);
                 scene->time += sub_dt;
             }
         }
@@ -600,12 +572,38 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
     bool skip_present) {
     SceneControllerRenderDeriveFrame frame = {0};
     const char *quality_label = NULL;
+    SimRuntimeBackendReport backend_report = {0};
+    SceneFluidFieldView2D fluid_view = {0};
+    SceneObstacleFieldView2D obstacle_view = {0};
+    bool compatibility_slice_has_activity = false;
+    bool compatibility_slice_has_obstacles = false;
 
     if (!scene || !cfg || !update_frame || !update_frame->valid) {
         return frame;
     }
 
     quality_label = quality_profile_name(cfg->quality_index);
+    (void)scene_backend_report(scene, &backend_report);
+    if (backend_report.compatibility_view_2d_available &&
+        scene_backend_fluid_view_2d(scene, &fluid_view) &&
+        fluid_view.density) {
+        for (size_t i = 0; i < fluid_view.cell_count; ++i) {
+            if (fluid_view.density[i] > 0.0001f) {
+                compatibility_slice_has_activity = true;
+                break;
+            }
+        }
+    }
+    if (backend_report.compatibility_view_2d_available &&
+        scene_backend_obstacle_view_2d(scene, &obstacle_view) &&
+        obstacle_view.solid_mask) {
+        for (size_t i = 0; i < obstacle_view.cell_count; ++i) {
+            if (obstacle_view.solid_mask[i]) {
+                compatibility_slice_has_obstacles = true;
+                break;
+            }
+        }
+    }
     frame.valid = true;
     frame.headless_mode = headless_mode;
     frame.frame_index = update_frame->frame_index;
@@ -627,6 +625,30 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .projection_space_mode = scene->mode_route.projection_space_mode,
         .backend_lane = scene->mode_route.backend_lane,
         .backend_uses_canonical_2d_solver = scene->mode_route.backend_uses_canonical_2d_solver,
+        .backend_kind = backend_report.kind,
+        .backend_domain_w = backend_report.domain_w,
+        .backend_domain_h = backend_report.domain_h,
+        .backend_domain_d = backend_report.domain_d,
+        .backend_cell_count = backend_report.cell_count,
+        .backend_volumetric_emitters_free_live = backend_report.volumetric_emitters_free_live,
+        .backend_volumetric_emitters_attached_live = backend_report.volumetric_emitters_attached_live,
+        .backend_volumetric_obstacles_live = backend_report.volumetric_obstacles_live,
+        .backend_full_3d_solver_live = backend_report.full_3d_solver_live,
+        .backend_world_bounds_valid = backend_report.world_bounds_valid,
+        .backend_world_min_x = backend_report.world_min_x,
+        .backend_world_min_y = backend_report.world_min_y,
+        .backend_world_min_z = backend_report.world_min_z,
+        .backend_world_max_x = backend_report.world_max_x,
+        .backend_world_max_y = backend_report.world_max_y,
+        .backend_world_max_z = backend_report.world_max_z,
+        .backend_voxel_size = backend_report.voxel_size,
+        .backend_compatibility_view_2d_available = backend_report.compatibility_view_2d_available,
+        .backend_compatibility_view_2d_derived = backend_report.compatibility_view_2d_derived,
+        .backend_compatibility_slice_z = backend_report.compatibility_slice_z,
+        .backend_compatibility_slice_has_activity = compatibility_slice_has_activity,
+        .backend_compatibility_slice_has_obstacles = compatibility_slice_has_obstacles,
+        .backend_secondary_debug_slice_stack_live = backend_report.secondary_debug_slice_stack_live,
+        .backend_secondary_debug_slice_stack_radius = backend_report.secondary_debug_slice_stack_radius,
         .tunnel_inflow_speed = cfg->tunnel_inflow_speed,
         .vorticity_enabled = renderer_sdl_vorticity_enabled(),
         .pressure_enabled = renderer_sdl_pressure_enabled(),
@@ -724,7 +746,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
     }
     if (mode_route.fallback_to_2d_projection) {
         fprintf(stderr,
-                "[scene] Space mode 3D requested; using controlled 3D lane with canonical 2D solver/projection scaffold.\n");
+                "[scene] Space mode 3D requested; using controlled 3D lane with scaffold backend and compatibility XY projection.\n");
     }
 
     if (!renderer_sdl_init(cfg.window_w, cfg.window_h, cfg.grid_w, cfg.grid_h)) {
@@ -743,7 +765,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                                   runtime_launch->retained_runtime_scene_path);
         (void)retained_runtime_scene_overlay_frame_view(&scene, cfg.window_w, cfg.window_h);
     }
-    if (!scene.smoke) {
+    if (!sim_runtime_backend_valid(scene.backend)) {
         fprintf(stderr, "[scene] Fluid grid failed to initialize.\n");
     }
     if (mode_hooks && mode_hooks->prepare_scene) {

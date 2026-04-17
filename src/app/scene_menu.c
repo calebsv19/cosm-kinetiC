@@ -416,7 +416,8 @@ restart_menu:
                                  space_text,
                                  (ctx.cfg && menu_normalize_space_mode(ctx.cfg->space_mode) == SPACE_MODE_3D));
                 if (ctx.cfg && menu_normalize_space_mode(ctx.cfg->space_mode) == SPACE_MODE_3D) {
-                    const char *scaffold_hint = "3D lane scaffold: canonical 2D backend route";
+                    const char *scaffold_hint =
+                        "3D scaffold backend: XYZ domain + derived XY compatibility slice";
                     char scaffold_hint_fit[160];
                     int hint_x = ctx.config_panel_rect.x;
                     int hint_y = ctx.mode_toggle_button.rect.y + ctx.mode_toggle_button.rect.h + 6;

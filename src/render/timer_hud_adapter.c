@@ -1,5 +1,6 @@
 #include "render/timer_hud_adapter.h"
 
+#include "app/data_paths.h"
 #include "timer_hud/time_scope.h"
 #include "timer_hud/timer_hud_backend.h"
 #include "font_paths.h"
@@ -8,10 +9,20 @@
 #include "vk_renderer.h"
 
 #include <SDL2/SDL_ttf.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
+#define TIMER_HUD_DEFAULT_SETTINGS_REL_PATH "config/timer_hud_settings.json"
+#define TIMER_HUD_RUNTIME_SETTINGS_REL_PATH "data/runtime/timer_hud_settings.json"
 
 static SDL_Renderer* g_timer_hud_renderer = NULL;
 static TTF_Font* g_timer_hud_font = NULL;
@@ -22,6 +33,74 @@ static const char* FONT_PATHS[] = {
     FONT_TITLE_PATH_1,
     FONT_TITLE_PATH_2
 };
+
+static int timer_hud_path_exists(const char* path) {
+    struct stat st = {0};
+    return path && path[0] && stat(path, &st) == 0;
+}
+
+static int timer_hud_resolve_abs_from_cwd(const char* relative_path,
+                                          char* out,
+                                          size_t out_cap) {
+    char cwd[PATH_MAX] = {0};
+    int written = 0;
+    if (!relative_path || !relative_path[0] || !out || out_cap == 0) {
+        return 0;
+    }
+    if (relative_path[0] == '/') {
+        written = snprintf(out, out_cap, "%s", relative_path);
+        return written > 0 && (size_t)written < out_cap;
+    }
+    if (!getcwd(cwd, sizeof(cwd))) {
+        return 0;
+    }
+    written = snprintf(out, out_cap, "%s/%s", cwd, relative_path);
+    return written > 0 && (size_t)written < out_cap;
+}
+
+static void timer_hud_seed_runtime_settings(const char* default_settings_path,
+                                            const char* runtime_settings_path) {
+    FILE* in = NULL;
+    FILE* out = NULL;
+    char buffer[4096];
+    size_t n = 0;
+    int io_failed = 0;
+
+    if (!default_settings_path || !runtime_settings_path) return;
+    if (timer_hud_path_exists(runtime_settings_path)) return;
+    if (!timer_hud_path_exists(default_settings_path)) return;
+    if (!physics_sim_ensure_runtime_dirs()) return;
+
+    in = fopen(default_settings_path, "rb");
+    if (!in) return;
+
+    out = fopen(runtime_settings_path, "wb");
+    if (!out) {
+        fclose(in);
+        return;
+    }
+
+    while ((n = fread(buffer, 1, sizeof(buffer), in)) > 0) {
+        if (fwrite(buffer, 1, n, out) != n) {
+            io_failed = 1;
+            break;
+        }
+    }
+    if (ferror(in)) {
+        io_failed = 1;
+    }
+    fclose(in);
+    if (fclose(out) != 0) {
+        io_failed = 1;
+    }
+
+    if (io_failed) {
+        fprintf(stderr,
+                "[TimerHUD] Failed to seed runtime settings from %s to %s\n",
+                default_settings_path,
+                runtime_settings_path);
+    }
+}
 
 static bool ensure_font_loaded(void) {
     int point_size = 16;
@@ -143,12 +222,25 @@ static const TimerHUDBackend g_timer_hud_backend = {
 };
 
 void timer_hud_register_backend(void) {
+    char default_settings_path[PATH_MAX] = {0};
+    char runtime_settings_path[PATH_MAX] = {0};
+
     ts_register_backend(&g_timer_hud_backend);
     ts_set_program_name("physics_sim");
 
     const char* outputRoot = getenv("TIMERHUD_OUTPUT_ROOT");
     if (outputRoot && outputRoot[0]) {
         ts_set_output_root(outputRoot);
+    }
+
+    if (timer_hud_resolve_abs_from_cwd(TIMER_HUD_DEFAULT_SETTINGS_REL_PATH,
+                                       default_settings_path,
+                                       sizeof(default_settings_path)) &&
+        timer_hud_resolve_abs_from_cwd(TIMER_HUD_RUNTIME_SETTINGS_REL_PATH,
+                                       runtime_settings_path,
+                                       sizeof(runtime_settings_path))) {
+        timer_hud_seed_runtime_settings(default_settings_path, runtime_settings_path);
+        ts_set_settings_path(runtime_settings_path);
     }
 
     const char* overridePath = getenv("PHYSICS_SIM_TIMER_HUD_SETTINGS");

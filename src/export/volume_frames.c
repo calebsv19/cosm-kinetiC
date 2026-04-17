@@ -412,12 +412,15 @@ fail:
     return false;
 }
 
+#ifndef VOLUME_FRAMES_DATASET_TOOL_ONLY
 static uint32_t obstacle_mask_crc32(const SceneState *scene) {
-    if (!scene || !scene->obstacle_mask) return 0;
-    size_t count = (size_t)scene->smoke->w * (size_t)scene->smoke->h;
+    SceneObstacleFieldView2D obstacles = {0};
+    if (!scene) return 0;
+    if (!scene_backend_obstacle_view_2d(scene, &obstacles) || !obstacles.solid_mask) return 0;
+    size_t count = obstacles.cell_count;
     uint32_t hash = 2166136261u; // FNV-1a
     for (size_t i = 0; i < count; ++i) {
-        hash ^= (uint32_t)scene->obstacle_mask[i];
+        hash ^= (uint32_t)obstacles.solid_mask[i];
         hash *= 16777619u;
     }
     return hash;
@@ -555,6 +558,8 @@ static bool manifest_append(const SceneState *scene,
     return ok;
 }
 
+#endif
+
 static bool resolve_manifest_latest_frame(const char *manifest_path, char *out_frame_path, size_t out_size) {
     if (!manifest_path || !out_frame_path || out_size == 0) return false;
     out_frame_path[0] = '\0';
@@ -614,6 +619,7 @@ static bool resolve_manifest_latest_frame(const char *manifest_path, char *out_f
     return ok;
 }
 
+#ifndef VOLUME_FRAMES_DATASET_TOOL_ONLY
 static bool write_scene_bundle(const SceneState *scene, const VolumeFrameHeaderV2 *header, const char *run_dir) {
     if (!scene || !header || !run_dir || !run_dir[0]) return false;
     char bundle_path[512];
@@ -668,7 +674,9 @@ static bool write_scene_bundle(const SceneState *scene, const VolumeFrameHeaderV
 
 bool volume_frames_write(const SceneState *scene,
                          uint64_t frame_index) {
-    if (!scene || !scene->smoke) return false;
+    SceneFluidFieldView2D fluid = {0};
+    if (!scene) return false;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
     if (!export_paths_init()) return false;
     char run_dir[512] = {0};
     const char *run_name = scene->preset && scene->preset->name ? scene->preset->name : "run";
@@ -690,8 +698,8 @@ bool volume_frames_write(const SceneState *scene,
     VolumeFrameHeaderV2 header = {
         .magic = VOLUME_MAGIC,
         .version = VOLUME_VERSION_V2,
-        .grid_w = (uint32_t)scene->smoke->w,
-        .grid_h = (uint32_t)scene->smoke->h,
+        .grid_w = (uint32_t)fluid.width,
+        .grid_h = (uint32_t)fluid.height,
         .time_seconds = scene->time,
         .frame_index = frame_index,
         .dt_seconds = scene->dt,
@@ -701,7 +709,7 @@ bool volume_frames_write(const SceneState *scene,
         .obstacle_mask_crc32 = obstacle_mask_crc32(scene),
         .reserved = {0, 0, 0}
     };
-    size_t grid_count = (size_t)scene->smoke->w * (size_t)scene->smoke->h;
+    size_t grid_count = fluid.cell_count;
 
     if (fwrite(&header, sizeof(header), 1, f) != 1) {
         fprintf(stderr, "[export] Failed to write header to %s\n", path);
@@ -709,9 +717,9 @@ bool volume_frames_write(const SceneState *scene,
         return false;
     }
 
-    if (fwrite(scene->smoke->density, sizeof(float), grid_count, f) != grid_count ||
-        fwrite(scene->smoke->velX, sizeof(float), grid_count, f) != grid_count ||
-        fwrite(scene->smoke->velY, sizeof(float), grid_count, f) != grid_count) {
+    if (fwrite(fluid.density, sizeof(float), grid_count, f) != grid_count ||
+        fwrite(fluid.velocity_x, sizeof(float), grid_count, f) != grid_count ||
+        fwrite(fluid.velocity_y, sizeof(float), grid_count, f) != grid_count) {
         fprintf(stderr, "[export] Failed to write frame data to %s\n", path);
         fclose(f);
         return false;
@@ -741,6 +749,14 @@ bool volume_frames_write(const SceneState *scene,
 
     return true;
 }
+#else
+bool volume_frames_write(const SceneState *scene,
+                         uint64_t frame_index) {
+    (void)scene;
+    (void)frame_index;
+    return false;
+}
+#endif
 
 bool volume_frame_read_header(const char *path, VolumeFrameInfo *out_info) {
     if (!path || !out_info) return false;

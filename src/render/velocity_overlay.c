@@ -34,9 +34,12 @@ static void velocity_overlay_draw_legacy(const SceneState *scene,
                                          int window_w,
                                          int window_h,
                                          const VelocityOverlayConfig *cfg) {
-    if (!scene || !scene->smoke || !renderer) return;
+    SceneFluidFieldView2D fluid = {0};
+    SceneObstacleFieldView2D obstacles = {0};
+    if (!scene || !renderer) return;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return;
+    (void)scene_backend_obstacle_view_2d(scene, &obstacles);
 
-    const Fluid2D *grid = scene->smoke;
     int stride = (cfg && cfg->sample_stride > 0) ? cfg->sample_stride
                                                  : DEFAULT_SAMPLE_STRIDE;
     float vector_scale = (cfg && cfg->vector_scale > 0.0f)
@@ -50,18 +53,18 @@ static void velocity_overlay_draw_legacy(const SceneState *scene,
                           : 1.0f;
     if (ref_speed < 0.0001f) ref_speed = 0.0001f;
 
-    float scale_x = safe_scale(window_w, grid->w);
-    float scale_y = safe_scale(window_h, grid->h);
+    float scale_x = safe_scale(window_w, fluid.width);
+    float scale_y = safe_scale(window_h, fluid.height);
 
 #if !USE_VULKAN
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 #endif
 
-    for (int gy = stride / 2; gy < grid->h; gy += stride) {
-        for (int gx = stride / 2; gx < grid->w; gx += stride) {
-            size_t idx = (size_t)gy * (size_t)grid->w + (size_t)gx;
-            float vx = grid->velX[idx];
-            float vy = grid->velY[idx];
+    for (int gy = stride / 2; gy < fluid.height; gy += stride) {
+        for (int gx = stride / 2; gx < fluid.width; gx += stride) {
+            size_t idx = (size_t)gy * (size_t)fluid.width + (size_t)gx;
+            float vx = fluid.velocity_x[idx];
+            float vy = fluid.velocity_y[idx];
             float speed = sqrtf(vx * vx + vy * vy);
             if (speed < speed_threshold) {
                 continue;
@@ -93,9 +96,9 @@ static void velocity_overlay_draw_legacy(const SceneState *scene,
             float end_y = start_y + dir_y * line_len * scale_y;
 
             float falloff = 1.0f;
-            if (scene && scene->obstacle_distance) {
-                size_t d_id = (size_t)gy * (size_t)grid->w + (size_t)gx;
-                falloff = scene->obstacle_distance[d_id];
+            if (obstacles.distance) {
+                size_t d_id = (size_t)gy * (size_t)fluid.width + (size_t)gx;
+                falloff = obstacles.distance[d_id];
             }
             float fade = 0.35f + 0.65f * falloff;
             if (fade <= 0.05f) continue;
@@ -130,9 +133,12 @@ static bool velocity_overlay_draw_kit_viz(const SceneState *scene,
                                           int window_w,
                                           int window_h,
                                           const VelocityOverlayConfig *cfg) {
-    if (!scene || !scene->smoke || !renderer) return false;
-    const Fluid2D *grid = scene->smoke;
-    if (!grid->velX || !grid->velY || grid->w <= 0 || grid->h <= 0) return false;
+    SceneFluidFieldView2D fluid = {0};
+    SceneObstacleFieldView2D obstacles = {0};
+    if (!scene || !renderer) return false;
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
+    if (!fluid.velocity_x || !fluid.velocity_y || fluid.width <= 0 || fluid.height <= 0) return false;
+    (void)scene_backend_obstacle_view_2d(scene, &obstacles);
 
     int stride = (cfg && cfg->sample_stride > 0) ? cfg->sample_stride
                                                  : DEFAULT_SAMPLE_STRIDE;
@@ -148,8 +154,8 @@ static bool velocity_overlay_draw_kit_viz(const SceneState *scene,
     bool fixed = cfg && cfg->fixed_length;
     float build_scale = fixed ? 1.0f : vector_scale;
 
-    size_t sample_w = (size_t)((grid->w + stride - 1) / stride);
-    size_t sample_h = (size_t)((grid->h + stride - 1) / stride);
+    size_t sample_w = (size_t)((fluid.width + stride - 1) / stride);
+    size_t sample_h = (size_t)((fluid.height + stride - 1) / stride);
     size_t max_segments = sample_w * sample_h;
     if (max_segments == 0) return false;
 
@@ -159,10 +165,10 @@ static bool velocity_overlay_draw_kit_viz(const SceneState *scene,
 
     size_t segment_count = 0;
     PhysicsKitVizVectorRequest request = {
-        .vx = grid->velX,
-        .vy = grid->velY,
-        .width = (uint32_t)grid->w,
-        .height = (uint32_t)grid->h,
+        .vx = fluid.velocity_x,
+        .vy = fluid.velocity_y,
+        .width = (uint32_t)fluid.width,
+        .height = (uint32_t)fluid.height,
         .stride = (uint32_t)stride,
         .scale = build_scale,
         .out_segments = g_vec_segments,
@@ -177,8 +183,8 @@ static bool velocity_overlay_draw_kit_viz(const SceneState *scene,
                           ? scene->config->tunnel_inflow_speed
                           : 1.0f;
     if (ref_speed < 0.0001f) ref_speed = 0.0001f;
-    float scale_x = safe_scale(window_w, grid->w);
-    float scale_y = safe_scale(window_h, grid->h);
+    float scale_x = safe_scale(window_w, fluid.width);
+    float scale_y = safe_scale(window_h, fluid.height);
 
 #if !USE_VULKAN
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -211,13 +217,13 @@ static bool velocity_overlay_draw_kit_viz(const SceneState *scene,
 
         int gx = (int)floorf(seg->x0);
         int gy = (int)floorf(seg->y0);
-        if (gx < 0 || gx >= grid->w || gy < 0 || gy >= grid->h) {
+        if (gx < 0 || gx >= fluid.width || gy < 0 || gy >= fluid.height) {
             continue;
         }
         float falloff = 1.0f;
-        if (scene->obstacle_distance) {
-            size_t d_id = (size_t)gy * (size_t)grid->w + (size_t)gx;
-            falloff = scene->obstacle_distance[d_id];
+        if (obstacles.distance) {
+            size_t d_id = (size_t)gy * (size_t)fluid.width + (size_t)gx;
+            falloff = obstacles.distance[d_id];
         }
         float fade = 0.35f + 0.65f * falloff;
         if (fade <= 0.05f) continue;

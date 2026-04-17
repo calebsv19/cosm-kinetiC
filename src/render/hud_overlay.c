@@ -90,6 +90,18 @@ static const char *hud_space_mode_label(SpaceMode mode) {
     }
 }
 
+static const char *hud_backend_kind_label(SimRuntimeBackendKind kind) {
+    switch (kind) {
+    case SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD:
+        return "3D scaffold backend";
+    case SIM_RUNTIME_BACKEND_KIND_FLUID_2D:
+        return "Fluid2D backend";
+    case SIM_RUNTIME_BACKEND_KIND_NONE:
+    default:
+        return "No backend";
+    }
+}
+
 void hud_overlay_draw(const RendererHudInfo *hud) {
     if (!hud || !g_hud_renderer || !g_hud_font) return;
 
@@ -123,9 +135,109 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
              (hud->backend_lane == SIM_BACKEND_CONTROLLED_3D)
                  ? "Controlled 3D lane"
                  : "Canonical 2D lane",
-             hud->backend_uses_canonical_2d_solver
-                 ? " (2D solver scaffold)"
-                 : "");
+             (hud->backend_kind != SIM_RUNTIME_BACKEND_KIND_NONE)
+                 ? ""
+                 : " (unavailable)");
+
+    char backend_kind_line[160];
+    snprintf(backend_kind_line,
+             sizeof(backend_kind_line),
+             "Backend impl: %s",
+             hud_backend_kind_label(hud->backend_kind));
+
+    char domain_line[160];
+    if (hud->backend_domain_d > 1) {
+        snprintf(domain_line,
+                 sizeof(domain_line),
+                 "Domain: %dx%dx%d voxels (%zu cells)",
+                 hud->backend_domain_w,
+                 hud->backend_domain_h,
+                 hud->backend_domain_d,
+                 hud->backend_cell_count);
+    } else {
+        snprintf(domain_line,
+                 sizeof(domain_line),
+                 "Domain: %dx%d cells (%zu total)",
+                 hud->backend_domain_w,
+                 hud->backend_domain_h,
+                 hud->backend_cell_count);
+    }
+
+    char domain_extent_line[160];
+    if (hud->backend_world_bounds_valid) {
+        float span_x = hud->backend_world_max_x - hud->backend_world_min_x;
+        float span_y = hud->backend_world_max_y - hud->backend_world_min_y;
+        float span_z = hud->backend_world_max_z - hud->backend_world_min_z;
+        snprintf(domain_extent_line,
+                 sizeof(domain_extent_line),
+                 "World span: %.2f x %.2f x %.2f @ %.4f voxel",
+                 span_x,
+                 span_y,
+                 span_z,
+                 hud->backend_voxel_size);
+    } else {
+        domain_extent_line[0] = '\0';
+    }
+
+    char compatibility_line[160];
+    if (hud->backend_compatibility_view_2d_available) {
+        if (hud->backend_compatibility_view_2d_derived && hud->backend_domain_d > 1) {
+            snprintf(compatibility_line,
+                     sizeof(compatibility_line),
+                     "Compat view: live derived XY slice z=%d/%d",
+                     hud->backend_compatibility_slice_z,
+                     hud->backend_domain_d - 1);
+        } else {
+            snprintf(compatibility_line,
+                     sizeof(compatibility_line),
+                     "Compat view: authoritative XY field");
+        }
+    } else {
+        compatibility_line[0] = '\0';
+    }
+
+    char backend_status_line[176];
+    if (hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD) {
+        snprintf(backend_status_line,
+                 sizeof(backend_status_line),
+                 "3D status: emitters %s%s%s, obstacles %s, solver %s",
+                 hud->backend_volumetric_emitters_free_live ? "free" : "none",
+                 hud->backend_volumetric_emitters_attached_live ? "+" : "",
+                 hud->backend_volumetric_emitters_attached_live ? "attached" : "",
+                 hud->backend_volumetric_obstacles_live ? "live" : "pending",
+                 hud->backend_full_3d_solver_live ? "live" : "compat");
+    } else {
+        backend_status_line[0] = '\0';
+    }
+
+    char compatibility_activity_line[160];
+    if (hud->backend_compatibility_view_2d_derived && hud->backend_domain_d > 1) {
+        const char *fluid_status = hud->backend_compatibility_slice_has_activity
+                                       ? "fluid visible"
+                                       : "fluid empty";
+        const char *obstacle_status = hud->backend_compatibility_slice_has_obstacles
+                                          ? "obstacles present"
+                                          : "obstacles clear";
+        snprintf(compatibility_activity_line,
+                 sizeof(compatibility_activity_line),
+                 "Compat slice activity: %s, %s",
+                 fluid_status,
+                 obstacle_status);
+    } else {
+        compatibility_activity_line[0] = '\0';
+    }
+
+    char debug_cue_line[160];
+    if (hud->backend_secondary_debug_slice_stack_live &&
+        hud->backend_compatibility_view_2d_derived &&
+        hud->backend_domain_d > 1) {
+        snprintf(debug_cue_line,
+                 sizeof(debug_cue_line),
+                 "3D cue: ghost slice stack +/- %d around active z",
+                 hud->backend_secondary_debug_slice_stack_radius);
+    } else {
+        debug_cue_line[0] = '\0';
+    }
 
     char preset_line[128];
     snprintf(preset_line, sizeof(preset_line), "Preset: %s",
@@ -197,14 +309,20 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     }
 
     char retained_runtime_line[112];
-    char retained_runtime_mode_line[96];
+    char retained_runtime_mode_line[128];
     if (hud->retained_runtime_visual_active) {
         snprintf(retained_runtime_line,
                  sizeof(retained_runtime_line),
-                 "Retained 3D view: Alt+LMB orbit  MMB pan  Wheel zoom  F frame");
-        snprintf(retained_runtime_mode_line,
-                 sizeof(retained_runtime_mode_line),
-                 "Runtime fluid: XY slice only; Z remains scaffold-only");
+                 "Retained 3D view: Alt+LMB orbit  MMB pan  Wheel zoom  [ ] slice  F frame");
+        if (hud->backend_compatibility_view_2d_derived && hud->backend_domain_d > 1) {
+            snprintf(retained_runtime_mode_line,
+                     sizeof(retained_runtime_mode_line),
+                     "Runtime fluid: live XY slice [ ] + ghost stack; volumetric emitters/obstacles and first-pass XYZ solver live");
+        } else {
+            snprintf(retained_runtime_mode_line,
+                     sizeof(retained_runtime_mode_line),
+                     "Runtime fluid: authoritative XY field");
+        }
     } else {
         retained_runtime_line[0] = '\0';
         retained_runtime_mode_line[0] = '\0';
@@ -219,6 +337,13 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     lines[line_count++] = status_line;
     lines[line_count++] = space_line;
     lines[line_count++] = backend_line;
+    lines[line_count++] = backend_kind_line;
+    lines[line_count++] = domain_line;
+    if (domain_extent_line[0]) lines[line_count++] = domain_extent_line;
+    if (compatibility_line[0]) lines[line_count++] = compatibility_line;
+    if (backend_status_line[0]) lines[line_count++] = backend_status_line;
+    if (compatibility_activity_line[0]) lines[line_count++] = compatibility_activity_line;
+    if (debug_cue_line[0]) lines[line_count++] = debug_cue_line;
     lines[line_count++] = preset_line;
     if (wind_line[0]) lines[line_count++] = wind_line;
     lines[line_count++] = quality_line;

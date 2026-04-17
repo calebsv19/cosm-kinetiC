@@ -94,5 +94,5 @@ void scene_objects_reset_gravity(SceneState *scene) {
             b->angle = rot;
         }
     }
-    scene->obstacle_mask_dirty = true;
+    scene_backend_mark_obstacles_dirty(scene);
 }
