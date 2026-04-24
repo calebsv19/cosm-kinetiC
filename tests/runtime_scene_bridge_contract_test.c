@@ -48,7 +48,7 @@ static char *read_text_file_alloc(const char *path, size_t *out_size) {
 
 static bool test_runtime_scene_bridge_preflight_accepts_runtime_fixture(void) {
     RuntimeSceneBridgePreflight preflight;
-    bool ok = runtime_scene_bridge_preflight_file("../shared/assets/scenes/trio_contract/scene_runtime_min.json",
+    bool ok = runtime_scene_bridge_preflight_file("../third_party/codework_shared/assets/scenes/trio_contract/scene_runtime_min.json",
                                                   &preflight);
     if (!ok) return false;
     if (!preflight.valid_contract) return false;
@@ -59,7 +59,7 @@ static bool test_runtime_scene_bridge_preflight_accepts_runtime_fixture(void) {
 
 static bool test_runtime_scene_bridge_rejects_authoring_variant(void) {
     RuntimeSceneBridgePreflight preflight;
-    bool ok = runtime_scene_bridge_preflight_file("../shared/assets/scenes/trio_contract/scene_authoring_min.json",
+    bool ok = runtime_scene_bridge_preflight_file("../third_party/codework_shared/assets/scenes/trio_contract/scene_authoring_min.json",
                                                   &preflight);
     if (ok) return false;
     if (strstr(preflight.diagnostics, "scene_runtime_v1") == NULL) return false;
@@ -112,7 +112,7 @@ static bool test_runtime_scene_bridge_apply_fixture(void) {
     AppConfig cfg = app_config_default();
     const FluidScenePreset *base = scene_presets_get_default();
     FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
-    bool ok = runtime_scene_bridge_apply_file("../shared/assets/scenes/trio_contract/scene_runtime_min.json",
+    bool ok = runtime_scene_bridge_apply_file("../third_party/codework_shared/assets/scenes/trio_contract/scene_runtime_min.json",
                                               &cfg,
                                               &preset,
                                               &summary);
@@ -543,9 +543,9 @@ static bool test_runtime_scene_bridge_visual_bootstrap_falls_back_to_axis_plane_
 static bool test_runtime_scene_bridge_trio_fixture_compile_writeback_apply(void) {
     size_t authoring_size = 0;
     size_t overlay_size = 0;
-    char *authoring_json = read_text_file_alloc("../shared/assets/scenes/trio_contract/scene_authoring_interop_min.json",
+    char *authoring_json = read_text_file_alloc("../third_party/codework_shared/assets/scenes/trio_contract/scene_authoring_interop_min.json",
                                                 &authoring_size);
-    char *overlay_json = read_text_file_alloc("../shared/assets/scenes/trio_contract/physics_overlay_min.json",
+    char *overlay_json = read_text_file_alloc("../third_party/codework_shared/assets/scenes/trio_contract/physics_overlay_min.json",
                                               &overlay_size);
     char diagnostics[256];
     char *runtime_json = NULL;

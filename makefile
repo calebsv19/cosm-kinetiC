@@ -13,13 +13,14 @@ SRC_DIR   := src
 INC_DIR   := include
 BUILD_DIR := build
 TARGET    := physics_sim
-VK_RENDERER_DIR := ../shared/vk_renderer
-KIT_VIZ_DIR := ../shared/kit/kit_viz
-KIT_RENDER_DIR := ../shared/kit/kit_render
-SHARED_ASSETS_DIR := ../shared/assets
-CORE_SCENE_COMPILE_DIR := ../shared/core/core_scene_compile
+SHARED_ROOT ?= third_party/codework_shared
+VK_RENDERER_DIR := $(SHARED_ROOT)/vk_renderer
+KIT_VIZ_DIR := $(SHARED_ROOT)/kit/kit_viz
+KIT_RENDER_DIR := $(SHARED_ROOT)/kit/kit_render
+SHARED_ASSETS_DIR := $(SHARED_ROOT)/assets
+CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
 SHIM_MODE ?= off
-SYS_SHIMS_DIR := ../shared/sys_shims
+SYS_SHIMS_DIR := $(SHARED_ROOT)/sys_shims
 SYS_SHIMS_OVERLAY_DIR := $(SYS_SHIMS_DIR)/overlay/include
 SYS_SHIMS_INCLUDE_DIR := $(SYS_SHIMS_DIR)/include
 DIST_DIR := dist
@@ -149,7 +150,7 @@ LIBS += $(JSON_LIBS)
 #  Source / object discovery
 # =========================
 # Find all .c files under src/ excluding CLI tools
-TIMER_HUD_DIR := ../shared/timer_hud
+TIMER_HUD_DIR := $(SHARED_ROOT)/timer_hud
 TIMER_HUD_INCLUDE := -I$(TIMER_HUD_DIR)/include -I$(TIMER_HUD_DIR)/external
 
 CFLAGS += $(TIMER_HUD_INCLUDE) -I$(VK_RENDERER_DIR)/include $(VULKAN_CFLAGS) \
@@ -230,18 +231,18 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(CORE_IO_DIR)/src/core_io.c \
 	$(CORE_BASE_DIR)/src/core_base.c
 
-CORE_BASE_DIR := ../shared/core/core_base
-CORE_IO_DIR := ../shared/core/core_io
-CORE_DATA_DIR := ../shared/core/core_data
-CORE_PACK_DIR := ../shared/core/core_pack
-CORE_SCENE_DIR := ../shared/core/core_scene
-CORE_SCENE_COMPILE_DIR := ../shared/core/core_scene_compile
-CORE_OBJECT_DIR := ../shared/core/core_object
-CORE_UNITS_DIR := ../shared/core/core_units
-CORE_PANE_DIR := ../shared/core/core_pane
-CORE_TRACE_DIR := ../shared/core/core_trace
-CORE_THEME_DIR := ../shared/core/core_theme
-CORE_FONT_DIR := ../shared/core/core_font
+CORE_BASE_DIR := $(SHARED_ROOT)/core/core_base
+CORE_IO_DIR := $(SHARED_ROOT)/core/core_io
+CORE_DATA_DIR := $(SHARED_ROOT)/core/core_data
+CORE_PACK_DIR := $(SHARED_ROOT)/core/core_pack
+CORE_SCENE_DIR := $(SHARED_ROOT)/core/core_scene
+CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
+CORE_OBJECT_DIR := $(SHARED_ROOT)/core/core_object
+CORE_UNITS_DIR := $(SHARED_ROOT)/core/core_units
+CORE_PANE_DIR := $(SHARED_ROOT)/core/core_pane
+CORE_TRACE_DIR := $(SHARED_ROOT)/core/core_trace
+CORE_THEME_DIR := $(SHARED_ROOT)/core/core_theme
+CORE_FONT_DIR := $(SHARED_ROOT)/core/core_font
 CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include
 
 CORE_BASE_SRCS := $(CORE_BASE_DIR)/src/core_base.c

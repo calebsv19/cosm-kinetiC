@@ -24,7 +24,7 @@ Bundled resource lanes:
 - `data/snapshots/` (created)
 - `vk_renderer/shaders/`
 - `shaders/`
-- `shared/assets/fonts/` (copied when `../shared/assets/fonts` exists)
+- `shared/assets/fonts/` (copied when `third_party/codework_shared/assets/fonts` exists)
 
 ## Launcher Contract
 - config dump:

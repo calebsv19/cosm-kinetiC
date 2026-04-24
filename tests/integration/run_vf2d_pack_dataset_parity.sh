@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PACK_CLI="$ROOT_DIR/../shared/core/core_pack/build/pack_cli"
+PACK_CLI="$ROOT_DIR/third_party/codework_shared/core/core_pack/build/pack_cli"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -73,7 +73,7 @@ if [[ ! -f "$PACK_PATH" || ! -f "$DATASET_PATH" ]]; then
     exit 10
 fi
 
-make -C "$ROOT_DIR/../shared/core/core_pack" tools >/dev/null
+make -C "$ROOT_DIR/third_party/codework_shared/core/core_pack" tools >/dev/null
 "$PACK_CLI" inspect "$PACK_PATH" > "$PACK_INSPECT"
 
 grep -q "chunk_count=4" "$PACK_INSPECT" || {
