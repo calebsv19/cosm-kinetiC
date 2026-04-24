@@ -34,6 +34,19 @@ typedef struct PhysicsSimRuntimeConstructionPlane {
     CoreSceneFrame3 custom_frame;
 } PhysicsSimRuntimeConstructionPlane;
 
+typedef enum PhysicsSimRuntimeSceneUpSource {
+    PHYSICS_SIM_RUNTIME_SCENE_UP_NONE = 0,
+    PHYSICS_SIM_RUNTIME_SCENE_UP_CONSTRUCTION_PLANE_FRAME = 1,
+    PHYSICS_SIM_RUNTIME_SCENE_UP_CONSTRUCTION_PLANE_AXIS = 2,
+    PHYSICS_SIM_RUNTIME_SCENE_UP_FALLBACK_POSITIVE_Z = 3
+} PhysicsSimRuntimeSceneUpSource;
+
+typedef struct PhysicsSimRuntimeSceneUpVector {
+    bool valid;
+    CoreObjectVec3 direction;
+    PhysicsSimRuntimeSceneUpSource source;
+} PhysicsSimRuntimeSceneUpVector;
+
 typedef struct PhysicsSimRetainedRuntimeScene {
     bool valid_contract;
     char diagnostics[256];
@@ -58,6 +71,7 @@ typedef struct PhysicsSimRuntimeVisualBootstrap {
     PhysicsSimRetainedRuntimeScene retained_scene;
     PhysicsSimRuntimeSceneBounds scene_domain;
     bool scene_domain_authored;
+    PhysicsSimRuntimeSceneUpVector scene_up;
 } PhysicsSimRuntimeVisualBootstrap;
 
 bool runtime_scene_bridge_preflight_json(const char *runtime_scene_json,
@@ -89,5 +103,7 @@ bool runtime_scene_bridge_writeback_physics_overlay_json(const char *runtime_sce
                                                          char **out_runtime_scene_json,
                                                          char *out_diagnostics,
                                                          size_t out_diagnostics_size);
+
+const char *physics_sim_runtime_scene_up_source_label(PhysicsSimRuntimeSceneUpSource source);
 
 #endif

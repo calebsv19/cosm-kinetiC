@@ -18,7 +18,13 @@ static CoreObjectVec3 resolve_world_point(double position_x,
     CoreObjectVec3 world = {0};
     world.x = sim_runtime_3d_space_resolve_world_axis(position_x, world_min->x, world_max->x);
     world.y = sim_runtime_3d_space_resolve_world_axis(position_y, world_min->y, world_max->y);
-    world.z = sim_runtime_3d_space_resolve_world_axis(position_z, world_min->z, world_max->z);
+    if (position_z < world_min->z) {
+        world.z = world_min->z;
+    } else if (position_z > world_max->z) {
+        world.z = world_max->z;
+    } else {
+        world.z = position_z;
+    }
     return world;
 }
 

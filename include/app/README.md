@@ -10,6 +10,8 @@ Interfaces that describe global configuration and scene orchestration.
 - `sim_runtime_3d_domain.h` – declares the owned XYZ domain/container contract used by the 3D backend.
 - `sim_runtime_emitter.h` – declares the backend-owned emitter taxonomy and 3D placement contract used to keep PSBU-4 emitter work off old 2D mask assumptions.
 - `scene_controller.h` – declares the orchestration entry point that main calls to run the full SDL loop.
+- `scene_loop_policy.h` – declares the shared loop wait-policy contract used by menu/runtime loops to choose wait-vs-ramp behavior.
+- `scene_loop_diag.h` – declares the loop diagnostics sink used for schema-locked `LoopDiag` output.
 - `editor/` – scene editor interfaces split across canvas rendering (`scene_editor_canvas.h`), geometry/handle helpers (`scene_editor_canvas_geom.c` implementation), hit testing (`scene_editor_canvas_hit.c` implementation), input/panel wiring, and model helpers. Include these from this subdirectory when adding editor features.
 
 Implementation lives under `src/app/`. Any new high-level system that needs to persist across frames should have its struct declared here and be owned by `SceneState`.

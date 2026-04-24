@@ -25,6 +25,7 @@ bool runtime_scene_solver_projection_apply_runtime(const PhysicsSimRetainedRunti
                                                                                  in_out_preset) == 0) {
             runtime_scene_solver_projection_apply_emitters_from_lights(runtime_root,
                                                                        world_scale,
+                                                                       in_out_preset->dimension_mode,
                                                                        in_out_preset);
         }
     } else {
@@ -34,9 +35,11 @@ bool runtime_scene_solver_projection_apply_runtime(const PhysicsSimRetainedRunti
                                                                    out_summary);
         if (runtime_scene_solver_projection_apply_emitters_from_runtime_root_objects(runtime_root,
                                                                                      world_scale,
+                                                                                     in_out_preset->dimension_mode,
                                                                                      in_out_preset) == 0) {
             runtime_scene_solver_projection_apply_emitters_from_lights(runtime_root,
                                                                        world_scale,
+                                                                       in_out_preset->dimension_mode,
                                                                        in_out_preset);
         }
     }

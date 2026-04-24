@@ -2,6 +2,7 @@
 #define INPUT_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "command/command_bus.h"
 #include "input/input_context.h"
@@ -29,5 +30,13 @@ typedef struct InputCommands {
 bool input_poll_events(InputCommands *out,
                        CommandBus *bus,
                        InputContextManager *context_mgr);
+
+bool input_poll_events_with_wait(InputCommands *out,
+                                 CommandBus *bus,
+                                 InputContextManager *context_mgr,
+                                 int wait_timeout_ms,
+                                 uint32_t *out_wait_blocked_ms,
+                                 uint32_t *out_wait_call_count,
+                                 uint32_t *out_event_count);
 
 #endif // INPUT_H

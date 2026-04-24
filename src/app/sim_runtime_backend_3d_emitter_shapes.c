@@ -61,39 +61,17 @@ bool backend_3d_scaffold_build_attached_object_sphere(
     return true;
 }
 
-static void backend_3d_scaffold_fill_box_bounds(const SimRuntime3DDomainDesc *desc,
-                                                SimRuntimeEmitterOrientedBox3D *box) {
-    if (!desc || !box) return;
-    box->min_x = clamp_int_value((int)floorf((float)box->center_x - box->half_x - 1.0f), 0, desc->grid_w - 1);
-    box->max_x = clamp_int_value((int)ceilf((float)box->center_x + box->half_x + 1.0f), 0, desc->grid_w - 1);
-    box->min_y = clamp_int_value((int)floorf((float)box->center_y - box->half_y - 1.0f), 0, desc->grid_h - 1);
-    box->max_y = clamp_int_value((int)ceilf((float)box->center_y + box->half_y + 1.0f), 0, desc->grid_h - 1);
-    box->min_z = clamp_int_value((int)floorf((float)box->center_z - box->half_z), 0, desc->grid_d - 1);
-    box->max_z = clamp_int_value((int)ceilf((float)box->center_z + box->half_z), 0, desc->grid_d - 1);
-}
-
 bool backend_3d_scaffold_build_object_box(const SimRuntime3DDomainDesc *desc,
                                           const SimRuntimeEmitterPlacement3D *placement,
                                           const PresetObject *object,
                                           SimRuntimeEmitterOrientedBox3D *out_box) {
-    SimRuntimeEmitterOrientedBox3D box = {0};
-    SimRuntime3DFootprintHalfExtents half_extents = {0};
     if (!desc || !placement || !object || !out_box) return false;
-    if (!sim_runtime_3d_footprint_object_box_half_extents_cells(desc, object, &half_extents)) {
-        return false;
-    }
-
-    box.center_x = placement->center_x;
-    box.center_y = placement->center_y;
-    box.center_z = placement->center_z;
-    box.half_x = (float)half_extents.half_x_cells;
-    box.half_y = (float)half_extents.half_y_cells;
-    box.half_z = (float)half_extents.half_z_cells;
-    box.cos_a = cosf(object->angle);
-    box.sin_a = sinf(object->angle);
-    backend_3d_scaffold_fill_box_bounds(desc, &box);
-    *out_box = box;
-    return true;
+    return sim_runtime_backend_3d_build_preset_object_oriented_box(desc,
+                                                                   object,
+                                                                   placement->center_x,
+                                                                   placement->center_y,
+                                                                   placement->center_z,
+                                                                   out_box);
 }
 
 bool backend_3d_scaffold_build_import_box(const SimRuntime3DDomainDesc *desc,
@@ -102,6 +80,10 @@ bool backend_3d_scaffold_build_import_box(const SimRuntime3DDomainDesc *desc,
                                           SimRuntimeEmitterOrientedBox3D *out_box) {
     SimRuntimeEmitterOrientedBox3D box = {0};
     SimRuntime3DFootprintHalfExtents half_extents = {0};
+    float radians = 0.0f;
+    float span_x = 0.0f;
+    float span_y = 0.0f;
+    float span_z = 0.0f;
     if (!desc || !placement || !imp || !out_box) return false;
     if (!sim_runtime_3d_footprint_import_box_half_extents_cells(desc, imp, &half_extents)) {
         return false;
@@ -110,12 +92,34 @@ bool backend_3d_scaffold_build_import_box(const SimRuntime3DDomainDesc *desc,
     box.center_x = placement->center_x;
     box.center_y = placement->center_y;
     box.center_z = placement->center_z;
-    box.half_x = (float)half_extents.half_x_cells;
-    box.half_y = (float)half_extents.half_y_cells;
-    box.half_z = (float)half_extents.half_z_cells;
-    box.cos_a = cosf(imp->rotation_deg * (float)M_PI / 180.0f);
-    box.sin_a = sinf(imp->rotation_deg * (float)M_PI / 180.0f);
-    backend_3d_scaffold_fill_box_bounds(desc, &box);
+    box.half_u_cells = (float)half_extents.half_x_cells;
+    box.half_v_cells = (float)half_extents.half_y_cells;
+    box.half_w_cells = (float)half_extents.half_z_cells;
+    radians = imp->rotation_deg * (float)M_PI / 180.0f;
+    box.axis_u_x = cosf(radians);
+    box.axis_u_y = sinf(radians);
+    box.axis_u_z = 0.0f;
+    box.axis_v_x = -sinf(radians);
+    box.axis_v_y = cosf(radians);
+    box.axis_v_z = 0.0f;
+    box.axis_w_x = 0.0f;
+    box.axis_w_y = 0.0f;
+    box.axis_w_z = 1.0f;
+    span_x = fabsf(box.axis_u_x) * box.half_u_cells +
+             fabsf(box.axis_v_x) * box.half_v_cells +
+             fabsf(box.axis_w_x) * box.half_w_cells;
+    span_y = fabsf(box.axis_u_y) * box.half_u_cells +
+             fabsf(box.axis_v_y) * box.half_v_cells +
+             fabsf(box.axis_w_y) * box.half_w_cells;
+    span_z = fabsf(box.axis_u_z) * box.half_u_cells +
+             fabsf(box.axis_v_z) * box.half_v_cells +
+             fabsf(box.axis_w_z) * box.half_w_cells;
+    box.min_x = clamp_int_value((int)floorf((float)box.center_x - span_x - 1.0f), 0, desc->grid_w - 1);
+    box.max_x = clamp_int_value((int)ceilf((float)box.center_x + span_x + 1.0f), 0, desc->grid_w - 1);
+    box.min_y = clamp_int_value((int)floorf((float)box.center_y - span_y - 1.0f), 0, desc->grid_h - 1);
+    box.max_y = clamp_int_value((int)ceilf((float)box.center_y + span_y + 1.0f), 0, desc->grid_h - 1);
+    box.min_z = clamp_int_value((int)floorf((float)box.center_z - span_z - 1.0f), 0, desc->grid_d - 1);
+    box.max_z = clamp_int_value((int)ceilf((float)box.center_z + span_z + 1.0f), 0, desc->grid_d - 1);
     *out_box = box;
     return true;
 }

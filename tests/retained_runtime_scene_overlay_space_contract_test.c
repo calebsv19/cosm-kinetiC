@@ -1,5 +1,4 @@
 #include "render/retained_runtime_scene_overlay_space.h"
-
 #include "app/scene_state.h"
 
 #include <stdbool.h>
@@ -76,8 +75,20 @@ static bool test_emitter_actual_and_slice_points_follow_anchor_truth(void) {
     }
 
     return nearly_equal(actual.x, 2.0) && nearly_equal(actual.y, 15.0) &&
-           nearly_equal(actual.z, 1.2) && nearly_equal(slice.x, actual.x) &&
+           nearly_equal(actual.z, 0.4) && nearly_equal(slice.x, actual.x) &&
            nearly_equal(slice.y, actual.y) && nearly_equal(slice.z, 2.0);
+}
+
+static bool test_slice_overlay_defaults_on_and_respects_runtime_toggle(void) {
+    SceneState scene = {0};
+
+    scene.runtime_slice_overlay_enabled = true;
+
+    if (!scene_runtime_slice_overlay_enabled(&scene)) return false;
+    if (scene_runtime_toggle_slice_overlay(&scene)) return false;
+    if (scene_runtime_slice_overlay_enabled(&scene)) return false;
+    if (!scene_runtime_toggle_slice_overlay(&scene)) return false;
+    return scene_runtime_slice_overlay_enabled(&scene);
 }
 
 int main(void) {
@@ -94,6 +105,11 @@ int main(void) {
     if (!test_emitter_actual_and_slice_points_follow_anchor_truth()) {
         fprintf(stderr,
                 "retained_runtime_scene_overlay_space_contract_test: emitter points failed\n");
+        return 1;
+    }
+    if (!test_slice_overlay_defaults_on_and_respects_runtime_toggle()) {
+        fprintf(stderr,
+                "retained_runtime_scene_overlay_space_contract_test: slice toggle failed\n");
         return 1;
     }
     fprintf(stdout, "retained_runtime_scene_overlay_space_contract_test: success\n");

@@ -1,12 +1,22 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-04-15
+Last updated: 2026-04-18
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
 2. Introduce the locked scaffold lifecycle wrapper symbols with behavior parity.
 3. Normalize verification into explicit deterministic migration gates.
 4. Lock temp/runtime path hygiene so generated/runtime state does not drift into tracked defaults.
+
+## Immediate Next Direction
+- `physics_sim` producer-side truthful `3D` export is now complete through `PSBU-11D`.
+- The next cross-program boundary is downstream `ray_tracing` work, not more producer-side export churn in `physics_sim`.
+- The deferred handoff is:
+  - load raw `.vf3d` and additive `VF3H` `.pack`
+  - resolve truthful `scene_bundle.json` / `manifest.json` metadata
+  - land one first-pass density-driven volume renderer before any polish lane
+- Private trio handoff note:
+  - `../../docs/private_program_docs/physics_programs/trio_shared_scene_contract/2026-04-18_rt_vf3d_ingest_and_first_pass_volume_render_handoff.md`
 
 ## Planned Next Structural Intent
 - `PS-S1` (completed):
@@ -68,7 +78,7 @@ Last updated: 2026-04-15
   - wrap-up commit title used:
     - `Post-Scaffold Font Size Standardization`
   - trio 2D/3D parity propagation with `line_drawing` and `ray_tracing`:
-    - `../../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
   - current status:
     - `PS-U0` complete (baseline freeze + gap map + tracker sync)
     - `PS-U1` complete (space mode runtime contract + persistence + menu selector)
@@ -80,7 +90,7 @@ Last updated: 2026-04-15
   - parity lane status:
     - complete (`PS-U0` through `PS-U6`)
   - latest execution log:
-    - `../../docs/private_program_docs/physics_sim/2026-03-31_ps_u6_verification_docs_memory_closeout.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-03-31_ps_u6_verification_docs_memory_closeout.md`
 
 - desktop packaging lane:
   - `PS-PK0` baseline mapping complete
@@ -311,7 +321,7 @@ Last updated: 2026-04-15
       - retained `scene3d.bounds` remains fallback/provenance input only when no authored override exists
       - scene-domain is still scene-level solver policy, not wall geometry
     - the old `PS4D-RP*` reduced-runtime compatibility playback lane is now superseded
-    - `PSBU-2` through `PSBU-7E` are now complete:
+    - `PSBU-2` through `PSBU-8D` are now complete:
       - runtime ownership is now explicitly split:
         - `2D` keeps the extracted regression backend
         - `3D` owns a dense `XYZ` backend with volumetric emitters, volumetric obstacles/bounds, and a conservative first-pass `XYZ` solver
@@ -324,21 +334,31 @@ Last updated: 2026-04-15
         - one attached-anchor authority
         - one world-first footprint authority
         - one cross-boundary proof lock across projection, backend, and overlay
+      - bounded post-`PSBU-7E` solver-quality/performance follow-up is also complete:
+        - `3D` `velocity_damping` now acts as a viscosity-style control instead of direct multiplicative drag
+        - configured solver iterations now flow through the `3D` projection path directly, within the bounded `8..48` clamp
+        - one dense-volume update-path cost was removed by keeping freshly rasterized obstacle volume valid across substeps
+        - compatibility-slice HUD activity now reads from backend-owned truth instead of a second render-side rescan
       - honest limitations remain explicit:
         - the view is still debug playback, not final volumetric rendering
         - solver numerics are still first-pass and conservative
-        - dense-volume performance work is still pending
+        - tiny-domain behavioral proof and low-cost `3D` point-cloud readout are now in place, but one evidence-driven solver/emitter-flow follow-up is still the next practical gap
     - next locked follow-on order:
-      - first, solver quality and performance work on the stabilized truthful `3D` architecture
-      - second, richer `3D` playback, interaction, and rendering once solver/runtime truth remains stable
+      - first, formal `PSBU-9` truthful `3D` behavior validation/readout lane:
+        - `PSBU-9A`: very-low-voxel debug mode/profile complete
+        - `PSBU-9B`: emitter injection observability complete
+        - `PSBU-9C`: tiny-domain truth checks complete
+        - `PSBU-9D`: better truthful `3D` readout complete
+        - `PSBU-9E`: evidence-driven bounded solver-behavior follow-up and closeout
+      - second, deeper solver or richer readout/render work based on the `PSBU-9` evidence outcome
 
 - connection-pass lane:
   - completed:
     - `PS-CP0` baseline routing/ownership map captured
     - `PS-CP1` wrapper context + guarded stage-transition hardening
     - `PS-CP2` explicit wrapper dispatch seam extraction
-    - execution log:
-      - `../../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
+  - execution log:
+      - `../../docs/private_program_docs/physics_sim/archive/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
   - next:
     - optional `PS-CP3+`: deeper extraction of runtime/update/render ownership from legacy concentration points
 
@@ -355,19 +375,19 @@ Last updated: 2026-04-15
   - next:
     - optional `W4+` only if deeper legacy-lane extraction is needed
   - execution note:
-    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
-    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s0_s1_execution.md`
-    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
-    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
-    - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w3_s0_s1_execution.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w3_s2_execution.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w3_s3_execution.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w3_s4_closeout.md`
 
 - RS1 render split lane:
   - `RS1-S0` complete (render ownership baseline map captured in scene controller)
   - `RS1-S1` complete (typed update/derive/submit frame contracts + explicit phase seams landed)
   - `RS1-S2` complete (diagnostics closeout + tracker synchronization)
   - execution note:
-    - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
-    - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s2_closeout.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-03_physics_sim_rs1_s2_closeout.md`
   - next:
     - optional deeper extraction only if RS1 contracts need promotion into a broader shared kit lane
 
@@ -377,14 +397,14 @@ Last updated: 2026-04-15
   - `IR1-S2` complete (explicit input phase seams landed with behavior parity)
   - `IR1-S3` complete (diagnostics + tracker synchronization closeout)
   - execution note:
-    - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
   - next:
     - optional deeper pane-target routing split only if upcoming editor work requires finer route-policy ownership
 
 - structural-controller split stability lane:
   - `SC2-S0` through `SC2-S5` complete (interface split + runtime/render parity + closeout docs/keybind sync)
   - execution note:
-    - `../../docs/private_program_docs/physics_sim/2026-04-09_physics_sim_structural_controller_split_stability_plan.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-04-09_physics_sim_structural_controller_split_stability_plan.md`
 
 ## Non-Goals During Scaffold Migration
 - No feature-expansion work unrelated to scaffold alignment.
@@ -392,9 +412,9 @@ Last updated: 2026-04-15
 - No one-pass broad naming churn; changes stay phase-bounded and parity-verified.
 
 ## Release Readiness Next Intent
-- active release lane:
+  - active release lane:
   - `PS-RL0` through `PS-RL5` execution plan:
-    - `../../docs/private_program_docs/physics_sim/2026-04-04_physics_sim_release_readiness_rl0_rl5_execution_plan.md`
+    - `../../docs/private_program_docs/physics_sim/release_readiness/2026-04-04_physics_sim_release_readiness_rl0_rl5_execution_plan.md`
 - completed now:
   - `PS-RL0` release contract freeze
   - `PS-RL1` bundle audit + Vulkan runtime hardening

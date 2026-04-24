@@ -11,7 +11,7 @@
 #include "app/editor/scene_editor_canvas.h"
 #include "app/editor/scene_editor_model.h"
 #include "physics/math/math2d.h"
-#include "render/text_upload_policy.h"
+#include "render/text_draw.h"
 #include "vk_renderer.h"
 #include "render/vk_shared_device.h"
 
@@ -922,20 +922,15 @@ bool scene_editor_run_precision(const AppConfig *cfg,
 
         const char *hint = "Precision editor: drag objects/handles, +/- resize, arrows nudge, Enter apply, Esc cancel";
         if (font_small) {
-            SDL_Surface *surf = TTF_RenderUTF8_Blended(font_small, hint, (SDL_Color){190, 198, 209, 255});
-            if (surf) {
-                int logical_w = physics_sim_text_logical_pixels(renderer, surf->w);
-                int logical_h = physics_sim_text_logical_pixels(renderer, surf->h);
-                VkRendererTexture tex = {0};
-                if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
-                                                               surf,
-                                                               &tex,
-                                                               physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
-                    SDL_Rect dst = {12, win_h - logical_h - 12, logical_w, logical_h};
-                    vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
-                    vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
-                }
-                SDL_FreeSurface(surf);
+            int logical_w = 0;
+            int logical_h = 0;
+            if (physics_sim_text_measure_utf8(renderer, font_small, hint, &logical_w, &logical_h)) {
+                SDL_Rect dst = {12, win_h - logical_h - 12, logical_w, logical_h};
+                (void)physics_sim_text_draw_utf8(renderer,
+                                                 font_small,
+                                                 hint,
+                                                 (SDL_Color){190, 198, 209, 255},
+                                                 &dst);
             }
         }
 

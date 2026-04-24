@@ -9,6 +9,56 @@
 static const float SCAFFOLD_EMITTER_POWER_BOOST = 40.0f;
 static const float SCAFFOLD_REF_VOLUME_CELLS = 96.0f * 96.0f * 96.0f;
 
+static void backend_3d_scaffold_reset_emitter_step_stats(SimRuntimeBackend3DScaffold *state) {
+    if (!state) return;
+    state->emitter_step_emitters_applied = 0;
+    state->emitter_step_free_emitters_applied = 0;
+    state->emitter_step_attached_emitters_applied = 0;
+    state->emitter_step_affected_cells = 0;
+    state->emitter_step_last_footprint_cells = 0;
+    state->emitter_step_density_delta = 0.0f;
+    state->emitter_step_velocity_magnitude_delta = 0.0f;
+}
+
+static void backend_3d_scaffold_accumulate_emitter_step_stats(
+    SimRuntimeBackend3DScaffold *state,
+    const SimRuntimeEmitterResolved *emitter,
+    size_t affected_cells,
+    float total_strength) {
+    float density_delta = 0.0f;
+    float velocity_delta = 0.0f;
+    if (!state || !emitter || affected_cells == 0 || total_strength <= 0.0f) return;
+
+    state->emitter_step_emitters_applied += 1;
+    if (emitter->source_kind == SIM_RUNTIME_EMITTER_SOURCE_FREE) {
+        state->emitter_step_free_emitters_applied += 1;
+    } else {
+        state->emitter_step_attached_emitters_applied += 1;
+    }
+    state->emitter_step_affected_cells += affected_cells;
+    state->emitter_step_last_footprint_cells = affected_cells;
+
+    switch (emitter->type) {
+    case EMITTER_DENSITY_SOURCE:
+        density_delta = total_strength;
+        velocity_delta = emitter->direction_has_magnitude ? total_strength * 0.25f : 0.0f;
+        break;
+    case EMITTER_VELOCITY_JET:
+        density_delta = total_strength * 0.3f;
+        velocity_delta = emitter->direction_has_magnitude ? total_strength : 0.0f;
+        break;
+    case EMITTER_SINK:
+        density_delta = -total_strength * 0.5f;
+        velocity_delta = emitter->direction_has_magnitude ? total_strength * 0.4f : 0.0f;
+        break;
+    default:
+        break;
+    }
+
+    state->emitter_step_density_delta += density_delta;
+    state->emitter_step_velocity_magnitude_delta += velocity_delta;
+}
+
 static void rotate_xy(float *x, float *y, float radians) {
     float in_x = 0.0f;
     float in_y = 0.0f;
@@ -75,17 +125,7 @@ static bool backend_3d_scaffold_cell_in_oriented_box(const SimRuntimeEmitterOrie
                                                      int x,
                                                      int y,
                                                      int z) {
-    float dx = 0.0f;
-    float dy = 0.0f;
-    float local_x = 0.0f;
-    float local_y = 0.0f;
-    if (!box) return false;
-    if (fabsf((float)(z - box->center_z)) > box->half_z) return false;
-    dx = (float)(x - box->center_x);
-    dy = (float)(y - box->center_y);
-    local_x = dx * box->cos_a + dy * box->sin_a;
-    local_y = -dx * box->sin_a + dy * box->cos_a;
-    return fabsf(local_x) <= box->half_x && fabsf(local_y) <= box->half_y;
+    return sim_runtime_backend_3d_cell_in_oriented_box(box, x, y, z);
 }
 
 static size_t backend_3d_scaffold_count_sphere_cells(const SimRuntimeEmitterPlacement3D *placement) {
@@ -160,6 +200,7 @@ static void backend_3d_scaffold_apply_sphere(SimRuntimeBackend3DScaffold *state,
                                                                 state->volume.desc.cell_count);
     per_cell = total_strength / (float)cells;
     if (per_cell <= 0.0f) return;
+    backend_3d_scaffold_accumulate_emitter_step_stats(state, emitter, cells, total_strength);
 
     for (int z = placement->min_z; z <= placement->max_z; ++z) {
         for (int y = placement->min_y; y <= placement->max_y; ++y) {
@@ -190,6 +231,7 @@ static void backend_3d_scaffold_apply_oriented_box(SimRuntimeBackend3DScaffold *
                                                                 state->volume.desc.cell_count);
     per_cell = total_strength / (float)cells;
     if (per_cell <= 0.0f) return;
+    backend_3d_scaffold_accumulate_emitter_step_stats(state, emitter, cells, total_strength);
 
     for (int z = box->min_z; z <= box->max_z; ++z) {
         for (int y = box->min_y; y <= box->max_y; ++y) {
@@ -288,9 +330,10 @@ void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
                                         double dt) {
     SimRuntimeBackend3DScaffold *state = NULL;
     if (!backend || !scene || !scene->preset || dt <= 0.0) return;
-    if (!scene->emitters_enabled) return;
     state = (SimRuntimeBackend3DScaffold *)backend->impl;
     if (!state) return;
+    backend_3d_scaffold_reset_emitter_step_stats(state);
+    if (!scene->emitters_enabled) return;
 
     for (size_t i = 0; i < scene->preset->emitter_count && i < MAX_FLUID_EMITTERS; ++i) {
         SimRuntimeEmitterResolved emitter = {0};
@@ -310,5 +353,6 @@ void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
         }
     }
 
+    state->debug_volume_stats_dirty = true;
     state->fluid_slice_dirty = true;
 }

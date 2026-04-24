@@ -2,6 +2,7 @@
 
 #include "app/scene_state.h"
 #include "export/export_paths.h"
+#include "export/volume_frames_vf3d.h"
 #include "core_data.h"
 #include "core_io.h"
 #include "core_pack.h"
@@ -43,32 +44,43 @@ static const uint32_t VOLUME_MAGIC = ('V' << 24) | ('F' << 16) | ('R' << 8) | ('
 static const uint32_t VOLUME_VERSION_V2 = 2;
 static const uint32_t VOLUME_VERSION_V1 = 1;
 
-static bool build_pack_path(const char *vf2d_path, char *out_pack_path, size_t out_size) {
-    if (!vf2d_path || !out_pack_path || out_size == 0) return false;
-    size_t len = strlen(vf2d_path);
+static bool build_replace_extension_path(const char *src_path,
+                                         const char *expected_ext,
+                                         const char *new_ext,
+                                         char *out_path,
+                                         size_t out_size) {
+    size_t len = 0;
+    const char *ext = NULL;
+    size_t stem_len = 0;
+    size_t new_ext_len = 0;
+    if (!src_path || !expected_ext || !new_ext || !out_path || out_size == 0) return false;
+    len = strlen(src_path);
     if (len + 1 > out_size) return false;
-    memcpy(out_pack_path, vf2d_path, len + 1);
+    memcpy(out_path, src_path, len + 1);
 
-    const char *ext = strrchr(out_pack_path, '.');
-    if (!ext || strcmp(ext, ".vf2d") != 0) return false;
-    size_t stem_len = (size_t)(ext - out_pack_path);
-    if (stem_len + 5 > out_size) return false; // ".pack" + NUL
-    memcpy(out_pack_path + stem_len, ".pack", 6);
+    ext = strrchr(out_path, '.');
+    if (!ext || strcmp(ext, expected_ext) != 0) return false;
+    stem_len = (size_t)(ext - out_path);
+    new_ext_len = strlen(new_ext);
+    if (stem_len + new_ext_len + 1 > out_size) return false;
+    memcpy(out_path + stem_len, new_ext, new_ext_len + 1);
     return true;
 }
 
-static bool build_dataset_json_path(const char *vf2d_path, char *out_json_path, size_t out_size) {
-    if (!vf2d_path || !out_json_path || out_size == 0) return false;
-    size_t len = strlen(vf2d_path);
-    if (len + 1 > out_size) return false;
-    memcpy(out_json_path, vf2d_path, len + 1);
+#ifndef VOLUME_FRAMES_DATASET_TOOL_ONLY
+static bool build_pack_path(const char *frame_path, char *out_pack_path, size_t out_size) {
+    if (build_replace_extension_path(frame_path, ".vf2d", ".pack", out_pack_path, out_size)) return true;
+    if (build_replace_extension_path(frame_path, ".vf3d", ".pack", out_pack_path, out_size)) return true;
+    return false;
+}
+#endif
 
-    const char *ext = strrchr(out_json_path, '.');
-    if (!ext || strcmp(ext, ".vf2d") != 0) return false;
-    size_t stem_len = (size_t)(ext - out_json_path);
-    if (stem_len + strlen(".dataset.json") + 1 > out_size) return false;
-    memcpy(out_json_path + stem_len, ".dataset.json", strlen(".dataset.json") + 1);
-    return true;
+static bool build_dataset_json_path(const char *vf2d_path, char *out_json_path, size_t out_size) {
+    return build_replace_extension_path(vf2d_path,
+                                        ".vf2d",
+                                        ".dataset.json",
+                                        out_json_path,
+                                        out_size);
 }
 
 static const CoreTableColumnTyped *find_typed_column(const CoreDataItem *item, const char *name) {
@@ -675,8 +687,9 @@ static bool write_scene_bundle(const SceneState *scene, const VolumeFrameHeaderV
 bool volume_frames_write(const SceneState *scene,
                          uint64_t frame_index) {
     SceneFluidFieldView2D fluid = {0};
+    SimRuntimeBackendReport report = {0};
+    bool export_vf3d = false;
     if (!scene) return false;
-    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
     if (!export_paths_init()) return false;
     char run_dir[512] = {0};
     const char *run_name = scene->preset && scene->preset->name ? scene->preset->name : "run";
@@ -684,6 +697,40 @@ bool volume_frames_write(const SceneState *scene,
         return false;
     }
     const char *dir = run_dir;
+    export_vf3d = volume_frames_should_export_vf3d(scene, &report);
+
+    if (export_vf3d) {
+        VolumeFrameHeaderVf3dV1 header = {0};
+        char path[512];
+        char pack_path[512];
+        char manifest_path[512];
+        bool manifest_ok = false;
+
+        snprintf(path, sizeof(path), "%s/frame_%06llu.vf3d",
+                 dir, (unsigned long long)frame_index);
+        if (!volume_frame_write_vf3d_raw(scene, frame_index, path, &report, &header)) {
+            fprintf(stderr, "[export] Failed to write vf3d frame %s\n", path);
+            return false;
+        }
+
+        manifest_ok = volume_frame_manifest_append_vf3d(scene, &header, path, dir);
+        snprintf(manifest_path, sizeof(manifest_path), "%s/manifest.json", dir);
+        if (build_pack_path(path, pack_path, sizeof(pack_path))) {
+            const char *manifest_arg = manifest_ok ? manifest_path : NULL;
+            CoreResult pack_r = core_pack_convert_vf3d(path, pack_path, manifest_arg);
+            if (pack_r.code != CORE_OK) {
+                fprintf(stderr, "[export] Warning: .pack export failed for %s (%s)\n", path, pack_r.message);
+            }
+        } else {
+            fprintf(stderr, "[export] Warning: could not derive .pack path for %s\n", path);
+        }
+        if (!volume_frame_write_scene_bundle_vf3d(scene, &header, dir)) {
+            fprintf(stderr, "[export] Warning: failed to update scene_bundle.json in %s\n", dir);
+        }
+        return true;
+    }
+
+    if (!scene_backend_fluid_view_2d(scene, &fluid)) return false;
 
     char path[512];
     snprintf(path, sizeof(path), "%s/frame_%06llu.vf2d",

@@ -4,27 +4,12 @@
 #include <stdbool.h>
 
 #include "app/scene_presets.h"
+#include "app/sim_runtime_backend_3d_oriented_box.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_emitter.h"
 
 struct SceneState;
-
-typedef struct SimRuntimeEmitterOrientedBox3D {
-    int center_x;
-    int center_y;
-    int center_z;
-    float half_x;
-    float half_y;
-    float half_z;
-    float cos_a;
-    float sin_a;
-    int min_x;
-    int max_x;
-    int min_y;
-    int max_y;
-    int min_z;
-    int max_z;
-} SimRuntimeEmitterOrientedBox3D;
+typedef SimRuntimeOrientedBox3DCells SimRuntimeEmitterOrientedBox3D;
 
 void backend_3d_scaffold_fill_sphere_bounds(const SimRuntime3DDomainDesc *desc,
                                             SimRuntimeEmitterPlacement3D *placement);

@@ -28,11 +28,19 @@ int main(void) {
     unsetenv("PHYSICS_SIM_THEME_PRESET");
     unsetenv("PHYSICS_SIM_FONT_PRESET");
 
+    if (!physics_sim_shared_theme_resolve_menu_palette(&palette)) {
+        return fail("theme should resolve by default");
+    }
+    if (!physics_sim_shared_font_resolve_menu_body(path, sizeof(path), &point_size)) {
+        return fail("font should resolve by default");
+    }
+
+    setenv("PHYSICS_SIM_USE_SHARED_THEME_FONT", "0", 1);
     if (physics_sim_shared_theme_resolve_menu_palette(&palette)) {
-        return fail("theme should be disabled by default");
+        return fail("theme should be disabled when shared toggle is off");
     }
     if (physics_sim_shared_font_resolve_menu_body(path, sizeof(path), &point_size)) {
-        return fail("font should be disabled by default");
+        return fail("font should be disabled when shared toggle is off");
     }
 
     setenv("PHYSICS_SIM_USE_SHARED_THEME_FONT", "1", 1);

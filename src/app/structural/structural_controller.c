@@ -14,25 +14,18 @@
 #include "input/input_context.h"
 #include "app/data_paths.h"
 #include "config/config_loader.h"
-#include "font_paths.h"
+#include "render/font_bridge.h"
 #include "render/text_upload_policy.h"
 #include "vk_renderer.h"
 #include "render/vk_shared_device.h"
 
 static TTF_Font *load_font(const AppConfig *cfg, int size, SDL_Renderer *renderer) {
-    const char *paths[] = {
-        FONT_BODY_PATH_1,
-        FONT_BODY_PATH_2,
-        FONT_TITLE_PATH_1,
-        FONT_TITLE_PATH_2
-    };
-    int scaled_size = app_config_scale_text_point_size(cfg, size, 6);
-    scaled_size = physics_sim_text_raster_point_size(renderer, scaled_size, 6);
-    for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
-        TTF_Font *font = TTF_OpenFont(paths[i], scaled_size);
-        if (font) return font;
-    }
-    return NULL;
+    PhysicsSimFontSlot slot = (size <= 12)
+                                  ? PHYSICS_SIM_FONT_SLOT_STRUCTURAL_SMALL
+                                  : PHYSICS_SIM_FONT_SLOT_STRUCTURAL_HUD;
+    TTF_Font *font = NULL;
+    (void)physics_sim_font_bridge_open(renderer, cfg, slot, &font, NULL);
+    return font;
 }
 
 static bool structural_reload_fonts(StructuralController *ctrl,
@@ -44,12 +37,12 @@ static bool structural_reload_fonts(StructuralController *ctrl,
     small = load_font(cfg, 12, renderer);
     hud = load_font(cfg, 14, renderer);
     if (!small || !hud) {
-        if (small) TTF_CloseFont(small);
-        if (hud) TTF_CloseFont(hud);
+        if (small) physics_sim_font_bridge_close(&small);
+        if (hud) physics_sim_font_bridge_close(&hud);
         return false;
     }
-    if (ctrl->font_small) TTF_CloseFont(ctrl->font_small);
-    if (ctrl->font_hud) TTF_CloseFont(ctrl->font_hud);
+    if (ctrl->font_small) physics_sim_font_bridge_close(&ctrl->font_small);
+    if (ctrl->font_hud) physics_sim_font_bridge_close(&ctrl->font_hud);
     ctrl->font_small = small;
     ctrl->font_hud = hud;
     return true;
@@ -549,8 +542,8 @@ int structural_controller_run(AppConfig *cfg,
     }
 
     structural_controller_runtime_view_clear(&ctrl.runtime);
-    if (ctrl.font_small) TTF_CloseFont(ctrl.font_small);
-    if (ctrl.font_hud) TTF_CloseFont(ctrl.font_hud);
+    if (ctrl.font_small) physics_sim_font_bridge_close(&ctrl.font_small);
+    if (ctrl.font_hud) physics_sim_font_bridge_close(&ctrl.font_hud);
     vk_renderer_wait_idle((VkRenderer *)renderer);
     if (use_shared_device) {
         vk_renderer_shutdown_surface((VkRenderer *)renderer);

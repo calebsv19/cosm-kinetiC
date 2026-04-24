@@ -17,6 +17,13 @@ typedef struct SimRuntime3DSolverScratch {
     float *divergence;
 } SimRuntime3DSolverScratch;
 
+typedef struct SimRuntime3DForceAxis {
+    bool valid;
+    float x;
+    float y;
+    float z;
+} SimRuntime3DForceAxis;
+
 bool sim_runtime_3d_solver_scratch_init(SimRuntime3DSolverScratch *scratch,
                                         const SimRuntime3DDomainDesc *desc);
 void sim_runtime_3d_solver_scratch_destroy(SimRuntime3DSolverScratch *scratch);
@@ -43,6 +50,7 @@ bool sim_runtime_3d_sample_velocity_trilinear(const SimRuntime3DVolume *volume,
 bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                                            SimRuntime3DSolverScratch *scratch,
                                            const uint8_t *solid_mask,
+                                           const SimRuntime3DForceAxis *scene_up_axis,
                                            const AppConfig *cfg,
                                            double dt);
 

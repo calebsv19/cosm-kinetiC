@@ -5,8 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "render/text_upload_policy.h"
-#include "vk_renderer.h"
+#include "render/text_draw.h"
 
 static SDL_Color COLOR_PANEL     = {32, 36, 40, 255};
 static SDL_Color COLOR_TEXT      = {245, 247, 250, 255};
@@ -115,24 +114,14 @@ void scene_editor_draw_button(SDL_Renderer *renderer,
         label_x = button->rect.x + (button->rect.w - label_w) / 2;
         if (label_x < button->rect.x + 8) label_x = button->rect.x + 8;
     }
-    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, label, text);
-    if (!surf) return;
     SDL_Rect dst = {
         .x = label_x,
         .y = button->rect.y + (button->rect.h / 2) -
-             physics_sim_text_logical_pixels(renderer, surf->h) / 2,
-        .w = physics_sim_text_logical_pixels(renderer, surf->w),
-        .h = physics_sim_text_logical_pixels(renderer, surf->h)
+             label_h / 2,
+        .w = label_w,
+        .h = label_h
     };
-    VkRendererTexture tex = {0};
-    if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
-                                                   surf,
-                                                   &tex,
-                                                   physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
-        vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
-        vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
-    }
-    SDL_FreeSurface(surf);
+    (void)physics_sim_text_draw_utf8(renderer, font, label, text, &dst);
 }
 
 void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
@@ -151,20 +140,13 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
     SDL_RenderDrawRect(renderer, &field->rect);
     fit_text_to_width(renderer, font, field->label, field->rect.w - 4, label_fit, sizeof(label_fit));
     label_text = label_fit[0] ? label_fit : field->label;
-    SDL_Surface *label = TTF_RenderUTF8_Blended(font, label_text, COLOR_TEXT_DIM);
-    if (label) {
-        int label_w = physics_sim_text_logical_pixels(renderer, label->w);
-        int label_h = physics_sim_text_logical_pixels(renderer, label->h);
-        SDL_Rect dst = {field->rect.x, field->rect.y - label_h - 6, label_w, label_h};
-        VkRendererTexture label_tex = {0};
-        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
-                                                       label,
-                                                       &label_tex,
-                                                       physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
-            vk_renderer_draw_texture((VkRenderer *)renderer, &label_tex, NULL, &dst);
-            vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &label_tex);
+    {
+        int label_w = 0;
+        int label_h = 0;
+        if (physics_sim_text_measure_utf8(renderer, font, label_text, &label_w, &label_h)) {
+            SDL_Rect dst = {field->rect.x, field->rect.y - label_h - 6, label_w, label_h};
+            (void)physics_sim_text_draw_utf8(renderer, font, label_text, COLOR_TEXT_DIM, &dst);
         }
-        SDL_FreeSurface(label);
     }
 
     char display[32] = {0};
@@ -178,19 +160,15 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
     }
     fit_text_to_width(renderer, font, display, field->rect.w - 12, display_fit, sizeof(display_fit));
     value_text = display_fit[0] ? display_fit : display;
-    SDL_Surface *value = TTF_RenderUTF8_Blended(font, value_text, COLOR_TEXT);
-    if (value) {
-        int value_w = physics_sim_text_logical_pixels(renderer, value->w);
-        int value_h = physics_sim_text_logical_pixels(renderer, value->h);
-        SDL_Rect dst = {field->rect.x + 8, field->rect.y + (field->rect.h - value_h) / 2, value_w, value_h};
-        VkRendererTexture value_tex = {0};
-        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
-                                                       value,
-                                                       &value_tex,
-                                                       physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
-            vk_renderer_draw_texture((VkRenderer *)renderer, &value_tex, NULL, &dst);
-            vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &value_tex);
+    {
+        int value_w = 0;
+        int value_h = 0;
+        if (physics_sim_text_measure_utf8(renderer, font, value_text, &value_w, &value_h)) {
+            SDL_Rect dst = {field->rect.x + 8,
+                            field->rect.y + (field->rect.h - value_h) / 2,
+                            value_w,
+                            value_h};
+            (void)physics_sim_text_draw_utf8(renderer, font, value_text, COLOR_TEXT, &dst);
         }
-        SDL_FreeSurface(value);
     }
 }

@@ -59,7 +59,17 @@ typedef struct PresetObject {
     float size_x;
     float size_y;
     float size_z;     // additive dimensional field (defaults to size_x when omitted)
-    float angle;
+    float angle;      // legacy XY rotation compatibility carrier
+    bool  orientation_basis_valid;
+    float orientation_u_x;
+    float orientation_u_y;
+    float orientation_u_z;
+    float orientation_v_x;
+    float orientation_v_y;
+    float orientation_v_z;
+    float orientation_w_x;
+    float orientation_w_y;
+    float orientation_w_z;
     bool  is_static;
     bool  gravity_enabled;
     float initial_velocity_x; // reduced compatibility carrier for runtime body bootstrap

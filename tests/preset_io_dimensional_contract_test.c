@@ -160,8 +160,11 @@ static bool test_v12_additive_roundtrip(void) {
     const FluidEmitter *em = &loaded->preset.emitters[0];
     const PresetObject *obj = &loaded->preset.objects[0];
     const ImportedShape *imp = &loaded->preset.import_shapes[0];
+    float dir_len = sqrtf(0.3f * 0.3f + (-0.8f) * (-0.8f) + 0.5f * 0.5f);
     if (!approx_equal(em->position_z, 0.56f, 1e-4f)) goto done;
-    if (!approx_equal(em->dir_z, 0.5f, 1e-4f)) goto done;
+    if (!approx_equal(em->dir_x, 0.3f / dir_len, 1e-4f)) goto done;
+    if (!approx_equal(em->dir_y, -0.8f / dir_len, 1e-4f)) goto done;
+    if (!approx_equal(em->dir_z, 0.5f / dir_len, 1e-4f)) goto done;
     if (!approx_equal(obj->position_z, 0.4f, 1e-4f)) goto done;
     if (!approx_equal(obj->size_z, 0.3f, 1e-4f)) goto done;
     if (!approx_equal(imp->position_z, 0.41f, 1e-4f)) goto done;
@@ -175,6 +178,41 @@ done:
     return ok;
 }
 
+static bool test_3d_slot_sanitize_defaults_invalid_direction_up(void) {
+    CustomPresetLibrary lib;
+    FluidScenePreset preset = {0};
+    CustomPresetSlot *slot = NULL;
+    bool ok = false;
+
+    preset_library_init(&lib);
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.emitter_count = 1;
+    preset.emitters[0] = (FluidEmitter){
+        .type = EMITTER_VELOCITY_JET,
+        .position_x = 0.5f,
+        .position_y = 0.5f,
+        .position_z = 0.25f,
+        .radius = 0.08f,
+        .strength = 10.0f,
+        .dir_x = 0.0f,
+        .dir_y = 0.0f,
+        .dir_z = 0.0f,
+        .attached_object = -1,
+        .attached_import = -1,
+    };
+
+    slot = preset_library_add_slot(&lib, "3D Direction Defaults", &preset);
+    if (!slot) goto done;
+    if (!approx_equal(slot->preset.emitters[0].dir_x, 0.0f, 1e-6f)) goto done;
+    if (!approx_equal(slot->preset.emitters[0].dir_y, 0.0f, 1e-6f)) goto done;
+    if (!approx_equal(slot->preset.emitters[0].dir_z, 1.0f, 1e-6f)) goto done;
+    ok = true;
+
+done:
+    preset_library_shutdown(&lib);
+    return ok;
+}
+
 int main(void) {
     if (!test_legacy_omitted_z_fallback()) {
         fprintf(stderr, "preset_io_dimensional_contract_test: legacy fallback failed\n");
@@ -182,6 +220,10 @@ int main(void) {
     }
     if (!test_v12_additive_roundtrip()) {
         fprintf(stderr, "preset_io_dimensional_contract_test: v12 roundtrip failed\n");
+        return 1;
+    }
+    if (!test_3d_slot_sanitize_defaults_invalid_direction_up()) {
+        fprintf(stderr, "preset_io_dimensional_contract_test: 3d default direction failed\n");
         return 1;
     }
     fprintf(stdout, "preset_io_dimensional_contract_test: success\n");

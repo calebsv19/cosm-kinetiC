@@ -24,6 +24,8 @@ static bool test_quality_mapping(void) {
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 96) return false;
     cfg.quality_index = 4;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 72) return false;
+    cfg.quality_index = 5;
+    if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 16) return false;
     cfg.quality_index = -1;
     cfg.grid_w = 220;
     cfg.grid_h = 48;
@@ -55,6 +57,26 @@ static bool test_legacy_domain_derivation(void) {
     if (!nearly_equal(desc.world_max_y, 2.0f)) return false;
     if (!nearly_equal(desc.world_max_z, 2.0f)) return false;
     if (!nearly_equal(desc.voxel_size, 4.0f / 72.0f)) return false;
+    return true;
+}
+
+static bool test_tiny3d_debug_profile_derivation(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimRuntime3DDomainDesc desc = {0};
+
+    cfg.quality_index = 5;
+    cfg.grid_w = 64;
+    cfg.grid_h = 64;
+    preset.domain_width = 4.0f;
+    preset.domain_height = 2.0f;
+
+    if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.grid_w != 16) return false;
+    if (desc.grid_h != 8) return false;
+    if (desc.grid_d != 8) return false;
+    if (!nearly_equal(desc.voxel_size, 4.0f / 16.0f)) return false;
+    if (desc.cell_count != (size_t)16 * (size_t)8 * (size_t)8) return false;
     return true;
 }
 
@@ -150,6 +172,10 @@ int main(void) {
     }
     if (!test_legacy_domain_derivation()) {
         fprintf(stderr, "sim_runtime_3d_domain_contract_test: legacy derivation failed\n");
+        return 1;
+    }
+    if (!test_tiny3d_debug_profile_derivation()) {
+        fprintf(stderr, "sim_runtime_3d_domain_contract_test: tiny3d derivation failed\n");
         return 1;
     }
     if (!test_runtime_visual_precedence()) {

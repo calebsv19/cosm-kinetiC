@@ -173,6 +173,18 @@ bool sim_runtime_backend_get_obstacle_view_2d(const SimRuntimeBackend *backend,
            backend->ops->get_obstacle_view_2d(backend, out_view);
 }
 
+bool sim_runtime_backend_get_debug_volume_view_3d(const SimRuntimeBackend *backend,
+                                                  SceneDebugVolumeView3D *out_view) {
+    return backend && backend->ops && backend->ops->get_debug_volume_view_3d &&
+           backend->ops->get_debug_volume_view_3d(backend, out_view);
+}
+
+bool sim_runtime_backend_get_volume_export_view_3d(const SimRuntimeBackend *backend,
+                                                   SceneFluidVolumeExportView3D *out_view) {
+    return backend && backend->ops && backend->ops->get_volume_export_view_3d &&
+           backend->ops->get_volume_export_view_3d(backend, out_view);
+}
+
 bool sim_runtime_backend_get_report(const SimRuntimeBackend *backend,
                                     SimRuntimeBackendReport *out_report) {
     return backend && backend->ops && backend->ops->get_report &&

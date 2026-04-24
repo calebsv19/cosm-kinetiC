@@ -73,6 +73,65 @@ static bool parse_json_number(json_object *obj, const char *key, double *out_val
     return true;
 }
 
+static double vec3_length(CoreObjectVec3 value) {
+    return sqrt(value.x * value.x + value.y * value.y + value.z * value.z);
+}
+
+static bool normalize_vec3(CoreObjectVec3 *value) {
+    double len = 0.0;
+    if (!value) return false;
+    len = vec3_length(*value);
+    if (!(len > 1e-9) || !isfinite(len)) return false;
+    value->x /= len;
+    value->y /= len;
+    value->z /= len;
+    return true;
+}
+
+static CoreObjectVec3 scene_up_for_axis_plane(CoreObjectPlane axis_plane) {
+    switch (axis_plane) {
+    case CORE_OBJECT_PLANE_YZ:
+        return (CoreObjectVec3){1.0, 0.0, 0.0};
+    case CORE_OBJECT_PLANE_XZ:
+        return (CoreObjectVec3){0.0, 1.0, 0.0};
+    case CORE_OBJECT_PLANE_XY:
+    default:
+        return (CoreObjectVec3){0.0, 0.0, 1.0};
+    }
+}
+
+static PhysicsSimRuntimeSceneUpVector retained_scene_resolve_scene_up(
+    const PhysicsSimRetainedRuntimeScene *scene) {
+    PhysicsSimRuntimeSceneUpVector result = {0};
+    CoreObjectVec3 direction = {0};
+    if (!scene) return result;
+
+    if (scene->construction_plane.valid) {
+        direction = scene->construction_plane.custom_frame.normal;
+        if (normalize_vec3(&direction)) {
+            result.valid = true;
+            result.direction = direction;
+            result.source = PHYSICS_SIM_RUNTIME_SCENE_UP_CONSTRUCTION_PLANE_FRAME;
+            return result;
+        }
+
+        direction = scene_up_for_axis_plane(scene->construction_plane.axis_plane);
+        if (normalize_vec3(&direction)) {
+            result.valid = true;
+            result.direction = direction;
+            result.source = PHYSICS_SIM_RUNTIME_SCENE_UP_CONSTRUCTION_PLANE_AXIS;
+            return result;
+        }
+    }
+
+    if (scene->root.space_mode_default == CORE_SCENE_SPACE_MODE_3D) {
+        result.valid = true;
+        result.direction = (CoreObjectVec3){0.0, 0.0, 1.0};
+        result.source = PHYSICS_SIM_RUNTIME_SCENE_UP_FALLBACK_POSITIVE_Z;
+    }
+    return result;
+}
+
 static bool parse_frame3_with_axis_keys(json_object *obj,
                                         const char *key,
                                         const char *axis_u_key,
@@ -700,6 +759,7 @@ bool runtime_scene_bridge_load_visual_bootstrap_json(const char *runtime_scene_j
     retained_scene_capture(root, &preflight);
     out_bootstrap->valid = g_last_retained_scene.valid_contract;
     out_bootstrap->retained_scene = g_last_retained_scene;
+    out_bootstrap->scene_up = retained_scene_resolve_scene_up(&g_last_retained_scene);
     if (parse_scene_domain_overlay(root, &out_bootstrap->scene_domain)) {
         out_bootstrap->scene_domain_authored = true;
     } else if (g_last_retained_scene.has_line_drawing_scene3d &&
@@ -850,4 +910,18 @@ bool runtime_scene_bridge_writeback_physics_overlay_json(const char *runtime_sce
     json_object_put(runtime_root);
     json_object_put(overlay_root);
     return true;
+}
+
+const char *physics_sim_runtime_scene_up_source_label(PhysicsSimRuntimeSceneUpSource source) {
+    switch (source) {
+    case PHYSICS_SIM_RUNTIME_SCENE_UP_CONSTRUCTION_PLANE_FRAME:
+        return "construction-plane-frame";
+    case PHYSICS_SIM_RUNTIME_SCENE_UP_CONSTRUCTION_PLANE_AXIS:
+        return "construction-plane-axis";
+    case PHYSICS_SIM_RUNTIME_SCENE_UP_FALLBACK_POSITIVE_Z:
+        return "fallback-+z";
+    case PHYSICS_SIM_RUNTIME_SCENE_UP_NONE:
+    default:
+        return "none";
+    }
 }

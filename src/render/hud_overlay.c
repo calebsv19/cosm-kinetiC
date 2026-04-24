@@ -4,29 +4,22 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "font_paths.h"
-#include "render/text_upload_policy.h"
-#include "vk_renderer.h"
+#include "render/font_bridge.h"
+#include "render/text_draw.h"
 
 static SDL_Renderer *g_hud_renderer = NULL;
 static TTF_Font     *g_hud_font     = NULL;
 
 static TTF_Font *load_hud_font(void) {
-    const char *paths[] = {
-        FONT_BODY_PATH_1,
-        FONT_BODY_PATH_2,
-        FONT_TITLE_PATH_1,  // extra fallbacks if body fonts fail
-        FONT_TITLE_PATH_2
-    };
-    int point_size = physics_sim_text_raster_point_size(g_hud_renderer, 12, 8);
-
-    for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
-        TTF_Font *font = TTF_OpenFont(paths[i], point_size);
-        if (font) {
-            return font;
-        }
+    TTF_Font *font = NULL;
+    (void)physics_sim_font_bridge_open(g_hud_renderer,
+                                       NULL,
+                                       PHYSICS_SIM_FONT_SLOT_HUD_OVERLAY,
+                                       &font,
+                                       NULL);
+    if (font) {
+        return font;
     }
-
     fprintf(stderr, "[hud] Failed to load HUD font: %s\n", TTF_GetError());
     return NULL;
 }
@@ -42,31 +35,21 @@ bool hud_overlay_init(SDL_Renderer *renderer) {
 }
 
 void hud_overlay_shutdown(void) {
-    if (g_hud_font) {
-        TTF_CloseFont(g_hud_font);
-        g_hud_font = NULL;
-    }
+    physics_sim_font_bridge_close(&g_hud_font);
     g_hud_renderer = NULL;
 }
 
-static void render_hud_text_line(const char *text,
-                                 SDL_Surface **surface,
-                                 int *w,
-                                 int *h) {
-    if (!text || !surface || !w || !h) return;
+static void measure_hud_text_line(const char *text,
+                                  int *w,
+                                  int *h) {
+    if (!w || !h) return;
+    *w = 0;
+    *h = 0;
+    if (!text) return;
     if (!g_hud_font || !g_hud_renderer) {
-        *surface = NULL;
-        *w = *h = 0;
         return;
     }
-    SDL_Color color = {240, 240, 240, 255};
-    *surface = TTF_RenderUTF8_Blended(g_hud_font, text, color);
-    if (!*surface) {
-        *w = *h = 0;
-        return;
-    }
-    *w = physics_sim_text_logical_pixels(g_hud_renderer, (*surface)->w);
-    *h = physics_sim_text_logical_pixels(g_hud_renderer, (*surface)->h);
+    (void)physics_sim_text_measure_utf8(g_hud_renderer, g_hud_font, text, w, h);
 }
 
 static void append_token(char *dst, size_t dst_size, const char *token) {
@@ -210,6 +193,20 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         backend_status_line[0] = '\0';
     }
 
+    char scene_axis_line[160];
+    if (hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD &&
+        hud->backend_scene_up_valid) {
+        snprintf(scene_axis_line,
+                 sizeof(scene_axis_line),
+                 "3D axis: up=(%.2f, %.2f, %.2f) source=%s",
+                 hud->backend_scene_up_x,
+                 hud->backend_scene_up_y,
+                 hud->backend_scene_up_z,
+                 physics_sim_runtime_scene_up_source_label(hud->backend_scene_up_source));
+    } else {
+        scene_axis_line[0] = '\0';
+    }
+
     char compatibility_activity_line[160];
     if (hud->backend_compatibility_view_2d_derived && hud->backend_domain_d > 1) {
         const char *fluid_status = hud->backend_compatibility_slice_has_activity
@@ -227,13 +224,56 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         compatibility_activity_line[0] = '\0';
     }
 
+    char volume_truth_line[192];
+    if (hud->backend_debug_volume_view_3d_available &&
+        hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD) {
+        if (hud->backend_debug_volume_scene_up_velocity_valid) {
+            snprintf(volume_truth_line,
+                     sizeof(volume_truth_line),
+                     "3D volume: XYZ live act=%zu solid=%zu rho_max=%.2f |v|_max=%.2f v_up(avg/peak)=%.2f/%.2f",
+                     hud->backend_debug_volume_active_density_cells,
+                     hud->backend_debug_volume_solid_cells,
+                     hud->backend_debug_volume_max_density,
+                     hud->backend_debug_volume_max_velocity_magnitude,
+                     hud->backend_debug_volume_scene_up_velocity_avg,
+                     hud->backend_debug_volume_scene_up_velocity_peak);
+        } else {
+            snprintf(volume_truth_line,
+                     sizeof(volume_truth_line),
+                     "3D volume: XYZ live act=%zu solid=%zu rho_max=%.2f |v|_max=%.2f",
+                     hud->backend_debug_volume_active_density_cells,
+                     hud->backend_debug_volume_solid_cells,
+                     hud->backend_debug_volume_max_density,
+                     hud->backend_debug_volume_max_velocity_magnitude);
+        }
+    } else {
+        volume_truth_line[0] = '\0';
+    }
+
+    char emitter_step_line[176];
+    if (hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD) {
+        snprintf(emitter_step_line,
+                 sizeof(emitter_step_line),
+                 "Emit step: n=%zu free=%zu att=%zu vox=%zu last=%zu rho=%+.2f vel=%.2f",
+                 hud->backend_emitter_step_emitters_applied,
+                 hud->backend_emitter_step_free_emitters_applied,
+                 hud->backend_emitter_step_attached_emitters_applied,
+                 hud->backend_emitter_step_affected_cells,
+                 hud->backend_emitter_step_last_footprint_cells,
+                 hud->backend_emitter_step_density_delta,
+                 hud->backend_emitter_step_velocity_magnitude_delta);
+    } else {
+        emitter_step_line[0] = '\0';
+    }
+
     char debug_cue_line[160];
-    if (hud->backend_secondary_debug_slice_stack_live &&
+    if (hud->retained_runtime_slice_overlay_enabled &&
+        hud->backend_secondary_debug_slice_stack_live &&
         hud->backend_compatibility_view_2d_derived &&
         hud->backend_domain_d > 1) {
         snprintf(debug_cue_line,
                  sizeof(debug_cue_line),
-                 "3D cue: ghost slice stack +/- %d around active z",
+                 "3D cue: derived XY ghost slice stack +/- %d + true XYZ volume point cloud",
                  hud->backend_secondary_debug_slice_stack_radius);
     } else {
         debug_cue_line[0] = '\0';
@@ -308,17 +348,29 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         gravity_line[0] = '\0';
     }
 
-    char retained_runtime_line[112];
-    char retained_runtime_mode_line[128];
+    char retained_runtime_line[128];
+    char retained_runtime_mode_line[160];
+    char retained_runtime_slice_line[96];
     if (hud->retained_runtime_visual_active) {
         snprintf(retained_runtime_line,
                  sizeof(retained_runtime_line),
-                 "Retained 3D view: Alt+LMB orbit  MMB pan  Wheel zoom  [ ] slice  F frame");
+                 "Retained 3D view: Alt+LMB orbit  MMB pan  Wheel zoom  [ ] slice  T overlay  F frame");
         if (hud->backend_compatibility_view_2d_derived && hud->backend_domain_d > 1) {
-            snprintf(retained_runtime_mode_line,
-                     sizeof(retained_runtime_mode_line),
-                     "Runtime fluid: live XY slice [ ] + ghost stack; volumetric emitters/obstacles and first-pass XYZ solver live");
+            snprintf(retained_runtime_slice_line,
+                     sizeof(retained_runtime_slice_line),
+                     "Slice overlay: %s (T)",
+                     hud->retained_runtime_slice_overlay_enabled ? "On" : "Off");
+            if (hud->retained_runtime_slice_overlay_enabled) {
+                snprintf(retained_runtime_mode_line,
+                         sizeof(retained_runtime_mode_line),
+                         "Runtime fluid: derived XY slice [ ] + ghost stack; true XYZ volume, emitters/obstacles, and first-pass solver live");
+            } else {
+                snprintf(retained_runtime_mode_line,
+                         sizeof(retained_runtime_mode_line),
+                         "Runtime fluid: slice overlay hidden; true XYZ volume, emitters/obstacles, and first-pass solver live");
+            }
         } else {
+            retained_runtime_slice_line[0] = '\0';
             snprintf(retained_runtime_mode_line,
                      sizeof(retained_runtime_mode_line),
                      "Runtime fluid: authoritative XY field");
@@ -326,13 +378,15 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     } else {
         retained_runtime_line[0] = '\0';
         retained_runtime_mode_line[0] = '\0';
+        retained_runtime_slice_line[0] = '\0';
     }
 
-    const char *hint_line_a = "Keys: P/C/E Esc 1/2  V/B/S/L  Shift+S";
+    const char *hint_line_a = "Keys: P/C/E Esc 1/2  V/B/S/L  Shift+S  T slice";
     const char *hint_line_b = "Paths: K/J  Shift+V/B/L  G grav  H elastic";
 
     enum { MAX_HUD_LINES = 32 };
     const char *lines[MAX_HUD_LINES];
+    const char *draw_lines[MAX_HUD_LINES];
     size_t line_count = 0;
     lines[line_count++] = status_line;
     lines[line_count++] = space_line;
@@ -342,7 +396,10 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     if (domain_extent_line[0]) lines[line_count++] = domain_extent_line;
     if (compatibility_line[0]) lines[line_count++] = compatibility_line;
     if (backend_status_line[0]) lines[line_count++] = backend_status_line;
+    if (emitter_step_line[0]) lines[line_count++] = emitter_step_line;
     if (compatibility_activity_line[0]) lines[line_count++] = compatibility_activity_line;
+    if (scene_axis_line[0]) lines[line_count++] = scene_axis_line;
+    if (volume_truth_line[0]) lines[line_count++] = volume_truth_line;
     if (debug_cue_line[0]) lines[line_count++] = debug_cue_line;
     lines[line_count++] = preset_line;
     if (wind_line[0]) lines[line_count++] = wind_line;
@@ -361,6 +418,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     }
     if (gravity_line[0]) lines[line_count++] = gravity_line;
     if (retained_runtime_line[0]) lines[line_count++] = retained_runtime_line;
+    if (retained_runtime_slice_line[0]) lines[line_count++] = retained_runtime_slice_line;
     if (retained_runtime_mode_line[0]) lines[line_count++] = retained_runtime_mode_line;
     if (!hud->retained_runtime_visual_active) {
         lines[line_count++] = hint_line_a;
@@ -369,11 +427,9 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         }
     }
 
-    SDL_Surface *surfaces[MAX_HUD_LINES];
     int widths[MAX_HUD_LINES];
     int heights[MAX_HUD_LINES];
     for (int i = 0; i < MAX_HUD_LINES; ++i) {
-        surfaces[i] = NULL;
         widths[i] = 0;
         heights[i] = 0;
     }
@@ -382,11 +438,10 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     int total_h = 0;
 
     for (size_t i = 0; i < line_count; ++i) {
-        SDL_Surface *surf = NULL;
         int w = 0, h = 0;
-        render_hud_text_line(lines[i], &surf, &w, &h);
-        if (!surf) continue;
-        surfaces[count] = surf;
+        measure_hud_text_line(lines[i], &w, &h);
+        if (w <= 0 || h <= 0) continue;
+        draw_lines[count] = lines[i];
         widths[count] = w;
         heights[count] = h;
         if (w > max_w) max_w = w;
@@ -417,18 +472,11 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     int y = panel.y + padding;
     for (int i = 0; i < count; ++i) {
         SDL_Rect dst = {panel.x + padding, y, widths[i], heights[i]};
-        VkRendererTexture texture = {0};
-        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer*)g_hud_renderer,
-                                                       surfaces[i],
-                                                       &texture,
-                                                       physics_sim_text_upload_filter(g_hud_renderer)) == VK_SUCCESS) {
-            vk_renderer_draw_texture((VkRenderer*)g_hud_renderer, &texture, NULL, &dst);
-            vk_renderer_queue_texture_destroy((VkRenderer*)g_hud_renderer, &texture);
-        }
+        (void)physics_sim_text_draw_utf8(g_hud_renderer,
+                                         g_hud_font,
+                                         draw_lines[i],
+                                         (SDL_Color){240, 240, 240, 255},
+                                         &dst);
         y += heights[i] + spacing;
-    }
-
-    for (int i = 0; i < count; ++i) {
-        if (surfaces[i]) SDL_FreeSurface(surfaces[i]);
     }
 }

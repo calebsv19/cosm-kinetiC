@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "app/menu/menu_state.h"
-#include "render/text_upload_policy.h"
+#include "render/text_draw.h"
 
 static SDL_Color COLOR_BG       = {18, 18, 22, 255};
 static SDL_Color COLOR_PANEL    = {32, 36, 40, 255};
@@ -116,24 +116,7 @@ void menu_draw_text(SDL_Renderer *renderer,
                     int x,
                     int y,
                     SDL_Color color) {
-    if (!renderer || !font || !text) return;
-    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, text, color);
-    if (!surf) return;
-    VkRendererTexture tex = {0};
-    if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
-                                                   surf,
-                                                   &tex,
-                                                   physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
-        SDL_Rect dst = {
-            x,
-            y,
-            physics_sim_text_logical_pixels(renderer, surf->w),
-            physics_sim_text_logical_pixels(renderer, surf->h)
-        };
-        vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
-        vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
-    }
-    SDL_FreeSurface(surf);
+    (void)physics_sim_text_draw_utf8_at(renderer, font, text, x, y, color);
 }
 
 void menu_draw_panel(SDL_Renderer *renderer, const SDL_Rect *rect) {
@@ -278,23 +261,12 @@ void menu_draw_text_input(SDL_Renderer *renderer,
     if (max_value_w < 8) max_value_w = 8;
     menu_fit_text_to_width(renderer, font, value, max_value_w, value_fit, sizeof(value_fit));
     if (!value_fit[0]) snprintf(value_fit, sizeof(value_fit), "%s", value ? value : "");
-    SDL_Surface *surf = TTF_RenderUTF8_Blended(font, value_fit, text_color);
     int text_w = 0;
     int text_h_logical = 0;
-    if (surf) {
-        text_w = physics_sim_text_logical_pixels(renderer, surf->w);
-        text_h_logical = physics_sim_text_logical_pixels(renderer, surf->h);
+    if (physics_sim_text_measure_utf8(renderer, font, value_fit, &text_w, &text_h_logical)) {
         SDL_Rect dst = {rect->x + 8, rect->y + rect->h / 2 - text_h_logical / 2,
                         text_w, text_h_logical};
-        VkRendererTexture tex = {0};
-        if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
-                                                       surf,
-                                                       &tex,
-                                                       physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
-            vk_renderer_draw_texture((VkRenderer *)renderer, &tex, NULL, &dst);
-            vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &tex);
-        }
-        SDL_FreeSurface(surf);
+        (void)physics_sim_text_draw_utf8(renderer, font, value_fit, text_color, &dst);
     }
     if (field->caret_visible) {
         int caret_x = rect->x + 8 + text_w + 2;

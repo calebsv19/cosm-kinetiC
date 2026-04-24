@@ -147,8 +147,7 @@ static void diffuse_scalar_field(float *field,
 static void advect_velocity(SimRuntime3DVolume *volume,
                             const SimRuntime3DSolverScratch *scratch,
                             const uint8_t *solid_mask,
-                            float dt_cells,
-                            float damping) {
+                            float dt_cells) {
     const SimRuntime3DDomainDesc *desc = NULL;
     if (!volume || !scratch) return;
     desc = &volume->desc;
@@ -172,25 +171,78 @@ static void advect_velocity(SimRuntime3DVolume *volume,
                 }
 
                 volume->velocity_x[idx] = sample_field_trilinear_masked(
-                    scratch->velocity_x_prev, desc, solid_mask, sample_x, sample_y, sample_z) * damping;
+                    scratch->velocity_x_prev, desc, solid_mask, sample_x, sample_y, sample_z);
                 volume->velocity_y[idx] = sample_field_trilinear_masked(
-                    scratch->velocity_y_prev, desc, solid_mask, sample_x, sample_y, sample_z) * damping;
+                    scratch->velocity_y_prev, desc, solid_mask, sample_x, sample_y, sample_z);
                 volume->velocity_z[idx] = sample_field_trilinear_masked(
-                    scratch->velocity_z_prev, desc, solid_mask, sample_x, sample_y, sample_z) * damping;
+                    scratch->velocity_z_prev, desc, solid_mask, sample_x, sample_y, sample_z);
             }
         }
     }
 }
 
+static void diffuse_velocity_fields(SimRuntime3DVolume *volume,
+                                    SimRuntime3DSolverScratch *scratch,
+                                    const uint8_t *solid_mask,
+                                    float viscosity_blend) {
+    const SimRuntime3DDomainDesc *desc = NULL;
+    if (!volume || !scratch || viscosity_blend <= 0.0f) return;
+    desc = &volume->desc;
+
+    memcpy(scratch->velocity_x_prev, volume->velocity_x, desc->cell_count * sizeof(float));
+    memcpy(scratch->velocity_y_prev, volume->velocity_y, desc->cell_count * sizeof(float));
+    memcpy(scratch->velocity_z_prev, volume->velocity_z, desc->cell_count * sizeof(float));
+
+    diffuse_scalar_field(volume->velocity_x,
+                         scratch->velocity_x_prev,
+                         desc,
+                         solid_mask,
+                         viscosity_blend);
+    diffuse_scalar_field(volume->velocity_y,
+                         scratch->velocity_y_prev,
+                         desc,
+                         solid_mask,
+                         viscosity_blend);
+    diffuse_scalar_field(volume->velocity_z,
+                         scratch->velocity_z_prev,
+                         desc,
+                         solid_mask,
+                         viscosity_blend);
+}
+
 static void apply_buoyancy(SimRuntime3DVolume *volume,
                            const SimRuntime3DSolverScratch *scratch,
                            const uint8_t *solid_mask,
+                           const SimRuntime3DForceAxis *scene_up_axis,
                            float buoyancy_force,
                            float dt) {
+    float axis_x = 0.0f;
+    float axis_y = -1.0f;
+    float axis_z = 0.0f;
+    float axis_len = 0.0f;
     if (!volume || !scratch || buoyancy_force == 0.0f || dt <= 0.0f) return;
+    if (scene_up_axis && scene_up_axis->valid) {
+        axis_x = scene_up_axis->x;
+        axis_y = scene_up_axis->y;
+        axis_z = scene_up_axis->z;
+        axis_len = sqrtf(axis_x * axis_x + axis_y * axis_y + axis_z * axis_z);
+        if (axis_len > 0.0001f) {
+            axis_x /= axis_len;
+            axis_y /= axis_len;
+            axis_z /= axis_len;
+        } else {
+            axis_x = 0.0f;
+            axis_y = -1.0f;
+            axis_z = 0.0f;
+        }
+    }
     for (size_t i = 0; i < volume->desc.cell_count; ++i) {
+        float impulse = 0.0f;
         if (cell_is_solid(solid_mask, i)) continue;
-        volume->velocity_y[i] -= scratch->density_prev[i] * buoyancy_force * dt;
+        impulse = scratch->density_prev[i] * buoyancy_force * dt;
+        volume->velocity_x[i] += axis_x * impulse;
+        volume->velocity_y[i] += axis_y * impulse;
+        volume->velocity_z[i] += axis_z * impulse;
     }
 }
 
@@ -381,13 +433,14 @@ static void advect_density(SimRuntime3DVolume *volume,
 bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                                            SimRuntime3DSolverScratch *scratch,
                                            const uint8_t *solid_mask,
+                                           const SimRuntime3DForceAxis *scene_up_axis,
                                            const AppConfig *cfg,
                                            double dt) {
     float dt_f = 0.0f;
     float voxel_size = 1.0f;
     float dt_cells = 0.0f;
     float diffusion_blend = 0.0f;
-    float damping = 1.0f;
+    float viscosity_blend = 0.0f;
     int iterations = 0;
     if (!volume || !scratch || !cfg || dt <= 0.0) return false;
     if (volume->desc.cell_count == 0 || scratch->desc.cell_count != volume->desc.cell_count) {
@@ -399,14 +452,20 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
     voxel_size = volume->desc.voxel_size > 0.0f ? volume->desc.voxel_size : 1.0f;
     dt_cells = dt_f / voxel_size;
     diffusion_blend = clamp_float_value(cfg->density_diffusion * dt_f, 0.0f, 0.2f);
-    damping = clamp_float_value(cfg->velocity_damping, 0.0f, 1.0f);
-    iterations = cfg->fluid_solver_iterations > 0 ? cfg->fluid_solver_iterations / 2 : 0;
-    if (iterations < 4) iterations = 4;
-    if (iterations > 24) iterations = 24;
+    viscosity_blend = clamp_float_value(cfg->velocity_damping * dt_f, 0.0f, 0.25f);
+    iterations = cfg->fluid_solver_iterations > 0 ? cfg->fluid_solver_iterations : 0;
+    if (iterations < 8) iterations = 8;
+    if (iterations > 48) iterations = 48;
 
     apply_solid_mask(volume, solid_mask);
-    advect_velocity(volume, scratch, solid_mask, dt_cells, damping);
-    apply_buoyancy(volume, scratch, solid_mask, cfg->fluid_buoyancy_force, dt_f);
+    advect_velocity(volume, scratch, solid_mask, dt_cells);
+    diffuse_velocity_fields(volume, scratch, solid_mask, viscosity_blend);
+    apply_buoyancy(volume,
+                   scratch,
+                   solid_mask,
+                   scene_up_axis,
+                   cfg->fluid_buoyancy_force,
+                   dt_f);
     compute_divergence(volume, scratch, solid_mask);
     project_velocity(volume, scratch, solid_mask, iterations);
     advect_density(volume, scratch, solid_mask, dt_cells, diffusion_blend, cfg->density_decay, dt);

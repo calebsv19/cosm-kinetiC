@@ -15,6 +15,7 @@ enum {
     SIM_RUNTIME_3D_MAJOR_AXIS_HIGH = 72,
     SIM_RUNTIME_3D_MAJOR_AXIS_DEEP = 96,
     SIM_RUNTIME_3D_MAJOR_AXIS_KARMAN = 72,
+    SIM_RUNTIME_3D_MAJOR_AXIS_TINY3D = 16,
     SIM_RUNTIME_3D_MAJOR_AXIS_MAX = 96
 };
 
@@ -117,6 +118,7 @@ int sim_runtime_3d_major_axis_cells_for_config(const AppConfig *cfg) {
     case 2: return SIM_RUNTIME_3D_MAJOR_AXIS_HIGH;
     case 3: return SIM_RUNTIME_3D_MAJOR_AXIS_DEEP;
     case 4: return SIM_RUNTIME_3D_MAJOR_AXIS_KARMAN;
+    case 5: return SIM_RUNTIME_3D_MAJOR_AXIS_TINY3D;
     default: break;
     }
     custom_major_axis = cfg->grid_w > cfg->grid_h ? cfg->grid_w : cfg->grid_h;

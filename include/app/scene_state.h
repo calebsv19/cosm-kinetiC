@@ -46,6 +46,7 @@ typedef struct SceneState {
 
     PhysicsSimRuntimeVisualBootstrap runtime_visual;
     SceneEditorViewportState runtime_viewport;
+    bool runtime_slice_overlay_enabled;
 } SceneState;
 
 SceneState scene_create(const AppConfig *cfg,
@@ -80,6 +81,20 @@ static inline bool scene_backend_obstacle_view_2d(const SceneState *scene,
            scene->backend->ops->get_obstacle_view_2d(scene->backend, out_view);
 }
 
+static inline bool scene_backend_debug_volume_view_3d(const SceneState *scene,
+                                                      SceneDebugVolumeView3D *out_view) {
+    return scene && scene->backend && scene->backend->ops &&
+           scene->backend->ops->get_debug_volume_view_3d &&
+           scene->backend->ops->get_debug_volume_view_3d(scene->backend, out_view);
+}
+
+static inline bool scene_backend_volume_export_view_3d(const SceneState *scene,
+                                                       SceneFluidVolumeExportView3D *out_view) {
+    return scene && scene->backend && scene->backend->ops &&
+           scene->backend->ops->get_volume_export_view_3d &&
+           scene->backend->ops->get_volume_export_view_3d(scene->backend, out_view);
+}
+
 static inline bool scene_backend_report(const SceneState *scene,
                                         SimRuntimeBackendReport *out_report) {
     return scene && scene->backend && scene->backend->ops &&
@@ -90,6 +105,16 @@ static inline bool scene_backend_report(const SceneState *scene,
 static inline bool scene_backend_step_compatibility_slice(SceneState *scene, int delta_z) {
     return scene && scene->backend &&
            sim_runtime_backend_step_compatibility_slice(scene->backend, delta_z);
+}
+
+static inline bool scene_runtime_slice_overlay_enabled(const SceneState *scene) {
+    return !scene || scene->runtime_slice_overlay_enabled;
+}
+
+static inline bool scene_runtime_toggle_slice_overlay(SceneState *scene) {
+    if (!scene) return false;
+    scene->runtime_slice_overlay_enabled = !scene->runtime_slice_overlay_enabled;
+    return scene->runtime_slice_overlay_enabled;
 }
 
 static inline bool scene_backend_compatibility_slice_activity(const SceneState *scene,

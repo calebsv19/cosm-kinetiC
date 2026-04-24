@@ -41,6 +41,7 @@ SceneState scene_create(const AppConfig *cfg,
     }
     s.config = cfg;
     s.preset = preset;
+    s.runtime_slice_overlay_enabled = true;
     memset(&s.runtime_visual, 0, sizeof(s.runtime_visual));
     scene_editor_viewport_init(&s.runtime_viewport, SPACE_MODE_3D, SPACE_MODE_3D);
     (void)scene_recreate_backend(&s, NULL);

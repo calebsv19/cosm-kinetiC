@@ -17,6 +17,7 @@ typedef struct SolverProjectionPhysicsOverlay {
     FluidEmitterType emitter_type;
     double emitter_radius;
     double emitter_strength;
+    bool has_emitter_direction;
     double emitter_dir_x;
     double emitter_dir_y;
     double emitter_dir_z;
@@ -83,6 +84,7 @@ void runtime_scene_solver_projection_apply_runtime_root_objects(json_object *run
                                                                 RuntimeSceneBridgePreflight *out_summary);
 void runtime_scene_solver_projection_apply_emitters_from_lights(json_object *runtime_root,
                                                                 double world_scale,
+                                                                FluidSceneDimensionMode dimension_mode,
                                                                 FluidScenePreset *in_out_preset);
 int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
     const PhysicsSimRetainedRuntimeScene *retained_scene,
@@ -92,6 +94,7 @@ int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
 int runtime_scene_solver_projection_apply_emitters_from_runtime_root_objects(
     json_object *runtime_root,
     double world_scale,
+    FluidSceneDimensionMode dimension_mode,
     FluidScenePreset *in_out_preset);
 
 #endif

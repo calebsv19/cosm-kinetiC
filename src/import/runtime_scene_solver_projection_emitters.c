@@ -1,5 +1,6 @@
 #include "import/runtime_scene_solver_projection_internal.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "app/sim_runtime_3d_anchor.h"
@@ -18,8 +19,67 @@ static void apply_normalized_emitter_position(double x,
                                                                        mapping->max_y);
 }
 
+static CoreObjectVec3 default_emitter_direction_for_mode(FluidSceneDimensionMode dimension_mode) {
+    if (dimension_mode == SCENE_DIMENSION_MODE_3D) {
+        return (CoreObjectVec3){0.0, 0.0, 1.0};
+    }
+    return (CoreObjectVec3){0.0, -1.0, 0.0};
+}
+
+static CoreObjectVec3 retained_object_emitter_default_direction(
+    const CoreSceneObjectContract *object) {
+    CoreObjectVec3 direction = {0.0, 0.0, 1.0};
+    if (!object) return direction;
+    if (object->has_plane_primitive) {
+        direction = object->plane_primitive.frame.normal;
+    } else if (object->has_rect_prism_primitive) {
+        direction = object->rect_prism_primitive.frame.normal;
+    }
+    return direction;
+}
+
+static bool emitter_direction_is_legacy_sideways(double x, double y, double z) {
+    return fabs(x) <= 1e-6 && fabs(y - (-1.0)) <= 1e-6 && fabs(z) <= 1e-6;
+}
+
+static void resolve_retained_object_emitter_direction(const CoreSceneObjectContract *object,
+                                                      const SolverProjectionPhysicsOverlay *overlay,
+                                                      FluidEmitter *dst) {
+    CoreObjectVec3 direction = retained_object_emitter_default_direction(object);
+    if (overlay && overlay->has_emitter_direction &&
+        !emitter_direction_is_legacy_sideways(overlay->emitter_dir_x,
+                                              overlay->emitter_dir_y,
+                                              overlay->emitter_dir_z)) {
+        direction.x = overlay->emitter_dir_x;
+        direction.y = overlay->emitter_dir_y;
+        direction.z = overlay->emitter_dir_z;
+    }
+    dst->dir_x = (float)direction.x;
+    dst->dir_y = (float)direction.y;
+    dst->dir_z = (float)direction.z;
+}
+
+static void resolve_free_emitter_direction(const SolverProjectionPhysicsOverlay *overlay,
+                                           FluidSceneDimensionMode dimension_mode,
+                                           FluidEmitter *dst) {
+    CoreObjectVec3 direction = default_emitter_direction_for_mode(dimension_mode);
+    if (overlay && overlay->has_emitter_direction &&
+        !(dimension_mode == SCENE_DIMENSION_MODE_3D &&
+          emitter_direction_is_legacy_sideways(overlay->emitter_dir_x,
+                                              overlay->emitter_dir_y,
+                                              overlay->emitter_dir_z))) {
+        direction.x = overlay->emitter_dir_x;
+        direction.y = overlay->emitter_dir_y;
+        direction.z = (dimension_mode == SCENE_DIMENSION_MODE_3D) ? overlay->emitter_dir_z : 0.0;
+    }
+    dst->dir_x = (float)direction.x;
+    dst->dir_y = (float)direction.y;
+    dst->dir_z = (float)direction.z;
+}
+
 void runtime_scene_solver_projection_apply_emitters_from_lights(json_object *runtime_root,
                                                                 double world_scale,
+                                                                FluidSceneDimensionMode dimension_mode,
                                                                 FluidScenePreset *in_out_preset) {
     json_object *lights_array = NULL;
     size_t src_count = 0;
@@ -60,9 +120,12 @@ void runtime_scene_solver_projection_apply_emitters_from_lights(json_object *run
         dst->type = EMITTER_DENSITY_SOURCE;
         dst->radius = 0.08f;
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)strength, 0.0f, 5000.0f);
-        dst->dir_x = 0.0f;
-        dst->dir_y = -1.0f;
-        dst->dir_z = 0.0f;
+        {
+            CoreObjectVec3 direction = default_emitter_direction_for_mode(dimension_mode);
+            dst->dir_x = (float)direction.x;
+            dst->dir_y = (float)direction.y;
+            dst->dir_z = (float)direction.z;
+        }
         dst->attached_object = -1;
         dst->attached_import = -1;
         in_out_preset->emitter_count++;
@@ -112,9 +175,7 @@ int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)overlay.emitter_strength,
                                                                    0.0f,
                                                                    5000.0f);
-        dst->dir_x = (float)overlay.emitter_dir_x;
-        dst->dir_y = (float)overlay.emitter_dir_y;
-        dst->dir_z = (float)overlay.emitter_dir_z;
+        resolve_retained_object_emitter_direction(object, &overlay, dst);
         dst->attached_object = i;
         dst->attached_import = -1;
         in_out_preset->emitter_count++;
@@ -126,6 +187,7 @@ int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
 int runtime_scene_solver_projection_apply_emitters_from_runtime_root_objects(
     json_object *runtime_root,
     double world_scale,
+    FluidSceneDimensionMode dimension_mode,
     FluidScenePreset *in_out_preset) {
     json_object *objects = NULL;
     size_t src_count = 0;
@@ -173,9 +235,7 @@ int runtime_scene_solver_projection_apply_emitters_from_runtime_root_objects(
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)overlay.emitter_strength,
                                                                    0.0f,
                                                                    5000.0f);
-        dst->dir_x = (float)overlay.emitter_dir_x;
-        dst->dir_y = (float)overlay.emitter_dir_y;
-        dst->dir_z = (float)overlay.emitter_dir_z;
+        resolve_free_emitter_direction(&overlay, dimension_mode, dst);
         dst->attached_object = (int)i;
         dst->attached_import = -1;
         in_out_preset->emitter_count++;

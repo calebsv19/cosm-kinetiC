@@ -130,6 +130,28 @@ static bool test_import_runtime_then_preset_then_free_fallback_order(void) {
            nearly_equal(world.z, 0.45);
 }
 
+static bool test_additive_world_z_is_not_reinterpreted_as_normalized(void) {
+    SceneState scene = {0};
+    CoreObjectVec3 world = {0};
+    CoreObjectVec3 world_min = {-6.0, -5.0, -2.5};
+    CoreObjectVec3 world_max = {6.0, 5.0, 4.0};
+
+    if (!sim_runtime_3d_anchor_resolve_emitter_world_anchor(&scene,
+                                                            -1,
+                                                            -1,
+                                                            0.5,
+                                                            0.5,
+                                                            0.25,
+                                                            &world_min,
+                                                            &world_max,
+                                                            &world)) {
+        return false;
+    }
+    return nearly_equal(world.x, 0.0) &&
+           nearly_equal(world.y, 0.0) &&
+           nearly_equal(world.z, 0.25);
+}
+
 int main(void) {
     if (!test_retained_object_origin_prefers_embedded_primitive_origin()) {
         fprintf(stderr, "sim_runtime_3d_anchor_contract_test: retained origin contract failed\n");
@@ -141,6 +163,10 @@ int main(void) {
     }
     if (!test_import_runtime_then_preset_then_free_fallback_order()) {
         fprintf(stderr, "sim_runtime_3d_anchor_contract_test: import/free fallback order failed\n");
+        return 1;
+    }
+    if (!test_additive_world_z_is_not_reinterpreted_as_normalized()) {
+        fprintf(stderr, "sim_runtime_3d_anchor_contract_test: additive world z contract failed\n");
         return 1;
     }
     fprintf(stdout, "sim_runtime_3d_anchor_contract_test: success\n");

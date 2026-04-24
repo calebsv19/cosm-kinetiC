@@ -51,6 +51,20 @@ static void apply_normalized_position(double x,
                                                                        mapping->max_y);
 }
 
+static void apply_frame_orientation(const CoreSceneFrame3 *frame, PresetObject *dst) {
+    if (!frame || !dst) return;
+    dst->orientation_basis_valid = true;
+    dst->orientation_u_x = (float)frame->axis_u.x;
+    dst->orientation_u_y = (float)frame->axis_u.y;
+    dst->orientation_u_z = (float)frame->axis_u.z;
+    dst->orientation_v_x = (float)frame->axis_v.x;
+    dst->orientation_v_y = (float)frame->axis_v.y;
+    dst->orientation_v_z = (float)frame->axis_v.z;
+    dst->orientation_w_x = (float)frame->normal.x;
+    dst->orientation_w_y = (float)frame->normal.y;
+    dst->orientation_w_z = (float)frame->normal.z;
+}
+
 static void runtime_scene_solver_projection_apply_json_object(json_object *src,
                                                               json_object *runtime_root,
                                                               double world_scale,
@@ -134,6 +148,7 @@ static void runtime_scene_solver_projection_apply_object(
 
     if (object->has_plane_primitive) {
         position = object->plane_primitive.frame.origin;
+        apply_frame_orientation(&object->plane_primitive.frame, dst);
         if (mapping && mapping->valid) {
             dst->size_x = (float)sim_runtime_3d_space_normalize_half_extent(
                 object->plane_primitive.width * 0.5, mapping->span_x, 0.04f);
@@ -141,14 +156,15 @@ static void runtime_scene_solver_projection_apply_object(
                 object->plane_primitive.height * 0.5, mapping->span_y, 0.04f);
         } else {
             dst->size_x = runtime_scene_solver_projection_scaled_size(
-                object->plane_primitive.width, world_scale, fallback_size);
+                object->plane_primitive.width * 0.5, world_scale, fallback_size);
             dst->size_y = runtime_scene_solver_projection_scaled_size(
-                object->plane_primitive.height, world_scale, fallback_size);
+                object->plane_primitive.height * 0.5, world_scale, fallback_size);
         }
         dst->size_z = runtime_scene_solver_projection_scaled_size(
-            SOLVER_PLANE_THICKNESS, world_scale, fallback_size);
+            SOLVER_PLANE_THICKNESS * 0.5, world_scale, fallback_size);
     } else if (object->has_rect_prism_primitive) {
         position = object->rect_prism_primitive.frame.origin;
+        apply_frame_orientation(&object->rect_prism_primitive.frame, dst);
         if (mapping && mapping->valid) {
             dst->size_x = (float)sim_runtime_3d_space_normalize_half_extent(
                 object->rect_prism_primitive.width * 0.5, mapping->span_x, 0.04f);
@@ -156,12 +172,12 @@ static void runtime_scene_solver_projection_apply_object(
                 object->rect_prism_primitive.height * 0.5, mapping->span_y, 0.04f);
         } else {
             dst->size_x = runtime_scene_solver_projection_scaled_size(
-                object->rect_prism_primitive.width, world_scale, fallback_size);
+                object->rect_prism_primitive.width * 0.5, world_scale, fallback_size);
             dst->size_y = runtime_scene_solver_projection_scaled_size(
-                object->rect_prism_primitive.height, world_scale, fallback_size);
+                object->rect_prism_primitive.height * 0.5, world_scale, fallback_size);
         }
         dst->size_z = runtime_scene_solver_projection_scaled_size(
-            object->rect_prism_primitive.depth, world_scale, fallback_size);
+            object->rect_prism_primitive.depth * 0.5, world_scale, fallback_size);
     } else {
         position = object->object.transform.position;
         scale = object->object.transform.scale;

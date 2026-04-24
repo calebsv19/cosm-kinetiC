@@ -12,7 +12,20 @@ static NumericField *current_field(SceneEditorState *state) {
     return state ? state->active_field : NULL;
 }
 
-static void normalize_direction(FluidEmitter *em);
+static void normalize_direction(FluidEmitter *em, FluidSceneDimensionMode dimension_mode);
+
+static void set_default_direction_for_mode(FluidEmitter *em, FluidSceneDimensionMode dimension_mode) {
+    if (!em) return;
+    if (dimension_mode == SCENE_DIMENSION_MODE_3D) {
+        em->dir_x = 0.0f;
+        em->dir_y = 0.0f;
+        em->dir_z = 1.0f;
+        return;
+    }
+    em->dir_x = 0.0f;
+    em->dir_y = -1.0f;
+    em->dir_z = 0.0f;
+}
 
 void scene_editor_sync_selection_session(SceneEditorState *state) {
     if (!state) return;
@@ -179,7 +192,7 @@ void sync_emitter_to_import(SceneEditorState *state, int import_index) {
     em->attached_import = import_index;
     state->emitter_object_map[em_idx] = -1;
     state->emitter_import_map[em_idx] = import_index;
-    normalize_direction(em);
+    normalize_direction(em, state->working.dimension_mode);
     em->position_x = clamp01(em->position_x);
     em->position_y = clamp01(em->position_y);
 }
@@ -332,18 +345,28 @@ void nudge_selected(SceneEditorState *state, float dx, float dy) {
     set_dirty(state);
 }
 
-static void normalize_direction(FluidEmitter *em) {
-    float len = sqrtf(em->dir_x * em->dir_x + em->dir_y * em->dir_y);
+static void normalize_direction(FluidEmitter *em, FluidSceneDimensionMode dimension_mode) {
+    float len = 0.0f;
+    if (!em) return;
+    if (dimension_mode == SCENE_DIMENSION_MODE_3D) {
+        len = sqrtf(em->dir_x * em->dir_x +
+                    em->dir_y * em->dir_y +
+                    em->dir_z * em->dir_z);
+    } else {
+        len = sqrtf(em->dir_x * em->dir_x +
+                    em->dir_y * em->dir_y);
+    }
     if (len < 0.001f) {
-        em->dir_x = 0.0f;
-        em->dir_y = -1.0f;
-        em->dir_z = 0.0f;
+        set_default_direction_for_mode(em, dimension_mode);
     } else {
         em->dir_x /= len;
         em->dir_y /= len;
-        if (!isfinite(em->dir_z)) em->dir_z = 0.0f;
-        if (em->dir_z < -1.0f) em->dir_z = -1.0f;
-        if (em->dir_z > 1.0f) em->dir_z = 1.0f;
+        if (dimension_mode == SCENE_DIMENSION_MODE_3D) {
+            em->dir_z /= len;
+            if (!isfinite(em->dir_z)) em->dir_z = 0.0f;
+        } else {
+            em->dir_z = 0.0f;
+        }
     }
 }
 
@@ -375,29 +398,31 @@ int emitter_index_for_import(const SceneEditorState *state, int import_index) {
     return -1;
 }
 
-static void apply_defaults_for_type(FluidEmitter *em, FluidEmitterType type) {
+static void apply_defaults_for_type(FluidEmitter *em,
+                                    FluidEmitterType type,
+                                    FluidSceneDimensionMode dimension_mode) {
     if (!em) return;
     em->type = type;
     switch (type) {
     case EMITTER_DENSITY_SOURCE:
         em->radius = 0.08f;
         em->strength = 8.0f;
-        em->dir_x = 0.0f; em->dir_y = -1.0f; em->dir_z = 0.0f;
+        set_default_direction_for_mode(em, dimension_mode);
         break;
     case EMITTER_VELOCITY_JET:
         em->radius = 0.08f;
         em->strength = 40.0f;
-        em->dir_x = 0.0f; em->dir_y = -1.0f; em->dir_z = 0.0f;
+        set_default_direction_for_mode(em, dimension_mode);
         break;
     case EMITTER_SINK:
         em->radius = 0.08f;
         em->strength = 25.0f;
-        em->dir_x = 0.0f; em->dir_y = -1.0f; em->dir_z = 0.0f;
+        set_default_direction_for_mode(em, dimension_mode);
         break;
     default:
         break;
     }
-    normalize_direction(em);
+    normalize_direction(em, dimension_mode);
     if (em->attached_object < 0) em->attached_object = -1;
     if (em->attached_import < 0) em->attached_import = -1;
 }
@@ -416,7 +441,7 @@ void sync_emitter_to_object(SceneEditorState *state, int obj_index) {
     state->emitter_object_map[em_idx] = obj_index;
     state->emitter_import_map[em_idx] = -1;
     // Keep direction normalized in case callers mutated it.
-    normalize_direction(em);
+    normalize_direction(em, state->working.dimension_mode);
     // Also keep the emitter's position in range.
     em->position_x = clamp01(em->position_x);
     em->position_y = clamp01(em->position_y);
@@ -453,7 +478,7 @@ int ensure_emitter_for_object(SceneEditorState *state,
             set_dirty(state);
             return -1;
         }
-        apply_defaults_for_type(em, type);
+        apply_defaults_for_type(em, type, state->working.dimension_mode);
         state->emitter_object_map[existing] = obj_index;
         state->emitter_import_map[existing] = -1;
         em->attached_object = obj_index;
@@ -471,12 +496,12 @@ int ensure_emitter_for_object(SceneEditorState *state,
         .position_z = obj->position_z,
         .radius = fmaxf(obj->size_x, obj->size_y),
         .dir_x = 0.0f,
-        .dir_y = -1.0f,
+        .dir_y = 0.0f,
         .dir_z = 0.0f,
         .attached_object = obj_index,
         .attached_import = -1
     };
-    apply_defaults_for_type(&emitter, type);
+    apply_defaults_for_type(&emitter, type, state->working.dimension_mode);
     state->working.emitters[state->working.emitter_count] = emitter;
     state->emitter_object_map[state->working.emitter_count] = obj_index;
     state->emitter_import_map[state->working.emitter_count] = -1;
@@ -499,7 +524,7 @@ int ensure_emitter_for_import(SceneEditorState *state,
             set_dirty(state);
             return -1;
         }
-        apply_defaults_for_type(em, type);
+        apply_defaults_for_type(em, type, state->working.dimension_mode);
         state->emitter_import_map[existing] = import_index;
         state->emitter_object_map[existing] = -1;
         em->attached_import = import_index;
@@ -517,12 +542,12 @@ int ensure_emitter_for_import(SceneEditorState *state,
         .position_z = imp->position_z,
         .radius = import_max_extent_norm(state, import_index),
         .dir_x = 0.0f,
-        .dir_y = -1.0f,
+        .dir_y = 0.0f,
         .dir_z = 0.0f,
         .attached_object = -1,
         .attached_import = import_index
     };
-    apply_defaults_for_type(&emitter, type);
+    apply_defaults_for_type(&emitter, type, state->working.dimension_mode);
     state->working.emitters[state->working.emitter_count] = emitter;
     state->emitter_import_map[state->working.emitter_count] = import_index;
     state->emitter_object_map[state->working.emitter_count] = -1;
@@ -542,29 +567,19 @@ void add_emitter(SceneEditorState *state, FluidEmitterType type) {
         .position_z = 0.0f,
         .radius = 0.08f,
         .dir_x = 0.0f,
-        .dir_y = -1.0f,
+        .dir_y = 0.0f,
         .dir_z = 0.0f,
         .attached_object = -1,
         .attached_import = -1
     };
-    switch (type) {
-    case EMITTER_DENSITY_SOURCE:
-        emitter.strength = 8.0f;
-        break;
-    case EMITTER_VELOCITY_JET:
-        emitter.strength = 40.0f;
-        break;
-    case EMITTER_SINK:
-        emitter.strength = 25.0f;
-        break;
-    }
+    apply_defaults_for_type(&emitter, type, state->working.dimension_mode);
     state->working.emitters[state->working.emitter_count] = emitter;
     state->emitter_object_map[state->working.emitter_count] = -1;
     state->emitter_import_map[state->working.emitter_count] = -1;
     {
         int selected_emitter = (int)state->working.emitter_count;
         state->working.emitter_count++;
-        normalize_direction(&state->working.emitters[selected_emitter]);
+        normalize_direction(&state->working.emitters[selected_emitter], state->working.dimension_mode);
         scene_editor_select_emitter(state, selected_emitter, -1, -1);
     }
     set_dirty(state);

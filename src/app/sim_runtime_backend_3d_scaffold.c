@@ -6,6 +6,7 @@
 #include "app/sim_runtime_3d_solver.h"
 #include "app/sim_runtime_obstacle.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,7 +28,93 @@ static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
     sim_runtime_3d_volume_clear(&state->volume);
     sim_runtime_3d_solver_scratch_clear(&state->solver_scratch);
     backend_3d_scaffold_reset_obstacles(state);
+    state->emitter_step_emitters_applied = 0;
+    state->emitter_step_free_emitters_applied = 0;
+    state->emitter_step_attached_emitters_applied = 0;
+    state->emitter_step_affected_cells = 0;
+    state->emitter_step_last_footprint_cells = 0;
+    state->emitter_step_density_delta = 0.0f;
+    state->emitter_step_velocity_magnitude_delta = 0.0f;
+    state->debug_volume_stats_dirty = true;
+    state->debug_volume_active_density_cells = 0;
+    state->debug_volume_solid_cells = 0;
+    state->debug_volume_max_density = 0.0f;
+    state->debug_volume_max_velocity_magnitude = 0.0f;
+    state->debug_volume_scene_up_velocity_valid = false;
+    state->debug_volume_scene_up_velocity_avg = 0.0f;
+    state->debug_volume_scene_up_velocity_peak = 0.0f;
     state->fluid_slice_dirty = true;
+}
+
+static void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DScaffold *state) {
+    const float density_threshold = 0.0001f;
+    float axis_x = 0.0f;
+    float axis_y = 0.0f;
+    float axis_z = 0.0f;
+    float axis_len = 0.0f;
+    double scene_up_velocity_weighted_sum = 0.0;
+    double scene_up_density_weight = 0.0;
+    if (!state) return;
+    if (!state->debug_volume_stats_dirty) return;
+
+    state->debug_volume_active_density_cells = 0;
+    state->debug_volume_solid_cells = 0;
+    state->debug_volume_max_density = 0.0f;
+    state->debug_volume_max_velocity_magnitude = 0.0f;
+    state->debug_volume_scene_up_velocity_valid = false;
+    state->debug_volume_scene_up_velocity_avg = 0.0f;
+    state->debug_volume_scene_up_velocity_peak = 0.0f;
+
+    if (state->scene_up_valid) {
+        axis_x = state->scene_up_x;
+        axis_y = state->scene_up_y;
+        axis_z = state->scene_up_z;
+        axis_len = sqrtf(axis_x * axis_x + axis_y * axis_y + axis_z * axis_z);
+        if (axis_len > 0.0001f) {
+            axis_x /= axis_len;
+            axis_y /= axis_len;
+            axis_z /= axis_len;
+            state->debug_volume_scene_up_velocity_valid = true;
+        }
+    }
+
+    for (size_t i = 0; i < state->volume.desc.cell_count; ++i) {
+        float density = state->volume.density[i];
+        float velocity_x = state->volume.velocity_x[i];
+        float velocity_y = state->volume.velocity_y[i];
+        float velocity_z = state->volume.velocity_z[i];
+        float speed = sqrtf(velocity_x * velocity_x +
+                            velocity_y * velocity_y +
+                            velocity_z * velocity_z);
+        if (state->obstacle_occupancy[i]) {
+            state->debug_volume_solid_cells++;
+        }
+        if (density > state->debug_volume_max_density) {
+            state->debug_volume_max_density = density;
+        }
+        if (speed > state->debug_volume_max_velocity_magnitude) {
+            state->debug_volume_max_velocity_magnitude = speed;
+        }
+        if (density > density_threshold) {
+            state->debug_volume_active_density_cells++;
+            if (state->debug_volume_scene_up_velocity_valid) {
+                float scene_up_velocity = velocity_x * axis_x +
+                                          velocity_y * axis_y +
+                                          velocity_z * axis_z;
+                scene_up_velocity_weighted_sum += (double)scene_up_velocity * (double)density;
+                scene_up_density_weight += (double)density;
+                if (scene_up_velocity > state->debug_volume_scene_up_velocity_peak) {
+                    state->debug_volume_scene_up_velocity_peak = scene_up_velocity;
+                }
+            }
+        }
+    }
+
+    if (state->debug_volume_scene_up_velocity_valid && scene_up_density_weight > 0.0) {
+        state->debug_volume_scene_up_velocity_avg =
+            (float)(scene_up_velocity_weighted_sum / scene_up_density_weight);
+    }
+    state->debug_volume_stats_dirty = false;
 }
 
 static bool backend_3d_scaffold_sync_fluid_slice(SimRuntimeBackend3DScaffold *state) {
@@ -183,6 +270,7 @@ static bool backend_3d_scaffold_apply_brush_sample(SimRuntimeBackend *backend,
         break;
     }
 
+    state->debug_volume_stats_dirty = true;
     state->fluid_slice_dirty = true;
     return true;
 }
@@ -210,17 +298,26 @@ static void backend_3d_scaffold_step(SimRuntimeBackend *backend,
                                      const AppConfig *cfg,
                                      double dt) {
     SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
+    SimRuntime3DForceAxis scene_up_axis = {0};
     if (state && state->obstacle_volume_dirty) {
         backend_3d_scaffold_build_obstacles(backend, scene);
     }
     if (!state || !cfg || dt <= 0.0) return;
+    if (state->scene_up_valid) {
+        scene_up_axis.valid = true;
+        scene_up_axis.x = state->scene_up_x;
+        scene_up_axis.y = state->scene_up_y;
+        scene_up_axis.z = state->scene_up_z;
+    }
     if (!sim_runtime_3d_solver_step_first_pass(&state->volume,
                                                &state->solver_scratch,
                                                state->obstacle_occupancy,
+                                               &scene_up_axis,
                                                cfg,
                                                dt)) {
         return;
     }
+    state->debug_volume_stats_dirty = true;
     state->fluid_slice_dirty = true;
 }
 
@@ -243,6 +340,7 @@ static void backend_3d_scaffold_seed_uniform_velocity_2d(SimRuntimeBackend *back
         state->volume.velocity_x[i] = velocity_x;
         state->volume.velocity_y[i] = velocity_y;
     }
+    state->debug_volume_stats_dirty = true;
     state->fluid_slice_dirty = true;
 }
 
@@ -276,12 +374,76 @@ static bool backend_3d_scaffold_get_fluid_view_2d(const SimRuntimeBackend *backe
     return true;
 }
 
+static bool backend_3d_scaffold_get_debug_volume_view_3d(const SimRuntimeBackend *backend,
+                                                         SceneDebugVolumeView3D *out_view) {
+    SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state((SimRuntimeBackend *)backend);
+    const SimRuntime3DDomainDesc *desc = NULL;
+    if (!state || !out_view) return false;
+    desc = &state->volume.desc;
+    if (state->obstacle_volume_dirty) {
+        backend_3d_scaffold_build_obstacles((SimRuntimeBackend *)backend, NULL);
+    }
+    backend_3d_scaffold_update_debug_volume_stats(state);
+    *out_view = (SceneDebugVolumeView3D){
+        .width = desc->grid_w,
+        .height = desc->grid_h,
+        .depth = desc->grid_d,
+        .cell_count = desc->cell_count,
+        .world_min_x = desc->world_min_x,
+        .world_min_y = desc->world_min_y,
+        .world_min_z = desc->world_min_z,
+        .world_max_x = desc->world_max_x,
+        .world_max_y = desc->world_max_y,
+        .world_max_z = desc->world_max_z,
+        .voxel_size = desc->voxel_size,
+        .density = state->volume.density,
+        .solid_mask = state->obstacle_occupancy,
+    };
+    return true;
+}
+
+static bool backend_3d_scaffold_get_volume_export_view_3d(const SimRuntimeBackend *backend,
+                                                          SceneFluidVolumeExportView3D *out_view) {
+    SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state((SimRuntimeBackend *)backend);
+    const SimRuntime3DDomainDesc *desc = NULL;
+    if (!state || !out_view) return false;
+    desc = &state->volume.desc;
+    if (state->obstacle_volume_dirty) {
+        backend_3d_scaffold_build_obstacles((SimRuntimeBackend *)backend, NULL);
+    }
+    *out_view = (SceneFluidVolumeExportView3D){
+        .width = desc->grid_w,
+        .height = desc->grid_h,
+        .depth = desc->grid_d,
+        .cell_count = desc->cell_count,
+        .origin_x = desc->world_min_x,
+        .origin_y = desc->world_min_y,
+        .origin_z = desc->world_min_z,
+        .voxel_size = desc->voxel_size,
+        .scene_up_valid = state->scene_up_valid,
+        .scene_up_x = state->scene_up_x,
+        .scene_up_y = state->scene_up_y,
+        .scene_up_z = state->scene_up_z,
+        .density = state->volume.density,
+        .velocity_x = state->volume.velocity_x,
+        .velocity_y = state->volume.velocity_y,
+        .velocity_z = state->volume.velocity_z,
+        .pressure = state->volume.pressure,
+        .solid_mask = state->obstacle_occupancy,
+    };
+    return true;
+}
+
 static bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
                                            SimRuntimeBackendReport *out_report) {
     const SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state_const(backend);
     const SimRuntime3DDomainDesc *desc = NULL;
     if (!state || !out_report) return false;
     desc = &state->volume.desc;
+    if (state->obstacle_volume_dirty) {
+        backend_3d_scaffold_build_obstacles((SimRuntimeBackend *)backend, NULL);
+    }
+    backend_3d_scaffold_update_debug_volume_stats((SimRuntimeBackend3DScaffold *)state);
 
     *out_report = (SimRuntimeBackendReport){
         .kind = SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD,
@@ -301,11 +463,31 @@ static bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
         .world_max_y = desc->world_max_y,
         .world_max_z = desc->world_max_z,
         .voxel_size = desc->voxel_size,
+        .scene_up_valid = state->scene_up_valid,
+        .scene_up_x = state->scene_up_x,
+        .scene_up_y = state->scene_up_y,
+        .scene_up_z = state->scene_up_z,
+        .scene_up_source = state->scene_up_source,
         .compatibility_view_2d_available = true,
         .compatibility_view_2d_derived = true,
         .compatibility_slice_z = state->compatibility_slice_z,
         .secondary_debug_slice_stack_live = true,
         .secondary_debug_slice_stack_radius = 2,
+        .debug_volume_view_3d_available = true,
+        .debug_volume_active_density_cells = state->debug_volume_active_density_cells,
+        .debug_volume_solid_cells = state->debug_volume_solid_cells,
+        .debug_volume_max_density = state->debug_volume_max_density,
+        .debug_volume_max_velocity_magnitude = state->debug_volume_max_velocity_magnitude,
+        .debug_volume_scene_up_velocity_valid = state->debug_volume_scene_up_velocity_valid,
+        .debug_volume_scene_up_velocity_avg = state->debug_volume_scene_up_velocity_avg,
+        .debug_volume_scene_up_velocity_peak = state->debug_volume_scene_up_velocity_peak,
+        .emitter_step_emitters_applied = state->emitter_step_emitters_applied,
+        .emitter_step_free_emitters_applied = state->emitter_step_free_emitters_applied,
+        .emitter_step_attached_emitters_applied = state->emitter_step_attached_emitters_applied,
+        .emitter_step_affected_cells = state->emitter_step_affected_cells,
+        .emitter_step_last_footprint_cells = state->emitter_step_last_footprint_cells,
+        .emitter_step_density_delta = state->emitter_step_density_delta,
+        .emitter_step_velocity_magnitude_delta = state->emitter_step_velocity_magnitude_delta,
     };
     return true;
 }
@@ -362,6 +544,8 @@ static const SimRuntimeBackendOps g_backend_3d_scaffold_ops = {
     .export_snapshot = backend_3d_scaffold_export_snapshot,
     .get_fluid_view_2d = backend_3d_scaffold_get_fluid_view_2d,
     .get_obstacle_view_2d = backend_3d_scaffold_get_obstacle_view_2d,
+    .get_debug_volume_view_3d = backend_3d_scaffold_get_debug_volume_view_3d,
+    .get_volume_export_view_3d = backend_3d_scaffold_get_volume_export_view_3d,
     .get_report = backend_3d_scaffold_get_report,
     .get_compatibility_slice_activity = backend_3d_scaffold_get_compatibility_slice_activity,
     .step_compatibility_slice = backend_3d_scaffold_step_compatibility_slice,
@@ -400,6 +584,15 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
     }
 
     sim_runtime_obstacle_contract_default(&state->obstacle_contract);
+    if (runtime_visual && runtime_visual->scene_up.valid) {
+        state->scene_up_valid = true;
+        state->scene_up_x = (float)runtime_visual->scene_up.direction.x;
+        state->scene_up_y = (float)runtime_visual->scene_up.direction.y;
+        state->scene_up_z = (float)runtime_visual->scene_up.direction.z;
+        state->scene_up_source = runtime_visual->scene_up.source;
+    } else {
+        state->scene_up_source = PHYSICS_SIM_RUNTIME_SCENE_UP_NONE;
+    }
     slice_cells = desc.slice_cell_count;
     state->compatibility_slice_z = desc.grid_d / 2;
     state->fluid_slice_dirty = true;

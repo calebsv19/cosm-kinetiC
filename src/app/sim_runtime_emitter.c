@@ -1,4 +1,5 @@
 #include "app/sim_runtime_emitter.h"
+#include "app/sim_runtime_3d_space.h"
 
 #include <math.h>
 #include <string.h>
@@ -51,7 +52,7 @@ bool sim_runtime_emitter_resolve(const FluidScenePreset *preset,
     resolved.type = emitter->type;
     resolved.position_x = clamp_unit(emitter->position_x);
     resolved.position_y = clamp_unit(emitter->position_y);
-    resolved.position_z = clamp_unit(emitter->position_z);
+    resolved.position_z = emitter->position_z;
     resolved.radius = emitter->radius > 0.0f ? emitter->radius : 0.0f;
     resolved.strength = emitter->strength;
     resolved.dir_x = emitter->dir_x;
@@ -94,9 +95,10 @@ bool sim_runtime_emitter_resolve_3d_placement(const SimRuntime3DDomainDesc *doma
     placement.center_y = clamp_int_value((int)lroundf(resolved->position_y * (float)(domain->grid_h - 1)),
                                          0,
                                          domain->grid_h - 1);
-    placement.center_z = clamp_int_value((int)lroundf(resolved->position_z * (float)(domain->grid_d - 1)),
-                                         0,
-                                         domain->grid_d - 1);
+    placement.center_z = sim_runtime_3d_space_world_to_grid_axis(resolved->position_z,
+                                                                 domain->world_min_z,
+                                                                 domain->voxel_size,
+                                                                 domain->grid_d);
 
     max_axis_cells = max3_int(domain->grid_w, domain->grid_h, domain->grid_d);
     placement.radius_cells = (int)ceilf(resolved->radius * (float)max_axis_cells);

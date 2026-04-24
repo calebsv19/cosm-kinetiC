@@ -11,6 +11,10 @@
 #include "command/command_bus.h"
 #include "app/scene_state.h"
 #include "app/scene_presets.h"
+#include "app/scene_runtime_launch_projection.h"
+#include "app/scene_loop_diag.h"
+#include "app/scene_loop_policy.h"
+#include "app/scene_controller_util.h"
 #include "app/sim_mode.h"
 #include "app/sim_runtime_backend.h"
 #include "app/quality_profiles.h"
@@ -120,6 +124,8 @@ static void scene_controller_runtime_key_down(void *user,
         (void)retained_runtime_scene_overlay_frame_view(scene,
                                                         scene->config ? scene->config->window_w : 1,
                                                         scene->config ? scene->config->window_h : 1);
+    } else if (key == SDLK_t) {
+        (void)scene_runtime_toggle_slice_overlay(scene);
     } else if (key == SDLK_LEFTBRACKET) {
         (void)scene_backend_step_compatibility_slice(scene, -1);
     } else if (key == SDLK_RIGHTBRACKET) {
@@ -144,29 +150,6 @@ static void scene_controller_runtime_key_up(void *user,
 static const double DEFAULT_SAMPLE_RATE = 240.0;
 static const float  DEFAULT_SAMPLE_SPACING = 3.0f;
 static const size_t MAX_SAMPLES_PER_FRAME = 512;
-
-static bool scene_controller_env_flag_enabled(const char *name) {
-    if (!name) {
-        return false;
-    }
-    const char *value = getenv(name);
-    if (!value || !value[0]) {
-        return false;
-    }
-    return strcmp(value, "1") == 0 ||
-           strcmp(value, "true") == 0 ||
-           strcmp(value, "TRUE") == 0 ||
-           strcmp(value, "yes") == 0 ||
-           strcmp(value, "on") == 0;
-}
-
-static bool scene_controller_rs1_diag_enabled(void) {
-    return scene_controller_env_flag_enabled("PHYSICS_SIM_RS1_DIAG");
-}
-
-static bool scene_controller_ir1_diag_enabled(void) {
-    return scene_controller_env_flag_enabled("PHYSICS_SIM_IR1_DIAG");
-}
 
 static bool handle_scene_command(const Command *cmd, void *user_data) {
     CommandDispatchContext *ctx = (CommandDispatchContext *)user_data;
@@ -317,20 +300,23 @@ static void stroke_sampler_apply(StrokeSampler *sampler,
     }
 }
 
-static uint32_t scene_controller_count_bool(bool value) {
-    return value ? 1u : 0u;
-}
-
 static void scene_controller_input_intake_phase(InputContextManager *ctx_mgr,
                                                 CommandBus *bus,
                                                 bool ignore_input,
+                                                int wait_timeout_ms,
                                                 SceneControllerInputEventRaw *out_raw) {
     if (!out_raw) {
         return;
     }
     memset(out_raw, 0, sizeof(*out_raw));
     out_raw->ignore_input_active = ignore_input;
-    out_raw->polled = input_poll_events(&out_raw->commands, bus, ctx_mgr);
+    out_raw->polled = input_poll_events_with_wait(&out_raw->commands,
+                                                  bus,
+                                                  ctx_mgr,
+                                                  wait_timeout_ms,
+                                                  &out_raw->wait_blocked_ms,
+                                                  &out_raw->wait_call_count,
+                                                  NULL);
     out_raw->quit_requested = out_raw->commands.quit;
     out_raw->running_after_poll = ignore_input ? true : out_raw->polled;
     out_raw->valid = true;
@@ -419,10 +405,15 @@ static void scene_controller_input_invalidate_phase(
 static SceneControllerInputFrame scene_controller_input_phase(InputContextManager *ctx_mgr,
                                                               CommandBus *bus,
                                                               bool ignore_input,
-                                                              bool headless_mode) {
+                                                              bool headless_mode,
+                                                              int wait_timeout_ms) {
     SceneControllerInputFrame frame = {0};
     frame.valid = true;
-    scene_controller_input_intake_phase(ctx_mgr, bus, ignore_input, &frame.raw);
+    scene_controller_input_intake_phase(ctx_mgr,
+                                        bus,
+                                        ignore_input,
+                                        wait_timeout_ms,
+                                        &frame.raw);
     scene_controller_input_normalize_phase(&frame.raw, &frame.normalized);
     scene_controller_input_route_phase(&frame.normalized, &frame.route);
     scene_controller_input_invalidate_phase(&frame, &frame.invalidation);
@@ -538,7 +529,6 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
                 }
                 scene_rasterize_dynamic_obstacles(scene);
                 sim_runtime_backend_inject_object_motion(scene->backend, scene);
-                scene_backend_mark_obstacles_dirty(scene);
                 scene->time += sub_dt;
             }
         }
@@ -573,8 +563,6 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
     SceneControllerRenderDeriveFrame frame = {0};
     const char *quality_label = NULL;
     SimRuntimeBackendReport backend_report = {0};
-    SceneFluidFieldView2D fluid_view = {0};
-    SceneObstacleFieldView2D obstacle_view = {0};
     bool compatibility_slice_has_activity = false;
     bool compatibility_slice_has_obstacles = false;
 
@@ -585,24 +573,11 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
     quality_label = quality_profile_name(cfg->quality_index);
     (void)scene_backend_report(scene, &backend_report);
     if (backend_report.compatibility_view_2d_available &&
-        scene_backend_fluid_view_2d(scene, &fluid_view) &&
-        fluid_view.density) {
-        for (size_t i = 0; i < fluid_view.cell_count; ++i) {
-            if (fluid_view.density[i] > 0.0001f) {
-                compatibility_slice_has_activity = true;
-                break;
-            }
-        }
-    }
-    if (backend_report.compatibility_view_2d_available &&
-        scene_backend_obstacle_view_2d(scene, &obstacle_view) &&
-        obstacle_view.solid_mask) {
-        for (size_t i = 0; i < obstacle_view.cell_count; ++i) {
-            if (obstacle_view.solid_mask[i]) {
-                compatibility_slice_has_obstacles = true;
-                break;
-            }
-        }
+        scene_backend_compatibility_slice_activity(scene,
+                                                   backend_report.compatibility_slice_z,
+                                                   &compatibility_slice_has_activity,
+                                                   &compatibility_slice_has_obstacles)) {
+        /* Backend-owned slice activity avoids duplicate per-frame scans in the render derive lane. */
     }
     frame.valid = true;
     frame.headless_mode = headless_mode;
@@ -642,6 +617,11 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .backend_world_max_y = backend_report.world_max_y,
         .backend_world_max_z = backend_report.world_max_z,
         .backend_voxel_size = backend_report.voxel_size,
+        .backend_scene_up_valid = backend_report.scene_up_valid,
+        .backend_scene_up_x = backend_report.scene_up_x,
+        .backend_scene_up_y = backend_report.scene_up_y,
+        .backend_scene_up_z = backend_report.scene_up_z,
+        .backend_scene_up_source = backend_report.scene_up_source,
         .backend_compatibility_view_2d_available = backend_report.compatibility_view_2d_available,
         .backend_compatibility_view_2d_derived = backend_report.compatibility_view_2d_derived,
         .backend_compatibility_slice_z = backend_report.compatibility_slice_z,
@@ -649,6 +629,21 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .backend_compatibility_slice_has_obstacles = compatibility_slice_has_obstacles,
         .backend_secondary_debug_slice_stack_live = backend_report.secondary_debug_slice_stack_live,
         .backend_secondary_debug_slice_stack_radius = backend_report.secondary_debug_slice_stack_radius,
+        .backend_debug_volume_view_3d_available = backend_report.debug_volume_view_3d_available,
+        .backend_debug_volume_active_density_cells = backend_report.debug_volume_active_density_cells,
+        .backend_debug_volume_solid_cells = backend_report.debug_volume_solid_cells,
+        .backend_debug_volume_max_density = backend_report.debug_volume_max_density,
+        .backend_debug_volume_max_velocity_magnitude = backend_report.debug_volume_max_velocity_magnitude,
+        .backend_debug_volume_scene_up_velocity_valid = backend_report.debug_volume_scene_up_velocity_valid,
+        .backend_debug_volume_scene_up_velocity_avg = backend_report.debug_volume_scene_up_velocity_avg,
+        .backend_debug_volume_scene_up_velocity_peak = backend_report.debug_volume_scene_up_velocity_peak,
+        .backend_emitter_step_emitters_applied = backend_report.emitter_step_emitters_applied,
+        .backend_emitter_step_free_emitters_applied = backend_report.emitter_step_free_emitters_applied,
+        .backend_emitter_step_attached_emitters_applied = backend_report.emitter_step_attached_emitters_applied,
+        .backend_emitter_step_affected_cells = backend_report.emitter_step_affected_cells,
+        .backend_emitter_step_last_footprint_cells = backend_report.emitter_step_last_footprint_cells,
+        .backend_emitter_step_density_delta = backend_report.emitter_step_density_delta,
+        .backend_emitter_step_velocity_magnitude_delta = backend_report.emitter_step_velocity_magnitude_delta,
         .tunnel_inflow_speed = cfg->tunnel_inflow_speed,
         .vorticity_enabled = renderer_sdl_vorticity_enabled(),
         .pressure_enabled = renderer_sdl_pressure_enabled(),
@@ -667,6 +662,7 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .kit_viz_particles_active = renderer_sdl_particles_using_kit_viz(),
         .objects_gravity_enabled = scene->objects_gravity_enabled,
         .retained_runtime_visual_active = scene_controller_retained_runtime_view_active(scene),
+        .retained_runtime_slice_overlay_enabled = scene_runtime_slice_overlay_enabled(scene),
         .quality_name = quality_label ? quality_label : "Custom",
         .solver_iterations = cfg->fluid_solver_iterations,
         .physics_substeps = cfg->physics_substeps
@@ -739,8 +735,27 @@ int scene_controller_run(const AppConfig *initial_cfg,
     AppConfig cfg = *initial_cfg;
     const FluidScenePreset *preset_fallback = preset ? preset : scene_presets_get_default();
     FluidScenePreset runtime_preset = preset_fallback ? *preset_fallback : (FluidScenePreset){0};
-    SimModeRoute mode_route = sim_mode_resolve_route(cfg.sim_mode, cfg.space_mode);
-    const SimModeHooks *mode_hooks = mode_route.hooks;
+    SimModeRoute mode_route = {0};
+    const SimModeHooks *mode_hooks = NULL;
+    char runtime_scene_diagnostics[256];
+    if (runtime_launch &&
+        runtime_launch->has_retained_scene &&
+        runtime_launch->retained_runtime_scene_path[0] &&
+        cfg.space_mode == SPACE_MODE_3D) {
+        if (!scene_runtime_launch_apply_retained_projection(runtime_launch,
+                                                            &cfg,
+                                                            &runtime_preset,
+                                                            runtime_scene_diagnostics,
+                                                            sizeof(runtime_scene_diagnostics))) {
+            fprintf(stderr,
+                    "[scene] Retained runtime launch projection failed: %s\n",
+                    runtime_scene_diagnostics[0] ? runtime_scene_diagnostics
+                                                 : "unknown projection failure");
+            return 1;
+        }
+    }
+    mode_route = sim_mode_resolve_route(cfg.sim_mode, cfg.space_mode);
+    mode_hooks = mode_route.hooks;
     if (mode_hooks && mode_hooks->configure_app) {
         mode_hooks->configure_app(&cfg, &runtime_preset);
     }
@@ -806,15 +821,30 @@ int scene_controller_run(const AppConfig *initial_cfg,
     int interactive_frame_limit = (!headless_mode && cfg.headless_frame_count > 0)
                                       ? cfg.headless_frame_count
                                       : 0;
+    uint64_t perf_freq = SDL_GetPerformanceFrequency();
     SceneControllerRs1DiagTotals rs1_diag_totals = {0};
     SceneControllerIr1DiagTotals ir1_diag_totals = {0};
     while (running) {
+        uint64_t loop_wall_begin = SDL_GetPerformanceCounter();
         ts_frame_start();
         ts_start_timer("frame");
 
         bool ignore_input = headless_mode && headless->ignore_input;
+        SceneLoopWaitPolicyInput wait_policy = {
+            .headless_mode = headless_mode,
+            .simulation_active = !scene.paused,
+            .interaction_active = scene_controller_runtime_interaction_active(&scene),
+            .background_busy = command_bus_count(&bus) > 0u ||
+                               stroke_buffer_count(&sampler.buffer) > 0u,
+            .resize_pending = false
+        };
+        int wait_timeout_ms = scene_loop_compute_wait_timeout_ms(&wait_policy);
         SceneControllerInputFrame input_frame =
-            scene_controller_input_phase(&ctx_mgr, &bus, ignore_input, headless_mode);
+            scene_controller_input_phase(&ctx_mgr,
+                                         &bus,
+                                         ignore_input,
+                                         headless_mode,
+                                         wait_timeout_ms);
         running = input_frame.running;
         if (input_frame.aborted) {
             aborted = true;
@@ -877,7 +907,6 @@ int scene_controller_run(const AppConfig *initial_cfg,
         uint64_t submit_end = SDL_GetPerformanceCounter();
 
         {
-            uint64_t perf_freq = SDL_GetPerformanceFrequency();
             uint64_t derive_ns = 0;
             uint64_t submit_ns = 0;
             if (perf_freq > 0) {
@@ -905,6 +934,17 @@ int scene_controller_run(const AppConfig *initial_cfg,
             }
         }
 
+        {
+            uint64_t loop_wall_end = SDL_GetPerformanceCounter();
+            double frame_elapsed_sec = 0.0;
+            if (perf_freq > 0 && loop_wall_end >= loop_wall_begin) {
+                frame_elapsed_sec = (double)(loop_wall_end - loop_wall_begin) /
+                                    (double)perf_freq;
+            }
+            scene_loop_diag_tick(frame_elapsed_sec,
+                                 input_frame.raw.wait_blocked_ms,
+                                 input_frame.raw.wait_call_count);
+        }
 
         frame_index++;
         if (headless_mode && headless->frame_limit > 0 &&

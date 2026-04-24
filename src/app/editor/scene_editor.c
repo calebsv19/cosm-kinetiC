@@ -5,67 +5,46 @@
 #include "app/editor/scene_editor_model.h"
 #include "app/editor/scene_editor_panel.h"
 #include "app/editor/scene_editor_precision.h"
-#include "app/menu/shared_theme_font_adapter.h"
 #include "app/sim_mode.h"
 #include "app/data_paths.h"
 
 #include "config/config_loader.h"
-#include "font_paths.h"
 #include "input/input.h"
+#include "render/font_bridge.h"
 #include "render/text_upload_policy.h"
 #include <stdio.h>
 
 #include "vk_renderer.h"
 
-static int editor_scaled_font_size(const AppConfig *cfg,
-                                   int base_point_size,
-                                   int min_point_size) {
-    return app_config_scale_text_point_size(cfg, base_point_size, min_point_size);
-}
-
 static TTF_Font *editor_open_body_font(const AppConfig *cfg, SDL_Renderer *renderer) {
-    char shared_path[256];
-    int shared_size = 22;
-    if (physics_sim_shared_font_resolve_menu_body(shared_path, sizeof(shared_path), &shared_size)) {
-        shared_size = editor_scaled_font_size(cfg, shared_size, 6);
-        shared_size = physics_sim_text_raster_point_size(renderer, shared_size, 6);
-        return TTF_OpenFont(shared_path, shared_size);
-    }
-    shared_size = editor_scaled_font_size(cfg, 22, 6);
-    shared_size = physics_sim_text_raster_point_size(renderer, shared_size, 6);
-    {
-        TTF_Font *font = TTF_OpenFont(FONT_BODY_PATH_1, shared_size);
-        if (font) return font;
-    }
-    return TTF_OpenFont(FONT_BODY_PATH_2, shared_size);
+    TTF_Font *font = NULL;
+    (void)physics_sim_font_bridge_open(renderer,
+                                       cfg,
+                                       PHYSICS_SIM_FONT_SLOT_MENU_BODY,
+                                       &font,
+                                       NULL);
+    return font;
 }
 
 static TTF_Font *editor_open_small_font(const AppConfig *cfg, SDL_Renderer *renderer) {
-    char shared_path[256];
-    int shared_size = 18;
-    if (physics_sim_shared_font_resolve_menu_small(shared_path, sizeof(shared_path), &shared_size)) {
-        shared_size = editor_scaled_font_size(cfg, shared_size, 6);
-        shared_size = physics_sim_text_raster_point_size(renderer, shared_size, 6);
-        return TTF_OpenFont(shared_path, shared_size);
-    }
-    shared_size = editor_scaled_font_size(cfg, 18, 6);
-    shared_size = physics_sim_text_raster_point_size(renderer, shared_size, 6);
-    {
-        TTF_Font *font = TTF_OpenFont(FONT_BODY_PATH_1, shared_size);
-        if (font) return font;
-    }
-    return TTF_OpenFont(FONT_BODY_PATH_2, shared_size);
+    TTF_Font *font = NULL;
+    (void)physics_sim_font_bridge_open(renderer,
+                                       cfg,
+                                       PHYSICS_SIM_FONT_SLOT_MENU_SMALL,
+                                       &font,
+                                       NULL);
+    return font;
 }
 
 static void editor_close_owned_fonts(SceneEditorState *state) {
     if (!state) return;
     if (state->owns_font_main && state->font_main) {
-        TTF_CloseFont(state->font_main);
+        physics_sim_font_bridge_close(&state->font_main);
         state->font_main = NULL;
         state->owns_font_main = false;
     }
     if (state->owns_font_small && state->font_small) {
-        TTF_CloseFont(state->font_small);
+        physics_sim_font_bridge_close(&state->font_small);
         state->font_small = NULL;
         state->owns_font_small = false;
     }
@@ -78,8 +57,8 @@ static bool editor_reload_fonts(SceneEditorState *state) {
     new_main = editor_open_body_font(&state->cfg, state->renderer);
     new_small = editor_open_small_font(&state->cfg, state->renderer);
     if (!new_main || !new_small) {
-        if (new_main) TTF_CloseFont(new_main);
-        if (new_small) TTF_CloseFont(new_small);
+        if (new_main) physics_sim_font_bridge_close(&new_main);
+        if (new_small) physics_sim_font_bridge_close(&new_small);
         return false;
     }
     editor_close_owned_fonts(state);

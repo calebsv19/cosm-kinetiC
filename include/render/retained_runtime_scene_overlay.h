@@ -6,6 +6,7 @@
 #include "app/scene_state.h"
 
 bool retained_runtime_scene_overlay_active(const SceneState *scene);
+bool retained_runtime_scene_overlay_slice_debug_enabled(const SceneState *scene);
 bool retained_runtime_scene_overlay_frame_view(SceneState *scene,
                                                int window_w,
                                                int window_h);

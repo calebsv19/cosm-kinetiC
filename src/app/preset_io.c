@@ -36,7 +36,23 @@ static float clampf(float v, float min_v, float max_v) {
     return v;
 }
 
-static void sanitize_emitter(FluidEmitter *em) {
+static void default_emitter_direction_for_mode(FluidSceneDimensionMode mode,
+                                               float *out_x,
+                                               float *out_y,
+                                               float *out_z) {
+    if (!out_x || !out_y || !out_z) return;
+    if (mode == SCENE_DIMENSION_MODE_3D) {
+        *out_x = 0.0f;
+        *out_y = 0.0f;
+        *out_z = 1.0f;
+        return;
+    }
+    *out_x = 0.0f;
+    *out_y = -1.0f;
+    *out_z = 0.0f;
+}
+
+static void sanitize_emitter(FluidEmitter *em, FluidSceneDimensionMode dimension_mode) {
     if (!em) return;
     if (!isfinite(em->position_x)) em->position_x = 0.5f;
     if (!isfinite(em->position_y)) em->position_y = 0.5f;
@@ -56,23 +72,36 @@ static void sanitize_emitter(FluidEmitter *em) {
 
     float dx = em->dir_x;
     float dy = em->dir_y;
-    if (!isfinite(dx) || !isfinite(dy)) {
-        em->dir_x = 0.0f;
-        em->dir_y = -1.0f;
-        em->dir_z = 0.0f;
+    float dz = em->dir_z;
+    float len = 0.0f;
+    if (dimension_mode == SCENE_DIMENSION_MODE_3D) {
+        if (!isfinite(dx) || !isfinite(dy) || !isfinite(dz)) {
+            default_emitter_direction_for_mode(dimension_mode, &em->dir_x, &em->dir_y, &em->dir_z);
+            return;
+        }
+        len = sqrtf(dx * dx + dy * dy + dz * dz);
+        if (len < 1e-4f) {
+            default_emitter_direction_for_mode(dimension_mode, &em->dir_x, &em->dir_y, &em->dir_z);
+            return;
+        }
+        em->dir_x = dx / len;
+        em->dir_y = dy / len;
+        em->dir_z = dz / len;
         return;
     }
-    float len = sqrtf(dx * dx + dy * dy);
+
+    if (!isfinite(dx) || !isfinite(dy)) {
+        default_emitter_direction_for_mode(dimension_mode, &em->dir_x, &em->dir_y, &em->dir_z);
+        return;
+    }
+    len = sqrtf(dx * dx + dy * dy);
     if (len < 1e-4f) {
-        em->dir_x = 0.0f;
-        em->dir_y = -1.0f;
-        em->dir_z = 0.0f;
+        default_emitter_direction_for_mode(dimension_mode, &em->dir_x, &em->dir_y, &em->dir_z);
         return;
     }
     em->dir_x = dx / len;
     em->dir_y = dy / len;
-    if (!isfinite(em->dir_z)) em->dir_z = 0.0f;
-    em->dir_z = clampf(em->dir_z, -1.0f, 1.0f);
+    em->dir_z = 0.0f;
 }
 
 static void sanitize_preset_object(PresetObject *obj) {
@@ -268,7 +297,7 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
             slot->preset.import_shape_count = MAX_IMPORTED_SHAPES;
         }
         for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
-            sanitize_emitter(&slot->preset.emitters[e]);
+            sanitize_emitter(&slot->preset.emitters[e], slot->preset.dimension_mode);
         }
         for (size_t o = 0; o < slot->preset.object_count; ++o) {
             sanitize_preset_object(&slot->preset.objects[o]);
@@ -517,7 +546,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 emitter.dir_z = 0.0f;
             }
             emitter.type = (FluidEmitterType)type;
-            sanitize_emitter(&emitter);
+            sanitize_emitter(&emitter, dimension_mode);
             slot.preset.emitters[e] = emitter;
             slot.preset.emitter_count++;
         }

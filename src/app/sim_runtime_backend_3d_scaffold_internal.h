@@ -19,6 +19,19 @@ typedef struct SimRuntimeBackend3DScaffold {
     bool fluid_slice_dirty;
     bool obstacle_volume_dirty;
     bool obstacle_slice_dirty;
+    bool scene_up_valid;
+    float scene_up_x;
+    float scene_up_y;
+    float scene_up_z;
+    PhysicsSimRuntimeSceneUpSource scene_up_source;
+    bool debug_volume_stats_dirty;
+    size_t debug_volume_active_density_cells;
+    size_t debug_volume_solid_cells;
+    float debug_volume_max_density;
+    float debug_volume_max_velocity_magnitude;
+    bool debug_volume_scene_up_velocity_valid;
+    float debug_volume_scene_up_velocity_avg;
+    float debug_volume_scene_up_velocity_peak;
     float *slice_density;
     float *slice_velocity_x;
     float *slice_velocity_y;
@@ -28,6 +41,13 @@ typedef struct SimRuntimeBackend3DScaffold {
     float *slice_obstacle_velocity_x;
     float *slice_obstacle_velocity_y;
     float *slice_obstacle_distance;
+    size_t emitter_step_emitters_applied;
+    size_t emitter_step_free_emitters_applied;
+    size_t emitter_step_attached_emitters_applied;
+    size_t emitter_step_affected_cells;
+    size_t emitter_step_last_footprint_cells;
+    float emitter_step_density_delta;
+    float emitter_step_velocity_magnitude_delta;
 } SimRuntimeBackend3DScaffold;
 
 void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,

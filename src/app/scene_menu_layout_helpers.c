@@ -241,7 +241,7 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
 
     ctx->grid_dec_button.rect = (SDL_Rect){
         panel_x + panel_w - config_pad - icon_w * 2 - 8,
-        panel_y + config_pad + small_h + 6,
+        panel_y + config_pad + small_h + body_h + 18,
         icon_w,
         compact_h
     };
@@ -254,7 +254,7 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
 
     ctx->quality_prev_button.rect = (SDL_Rect){
         panel_x + config_pad,
-        ctx->grid_dec_button.rect.y + compact_h + section_gap,
+        ctx->grid_dec_button.rect.y + compact_h + section_gap + small_h + 4,
         icon_w,
         compact_h
     };

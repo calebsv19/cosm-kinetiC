@@ -62,20 +62,22 @@ static bool test_import_attachment_takes_source_precedence(void) {
     if (resolved.fallback_footprint != SIM_RUNTIME_EMITTER_FOOTPRINT_RADIAL_SPHERE) return false;
     if (!nearly_equal(resolved.position_x, 0.0f)) return false;
     if (!nearly_equal(resolved.position_y, 1.0f)) return false;
-    if (!nearly_equal(resolved.position_z, 1.0f)) return false;
+    if (!nearly_equal(resolved.position_z, 2.0f)) return false;
     return true;
 }
 
-static bool test_3d_placement_clamps_to_domain(void) {
+static bool test_3d_placement_maps_additive_world_z(void) {
     SimRuntime3DDomainDesc domain = {
         .grid_w = 96,
         .grid_h = 80,
         .grid_d = 52,
+        .world_min_z = -2.5f,
+        .voxel_size = 0.125f,
     };
     SimRuntimeEmitterResolved emitter = {
         .position_x = 0.98f,
         .position_y = 0.02f,
-        .position_z = 0.50f,
+        .position_z = 0.25f,
         .radius = 0.10f,
     };
     SimRuntimeEmitterPlacement3D placement = {0};
@@ -83,11 +85,11 @@ static bool test_3d_placement_clamps_to_domain(void) {
     if (!sim_runtime_emitter_resolve_3d_placement(&domain, &emitter, &placement)) return false;
     if (placement.center_x != 93) return false;
     if (placement.center_y != 2) return false;
-    if (placement.center_z != 26) return false;
+    if (placement.center_z != 22) return false;
     if (placement.radius_cells != 10) return false;
     if (placement.max_x != 95) return false;
     if (placement.min_y != 0) return false;
-    if (placement.max_z != 36) return false;
+    if (placement.max_z != 32) return false;
     return true;
 }
 
@@ -100,7 +102,7 @@ int main(void) {
         fprintf(stderr, "sim_runtime_emitter_contract_test: attachment precedence failed\n");
         return 1;
     }
-    if (!test_3d_placement_clamps_to_domain()) {
+    if (!test_3d_placement_maps_additive_world_z()) {
         fprintf(stderr, "sim_runtime_emitter_contract_test: 3d placement failed\n");
         return 1;
     }

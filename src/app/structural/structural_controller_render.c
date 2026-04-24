@@ -5,33 +5,11 @@
 #include <string.h>
 
 #include "app/structural/structural_render.h"
-#include "render/text_upload_policy.h"
-#include "vk_renderer.h"
+#include "render/text_draw.h"
 
 static void render_text(SDL_Renderer *renderer, TTF_Font *font,
                         int x, int y, SDL_Color color, const char *text) {
-    if (!renderer || !font || !text) return;
-    {
-        SDL_Surface *surface = TTF_RenderUTF8_Blended(font, text, color);
-        if (!surface) return;
-        {
-            SDL_Rect dst = {
-                x,
-                y,
-                physics_sim_text_logical_pixels(renderer, surface->w),
-                physics_sim_text_logical_pixels(renderer, surface->h)
-            };
-            VkRendererTexture texture = {0};
-            if (vk_renderer_upload_sdl_surface_with_filter((VkRenderer *)renderer,
-                                                           surface,
-                                                           &texture,
-                                                           physics_sim_text_upload_filter(renderer)) == VK_SUCCESS) {
-                vk_renderer_draw_texture((VkRenderer *)renderer, &texture, NULL, &dst);
-                vk_renderer_queue_texture_destroy((VkRenderer *)renderer, &texture);
-            }
-        }
-        SDL_FreeSurface(surface);
-    }
+    (void)physics_sim_text_draw_utf8_at(renderer, font, text, x, y, color);
 }
 
 static bool render_hud_line_limited(SDL_Renderer *renderer,

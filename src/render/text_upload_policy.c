@@ -2,7 +2,7 @@
 
 #include <math.h>
 
-static const float k_physics_sim_max_text_raster_scale = 2.5f;
+static const float k_physics_sim_max_text_raster_scale = 4.0f;
 
 float physics_sim_text_raster_scale(SDL_Renderer *renderer) {
     const VkRenderer *vk = NULL;
@@ -26,7 +26,7 @@ float physics_sim_text_raster_scale(SDL_Renderer *renderer) {
         scale_y = (float)vk->context.swapchain.extent.height / logical_h;
     }
 
-    raster_scale = (scale_x < scale_y) ? scale_x : scale_y;
+    raster_scale = (scale_x > scale_y) ? scale_x : scale_y;
     if (!isfinite(raster_scale) || raster_scale < 1.0f) {
         raster_scale = 1.0f;
     }

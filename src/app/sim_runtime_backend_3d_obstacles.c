@@ -143,6 +143,7 @@ static void backend_3d_scaffold_apply_obstacle_enforcement(SimRuntimeBackend3DSc
         state->volume.pressure[i] = 0.0f;
     }
 
+    state->debug_volume_stats_dirty = true;
     state->fluid_slice_dirty = true;
     state->obstacle_slice_dirty = true;
 }

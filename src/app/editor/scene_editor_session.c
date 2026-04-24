@@ -42,6 +42,22 @@ static float session_default_emitter_radius_for_object(const CoreSceneObjectCont
     return session_clamp_emitter_radius((float)radius);
 }
 
+static CoreObjectVec3 session_default_emitter_direction_for_object(const CoreSceneObjectContract *object) {
+    CoreObjectVec3 direction = {0.0, 0.0, 1.0};
+    if (!object) return direction;
+    if (object->has_plane_primitive) {
+        direction = object->plane_primitive.frame.normal;
+    } else if (object->has_rect_prism_primitive) {
+        direction = object->rect_prism_primitive.frame.normal;
+    }
+    return direction;
+}
+
+static bool session_is_legacy_sideways_direction(CoreObjectVec3 direction) {
+    return fabs(direction.x) <= 1e-9 && fabs(direction.y - (-1.0)) <= 1e-9 &&
+           fabs(direction.z) <= 1e-9;
+}
+
 static bool session_compute_retained_bounds(const PhysicsSimRetainedRuntimeScene *retained,
                                             CoreObjectVec3 *out_min,
                                             CoreObjectVec3 *out_max,
@@ -186,7 +202,7 @@ static void physics_sim_editor_session_seed_default_overlay(PhysicsSimEditorSess
         overlay->emitter.type = EMITTER_DENSITY_SOURCE;
         overlay->emitter.radius = session_default_emitter_radius_for_object(object);
         overlay->emitter.strength = session_emitter_default_strength(EMITTER_DENSITY_SOURCE);
-        overlay->emitter.direction = (CoreObjectVec3){0.0, -1.0, 0.0};
+        overlay->emitter.direction = session_default_emitter_direction_for_object(object);
         session->physics_overlay.object_overlay_count++;
     }
 }
@@ -386,7 +402,7 @@ bool physics_sim_editor_session_set_selected_emitter_type(PhysicsSimEditorSessio
     if (overlay->emitter.direction.x == 0.0 &&
         overlay->emitter.direction.y == 0.0 &&
         overlay->emitter.direction.z == 0.0) {
-        overlay->emitter.direction = (CoreObjectVec3){0.0, -1.0, 0.0};
+        overlay->emitter.direction = session_default_emitter_direction_for_object(object);
     }
     session->physics_overlay.derived_defaults = false;
     return true;
@@ -739,6 +755,7 @@ bool physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(PhysicsS
             json_object *initial_velocity = NULL;
             json_object *emitter = NULL;
             PhysicsSimObjectOverlay *overlay = NULL;
+            const CoreSceneObjectContract *object = NULL;
             if (!overlay_obj || !json_object_is_type(overlay_obj, json_type_object)) continue;
             if (!json_object_object_get_ex(overlay_obj, "object_id", &object_id) ||
                 !json_object_is_type(object_id, json_type_string)) {
@@ -747,6 +764,7 @@ bool physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(PhysicsS
             overlay = physics_sim_editor_session_find_overlay_by_object_id_mut(session,
                                                                                json_object_get_string(object_id));
             if (!overlay) continue;
+            object = physics_sim_editor_session_object_at(session, overlay->retained_object_index);
             if (json_object_object_get_ex(overlay_obj, "motion_mode", &motion_mode) &&
                 json_object_is_type(motion_mode, json_type_string)) {
                 const char *mode_text = json_object_get_string(motion_mode);
@@ -819,6 +837,12 @@ bool physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(PhysicsS
                         (json_object_is_type(vz, json_type_double) || json_object_is_type(vz, json_type_int))) {
                         overlay->emitter.direction.z = json_object_get_double(vz);
                     }
+                }
+                if ((overlay->emitter.direction.x == 0.0 &&
+                     overlay->emitter.direction.y == 0.0 &&
+                     overlay->emitter.direction.z == 0.0) ||
+                    session_is_legacy_sideways_direction(overlay->emitter.direction)) {
+                    overlay->emitter.direction = session_default_emitter_direction_for_object(object);
                 }
             }
             found_any = true;

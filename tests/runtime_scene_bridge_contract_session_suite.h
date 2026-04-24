@@ -1,0 +1,17 @@
+#ifndef RUNTIME_SCENE_BRIDGE_CONTRACT_SESSION_SUITE_H
+#define RUNTIME_SCENE_BRIDGE_CONTRACT_SESSION_SUITE_H
+
+#include <stdbool.h>
+
+bool test_scene_editor_session_bootstrap_preserves_retained_scene(void);
+bool test_scene_editor_session_overlay_defaults_respect_locked_objects(void);
+bool test_scene_editor_session_overlay_mutation_updates_selected_object(void);
+bool test_scene_editor_session_retained_emitter_defaults_to_object_normal(void);
+bool test_scene_editor_session_overlay_json_build_and_merge(void);
+bool test_runtime_scene_bridge_apply_merged_overlay_affects_solver_mapping(void);
+bool test_runtime_scene_bridge_apply_merged_scene_domain_affects_solver_domain(void);
+bool test_runtime_scene_bridge_apply_merged_emitter_overlay_affects_solver_emitters(void);
+bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void);
+bool test_scene_editor_session_tracks_legacy_selection(void);
+
+#endif

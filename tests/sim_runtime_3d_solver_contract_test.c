@@ -142,7 +142,7 @@ static bool test_first_pass_step_evolves_density_and_velocity(void) {
     volume.density[center] = 12.0f;
     volume.velocity_x[center] = 2.0f;
 
-    if (!sim_runtime_3d_solver_step_first_pass(&volume, &scratch, NULL, &cfg, 0.5)) {
+    if (!sim_runtime_3d_solver_step_first_pass(&volume, &scratch, NULL, NULL, &cfg, 0.5)) {
         return false;
     }
 
@@ -164,6 +164,225 @@ static bool test_first_pass_step_evolves_density_and_velocity(void) {
     return ok;
 }
 
+static bool test_velocity_viscosity_semantics_preserve_uniform_flow(void) {
+    SimRuntime3DDomainDesc desc = test_desc();
+    SimRuntime3DVolume volume = {0};
+    SimRuntime3DSolverScratch scratch = {0};
+    AppConfig cfg = {0};
+
+    desc.grid_w = 5;
+    desc.grid_h = 5;
+    desc.grid_d = 5;
+    desc.slice_cell_count = 25;
+    desc.cell_count = 125;
+    desc.world_max_x = 5.0f;
+    desc.world_max_y = 5.0f;
+    desc.world_max_z = 5.0f;
+
+    if (!sim_runtime_3d_volume_init(&volume, &desc)) return false;
+    if (!sim_runtime_3d_solver_scratch_init(&scratch, &desc)) return false;
+
+    cfg.fluid_solver_iterations = 20;
+    cfg.velocity_damping = 0.000006f;
+    cfg.density_diffusion = 0.0f;
+    cfg.density_decay = 0.0f;
+    cfg.fluid_buoyancy_force = 0.0f;
+
+    for (size_t i = 0; i < desc.cell_count; ++i) {
+        volume.velocity_x[i] = 1.0f;
+        volume.velocity_y[i] = 0.0f;
+        volume.velocity_z[i] = 0.0f;
+    }
+
+    if (!sim_runtime_3d_solver_step_first_pass(&volume, &scratch, NULL, NULL, &cfg, 0.25)) {
+        return false;
+    }
+
+    for (size_t i = 0; i < desc.cell_count; ++i) {
+        if (volume.velocity_x[i] < 0.95f || volume.velocity_x[i] > 1.05f) {
+            sim_runtime_3d_solver_scratch_destroy(&scratch);
+            sim_runtime_3d_volume_destroy(&volume);
+            return false;
+        }
+        if (!nearly_equal(volume.velocity_y[i], 0.0f)) {
+            sim_runtime_3d_solver_scratch_destroy(&scratch);
+            sim_runtime_3d_volume_destroy(&volume);
+            return false;
+        }
+        if (!nearly_equal(volume.velocity_z[i], 0.0f)) {
+            sim_runtime_3d_solver_scratch_destroy(&scratch);
+            sim_runtime_3d_volume_destroy(&volume);
+            return false;
+        }
+    }
+
+    sim_runtime_3d_solver_scratch_destroy(&scratch);
+    sim_runtime_3d_volume_destroy(&volume);
+    return true;
+}
+
+static bool test_tiny_domain_solid_plane_blocks_transport(void) {
+    SimRuntime3DDomainDesc desc = test_desc();
+    SimRuntime3DVolume volume = {0};
+    SimRuntime3DSolverScratch scratch = {0};
+    AppConfig cfg = {0};
+    uint8_t solid_mask[128] = {0};
+    bool leaked_past_wall = false;
+
+    desc.grid_w = 8;
+    desc.grid_h = 4;
+    desc.grid_d = 4;
+    desc.slice_cell_count = 32;
+    desc.cell_count = 128;
+    desc.world_max_x = 8.0f;
+    desc.world_max_y = 4.0f;
+    desc.world_max_z = 4.0f;
+
+    if (!sim_runtime_3d_volume_init(&volume, &desc)) return false;
+    if (!sim_runtime_3d_solver_scratch_init(&scratch, &desc)) return false;
+
+    cfg.fluid_solver_iterations = 8;
+    cfg.velocity_damping = 0.000006f;
+    cfg.density_diffusion = 0.0f;
+    cfg.density_decay = 0.0f;
+    cfg.fluid_buoyancy_force = 0.0f;
+
+    for (int z = 0; z < desc.grid_d; ++z) {
+        for (int y = 0; y < desc.grid_h; ++y) {
+            size_t wall_idx = sim_runtime_3d_volume_index(&desc, 4, y, z);
+            solid_mask[wall_idx] = 1u;
+        }
+    }
+    for (int z = 0; z < desc.grid_d; ++z) {
+        for (int y = 0; y < desc.grid_h; ++y) {
+            for (int x = 0; x < 4; ++x) {
+                size_t idx = sim_runtime_3d_volume_index(&desc, x, y, z);
+                volume.velocity_x[idx] = 1.0f;
+            }
+        }
+    }
+    volume.density[sim_runtime_3d_volume_index(&desc, 3, 2, 2)] = 10.0f;
+
+    if (!sim_runtime_3d_solver_step_first_pass(&volume, &scratch, solid_mask, NULL, &cfg, 0.25)) {
+        return false;
+    }
+    for (int z = 0; z < desc.grid_d; ++z) {
+        for (int y = 0; y < desc.grid_h; ++y) {
+            for (int x = 4; x < desc.grid_w; ++x) {
+                size_t idx = sim_runtime_3d_volume_index(&desc, x, y, z);
+                if (volume.density[idx] > 0.0001f) {
+                    leaked_past_wall = true;
+                    break;
+                }
+            }
+            if (leaked_past_wall) break;
+        }
+        if (leaked_past_wall) break;
+    }
+
+    if (leaked_past_wall) {
+        sim_runtime_3d_solver_scratch_destroy(&scratch);
+        sim_runtime_3d_volume_destroy(&volume);
+        return false;
+    }
+    if (volume.density[sim_runtime_3d_volume_index(&desc, 3, 2, 2)] <= 0.0f) {
+        sim_runtime_3d_solver_scratch_destroy(&scratch);
+        sim_runtime_3d_volume_destroy(&volume);
+        return false;
+    }
+
+    sim_runtime_3d_solver_scratch_destroy(&scratch);
+    sim_runtime_3d_volume_destroy(&volume);
+    return true;
+}
+
+static bool test_first_pass_buoyancy_uses_scene_up_axis(void) {
+    SimRuntime3DDomainDesc desc = test_desc();
+    SimRuntime3DVolume legacy_volume = {0};
+    SimRuntime3DVolume z_up_volume = {0};
+    SimRuntime3DSolverScratch legacy_scratch = {0};
+    SimRuntime3DSolverScratch z_up_scratch = {0};
+    SimRuntime3DForceAxis scene_up = {
+        .valid = true,
+        .x = 0.0f,
+        .y = 0.0f,
+        .z = 1.0f,
+    };
+    AppConfig cfg = {0};
+    size_t center = 0;
+    float legacy_abs_z = 0.0f;
+    float z_up_abs_z = 0.0f;
+
+    if (!sim_runtime_3d_volume_init(&legacy_volume, &desc)) return false;
+    if (!sim_runtime_3d_volume_init(&z_up_volume, &desc)) {
+        sim_runtime_3d_volume_destroy(&legacy_volume);
+        return false;
+    }
+    if (!sim_runtime_3d_solver_scratch_init(&legacy_scratch, &desc)) {
+        sim_runtime_3d_volume_destroy(&legacy_volume);
+        sim_runtime_3d_volume_destroy(&z_up_volume);
+        return false;
+    }
+    if (!sim_runtime_3d_solver_scratch_init(&z_up_scratch, &desc)) {
+        sim_runtime_3d_solver_scratch_destroy(&legacy_scratch);
+        sim_runtime_3d_volume_destroy(&legacy_volume);
+        sim_runtime_3d_volume_destroy(&z_up_volume);
+        return false;
+    }
+
+    cfg.fluid_solver_iterations = 8;
+    cfg.velocity_damping = 0.0f;
+    cfg.density_diffusion = 0.0f;
+    cfg.density_decay = 0.0f;
+    cfg.fluid_buoyancy_force = 1.0f;
+
+    center = sim_runtime_3d_volume_index(&desc, 1, 1, 1);
+    legacy_volume.density[center] = 10.0f;
+    z_up_volume.density[center] = 10.0f;
+
+    if (!sim_runtime_3d_solver_step_first_pass(&legacy_volume, &legacy_scratch, NULL, NULL, &cfg, 0.5)) {
+        sim_runtime_3d_solver_scratch_destroy(&legacy_scratch);
+        sim_runtime_3d_solver_scratch_destroy(&z_up_scratch);
+        sim_runtime_3d_volume_destroy(&legacy_volume);
+        sim_runtime_3d_volume_destroy(&z_up_volume);
+        return false;
+    }
+    if (!sim_runtime_3d_solver_step_first_pass(&z_up_volume, &z_up_scratch, NULL, &scene_up, &cfg, 0.5)) {
+        sim_runtime_3d_solver_scratch_destroy(&legacy_scratch);
+        sim_runtime_3d_solver_scratch_destroy(&z_up_scratch);
+        sim_runtime_3d_volume_destroy(&legacy_volume);
+        sim_runtime_3d_volume_destroy(&z_up_volume);
+        return false;
+    }
+
+    for (size_t i = 0; i < desc.cell_count; ++i) {
+        float legacy_vz = legacy_volume.velocity_z[i];
+        float z_up_vz = z_up_volume.velocity_z[i];
+        legacy_abs_z += (legacy_vz < 0.0f) ? -legacy_vz : legacy_vz;
+        z_up_abs_z += (z_up_vz < 0.0f) ? -z_up_vz : z_up_vz;
+    }
+    if (z_up_abs_z <= legacy_abs_z + 0.0001f) {
+        sim_runtime_3d_solver_scratch_destroy(&legacy_scratch);
+        sim_runtime_3d_solver_scratch_destroy(&z_up_scratch);
+        sim_runtime_3d_volume_destroy(&legacy_volume);
+        sim_runtime_3d_volume_destroy(&z_up_volume);
+        return false;
+    }
+    if (z_up_volume.velocity_z[center] <= legacy_volume.velocity_z[center]) {
+        sim_runtime_3d_solver_scratch_destroy(&legacy_scratch);
+        sim_runtime_3d_solver_scratch_destroy(&z_up_scratch);
+        sim_runtime_3d_volume_destroy(&legacy_volume);
+        sim_runtime_3d_volume_destroy(&z_up_volume);
+        return false;
+    }
+
+    sim_runtime_3d_solver_scratch_destroy(&legacy_scratch);
+    sim_runtime_3d_solver_scratch_destroy(&z_up_scratch);
+    sim_runtime_3d_volume_destroy(&legacy_volume);
+    sim_runtime_3d_volume_destroy(&z_up_volume);
+    return true;
+}
+
 int main(void) {
     if (!test_solver_scratch_capture_and_clear()) {
         fprintf(stderr, "sim_runtime_3d_solver_contract_test: scratch capture/clear failed\n");
@@ -183,6 +402,18 @@ int main(void) {
     }
     if (!test_first_pass_step_evolves_density_and_velocity()) {
         fprintf(stderr, "sim_runtime_3d_solver_contract_test: first-pass step failed\n");
+        return 1;
+    }
+    if (!test_velocity_viscosity_semantics_preserve_uniform_flow()) {
+        fprintf(stderr, "sim_runtime_3d_solver_contract_test: viscosity semantics failed\n");
+        return 1;
+    }
+    if (!test_tiny_domain_solid_plane_blocks_transport()) {
+        fprintf(stderr, "sim_runtime_3d_solver_contract_test: tiny solid-plane blockage failed\n");
+        return 1;
+    }
+    if (!test_first_pass_buoyancy_uses_scene_up_axis()) {
+        fprintf(stderr, "sim_runtime_3d_solver_contract_test: scene-up buoyancy failed\n");
         return 1;
     }
     fprintf(stdout, "sim_runtime_3d_solver_contract_test: success\n");

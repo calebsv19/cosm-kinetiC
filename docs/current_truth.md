@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-13
+Last updated: 2026-04-18
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -20,6 +20,27 @@ Last updated: 2026-04-13
   - include-dominant with public interfaces primarily under `include/` and a smaller private-header set under `src/`
   - include layout is currently domain-first (`include/app`, `include/physics`, etc.)
 
+## Current 3D Export State
+- Producer-side truthful `3D` export is complete through `PSBU-11D`.
+- Authoritative volumetric `XYZ` runtime now auto-routes export to:
+  - raw `.vf3d`
+  - additive `VF3H` `.pack`
+  - truthful `manifest.json` / `scene_bundle.json` metadata with `frame_contract=vf3d`, `space_mode=3d`, and `axis_authority=xyz`
+- The frozen first-pass `3D` payload carries:
+  - density
+  - velocity `x/y/z`
+  - pressure
+  - `solid_mask`
+- Deterministic parity proof now exists for a tiny-domain fixture:
+  - `16x8x8`
+  - `voxel_size=0.25`
+  - `4` nonzero density cells
+  - `3` occupied solid cells
+- Downstream `ray_tracing` still needs the next handoff slice:
+  - load `vf3d` / `VF3H`
+  - resolve truthful `scene_bundle.json` / `manifest.json`
+  - land a first-pass density-driven volume renderer
+
 ## Runtime/Verification Contract (Current)
 - Build:
   - `make -C physics_sim clean && make -C physics_sim`
@@ -35,15 +56,15 @@ Last updated: 2026-04-13
 
 Stable test lane:
 - `make -C physics_sim test-stable`
-- current composition:
+- high-signal coverage now includes:
+  - `test-volume-frames-3d-export-contract`
+  - `test-volume-frames-3d-tiny-parity-contract`
   - `test-manifest-to-trace-export`
   - `test-vf2d-pack-dataset-parity`
-  - `test-trio-scene-contract-diff`
-  - `test-kitviz-field-adapter`
-  - `test-sim-mode-route-contract`
-  - `test-preset-io-dimensional-contract`
-  - `test-runtime-scene-bridge-contract`
-  - `test-structural-runtime-split-contract`
+  - sim-runtime `3D` backend/reporting/domain/solver contracts
+  - retained-runtime overlay/readout/space contracts
+  - runtime-scene bridge/projection/launch contracts
+  - structural runtime split contract
 
 Legacy test lane:
 - `make -C physics_sim test-legacy`
@@ -754,17 +775,17 @@ Legacy test lane:
 
 ## Scaffold Migration State
 - Private migration plan:
-  - `../../docs/private_program_docs/physics_sim/2026-03-28_physics_sim_scaffold_standardization_switchover_plan.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-03-28_physics_sim_scaffold_standardization_switchover_plan.md`
 - Baseline freeze:
-  - `../../docs/private_program_docs/physics_sim/2026-03-28_ps_s0_baseline_freeze_and_mapping.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-03-28_ps_s0_baseline_freeze_and_mapping.md`
 - Completed phases:
   - `PS-S0`, `PS-S1`, `PS-S2`, `PS-S3`, `PS-S4`, `PS-S5`
 - Completed post-scaffold lanes:
   - completed font-size standardization lane:
-    - `../../docs/private_program_docs/physics_sim/2026-03-29_physics_sim_post_scaffold_font_size_pass_plan.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-03-29_physics_sim_post_scaffold_font_size_pass_plan.md`
     - `PS-F0` through `PS-F5` complete
   - completed trio 2D/3D parity lane:
-    - `../../docs/private_program_docs/physics_sim/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
+    - `../../docs/private_program_docs/physics_sim/archive/2026-03-30_physics_sim_2d_3d_parity_with_line_drawing_plan.md`
     - `PS-U0` complete (baseline freeze + gap map + tracker sync)
     - `PS-U1` complete (space mode runtime contract + persistence + menu selector)
     - `PS-U2` complete (mode adapter seam for world/view/solver routing)
@@ -773,8 +794,8 @@ Legacy test lane:
     - `PS-U5` complete (UX + editor parity mode-visibility + scaffold guidance)
     - `PS-U6` complete (verification + docs + memory closeout)
     - execution logs:
-      - `../../docs/private_program_docs/physics_sim/2026-03-30_ps_u0_baseline_freeze_and_gap_map.md`
-      - `../../docs/private_program_docs/physics_sim/2026-03-31_ps_u1_space_mode_runtime_contract.md`
+      - `../../docs/private_program_docs/physics_sim/archive/2026-03-30_ps_u0_baseline_freeze_and_gap_map.md`
+      - `../../docs/private_program_docs/physics_sim/archive/2026-03-31_ps_u1_space_mode_runtime_contract.md`
 
 ## Wrapper Contract State
 - cross-program wrapper initiative status:
@@ -788,16 +809,16 @@ Legacy test lane:
   - `S3` seam diagnostics + ownership hardening complete
   - `S4` closeout/docs/memory sync complete
 - execution note:
-  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
-  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s0_s1_execution.md`
-  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s2_execution.md`
-  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s3_execution.md`
-  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_w3_s4_closeout.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w1_w2_wrapper_hardening.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w3_s0_s1_execution.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w3_s2_execution.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w3_s3_execution.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_w3_s4_closeout.md`
 - `test-stable` remains the baseline non-interactive regression gate
 
 ## Connection Pass State
 - `PS-CP0` through `PS-CP2` are complete:
-  - `../../docs/private_program_docs/physics_sim/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-01_physics_sim_connection_pass_cp0_cp2_execution.md`
 - current ownership summary:
   - wrapper (`src/app/physics_sim_app_main.c`) now owns explicit stage enum/context + guarded transitions and explicit runtime dispatch seam
   - legacy body (`src/main.c`, `physics_sim_app_main_legacy(...)`) still owns most runtime initialization/routing/teardown
@@ -816,8 +837,8 @@ Legacy test lane:
 
 ## RS1 Render Split State
 - private execution note:
-  - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
-  - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_rs1_s2_closeout.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-03_physics_sim_rs1_s0_s1_execution.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-03_physics_sim_rs1_s2_closeout.md`
 - `RS1-S0` complete:
   - top-level update/render ownership map captured in `src/app/scene_controller.c`.
 - `RS1-S1` complete:
@@ -846,7 +867,7 @@ Legacy test lane:
 
 ## IR1 Input Routing State
 - private execution note:
-  - `../../docs/private_program_docs/physics_sim/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-03_physics_sim_ir1_s0_s3_execution.md`
 - `IR1-S0` through `IR1-S3` complete:
   - explicit typed input frame contracts landed in:
     - `include/app/scene_controller.h`
@@ -895,7 +916,7 @@ Legacy test lane:
 
 ## PS3D Execution State
 - active execution plan:
-  - `../../docs/private_program_docs/physics_sim/2026-04-02_physics_sim_ps3d_execution_plan.md`
+  - `../../docs/private_program_docs/physics_sim/archive/2026-04-02_physics_sim_ps3d_execution_plan.md`
 - `PS3D-0` runtime intake is complete:
   - runtime bridge preflight/apply/writeback contract suite remains active under `tests/runtime_scene_bridge_contract_test.c`
   - baseline intake gate:
@@ -988,7 +1009,7 @@ Legacy test lane:
   - authored `extensions.physics_sim.scene_domain` still survives save/reopen/runtime apply
   - retained `scene3d.bounds` remains provenance/default input rather than the authored source of truth
 - the old reduced-runtime `PS4D-RP*` compatibility boundary is now superseded
-- `PSBU-2` through `PSBU-7E` are now complete:
+- `PSBU-2` through `PSBU-8D` are now complete:
   - `2D` remains the extracted regression-oracle backend
   - `3D` now runs through a controlled backend that owns:
     - a real dense `XYZ` domain
@@ -1004,12 +1025,33 @@ Legacy test lane:
     - attached-emitter anchor resolution
     - world-first footprint sizing before voxelization
   - cross-boundary proof now verifies projection, backend placement, and retained overlay agree on the same attached-emitter world anchor and slice relationship
+  - bounded post-`PSBU-7E` solver-quality/performance work is now also complete:
+    - `3D` `velocity_damping` now behaves as a bounded viscosity-style control instead of direct multiplicative drag
+    - `3D` projection now uses the configured solver iteration count directly with the bounded `8..48` clamp
+    - dynamic obstacle raster state no longer gets immediately re-dirtied after refresh in the same update path
+    - compatibility-slice HUD activity now reads from backend-owned truth instead of a second render-side scan
+  - early `PSBU-9` inspection work is now live:
+    - `Tiny3D` quality gives a cheap `16x8x8` truthful `3D` debug domain for quick iteration
+    - backend-owned last-step emitter injection stats now report applied emitter counts, affected voxels, and density/velocity contribution in the runtime HUD
+    - tiny-domain truth fixtures now prove:
+      - free-emitter downstream transport
+      - attached-emitter transport along a rotated retained anchor
+      - source-plus-sink net density reduction against source-only baseline
+      - solid-plane blockage in a focused tiny-domain solver case
+    - sparse backend-owned volume point-cloud readout is now live in the retained `3D` overlay:
+      - fluid density is shown at voxel centers through a cheap density-scaled point cloud
+      - rasterized solids are shown through faint voxel-center obstacle crosses
 - current honest runtime wording is now:
   - controlled `3D` scaffold backend in `3D` mode
   - live volumetric emitters
   - live volumetric obstacles
   - first-pass `XYZ` solver live
   - live selected `XY` slice plus ghost-slice stack
+  - live sparse backend-owned volume point-cloud readout
 - next boundary:
-  - post-`PSBU-7E` solver quality and performance work on the stabilized truthful `3D` architecture
-  - later richer `3D` playback, interaction, and rendering
+  - formal next lane is `PSBU-9`, truthful `3D` behavior validation and readout:
+    - `PSBU-9A`: very-low-voxel debug profile or mode complete
+    - `PSBU-9B`: emitter injection observability complete
+    - `PSBU-9C`: focused tiny-domain truth checks complete
+    - `PSBU-9D`: better truthful `3D` readout complete
+    - `PSBU-9E`: evidence-driven bounded solver-behavior follow-up and closeout

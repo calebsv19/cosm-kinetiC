@@ -50,6 +50,8 @@ typedef struct SceneControllerInputEventRaw {
     bool ignore_input_active;
     bool quit_requested;
     bool running_after_poll;
+    uint32_t wait_blocked_ms;
+    uint32_t wait_call_count;
     InputCommands commands;
 } SceneControllerInputEventRaw;
 

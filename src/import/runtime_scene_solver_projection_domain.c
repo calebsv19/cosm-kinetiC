@@ -301,14 +301,17 @@ bool runtime_scene_solver_projection_overlay_for_object(json_object *runtime_roo
                     if (json_object_object_get_ex(direction, "x", &vx) &&
                         (json_object_is_type(vx, json_type_double) || json_object_is_type(vx, json_type_int))) {
                         out_overlay->emitter_dir_x = json_object_get_double(vx);
+                        out_overlay->has_emitter_direction = true;
                     }
                     if (json_object_object_get_ex(direction, "y", &vy) &&
                         (json_object_is_type(vy, json_type_double) || json_object_is_type(vy, json_type_int))) {
                         out_overlay->emitter_dir_y = json_object_get_double(vy);
+                        out_overlay->has_emitter_direction = true;
                     }
                     if (json_object_object_get_ex(direction, "z", &vz) &&
                         (json_object_is_type(vz, json_type_double) || json_object_is_type(vz, json_type_int))) {
                         out_overlay->emitter_dir_z = json_object_get_double(vz);
+                        out_overlay->has_emitter_direction = true;
                     }
                 }
             }

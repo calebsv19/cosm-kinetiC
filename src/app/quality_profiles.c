@@ -7,7 +7,8 @@ static const QualityProfileDef QUALITY_PROFILES[] = {
     { "Balanced", 128, 128, 16, 2, true },
     { "High", 256, 256, 24, 3, true },
     { "Deep", 384, 384, 32, 4, true },
-    { "Karman", 256, 256, 40, 3, false }
+    { "Karman", 256, 256, 40, 3, false },
+    { "Tiny3D", 64, 64, 8, 1, false }
 };
 
 int quality_profile_count(void) {

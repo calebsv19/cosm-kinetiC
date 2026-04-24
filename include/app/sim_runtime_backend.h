@@ -38,6 +38,47 @@ typedef struct SceneObstacleFieldView2D {
     const float *distance;
 } SceneObstacleFieldView2D;
 
+typedef struct SceneDebugVolumeView3D {
+    int width;
+    int height;
+    int depth;
+    size_t cell_count;
+    float world_min_x;
+    float world_min_y;
+    float world_min_z;
+    float world_max_x;
+    float world_max_y;
+    float world_max_z;
+    float voxel_size;
+    const float *density;
+    const uint8_t *solid_mask;
+} SceneDebugVolumeView3D;
+
+// Dedicated authoritative 3D export carrier.
+// This is intentionally separate from SceneDebugVolumeView3D so export code can
+// consume backend-owned XYZ field truth without depending on debug/readout
+// surfaces or the derived compatibility slice.
+typedef struct SceneFluidVolumeExportView3D {
+    int width;
+    int height;
+    int depth;
+    size_t cell_count;
+    float origin_x;
+    float origin_y;
+    float origin_z;
+    float voxel_size;
+    bool scene_up_valid;
+    float scene_up_x;
+    float scene_up_y;
+    float scene_up_z;
+    const float *density;
+    const float *velocity_x;
+    const float *velocity_y;
+    const float *velocity_z;
+    const float *pressure;
+    const uint8_t *solid_mask;
+} SceneFluidVolumeExportView3D;
+
 typedef struct SimRuntimeBackendReport {
     SimRuntimeBackendKind kind;
     int domain_w;
@@ -56,11 +97,31 @@ typedef struct SimRuntimeBackendReport {
     float world_max_y;
     float world_max_z;
     float voxel_size;
+    bool scene_up_valid;
+    float scene_up_x;
+    float scene_up_y;
+    float scene_up_z;
+    PhysicsSimRuntimeSceneUpSource scene_up_source;
     bool compatibility_view_2d_available;
     bool compatibility_view_2d_derived;
     int compatibility_slice_z;
     bool secondary_debug_slice_stack_live;
     int secondary_debug_slice_stack_radius;
+    bool debug_volume_view_3d_available;
+    size_t debug_volume_active_density_cells;
+    size_t debug_volume_solid_cells;
+    float debug_volume_max_density;
+    float debug_volume_max_velocity_magnitude;
+    bool debug_volume_scene_up_velocity_valid;
+    float debug_volume_scene_up_velocity_avg;
+    float debug_volume_scene_up_velocity_peak;
+    size_t emitter_step_emitters_applied;
+    size_t emitter_step_free_emitters_applied;
+    size_t emitter_step_attached_emitters_applied;
+    size_t emitter_step_affected_cells;
+    size_t emitter_step_last_footprint_cells;
+    float emitter_step_density_delta;
+    float emitter_step_velocity_magnitude_delta;
 } SimRuntimeBackendReport;
 
 typedef struct SimRuntimeBackend SimRuntimeBackend;
@@ -92,6 +153,10 @@ typedef struct SimRuntimeBackendOps {
     bool (*export_snapshot)(const SimRuntimeBackend *backend, double time, const char *path);
     bool (*get_fluid_view_2d)(const SimRuntimeBackend *backend, SceneFluidFieldView2D *out_view);
     bool (*get_obstacle_view_2d)(const SimRuntimeBackend *backend, SceneObstacleFieldView2D *out_view);
+    bool (*get_debug_volume_view_3d)(const SimRuntimeBackend *backend,
+                                     SceneDebugVolumeView3D *out_view);
+    bool (*get_volume_export_view_3d)(const SimRuntimeBackend *backend,
+                                      SceneFluidVolumeExportView3D *out_view);
     bool (*get_report)(const SimRuntimeBackend *backend, SimRuntimeBackendReport *out_report);
     bool (*get_compatibility_slice_activity)(const SimRuntimeBackend *backend,
                                              int slice_z,
@@ -161,6 +226,10 @@ bool sim_runtime_backend_get_fluid_view_2d(const SimRuntimeBackend *backend,
                                            SceneFluidFieldView2D *out_view);
 bool sim_runtime_backend_get_obstacle_view_2d(const SimRuntimeBackend *backend,
                                               SceneObstacleFieldView2D *out_view);
+bool sim_runtime_backend_get_debug_volume_view_3d(const SimRuntimeBackend *backend,
+                                                  SceneDebugVolumeView3D *out_view);
+bool sim_runtime_backend_get_volume_export_view_3d(const SimRuntimeBackend *backend,
+                                                   SceneFluidVolumeExportView3D *out_view);
 bool sim_runtime_backend_get_report(const SimRuntimeBackend *backend,
                                     SimRuntimeBackendReport *out_report);
 bool sim_runtime_backend_get_compatibility_slice_activity(const SimRuntimeBackend *backend,

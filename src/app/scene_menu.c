@@ -12,12 +12,18 @@
 #include "app/menu/menu_types.h"
 #include "app/menu/menu_window.h"
 #include "app/data_paths.h"
+#include "app/scene_loop_diag.h"
+#include "app/scene_loop_policy.h"
 #include "app/scene_menu_layout_helpers.h"
 #include "config/config_loader.h"
 #include "input/input.h"
 #include "render/text_upload_policy.h"
 #include "render/vk_shared_device.h"
 #include "vk_renderer.h"
+
+enum {
+    MENU_IDLE_RENDER_HEARTBEAT_MS = 250u
+};
 
 static void menu_persist_runtime_config(const AppConfig *cfg) {
     const char *runtime_config_path = physics_sim_runtime_config_path();
@@ -74,6 +80,19 @@ static bool menu_apply_text_zoom_shortcut(SceneMenuInteraction *ctx,
 
     menu_persist_runtime_config(ctx->cfg);
     return true;
+}
+
+static void scene_menu_record_loop_diag(uint64_t frame_begin_counter,
+                                        uint64_t perf_freq,
+                                        uint32_t wait_blocked_ms,
+                                        uint32_t wait_call_count) {
+    uint64_t frame_end_counter = SDL_GetPerformanceCounter();
+    double frame_elapsed_sec = 0.0;
+    if (perf_freq > 0 && frame_end_counter >= frame_begin_counter) {
+        frame_elapsed_sec = (double)(frame_end_counter - frame_begin_counter) /
+                            (double)perf_freq;
+    }
+    scene_loop_diag_tick(frame_elapsed_sec, wait_blocked_ms, wait_call_count);
 }
 
 bool scene_menu_run(AppConfig *cfg,
@@ -275,8 +294,25 @@ restart_menu:
     input_context_manager_push(&context_mgr, &menu_ctx);
 
     Uint32 prev_ticks = SDL_GetTicks();
+    uint64_t perf_freq = SDL_GetPerformanceFrequency();
+    bool resize_pending = false;
+    bool frame_dirty = true;
+    Uint64 last_present_ticks = SDL_GetTicks64();
     bool device_lost = false;
     while (run) {
+        uint64_t frame_begin_counter = SDL_GetPerformanceCounter();
+        SceneLoopWaitPolicyInput wait_policy = {
+            .headless_mode = false,
+            .simulation_active = false,
+            .interaction_active = menu_text_entry_active(&ctx) || ctx.scrollbar_dragging,
+            .background_busy = ctx.headless_pending || ctx.headless_running || ctx.headless_run_requested,
+            .resize_pending = resize_pending
+        };
+        uint32_t wait_blocked_ms = 0u;
+        uint32_t wait_call_count = 0u;
+        uint32_t event_count = 0u;
+        int wait_timeout_ms = scene_loop_compute_wait_timeout_ms(&wait_policy);
+
         Uint32 now_ticks = SDL_GetTicks();
         double dt = (double)(now_ticks - prev_ticks) / 1000.0;
         prev_ticks = now_ticks;
@@ -308,12 +344,27 @@ restart_menu:
         menu_update_scrollbar(&ctx);
 
         InputCommands cmds;
-        input_poll_events(&cmds, NULL, &context_mgr);
+        input_poll_events_with_wait(&cmds,
+                                    NULL,
+                                    &context_mgr,
+                                    wait_timeout_ms,
+                                    &wait_blocked_ms,
+                                    &wait_call_count,
+                                    &event_count);
+        if (event_count > 0u) {
+            frame_dirty = true;
+        }
         if (cmds.quit) {
             run = false;
+            scene_menu_record_loop_diag(frame_begin_counter,
+                                        perf_freq,
+                                        wait_blocked_ms,
+                                        wait_call_count);
             break;
         }
-        (void)menu_apply_text_zoom_shortcut(&ctx, &cmds);
+        if (menu_apply_text_zoom_shortcut(&ctx, &cmds)) {
+            frame_dirty = true;
+        }
         menu_clamp_grid_size(cfg);
         scene_menu_update_dynamic_layout(&ctx, win_w, win_h);
         menu_update_scrollbar(&ctx);
@@ -330,13 +381,33 @@ restart_menu:
                          ctx.cfg->headless_frame_count);
             }
             menu_set_status(&ctx, msg, false);
+            frame_dirty = true;
+        }
+
+        {
+            Uint64 now_present_ticks = SDL_GetTicks64();
+            bool heartbeat_due =
+                (now_present_ticks - last_present_ticks) >= MENU_IDLE_RENDER_HEARTBEAT_MS;
+            bool force_render = resize_pending || ctx.headless_run_requested;
+            bool should_render = frame_dirty || heartbeat_due || force_render;
+            if (!should_render) {
+                scene_menu_record_loop_diag(frame_begin_counter,
+                                            perf_freq,
+                                            wait_blocked_ms,
+                                            wait_call_count);
+                continue;
+            }
         }
 
         int drawable_w = win_w;
         int drawable_h = win_h;
         SDL_Vulkan_GetDrawableSize(ctx.window, &drawable_w, &drawable_h);
         if (drawable_w <= 0 || drawable_h <= 0) {
-            SDL_Delay(16);
+            resize_pending = true;
+            scene_menu_record_loop_diag(frame_begin_counter,
+                                        perf_freq,
+                                        wait_blocked_ms,
+                                        wait_call_count);
             continue;
         }
         VkExtent2D swap_extent = ((VkRenderer *)ctx.renderer)->context.swapchain.extent;
@@ -344,7 +415,11 @@ restart_menu:
             (uint32_t)drawable_h != swap_extent.height) {
             vk_renderer_recreate_swapchain((VkRenderer *)ctx.renderer, ctx.window);
             vk_renderer_set_logical_size((VkRenderer *)ctx.renderer, (float)win_w, (float)win_h);
-            SDL_Delay(8);
+            resize_pending = true;
+            scene_menu_record_loop_diag(frame_begin_counter,
+                                        perf_freq,
+                                        wait_blocked_ms,
+                                        wait_call_count);
             continue;
         }
         VkCommandBuffer cmd = VK_NULL_HANDLE;
@@ -354,6 +429,11 @@ restart_menu:
         if (frame == VK_ERROR_OUT_OF_DATE_KHR || frame == VK_SUBOPTIMAL_KHR) {
             vk_renderer_recreate_swapchain((VkRenderer *)ctx.renderer, ctx.window);
             vk_renderer_set_logical_size((VkRenderer *)ctx.renderer, (float)win_w, (float)win_h);
+            resize_pending = true;
+            scene_menu_record_loop_diag(frame_begin_counter,
+                                        perf_freq,
+                                        wait_blocked_ms,
+                                        wait_call_count);
             continue;
         } else if (frame == VK_ERROR_DEVICE_LOST) {
             static int logged_device_lost = 0;
@@ -366,11 +446,21 @@ restart_menu:
             }
             device_lost = true;
             run = false;
+            scene_menu_record_loop_diag(frame_begin_counter,
+                                        perf_freq,
+                                        wait_blocked_ms,
+                                        wait_call_count);
             break;
         } else if (frame != VK_SUCCESS) {
             fprintf(stderr, "[menu] vk_renderer_begin_frame failed: %d\n", frame);
+            resize_pending = true;
+            scene_menu_record_loop_diag(frame_begin_counter,
+                                        perf_freq,
+                                        wait_blocked_ms,
+                                        wait_call_count);
             continue;
         }
+        resize_pending = false;
         vk_renderer_set_logical_size((VkRenderer *)ctx.renderer, (float)win_w, (float)win_h);
 
         SDL_Color bg_color = menu_color_bg();
@@ -726,8 +816,15 @@ restart_menu:
         if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {
             vk_renderer_recreate_swapchain((VkRenderer *)ctx.renderer, ctx.window);
             vk_renderer_set_logical_size((VkRenderer *)ctx.renderer, (float)win_w, (float)win_h);
+            resize_pending = true;
+            frame_dirty = true;
         } else if (end != VK_SUCCESS) {
             fprintf(stderr, "[menu] vk_renderer_end_frame failed: %d\n", end);
+            frame_dirty = true;
+        } else {
+            resize_pending = false;
+            frame_dirty = false;
+            last_present_ticks = SDL_GetTicks64();
         }
 #if defined(__APPLE__)
         if (end == VK_SUCCESS) {
@@ -739,7 +836,13 @@ restart_menu:
             ctx.headless_run_requested = false;
             menu_run_headless_batch(&ctx);
             ctx.headless_running = false;
+            frame_dirty = true;
         }
+
+        scene_menu_record_loop_diag(frame_begin_counter,
+                                    perf_freq,
+                                    wait_blocked_ms,
+                                    wait_call_count);
     }
 
     input_context_manager_pop(&context_mgr);

@@ -6,6 +6,7 @@
 #include "app/editor/scene_editor_viewport.h"
 #include "app/sim_runtime_3d_anchor.h"
 #include "render/retained_runtime_scene_overlay_geom.h"
+#include "render/retained_runtime_scene_overlay_readout.h"
 #include "render/retained_runtime_scene_overlay_space.h"
 
 static SDL_Color COLOR_DYNAMIC = {255, 184, 90, 255};
@@ -352,7 +353,8 @@ static void draw_emitter_projection_guides(SDL_Renderer *renderer,
                                            const SceneEditorViewportState *viewport,
                                            int window_w,
                                            int window_h,
-                                           const SceneState *scene) {
+                                           const SceneState *scene,
+                                           bool draw_slice_debug) {
     if (!renderer || !viewport || !scene || !scene->preset) return;
     for (size_t i = 0; i < scene->preset->emitter_count && i < MAX_FLUID_EMITTERS; ++i) {
         const FluidEmitter *emitter = &scene->preset->emitters[i];
@@ -368,12 +370,14 @@ static void draw_emitter_projection_guides(SDL_Renderer *renderer,
             continue;
         }
         project_point(viewport, window_w, window_h, actual, &actual_x, &actual_y);
-        project_point(viewport, window_w, window_h, slice, &slice_x, &slice_y);
-        if (fabs(actual.z - slice.z) > 0.001) {
-            draw_segment(renderer, viewport, window_w, window_h, actual, slice, COLOR_SLICE_PROJECTION);
+        if (draw_slice_debug) {
+            project_point(viewport, window_w, window_h, slice, &slice_x, &slice_y);
+            if (fabs(actual.z - slice.z) > 0.001) {
+                draw_segment(renderer, viewport, window_w, window_h, actual, slice, COLOR_SLICE_PROJECTION);
+            }
+            draw_cross(renderer, slice_x, slice_y, 4, lighten_color(color, 0.22f));
         }
         draw_circle(renderer, actual_x, actual_y, 3, color);
-        draw_cross(renderer, slice_x, slice_y, 4, lighten_color(color, 0.22f));
     }
 }
 
@@ -422,6 +426,11 @@ bool retained_runtime_scene_overlay_active(const SceneState *scene) {
            scene->mode_route.requested_space_mode == SPACE_MODE_3D;
 }
 
+bool retained_runtime_scene_overlay_slice_debug_enabled(const SceneState *scene) {
+    return retained_runtime_scene_overlay_active(scene) &&
+           scene_runtime_slice_overlay_enabled(scene);
+}
+
 bool retained_runtime_scene_overlay_frame_view(SceneState *scene,
                                                int window_w,
                                                int window_h) {
@@ -459,33 +468,46 @@ void retained_runtime_scene_overlay_draw(const SceneState *scene,
     CoreObjectVec3 visual_min = {0};
     CoreObjectVec3 visual_max = {0};
     double slice_z = 0.0;
+    bool slice_debug_enabled = false;
     if (!retained_runtime_scene_overlay_active(scene) || !renderer) return;
     if (!retained_runtime_overlay_compute_visual_bounds(scene, &visual_min, &visual_max)) return;
-    slice_z = retained_runtime_overlay_slice_z(scene, visual_min, visual_max);
-
-    draw_slice_stack_preview(renderer,
-                             &scene->runtime_viewport,
-                             window_w,
-                             window_h,
-                             scene,
-                             visual_min,
-                             visual_max);
-    draw_slice_plane(renderer, &scene->runtime_viewport, window_w, window_h, scene);
-    draw_fluid_slice(renderer, scene, &scene->runtime_viewport, window_w, window_h);
+    slice_debug_enabled = retained_runtime_scene_overlay_slice_debug_enabled(scene);
+    if (slice_debug_enabled) {
+        slice_z = retained_runtime_overlay_slice_z(scene, visual_min, visual_max);
+        draw_slice_stack_preview(renderer,
+                                 &scene->runtime_viewport,
+                                 window_w,
+                                 window_h,
+                                 scene,
+                                 visual_min,
+                                 visual_max);
+        draw_slice_plane(renderer, &scene->runtime_viewport, window_w, window_h, scene);
+    }
+    retained_runtime_overlay_draw_volume_readout(renderer,
+                                                 &scene->runtime_viewport,
+                                                 window_w,
+                                                 window_h,
+                                                 scene);
+    if (slice_debug_enabled) {
+        draw_fluid_slice(renderer, scene, &scene->runtime_viewport, window_w, window_h);
+    }
     draw_origin_axes(renderer, &scene->runtime_viewport, window_w, window_h);
     draw_domain_box(renderer, &scene->runtime_viewport, window_w, window_h, &scene->runtime_visual);
     for (int i = 0; i < scene->runtime_visual.retained_scene.retained_object_count; ++i) {
         const CoreSceneObjectContract *object = &scene->runtime_visual.retained_scene.objects[i];
         SDL_Color color = object_color(scene, i);
         CoreObjectVec3 origin = sim_runtime_3d_anchor_retained_object_origin(object);
-        bool slice_intersects = retained_runtime_overlay_object_slice_intersects(scene, object, slice_z);
+        bool slice_intersects = slice_debug_enabled &&
+                                retained_runtime_overlay_object_slice_intersects(scene, object, slice_z);
         int origin_x = 0;
         int origin_y = 0;
-        if (slice_intersects) {
+        if (slice_debug_enabled && slice_intersects) {
             color = lighten_color(color, 0.08f);
             color.a = 255;
-        } else {
+        } else if (slice_debug_enabled) {
             color.a = 112;
+        } else {
+            color.a = 224;
         }
         if (object->has_plane_primitive) {
             draw_plane(renderer, &scene->runtime_viewport, window_w, window_h, &object->plane_primitive, color);
@@ -504,5 +526,10 @@ void retained_runtime_scene_overlay_draw(const SceneState *scene,
                     slice_intersects ? 3 : 2,
                     lighten_color(color, slice_intersects ? 0.22f : 0.08f));
     }
-    draw_emitter_projection_guides(renderer, &scene->runtime_viewport, window_w, window_h, scene);
+    draw_emitter_projection_guides(renderer,
+                                   &scene->runtime_viewport,
+                                   window_w,
+                                   window_h,
+                                   scene,
+                                   slice_debug_enabled);
 }
