@@ -1,6 +1,6 @@
 # Physics Sim Desktop Packaging
 
-Last updated: 2026-04-10
+Last updated: 2026-04-25
 
 ## Bundle Targets
 - `make -C physics_sim package-desktop`
@@ -22,9 +22,25 @@ Bundled resource lanes:
 - `config/` (including `config/objects/` and structural preset files)
 - `data/runtime/` (created)
 - `data/snapshots/` (created)
+- optional `AppIcon.icns` when `PACKAGE_APP_ICON_SRC` or `PACKAGE_APP_ICONSET_SRC` is provided
 - `vk_renderer/shaders/`
 - `shaders/`
 - `shared/assets/fonts/` (copied when `third_party/codework_shared/assets/fonts` exists)
+
+Default local icon store:
+- `physics_sim/tools/packaging/macos/local_app_icon/AppIcon.icns`
+- `physics_sim/tools/packaging/macos/local_app_icon/AppIcon.iconset`
+
+Optional icon inputs:
+- `make -C physics_sim package-desktop-refresh PACKAGE_APP_ICON_SRC="/absolute/path/to/kinetic.icns"`
+- `make -C physics_sim package-desktop-refresh PACKAGE_APP_ICONSET_SRC="/absolute/path/to/kinetic.iconset"`
+
+When present, packaging now:
+- bundles `Contents/Resources/AppIcon.icns`
+- declares `CFBundleIconFile=AppIcon`
+- preserves the signed Desktop copy path with `ditto`
+
+Plain `make -C physics_sim package-desktop-refresh` and `package-desktop-self-test` now look in that local store first. The local icon store is gitignored so refreshed icon copies do not dirty the normal repo worktree.
 
 ## Launcher Contract
 - config dump:
@@ -44,3 +60,6 @@ Runtime defaults set by launcher:
 3. `/Users/<user>/Desktop/kinetiC.app/Contents/MacOS/physics-sim-launcher --print-config`
 4. `open /Users/<user>/Desktop/kinetiC.app`
 5. `tail -n 120 ~/Library/Logs/PhysicsSim/launcher.log`
+
+Note:
+- a fresh clone will still need an `AppIcon.icns` copied into `tools/packaging/macos/local_app_icon/` before plain packaging picks it up, because that lane is intentionally ignored.

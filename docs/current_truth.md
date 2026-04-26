@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-18
+Last updated: 2026-04-25
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -53,6 +53,12 @@ Last updated: 2026-04-18
   - `make -C physics_sim package-desktop-smoke`
   - `make -C physics_sim package-desktop-self-test`
   - `make -C physics_sim package-desktop-refresh`
+  - optional icon-input packaging:
+    - default local icon store is `tools/packaging/macos/local_app_icon/AppIcon.icns` and `tools/packaging/macos/local_app_icon/AppIcon.iconset`
+    - `PACKAGE_APP_ICON_SRC=/absolute/path/to/*.icns`
+    - `PACKAGE_APP_ICONSET_SRC=/absolute/path/to/*.iconset`
+    - packaged bundles now carry `Contents/Resources/AppIcon.icns` and declare `CFBundleIconFile=AppIcon` when either input is provided
+    - the local packaging icon store is gitignored and treated as a local distribution asset lane
 
 Stable test lane:
 - `make -C physics_sim test-stable`
