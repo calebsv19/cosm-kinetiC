@@ -24,6 +24,9 @@ typedef struct SimRuntime3DForceAxis {
     float z;
 } SimRuntime3DForceAxis;
 
+int sim_runtime_3d_solver_iterations_for_requested(int requested_iterations);
+int sim_runtime_3d_solver_iterations_for_config(const AppConfig *cfg);
+
 bool sim_runtime_3d_solver_scratch_init(SimRuntime3DSolverScratch *scratch,
                                         const SimRuntime3DDomainDesc *desc);
 void sim_runtime_3d_solver_scratch_destroy(SimRuntime3DSolverScratch *scratch);

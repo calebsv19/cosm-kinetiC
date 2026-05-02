@@ -110,6 +110,17 @@ static bool test_clamped_index_bounds(void) {
     return idx == sim_runtime_3d_volume_index(&desc, 0, 3, 2);
 }
 
+static bool test_solver_iteration_contract(void) {
+    AppConfig cfg = {0};
+    if (sim_runtime_3d_solver_iterations_for_requested(1) != 8) return false;
+    if (sim_runtime_3d_solver_iterations_for_requested(8) != 8) return false;
+    if (sim_runtime_3d_solver_iterations_for_requested(40) != 40) return false;
+    if (sim_runtime_3d_solver_iterations_for_requested(64) != 48) return false;
+    cfg.fluid_solver_iterations = 64;
+    if (sim_runtime_3d_solver_iterations_for_config(&cfg) != 48) return false;
+    return true;
+}
+
 static bool test_first_pass_step_evolves_density_and_velocity(void) {
     SimRuntime3DDomainDesc desc = test_desc();
     SimRuntime3DVolume volume = {0};
@@ -466,6 +477,10 @@ int main(void) {
     }
     if (!test_clamped_index_bounds()) {
         fprintf(stderr, "sim_runtime_3d_solver_contract_test: clamped index failed\n");
+        return 1;
+    }
+    if (!test_solver_iteration_contract()) {
+        fprintf(stderr, "sim_runtime_3d_solver_contract_test: solver iteration contract failed\n");
         return 1;
     }
     if (!test_first_pass_step_evolves_density_and_velocity()) {

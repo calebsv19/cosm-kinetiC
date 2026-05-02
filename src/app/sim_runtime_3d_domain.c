@@ -50,13 +50,22 @@ static bool fill_desc_from_world_bounds(float min_x,
                                         float max_x,
                                         float max_y,
                                         float max_z,
-                                        int major_axis_cells,
+                                        int requested_grid_x_cells,
+                                        int requested_grid_y_cells,
+                                        int requested_depth_cells,
+                                        SimRuntime3DDepthPolicy depth_policy,
                                         SimRuntime3DDomainDesc *out_desc) {
     SimRuntime3DDomainDesc desc = {0};
     float extent_x = max_x - min_x;
     float extent_y = max_y - min_y;
     float extent_z = max_z - min_z;
     float max_extent = 1.0f;
+    float voxel_size_x = 1.0f;
+    float voxel_size_y = 1.0f;
+    float voxel_size_z = 0.0f;
+    int applied_grid_x_cells = 0;
+    int applied_grid_y_cells = 0;
+    int applied_depth_cells = 0;
 
     if (!out_desc) return false;
     extent_x = sanitize_extent(extent_x);
@@ -67,13 +76,44 @@ static bool fill_desc_from_world_bounds(float min_x,
     if (extent_y > max_extent) max_extent = extent_y;
     if (extent_z > max_extent) max_extent = extent_z;
     if (max_extent <= 0.0f) max_extent = 1.0f;
-    if (major_axis_cells < SIM_RUNTIME_3D_GRID_MIN) {
-        major_axis_cells = SIM_RUNTIME_3D_GRID_MIN;
+    requested_grid_x_cells =
+        requested_grid_x_cells > 0 ? requested_grid_x_cells : SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
+    requested_grid_y_cells =
+        requested_grid_y_cells > 0 ? requested_grid_y_cells : SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
+    desc.requested_major_axis_cells =
+        requested_grid_x_cells > requested_grid_y_cells
+            ? requested_grid_x_cells
+            : requested_grid_y_cells;
+    applied_grid_x_cells =
+        sim_runtime_3d_applied_major_axis_cells_for_requested(requested_grid_x_cells);
+    applied_grid_y_cells =
+        sim_runtime_3d_applied_major_axis_cells_for_requested(requested_grid_y_cells);
+    desc.applied_major_axis_cells =
+        applied_grid_x_cells > applied_grid_y_cells
+            ? applied_grid_x_cells
+            : applied_grid_y_cells;
+    desc.requested_depth_cells = requested_depth_cells > 0 ? requested_depth_cells : 0;
+    desc.depth_policy = depth_policy;
+    if (desc.applied_major_axis_cells < SIM_RUNTIME_3D_GRID_MIN) {
+        desc.applied_major_axis_cells = SIM_RUNTIME_3D_GRID_MIN;
     }
+    applied_depth_cells =
+        sim_runtime_3d_applied_depth_cells_for_requested(desc.requested_depth_cells);
 
-    desc.voxel_size = max_extent / (float)major_axis_cells;
+    voxel_size_x = extent_x / (float)applied_grid_x_cells;
+    voxel_size_y = extent_y / (float)applied_grid_y_cells;
+    desc.voxel_size = voxel_size_x > voxel_size_y ? voxel_size_x : voxel_size_y;
+    if (applied_depth_cells > 0) {
+        voxel_size_z = extent_z / (float)applied_depth_cells;
+        if (voxel_size_z > desc.voxel_size) {
+            desc.voxel_size = voxel_size_z;
+        }
+    }
     if (desc.voxel_size <= 0.0f) {
-        desc.voxel_size = 1.0f / (float)major_axis_cells;
+        desc.voxel_size = max_extent / (float)desc.applied_major_axis_cells;
+    }
+    if (desc.voxel_size <= 0.0f) {
+        desc.voxel_size = 1.0f / (float)desc.applied_major_axis_cells;
     }
 
     desc.grid_w = clamp_int((int)ceilf(extent_x / desc.voxel_size),
@@ -85,6 +125,7 @@ static bool fill_desc_from_world_bounds(float min_x,
     desc.grid_d = clamp_int((int)ceilf(extent_z / desc.voxel_size),
                             SIM_RUNTIME_3D_GRID_MIN,
                             INT_MAX);
+    desc.applied_depth_cells = desc.grid_d;
     if (!compute_cell_counts(desc.grid_w,
                              desc.grid_h,
                              desc.grid_d,
@@ -104,16 +145,58 @@ static bool fill_desc_from_world_bounds(float min_x,
     return true;
 }
 
-int sim_runtime_3d_major_axis_cells_for_config(const AppConfig *cfg) {
+int sim_runtime_3d_requested_major_axis_cells_for_config(const AppConfig *cfg) {
     int custom_major_axis = 0;
     if (!cfg) return SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
     custom_major_axis = cfg->grid_w > cfg->grid_h ? cfg->grid_w : cfg->grid_h;
     if (custom_major_axis <= 0) {
         return SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
     }
-    return clamp_int(custom_major_axis,
+    return custom_major_axis;
+}
+
+int sim_runtime_3d_applied_major_axis_cells_for_requested(int requested_major_axis_cells) {
+    if (requested_major_axis_cells <= 0) {
+        return SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
+    }
+    return clamp_int(requested_major_axis_cells,
                      SIM_RUNTIME_3D_GRID_MIN,
                      SIM_RUNTIME_3D_MAJOR_AXIS_MAX);
+}
+
+int sim_runtime_3d_major_axis_cells_for_config(const AppConfig *cfg) {
+    return sim_runtime_3d_applied_major_axis_cells_for_requested(
+        sim_runtime_3d_requested_major_axis_cells_for_config(cfg));
+}
+
+int sim_runtime_3d_requested_depth_cells_for_config(const AppConfig *cfg) {
+    if (!cfg || cfg->grid_d <= 0) return 0;
+    return cfg->grid_d;
+}
+
+int sim_runtime_3d_applied_depth_cells_for_requested(int requested_depth_cells) {
+    if (requested_depth_cells <= 0) {
+        return 0;
+    }
+    return clamp_int(requested_depth_cells,
+                     SIM_RUNTIME_3D_GRID_MIN,
+                     SIM_RUNTIME_3D_MAJOR_AXIS_MAX);
+}
+
+const char *sim_runtime_3d_depth_policy_label(SimRuntime3DDepthPolicy policy) {
+    switch (policy) {
+    case SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS:
+        return "Configured Z cells";
+    case SIM_RUNTIME_3D_DEPTH_POLICY_SCENE_DOMAIN_BOUNDS:
+        return "Scene bounds Z";
+    case SIM_RUNTIME_3D_DEPTH_POLICY_RETAINED_SCENE_BOUNDS:
+        return "Retained bounds Z";
+    case SIM_RUNTIME_3D_DEPTH_POLICY_LEGACY_MIN_XY:
+        return "Legacy min(X,Y)";
+    case SIM_RUNTIME_3D_DEPTH_POLICY_NONE:
+    default:
+        return "Unspecified";
+    }
 }
 
 bool sim_runtime_3d_domain_desc_resolve(const AppConfig *cfg,
@@ -121,10 +204,16 @@ bool sim_runtime_3d_domain_desc_resolve(const AppConfig *cfg,
                                         const PhysicsSimRuntimeVisualBootstrap *runtime_visual,
                                         SimRuntime3DDomainDesc *out_desc) {
     const PhysicsSimRetainedRuntimeScene *retained = NULL;
-    int major_axis_cells = 0;
+    int requested_grid_x_cells = 0;
+    int requested_grid_y_cells = 0;
+    int requested_depth_cells = 0;
     if (!cfg || !out_desc) return false;
 
-    major_axis_cells = sim_runtime_3d_major_axis_cells_for_config(cfg);
+    requested_grid_x_cells =
+        cfg->grid_w > 0 ? cfg->grid_w : SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
+    requested_grid_y_cells =
+        cfg->grid_h > 0 ? cfg->grid_h : SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
+    requested_depth_cells = sim_runtime_3d_requested_depth_cells_for_config(cfg);
     if (runtime_visual && runtime_visual->scene_domain.enabled) {
         return fill_desc_from_world_bounds((float)runtime_visual->scene_domain.min.x,
                                            (float)runtime_visual->scene_domain.min.y,
@@ -132,7 +221,12 @@ bool sim_runtime_3d_domain_desc_resolve(const AppConfig *cfg,
                                            (float)runtime_visual->scene_domain.max.x,
                                            (float)runtime_visual->scene_domain.max.y,
                                            (float)runtime_visual->scene_domain.max.z,
-                                           major_axis_cells,
+                                           requested_grid_x_cells,
+                                           requested_grid_y_cells,
+                                           requested_depth_cells,
+                                           requested_depth_cells > 0
+                                               ? SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS
+                                               : SIM_RUNTIME_3D_DEPTH_POLICY_SCENE_DOMAIN_BOUNDS,
                                            out_desc);
     }
 
@@ -146,7 +240,12 @@ bool sim_runtime_3d_domain_desc_resolve(const AppConfig *cfg,
                                            (float)retained->bounds.max.x,
                                            (float)retained->bounds.max.y,
                                            (float)retained->bounds.max.z,
-                                           major_axis_cells,
+                                           requested_grid_x_cells,
+                                           requested_grid_y_cells,
+                                           requested_depth_cells,
+                                           requested_depth_cells > 0
+                                               ? SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS
+                                               : SIM_RUNTIME_3D_DEPTH_POLICY_RETAINED_SCENE_BOUNDS,
                                            out_desc);
     }
 
@@ -159,7 +258,9 @@ bool sim_runtime_3d_domain_desc_from_legacy(const AppConfig *cfg,
     float extent_x = 1.0f;
     float extent_y = 1.0f;
     float extent_z = 1.0f;
-    int major_axis_cells = 0;
+    int requested_grid_x_cells = 0;
+    int requested_grid_y_cells = 0;
+    int requested_depth_cells = 0;
 
     if (!cfg || !out_desc) return false;
 
@@ -171,14 +272,23 @@ bool sim_runtime_3d_domain_desc_from_legacy(const AppConfig *cfg,
                                        : preset->domain_height);
     }
 
-    major_axis_cells = sim_runtime_3d_major_axis_cells_for_config(cfg);
+    requested_grid_x_cells =
+        cfg->grid_w > 0 ? cfg->grid_w : SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
+    requested_grid_y_cells =
+        cfg->grid_h > 0 ? cfg->grid_h : SIM_RUNTIME_3D_MAJOR_AXIS_DEFAULT;
+    requested_depth_cells = sim_runtime_3d_requested_depth_cells_for_config(cfg);
     return fill_desc_from_world_bounds(0.0f,
                                        0.0f,
                                        0.0f,
                                        extent_x,
                                        extent_y,
                                        extent_z,
-                                       major_axis_cells,
+                                       requested_grid_x_cells,
+                                       requested_grid_y_cells,
+                                       requested_depth_cells,
+                                       requested_depth_cells > 0
+                                           ? SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS
+                                           : SIM_RUNTIME_3D_DEPTH_POLICY_LEGACY_MIN_XY,
                                        out_desc);
 }
 

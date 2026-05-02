@@ -7,6 +7,7 @@
 
 #include "app/app_config.h"
 #include "app/sim_mode.h"
+#include "app/sim_runtime_3d_domain.h"
 #include "import/runtime_scene_bridge.h"
 #include "input/stroke_buffer.h"
 
@@ -81,6 +82,13 @@ typedef struct SceneFluidVolumeExportView3D {
 
 typedef struct SimRuntimeBackendReport {
     SimRuntimeBackendKind kind;
+    int requested_major_axis_cells;
+    int applied_major_axis_cells;
+    int requested_depth_cells;
+    int applied_depth_cells;
+    SimRuntime3DDepthPolicy depth_policy;
+    int requested_solver_iterations;
+    int applied_solver_iterations;
     int domain_w;
     int domain_h;
     int domain_d;

@@ -9,12 +9,25 @@
 
 typedef struct PhysicsSimRuntimeVisualBootstrap PhysicsSimRuntimeVisualBootstrap;
 
+typedef enum SimRuntime3DDepthPolicy {
+    SIM_RUNTIME_3D_DEPTH_POLICY_NONE = 0,
+    SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS,
+    SIM_RUNTIME_3D_DEPTH_POLICY_SCENE_DOMAIN_BOUNDS,
+    SIM_RUNTIME_3D_DEPTH_POLICY_RETAINED_SCENE_BOUNDS,
+    SIM_RUNTIME_3D_DEPTH_POLICY_LEGACY_MIN_XY
+} SimRuntime3DDepthPolicy;
+
 typedef struct SimRuntime3DDomainDesc {
+    int requested_major_axis_cells;
+    int applied_major_axis_cells;
+    int requested_depth_cells;
+    int applied_depth_cells;
     int grid_w;
     int grid_h;
     int grid_d;
     size_t slice_cell_count;
     size_t cell_count;
+    SimRuntime3DDepthPolicy depth_policy;
     float world_min_x;
     float world_min_y;
     float world_min_z;
@@ -33,7 +46,12 @@ typedef struct SimRuntime3DVolume {
     float *pressure;
 } SimRuntime3DVolume;
 
+int sim_runtime_3d_requested_major_axis_cells_for_config(const AppConfig *cfg);
 int sim_runtime_3d_major_axis_cells_for_config(const AppConfig *cfg);
+int sim_runtime_3d_applied_major_axis_cells_for_requested(int requested_major_axis_cells);
+int sim_runtime_3d_requested_depth_cells_for_config(const AppConfig *cfg);
+int sim_runtime_3d_applied_depth_cells_for_requested(int requested_depth_cells);
+const char *sim_runtime_3d_depth_policy_label(SimRuntime3DDepthPolicy policy);
 bool sim_runtime_3d_domain_desc_resolve(const AppConfig *cfg,
                                         const FluidScenePreset *preset,
                                         const PhysicsSimRuntimeVisualBootstrap *runtime_visual,

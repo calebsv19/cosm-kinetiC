@@ -25,6 +25,11 @@ typedef struct RendererHudInfo {
     SimRuntimeBackendKind backend_kind;
     int         backend_requested_major_axis_cells;
     int         backend_applied_major_axis_cells;
+    int         backend_requested_depth_cells;
+    int         backend_applied_depth_cells;
+    SimRuntime3DDepthPolicy backend_depth_policy;
+    int         backend_requested_solver_iterations;
+    int         backend_applied_solver_iterations;
     int         backend_domain_w;
     int         backend_domain_h;
     int         backend_domain_d;

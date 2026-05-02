@@ -55,6 +55,15 @@ static float total_density_sum(const SimRuntimeBackend3DScaffoldTestView *impl) 
     return total;
 }
 
+static double total_density_mass(const SimRuntimeBackend3DScaffoldTestView *impl) {
+    double voxel_volume = 0.0;
+    if (!impl || !(impl->volume.desc.voxel_size > 0.0f)) return 0.0;
+    voxel_volume = (double)impl->volume.desc.voxel_size *
+                   (double)impl->volume.desc.voxel_size *
+                   (double)impl->volume.desc.voxel_size;
+    return (double)total_density_sum(impl) * voxel_volume;
+}
+
 static double density_center_x(const SimRuntimeBackend3DScaffoldTestView *impl) {
     double weighted = 0.0;
     double total = 0.0;
@@ -385,6 +394,96 @@ fail:
     return false;
 }
 
+static bool test_free_emitter_emitted_mass_stays_stable_across_quality_levels(void) {
+    FluidScenePreset preset = {0};
+    SimModeRoute route = {
+        .backend_lane = SIM_BACKEND_CONTROLLED_3D,
+        .requested_space_mode = SPACE_MODE_3D,
+        .projection_space_mode = SPACE_MODE_2D,
+    };
+    PhysicsSimRuntimeVisualBootstrap visual = {0};
+    AppConfig coarse_cfg = {0};
+    AppConfig dense_cfg = {0};
+    SceneState coarse_scene = {0};
+    SceneState dense_scene = {0};
+    SimRuntimeBackend *coarse_backend = NULL;
+    SimRuntimeBackend *dense_backend = NULL;
+    SimRuntimeBackend3DScaffoldTestView *coarse_impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView *dense_impl = NULL;
+    double coarse_mass = 0.0;
+    double dense_mass = 0.0;
+    double mass_ratio = 0.0;
+
+    coarse_cfg.quality_index = 0;
+    coarse_cfg.grid_w = 128;
+    coarse_cfg.grid_h = 128;
+    coarse_cfg.emitter_density_multiplier = 1.0f;
+    dense_cfg = coarse_cfg;
+    dense_cfg.grid_w = 384;
+    dense_cfg.grid_h = 384;
+
+    visual.scene_domain.enabled = true;
+    visual.scene_domain_authored = true;
+    visual.scene_domain.min.x = -5.0;
+    visual.scene_domain.min.y = -2.0;
+    visual.scene_domain.min.z = -1.0;
+    visual.scene_domain.max.x = 5.0;
+    visual.scene_domain.max.y = 2.0;
+    visual.scene_domain.max.z = 1.0;
+
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.emitter_count = 1;
+    preset.emitters[0] = (FluidEmitter){
+        .type = EMITTER_DENSITY_SOURCE,
+        .position_x = 0.5f,
+        .position_y = 0.5f,
+        .position_z = 0.0f,
+        .radius = 0.10f,
+        .strength = 10.0f,
+        .dir_x = 0.0f,
+        .dir_y = 0.0f,
+        .dir_z = 0.0f,
+        .attached_object = -1,
+        .attached_import = -1,
+    };
+
+    coarse_backend = sim_runtime_backend_create(&coarse_cfg, &preset, &route, &visual);
+    dense_backend = sim_runtime_backend_create(&dense_cfg, &preset, &route, &visual);
+    if (!coarse_backend || !dense_backend) goto fail;
+    coarse_impl = (SimRuntimeBackend3DScaffoldTestView *)coarse_backend->impl;
+    dense_impl = (SimRuntimeBackend3DScaffoldTestView *)dense_backend->impl;
+    if (!coarse_impl || !dense_impl) goto fail;
+
+    coarse_scene.backend = coarse_backend;
+    coarse_scene.preset = &preset;
+    coarse_scene.config = &coarse_cfg;
+    coarse_scene.emitters_enabled = true;
+
+    dense_scene.backend = dense_backend;
+    dense_scene.preset = &preset;
+    dense_scene.config = &dense_cfg;
+    dense_scene.emitters_enabled = true;
+
+    sim_runtime_backend_apply_emitters(coarse_backend, &coarse_scene, 0.1);
+    sim_runtime_backend_apply_emitters(dense_backend, &dense_scene, 0.1);
+
+    coarse_mass = total_density_mass(coarse_impl);
+    dense_mass = total_density_mass(dense_impl);
+    if (!(coarse_mass > 0.0) || !(dense_mass > 0.0)) goto fail;
+
+    mass_ratio = dense_mass / coarse_mass;
+    if (mass_ratio < 0.80 || mass_ratio > 1.25) goto fail;
+
+    sim_runtime_backend_destroy(coarse_backend);
+    sim_runtime_backend_destroy(dense_backend);
+    return true;
+
+fail:
+    if (coarse_backend) sim_runtime_backend_destroy(coarse_backend);
+    if (dense_backend) sim_runtime_backend_destroy(dense_backend);
+    return false;
+}
+
 static bool test_tiny3d_free_emitter_advects_density_downstream(void) {
     AppConfig cfg = {0};
     FluidScenePreset preset = {0};
@@ -627,6 +726,11 @@ int main(void) {
     if (!test_free_emitter_world_footprint_stays_stable_across_quality_levels()) {
         fprintf(stderr,
                 "sim_runtime_backend_3d_emitter_contract_test: world footprint stability failed\n");
+        return 1;
+    }
+    if (!test_free_emitter_emitted_mass_stays_stable_across_quality_levels()) {
+        fprintf(stderr,
+                "sim_runtime_backend_3d_emitter_contract_test: emitted mass invariance failed\n");
         return 1;
     }
     fprintf(stdout, "sim_runtime_backend_3d_emitter_contract_test: success\n");

@@ -159,18 +159,79 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         if (hud->backend_requested_major_axis_cells == hud->backend_applied_major_axis_cells) {
             snprintf(resolution_line,
                      sizeof(resolution_line),
-                     "3D resolution: requested axis %d, applied %d",
+                     "3D resolution: requested XY %dx%d, axis %d -> %d",
+                     hud->grid_w,
+                     hud->grid_h,
                      hud->backend_requested_major_axis_cells,
                      hud->backend_applied_major_axis_cells);
         } else {
             snprintf(resolution_line,
                      sizeof(resolution_line),
-                     "3D resolution: requested axis %d, applied %d (cap)",
+                     "3D resolution: requested XY %dx%d, axis %d -> %d (cap)",
+                     hud->grid_w,
+                     hud->grid_h,
                      hud->backend_requested_major_axis_cells,
                      hud->backend_applied_major_axis_cells);
         }
     } else {
         resolution_line[0] = '\0';
+    }
+
+    char depth_policy_line[160];
+    if (hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD &&
+        hud->backend_depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_NONE) {
+        if (hud->backend_requested_depth_cells > 0 &&
+            hud->backend_applied_depth_cells > 0) {
+            if (hud->backend_requested_depth_cells == hud->backend_applied_depth_cells) {
+                snprintf(depth_policy_line,
+                         sizeof(depth_policy_line),
+                         "3D depth: requested Z %d, applied %d (%s)",
+                         hud->backend_requested_depth_cells,
+                         hud->backend_applied_depth_cells,
+                         sim_runtime_3d_depth_policy_label(hud->backend_depth_policy));
+            } else {
+                snprintf(depth_policy_line,
+                         sizeof(depth_policy_line),
+                         "3D depth: requested Z %d, applied %d (%s)",
+                         hud->backend_requested_depth_cells,
+                         hud->backend_applied_depth_cells,
+                         sim_runtime_3d_depth_policy_label(hud->backend_depth_policy));
+            }
+        } else if (hud->backend_applied_depth_cells > 0) {
+            snprintf(depth_policy_line,
+                     sizeof(depth_policy_line),
+                     "3D depth: derived Z %d (%s)",
+                     hud->backend_applied_depth_cells,
+                     sim_runtime_3d_depth_policy_label(hud->backend_depth_policy));
+        } else {
+            snprintf(depth_policy_line,
+                     sizeof(depth_policy_line),
+                     "3D depth: %s",
+                     sim_runtime_3d_depth_policy_label(hud->backend_depth_policy));
+        }
+    } else {
+        depth_policy_line[0] = '\0';
+    }
+
+    char solver_contract_line[160];
+    if (hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD &&
+        hud->backend_requested_solver_iterations > 0 &&
+        hud->backend_applied_solver_iterations > 0) {
+        if (hud->backend_requested_solver_iterations == hud->backend_applied_solver_iterations) {
+            snprintf(solver_contract_line,
+                     sizeof(solver_contract_line),
+                     "3D solver: requested %d, applied %d",
+                     hud->backend_requested_solver_iterations,
+                     hud->backend_applied_solver_iterations);
+        } else {
+            snprintf(solver_contract_line,
+                     sizeof(solver_contract_line),
+                     "3D solver: requested %d, applied %d (3D clamp)",
+                     hud->backend_requested_solver_iterations,
+                     hud->backend_applied_solver_iterations);
+        }
+    } else {
+        solver_contract_line[0] = '\0';
     }
 
     char domain_extent_line[160];
@@ -422,6 +483,8 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     lines[line_count++] = backend_kind_line;
     lines[line_count++] = domain_line;
     if (resolution_line[0]) lines[line_count++] = resolution_line;
+    if (depth_policy_line[0]) lines[line_count++] = depth_policy_line;
+    if (solver_contract_line[0]) lines[line_count++] = solver_contract_line;
     if (domain_extent_line[0]) lines[line_count++] = domain_extent_line;
     if (compatibility_line[0]) lines[line_count++] = compatibility_line;
     if (backend_status_line[0]) lines[line_count++] = backend_status_line;

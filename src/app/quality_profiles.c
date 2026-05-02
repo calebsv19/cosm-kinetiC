@@ -3,19 +3,19 @@
 #include <stddef.h>
 
 static const QualityProfileDef QUALITY_PROFILES_2D[] = {
-    { "Preview", 96, 96, 12, 1, 0.00010f, 0.05f, 1.50f, 0.000006f, 1.00f, 1.00f, 1.00f, false },
-    { "Balanced", 128, 128, 16, 2, 0.00010f, 0.05f, 1.50f, 0.000006f, 1.00f, 1.00f, 1.00f, true },
-    { "High", 256, 256, 24, 3, 0.00010f, 0.05f, 1.50f, 0.000006f, 1.00f, 1.00f, 1.00f, true },
-    { "Deep", 384, 384, 32, 4, 0.00010f, 0.05f, 1.50f, 0.000006f, 1.00f, 1.00f, 1.00f, true },
-    { "Karman", 256, 256, 40, 3, 0.00010f, 0.05f, 1.50f, 0.000006f, 1.00f, 1.00f, 1.00f, false },
-    { "Tiny3D", 64, 64, 8, 1, 0.00010f, 0.05f, 1.50f, 0.000006f, 1.00f, 1.00f, 1.00f, false }
+    { "Preview", 96, 96, 12, 1, false },
+    { "Balanced", 128, 128, 16, 2, true },
+    { "High", 256, 256, 24, 3, true },
+    { "Deep", 384, 384, 32, 4, true },
+    { "Karman", 256, 256, 40, 3, false },
+    { "Tiny3D", 64, 64, 8, 1, false }
 };
 
 static const QualityProfileDef QUALITY_PROFILES_3D[] = {
-    { "Preview", 96, 96, 10, 1, 0.00008f, 0.06f, 1.20f, 0.000004f, 0.90f, 0.90f, 1.00f, false },
-    { "Basic", 160, 160, 18, 2, 0.00010f, 0.05f, 1.40f, 0.000005f, 1.00f, 1.00f, 1.00f, true },
-    { "High", 224, 224, 28, 3, 0.00012f, 0.04f, 1.60f, 0.000006f, 1.10f, 1.05f, 1.00f, true },
-    { "Deep", 256, 256, 40, 4, 0.00015f, 0.03f, 1.80f, 0.000007f, 1.20f, 1.10f, 1.00f, true }
+    { "Preview", 96, 96, 10, 1, false },
+    { "Basic", 160, 160, 18, 2, true },
+    { "High", 224, 224, 28, 3, true },
+    { "Deep", 256, 256, 40, 4, true }
 };
 
 static int profile_count_for_catalog(QualityProfileCatalogId catalog) {
@@ -67,13 +67,6 @@ void quality_profile_apply_for_catalog(AppConfig *cfg,
     cfg->grid_h = profile->grid_h;
     cfg->fluid_solver_iterations = profile->solver_iterations;
     cfg->physics_substeps = profile->physics_substeps;
-    cfg->density_diffusion = profile->density_diffusion;
-    cfg->density_decay = profile->density_decay;
-    cfg->fluid_buoyancy_force = profile->fluid_buoyancy_force;
-    cfg->velocity_damping = profile->velocity_damping;
-    cfg->emitter_density_multiplier = profile->emitter_density_multiplier;
-    cfg->emitter_velocity_multiplier = profile->emitter_velocity_multiplier;
-    cfg->emitter_sink_multiplier = profile->emitter_sink_multiplier;
     cfg->enable_render_blur = profile->enable_blur;
     cfg->quality_index = index;
 }

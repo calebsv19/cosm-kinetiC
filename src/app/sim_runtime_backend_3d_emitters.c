@@ -7,7 +7,120 @@
 #include <math.h>
 
 static const float SCAFFOLD_EMITTER_POWER_BOOST = 40.0f;
-static const float SCAFFOLD_REF_VOLUME_CELLS = 96.0f * 96.0f * 96.0f;
+static const float SCAFFOLD_REF_FOOTPRINT_CELLS = 128.0f;
+static const double SCAFFOLD_IMPORT_DESIRED_FIT = 0.25;
+
+static double backend_3d_scaffold_axis_span(double world_min, double world_max) {
+    double span = world_max - world_min;
+    return span > 0.0 ? span : 1.0;
+}
+
+static double backend_3d_scaffold_reference_xy_span(const SimRuntime3DDomainDesc *desc) {
+    double span_x = 0.0;
+    double span_y = 0.0;
+    if (!desc) return 1.0;
+    span_x = backend_3d_scaffold_axis_span(desc->world_min_x, desc->world_max_x);
+    span_y = backend_3d_scaffold_axis_span(desc->world_min_y, desc->world_max_y);
+    return span_x < span_y ? span_x : span_y;
+}
+
+static double backend_3d_scaffold_resolve_world_size(double authored_size, double world_span) {
+    if (!(authored_size > 0.0)) return 0.0;
+    if (authored_size <= 1.0) return authored_size * world_span;
+    return authored_size;
+}
+
+static double backend_3d_scaffold_sphere_world_volume(double world_radius) {
+    if (!(world_radius > 0.0)) return 0.0;
+    return (4.0 / 3.0) * M_PI * world_radius * world_radius * world_radius;
+}
+
+static double backend_3d_scaffold_box_world_volume(double half_x,
+                                                   double half_y,
+                                                   double half_z) {
+    if (!(half_x > 0.0) || !(half_y > 0.0) || !(half_z > 0.0)) return 0.0;
+    return 8.0 * half_x * half_y * half_z;
+}
+
+static double backend_3d_scaffold_emitter_world_radius(const SimRuntime3DDomainDesc *desc,
+                                                       float authored_radius) {
+    if (!desc) return 0.0;
+    return backend_3d_scaffold_resolve_world_size((double)authored_radius,
+                                                  backend_3d_scaffold_reference_xy_span(desc));
+}
+
+static double backend_3d_scaffold_object_world_sphere_radius(const SimRuntime3DDomainDesc *desc,
+                                                             const PresetObject *object) {
+    double half_x = 0.0;
+    double half_z = 0.0;
+    double size_z = 0.0;
+    if (!desc || !object) return 0.0;
+    size_z = object->size_z > 0.0f ? (double)object->size_z : (double)object->size_x;
+    half_x = backend_3d_scaffold_resolve_world_size((double)object->size_x,
+                                                    backend_3d_scaffold_reference_xy_span(desc));
+    half_z = backend_3d_scaffold_resolve_world_size(
+        size_z,
+        backend_3d_scaffold_axis_span(desc->world_min_z, desc->world_max_z));
+    return half_z > half_x ? half_z : half_x;
+}
+
+static double backend_3d_scaffold_object_world_half_extent_x(const SimRuntime3DDomainDesc *desc,
+                                                             const PresetObject *object) {
+    if (!desc || !object) return 0.0;
+    return backend_3d_scaffold_resolve_world_size(
+        (double)object->size_x,
+        backend_3d_scaffold_axis_span(desc->world_min_x, desc->world_max_x));
+}
+
+static double backend_3d_scaffold_object_world_half_extent_y(const SimRuntime3DDomainDesc *desc,
+                                                             const PresetObject *object) {
+    double size_y = 0.0;
+    if (!desc || !object) return 0.0;
+    size_y = object->size_y > 0.0f ? (double)object->size_y : (double)object->size_x;
+    return backend_3d_scaffold_resolve_world_size(
+        size_y,
+        backend_3d_scaffold_axis_span(desc->world_min_y, desc->world_max_y));
+}
+
+static double backend_3d_scaffold_object_world_half_extent_z(const SimRuntime3DDomainDesc *desc,
+                                                             const PresetObject *object) {
+    double size_z = 0.0;
+    if (!desc || !object) return 0.0;
+    size_z = object->size_z > 0.0f ? (double)object->size_z : (double)object->size_x;
+    return backend_3d_scaffold_resolve_world_size(
+        size_z,
+        backend_3d_scaffold_axis_span(desc->world_min_z, desc->world_max_z));
+}
+
+static double backend_3d_scaffold_import_world_half_extent_x(const SimRuntime3DDomainDesc *desc,
+                                                             const ImportedShape *imp) {
+    double scale = 1.0;
+    double scale_factor = 0.0;
+    if (!desc || !imp) return 0.0;
+    scale = imp->scale > 0.0f ? (double)imp->scale : 1.0;
+    scale_factor = scale * SCAFFOLD_IMPORT_DESIRED_FIT * 0.5;
+    return backend_3d_scaffold_axis_span(desc->world_min_x, desc->world_max_x) * scale_factor;
+}
+
+static double backend_3d_scaffold_import_world_half_extent_y(const SimRuntime3DDomainDesc *desc,
+                                                             const ImportedShape *imp) {
+    double scale = 1.0;
+    double scale_factor = 0.0;
+    if (!desc || !imp) return 0.0;
+    scale = imp->scale > 0.0f ? (double)imp->scale : 1.0;
+    scale_factor = scale * SCAFFOLD_IMPORT_DESIRED_FIT * 0.5;
+    return backend_3d_scaffold_axis_span(desc->world_min_y, desc->world_max_y) * scale_factor;
+}
+
+static double backend_3d_scaffold_import_world_half_extent_z(const SimRuntime3DDomainDesc *desc,
+                                                             const ImportedShape *imp) {
+    double scale = 1.0;
+    double scale_factor = 0.0;
+    if (!desc || !imp) return 0.0;
+    scale = imp->scale > 0.0f ? (double)imp->scale : 1.0;
+    scale_factor = scale * SCAFFOLD_IMPORT_DESIRED_FIT * 0.5;
+    return backend_3d_scaffold_axis_span(desc->world_min_z, desc->world_max_z) * scale_factor;
+}
 
 static void backend_3d_scaffold_reset_emitter_step_stats(SimRuntimeBackend3DScaffold *state) {
     if (!state) return;
@@ -90,19 +203,28 @@ static float backend_3d_scaffold_emitter_strength_scale(const SceneState *scene,
 }
 
 static float backend_3d_scaffold_emitter_total_strength(const SceneState *scene,
+                                                        const SimRuntime3DDomainDesc *desc,
                                                         const SimRuntimeEmitterResolved *emitter,
                                                         float dt,
-                                                        size_t volume_cells) {
+                                                        size_t footprint_cells,
+                                                        double footprint_world_volume) {
     float scale = 1.0f;
-    float volume_scale = 1.0f;
+    float footprint_scale = 1.0f;
+    double equivalent_cells = 0.0;
+    double voxel_volume = 0.0;
     if (!emitter || dt <= 0.0f) return 0.0f;
+    if (footprint_cells == 0) return 0.0f;
     scale = backend_3d_scaffold_emitter_strength_scale(scene, emitter->type);
-    if (volume_cells > 0) {
-        volume_scale = (float)volume_cells / SCAFFOLD_REF_VOLUME_CELLS;
-        if (volume_scale < 0.25f) volume_scale = 0.25f;
-        if (volume_scale > 8.0f) volume_scale = 8.0f;
+    equivalent_cells = (double)footprint_cells;
+    if (desc && desc->voxel_size > 0.0f && footprint_world_volume > 0.0) {
+        voxel_volume = (double)desc->voxel_size *
+                       (double)desc->voxel_size *
+                       (double)desc->voxel_size;
+        equivalent_cells = footprint_world_volume / voxel_volume;
+        if (equivalent_cells < 1.0) equivalent_cells = 1.0;
     }
-    return emitter->strength * scale * SCAFFOLD_EMITTER_POWER_BOOST * dt * volume_scale;
+    footprint_scale = (float)(equivalent_cells / (double)SCAFFOLD_REF_FOOTPRINT_CELLS);
+    return emitter->strength * scale * SCAFFOLD_EMITTER_POWER_BOOST * dt * footprint_scale;
 }
 
 static bool backend_3d_scaffold_cell_in_sphere(const SimRuntimeEmitterPlacement3D *placement,
@@ -187,6 +309,7 @@ static void backend_3d_scaffold_apply_sphere(SimRuntimeBackend3DScaffold *state,
                                              const SceneState *scene,
                                              const SimRuntimeEmitterResolved *emitter,
                                              const SimRuntimeEmitterPlacement3D *placement,
+                                             double footprint_world_volume,
                                              double dt) {
     size_t cells = 0;
     float total_strength = 0.0f;
@@ -195,9 +318,11 @@ static void backend_3d_scaffold_apply_sphere(SimRuntimeBackend3DScaffold *state,
     cells = backend_3d_scaffold_count_sphere_cells(placement);
     if (cells == 0) return;
     total_strength = backend_3d_scaffold_emitter_total_strength(scene,
+                                                                &state->volume.desc,
                                                                 emitter,
                                                                 (float)dt,
-                                                                state->volume.desc.cell_count);
+                                                                cells,
+                                                                footprint_world_volume);
     per_cell = total_strength / (float)cells;
     if (per_cell <= 0.0f) return;
     backend_3d_scaffold_accumulate_emitter_step_stats(state, emitter, cells, total_strength);
@@ -218,6 +343,7 @@ static void backend_3d_scaffold_apply_oriented_box(SimRuntimeBackend3DScaffold *
                                                    const SceneState *scene,
                                                    const SimRuntimeEmitterResolved *emitter,
                                                    const SimRuntimeEmitterOrientedBox3D *box,
+                                                   double footprint_world_volume,
                                                    double dt) {
     size_t cells = 0;
     float total_strength = 0.0f;
@@ -226,9 +352,11 @@ static void backend_3d_scaffold_apply_oriented_box(SimRuntimeBackend3DScaffold *
     cells = backend_3d_scaffold_count_oriented_box_cells(box);
     if (cells == 0) return;
     total_strength = backend_3d_scaffold_emitter_total_strength(scene,
+                                                                &state->volume.desc,
                                                                 emitter,
                                                                 (float)dt,
-                                                                state->volume.desc.cell_count);
+                                                                cells,
+                                                                footprint_world_volume);
     per_cell = total_strength / (float)cells;
     if (per_cell <= 0.0f) return;
     backend_3d_scaffold_accumulate_emitter_step_stats(state, emitter, cells, total_strength);
@@ -250,11 +378,14 @@ static void backend_3d_scaffold_apply_free_emitter(SimRuntimeBackend3DScaffold *
                                                    const SimRuntimeEmitterResolved *emitter,
                                                    double dt) {
     SimRuntimeEmitterPlacement3D placement = {0};
+    double world_radius = 0.0;
     if (!state || !scene || !emitter) return;
     if (!backend_3d_scaffold_resolve_emitter_placement(scene, &state->volume.desc, emitter, &placement)) {
         return;
     }
-    backend_3d_scaffold_apply_sphere(state, scene, emitter, &placement, dt);
+    world_radius = backend_3d_scaffold_emitter_world_radius(&state->volume.desc, emitter->radius);
+    backend_3d_scaffold_apply_sphere(
+        state, scene, emitter, &placement, backend_3d_scaffold_sphere_world_volume(world_radius), dt);
 }
 
 static void backend_3d_scaffold_apply_attached_object_emitter(SimRuntimeBackend3DScaffold *state,
@@ -264,6 +395,10 @@ static void backend_3d_scaffold_apply_attached_object_emitter(SimRuntimeBackend3
     SimRuntimeEmitterPlacement3D placement = {0};
     SimRuntimeEmitterOrientedBox3D box = {0};
     const PresetObject *object = NULL;
+    double world_radius = 0.0;
+    double half_x = 0.0;
+    double half_y = 0.0;
+    double half_z = 0.0;
     int index = -1;
     if (!state || !scene || !scene->preset || !emitter) return;
     if (!backend_3d_scaffold_resolve_emitter_placement(scene, &state->volume.desc, emitter, &placement)) {
@@ -271,7 +406,9 @@ static void backend_3d_scaffold_apply_attached_object_emitter(SimRuntimeBackend3
     }
     index = emitter->attached_object;
     if (index < 0 || index >= (int)scene->preset->object_count) {
-        backend_3d_scaffold_apply_sphere(state, scene, emitter, &placement, dt);
+        world_radius = backend_3d_scaffold_emitter_world_radius(&state->volume.desc, emitter->radius);
+        backend_3d_scaffold_apply_sphere(
+            state, scene, emitter, &placement, backend_3d_scaffold_sphere_world_volume(world_radius), dt);
         return;
     }
     object = &scene->preset->objects[index];
@@ -279,17 +416,35 @@ static void backend_3d_scaffold_apply_attached_object_emitter(SimRuntimeBackend3
         SimRuntimeEmitterPlacement3D object_sphere = placement;
         if (!backend_3d_scaffold_build_attached_object_sphere(
                 &state->volume.desc, &placement, object, &object_sphere)) {
-            backend_3d_scaffold_apply_sphere(state, scene, emitter, &placement, dt);
+            world_radius = backend_3d_scaffold_emitter_world_radius(&state->volume.desc, emitter->radius);
+            backend_3d_scaffold_apply_sphere(state,
+                                             scene,
+                                             emitter,
+                                             &placement,
+                                             backend_3d_scaffold_sphere_world_volume(world_radius),
+                                             dt);
             return;
         }
-        backend_3d_scaffold_apply_sphere(state, scene, emitter, &object_sphere, dt);
+        world_radius = backend_3d_scaffold_object_world_sphere_radius(&state->volume.desc, object);
+        backend_3d_scaffold_apply_sphere(state,
+                                         scene,
+                                         emitter,
+                                         &object_sphere,
+                                         backend_3d_scaffold_sphere_world_volume(world_radius),
+                                         dt);
         return;
     }
     if (!backend_3d_scaffold_build_object_box(&state->volume.desc, &placement, object, &box)) {
-        backend_3d_scaffold_apply_sphere(state, scene, emitter, &placement, dt);
+        world_radius = backend_3d_scaffold_emitter_world_radius(&state->volume.desc, emitter->radius);
+        backend_3d_scaffold_apply_sphere(
+            state, scene, emitter, &placement, backend_3d_scaffold_sphere_world_volume(world_radius), dt);
         return;
     }
-    backend_3d_scaffold_apply_oriented_box(state, scene, emitter, &box, dt);
+    half_x = backend_3d_scaffold_object_world_half_extent_x(&state->volume.desc, object);
+    half_y = backend_3d_scaffold_object_world_half_extent_y(&state->volume.desc, object);
+    half_z = backend_3d_scaffold_object_world_half_extent_z(&state->volume.desc, object);
+    backend_3d_scaffold_apply_oriented_box(
+        state, scene, emitter, &box, backend_3d_scaffold_box_world_volume(half_x, half_y, half_z), dt);
 }
 
 static void backend_3d_scaffold_apply_attached_import_emitter(SimRuntimeBackend3DScaffold *state,
@@ -300,6 +455,10 @@ static void backend_3d_scaffold_apply_attached_import_emitter(SimRuntimeBackend3
     SimRuntimeEmitterOrientedBox3D box = {0};
     SimRuntimeEmitterResolved rotated = {0};
     const ImportedShape *imp = NULL;
+    double world_radius = 0.0;
+    double half_x = 0.0;
+    double half_y = 0.0;
+    double half_z = 0.0;
     int index = -1;
     if (!state || !scene || !emitter) return;
     if (!backend_3d_scaffold_resolve_emitter_placement(scene, &state->volume.desc, emitter, &placement)) {
@@ -307,22 +466,36 @@ static void backend_3d_scaffold_apply_attached_import_emitter(SimRuntimeBackend3
     }
     index = emitter->attached_import;
     if (index < 0 || index >= (int)scene->import_shape_count) {
-        backend_3d_scaffold_apply_sphere(state, scene, emitter, &placement, dt);
+        world_radius = backend_3d_scaffold_emitter_world_radius(&state->volume.desc, emitter->radius);
+        backend_3d_scaffold_apply_sphere(
+            state, scene, emitter, &placement, backend_3d_scaffold_sphere_world_volume(world_radius), dt);
         return;
     }
     imp = &scene->import_shapes[index];
     if (!imp->enabled) {
-        backend_3d_scaffold_apply_sphere(state, scene, emitter, &placement, dt);
+        world_radius = backend_3d_scaffold_emitter_world_radius(&state->volume.desc, emitter->radius);
+        backend_3d_scaffold_apply_sphere(
+            state, scene, emitter, &placement, backend_3d_scaffold_sphere_world_volume(world_radius), dt);
         return;
     }
 
     rotated = *emitter;
     rotate_xy(&rotated.dir_x, &rotated.dir_y, imp->rotation_deg * (float)M_PI / 180.0f);
     if (!backend_3d_scaffold_build_import_box(&state->volume.desc, &placement, imp, &box)) {
-        backend_3d_scaffold_apply_sphere(state, scene, &rotated, &placement, dt);
+        world_radius = backend_3d_scaffold_emitter_world_radius(&state->volume.desc, emitter->radius);
+        backend_3d_scaffold_apply_sphere(state,
+                                         scene,
+                                         &rotated,
+                                         &placement,
+                                         backend_3d_scaffold_sphere_world_volume(world_radius),
+                                         dt);
         return;
     }
-    backend_3d_scaffold_apply_oriented_box(state, scene, &rotated, &box, dt);
+    half_x = backend_3d_scaffold_import_world_half_extent_x(&state->volume.desc, imp);
+    half_y = backend_3d_scaffold_import_world_half_extent_y(&state->volume.desc, imp);
+    half_z = backend_3d_scaffold_import_world_half_extent_z(&state->volume.desc, imp);
+    backend_3d_scaffold_apply_oriented_box(
+        state, scene, &rotated, &box, backend_3d_scaffold_box_world_volume(half_x, half_y, half_z), dt);
 }
 
 void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,

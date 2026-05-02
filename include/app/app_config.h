@@ -25,6 +25,7 @@ typedef struct AppConfig {
 
     int grid_w;
     int grid_h;
+    int grid_d;
 
     double min_dt;
     double max_dt;

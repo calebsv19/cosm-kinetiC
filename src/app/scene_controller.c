@@ -17,6 +17,7 @@
 #include "app/scene_controller_util.h"
 #include "app/sim_mode.h"
 #include "app/sim_runtime_3d_domain.h"
+#include "app/sim_runtime_3d_solver.h"
 #include "app/sim_runtime_backend.h"
 #include "app/quality_profiles.h"
 #include "app/data_paths.h"
@@ -604,15 +605,19 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .backend_lane = scene->mode_route.backend_lane,
         .backend_uses_canonical_2d_solver = scene->mode_route.backend_uses_canonical_2d_solver,
         .backend_kind = backend_report.kind,
-        .backend_requested_major_axis_cells = (scene->mode_route.backend_lane == SIM_BACKEND_CONTROLLED_3D)
-                                                  ? (((scene->config ? scene->config->grid_w : cfg->grid_w) >
-                                                      (scene->config ? scene->config->grid_h : cfg->grid_h))
-                                                         ? (scene->config ? scene->config->grid_w : cfg->grid_w)
-                                                         : (scene->config ? scene->config->grid_h : cfg->grid_h))
-                                                  : 0,
-        .backend_applied_major_axis_cells = (scene->mode_route.backend_lane == SIM_BACKEND_CONTROLLED_3D)
-                                                ? sim_runtime_3d_major_axis_cells_for_config(scene->config ? scene->config : cfg)
-                                                : 0,
+        .backend_requested_major_axis_cells = backend_report.requested_major_axis_cells,
+        .backend_applied_major_axis_cells = backend_report.applied_major_axis_cells,
+        .backend_requested_depth_cells = backend_report.requested_depth_cells,
+        .backend_applied_depth_cells = backend_report.applied_depth_cells,
+        .backend_depth_policy = backend_report.depth_policy,
+        .backend_requested_solver_iterations =
+            (scene->mode_route.backend_lane == SIM_BACKEND_CONTROLLED_3D)
+                ? (scene->config ? scene->config->fluid_solver_iterations : cfg->fluid_solver_iterations)
+                : 0,
+        .backend_applied_solver_iterations =
+            (scene->mode_route.backend_lane == SIM_BACKEND_CONTROLLED_3D)
+                ? sim_runtime_3d_solver_iterations_for_config(scene->config ? scene->config : cfg)
+                : 0,
         .backend_domain_w = backend_report.domain_w,
         .backend_domain_h = backend_report.domain_h,
         .backend_domain_d = backend_report.domain_d,

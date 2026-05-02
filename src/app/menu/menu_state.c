@@ -791,6 +791,8 @@ void menu_clamp_grid_size(AppConfig *cfg) {
     if (cfg->grid_h < 32) cfg->grid_h = 32;
     if (cfg->grid_w > 512) cfg->grid_w = 512;
     if (cfg->grid_h > 512) cfg->grid_h = 512;
+    if (cfg->grid_d < 0) cfg->grid_d = 0;
+    if (cfg->grid_d > 256) cfg->grid_d = 256;
 }
 
 void menu_begin_headless_frames_edit(SceneMenuInteraction *ctx) {

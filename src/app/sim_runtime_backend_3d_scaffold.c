@@ -447,6 +447,11 @@ static bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
 
     *out_report = (SimRuntimeBackendReport){
         .kind = SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD,
+        .requested_major_axis_cells = desc->requested_major_axis_cells,
+        .applied_major_axis_cells = desc->applied_major_axis_cells,
+        .requested_depth_cells = desc->requested_depth_cells,
+        .applied_depth_cells = desc->applied_depth_cells,
+        .depth_policy = desc->depth_policy,
         .domain_w = desc->grid_w,
         .domain_h = desc->grid_h,
         .domain_d = desc->grid_d,

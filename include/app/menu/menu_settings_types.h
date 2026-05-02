@@ -24,6 +24,10 @@ typedef enum MenuSettingsProviderId {
 typedef enum MenuSettingsFieldId {
     MENU_SETTINGS_FIELD_GRID_X = 0,
     MENU_SETTINGS_FIELD_GRID_Y,
+    MENU_SETTINGS_FIELD_GRID_Z,
+    MENU_SETTINGS_FIELD_3D_APPLIED_AXIS,
+    MENU_SETTINGS_FIELD_3D_APPLIED_DEPTH,
+    MENU_SETTINGS_FIELD_3D_DEPTH_POLICY,
     MENU_SETTINGS_FIELD_QUALITY_PRESET,
     MENU_SETTINGS_FIELD_PHYSICS_SUBSTEPS,
     MENU_SETTINGS_FIELD_SOLVER_ITERATIONS,
@@ -68,6 +72,7 @@ typedef struct MenuSettingsFieldDef {
 typedef struct MenuSettingsDraft {
     int grid_x;
     int grid_y;
+    int grid_z;
     int quality_index;
     int physics_substeps;
     int fluid_solver_iterations;

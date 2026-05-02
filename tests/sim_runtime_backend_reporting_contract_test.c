@@ -38,6 +38,7 @@ static bool test_3d_backend_reports_xyz_domain_and_compatibility_slice(void) {
     cfg.quality_index = 1;
     cfg.grid_w = 128;
     cfg.grid_h = 128;
+    cfg.grid_d = 0;
     cfg.window_w = 640;
     cfg.window_h = 480;
 
@@ -57,6 +58,10 @@ static bool test_3d_backend_reports_xyz_domain_and_compatibility_slice(void) {
     if (!backend) return false;
     if (!sim_runtime_backend_get_report(backend, &report)) return false;
     if (report.kind != SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD) return false;
+    if (report.requested_major_axis_cells != 128) return false;
+    if (report.applied_major_axis_cells != 128) return false;
+    if (report.requested_depth_cells != 0) return false;
+    if (report.applied_depth_cells != 32) return false;
     if (report.domain_w != 96) return false;
     if (report.domain_h != 128) return false;
     if (report.domain_d != 32) return false;
@@ -92,6 +97,49 @@ static bool test_3d_backend_reports_xyz_domain_and_compatibility_slice(void) {
     if (fluid.width != report.domain_w) return false;
     if (fluid.height != report.domain_h) return false;
     if (fluid.cell_count != (size_t)report.domain_w * (size_t)report.domain_h) return false;
+
+    sim_runtime_backend_destroy(backend);
+    return true;
+}
+
+static bool test_3d_backend_reports_explicit_depth_contract(void) {
+    AppConfig cfg = {0};
+    SimModeRoute route = {
+        .backend_lane = SIM_BACKEND_CONTROLLED_3D,
+        .requested_space_mode = SPACE_MODE_3D,
+        .projection_space_mode = SPACE_MODE_2D,
+    };
+    PhysicsSimRuntimeVisualBootstrap visual = {0};
+    SimRuntimeBackend *backend = NULL;
+    SimRuntimeBackendReport report = {0};
+
+    cfg.grid_w = 192;
+    cfg.grid_h = 192;
+    cfg.grid_d = 32;
+    cfg.window_w = 640;
+    cfg.window_h = 480;
+
+    visual.scene_domain.enabled = true;
+    visual.scene_domain_authored = true;
+    visual.scene_domain.min.x = -2.0;
+    visual.scene_domain.min.y = -2.0;
+    visual.scene_domain.min.z = -2.0;
+    visual.scene_domain.max.x = 2.0;
+    visual.scene_domain.max.y = 2.0;
+    visual.scene_domain.max.z = 2.0;
+
+    backend = sim_runtime_backend_create(&cfg, NULL, &route, &visual);
+    if (!backend) return false;
+    if (!sim_runtime_backend_get_report(backend, &report)) return false;
+    if (report.requested_major_axis_cells != 192) return false;
+    if (report.applied_major_axis_cells != 192) return false;
+    if (report.requested_depth_cells != 32) return false;
+    if (report.applied_depth_cells != 32) return false;
+    if (report.depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS) return false;
+    if (report.domain_w != 32) return false;
+    if (report.domain_h != 32) return false;
+    if (report.domain_d != 32) return false;
+    if (!nearly_equal(report.voxel_size, 4.0f / 32.0f)) return false;
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -442,6 +490,11 @@ int main(void) {
     if (!test_3d_backend_reports_xyz_domain_and_compatibility_slice()) {
         fprintf(stderr,
                 "sim_runtime_backend_reporting_contract_test: 3D report/compatibility failed\n");
+        return 1;
+    }
+    if (!test_3d_backend_reports_explicit_depth_contract()) {
+        fprintf(stderr,
+                "sim_runtime_backend_reporting_contract_test: explicit depth report failed\n");
         return 1;
     }
     if (!test_3d_backend_live_slice_selection_changes_report_and_view()) {

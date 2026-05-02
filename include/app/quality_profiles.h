@@ -14,13 +14,6 @@ typedef struct QualityProfileDef {
     int grid_h;
     int solver_iterations;
     int physics_substeps;
-    float density_diffusion;
-    float density_decay;
-    float fluid_buoyancy_force;
-    float velocity_damping;
-    float emitter_density_multiplier;
-    float emitter_velocity_multiplier;
-    float emitter_sink_multiplier;
     bool enable_blur;
 } QualityProfileDef;
 

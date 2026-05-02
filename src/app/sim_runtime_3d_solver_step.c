@@ -509,6 +509,18 @@ static void advect_density(SimRuntime3DVolume *volume,
     }
 }
 
+int sim_runtime_3d_solver_iterations_for_requested(int requested_iterations) {
+    int iterations = requested_iterations > 0 ? requested_iterations : 0;
+    if (iterations < 8) iterations = 8;
+    if (iterations > 48) iterations = 48;
+    return iterations;
+}
+
+int sim_runtime_3d_solver_iterations_for_config(const AppConfig *cfg) {
+    return sim_runtime_3d_solver_iterations_for_requested(
+        cfg ? cfg->fluid_solver_iterations : 0);
+}
+
 bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                                            SimRuntime3DSolverScratch *scratch,
                                            const uint8_t *solid_mask,
@@ -532,9 +544,7 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
     dt_cells = dt_f / voxel_size;
     diffusion_blend = clamp_float_value(cfg->density_diffusion * dt_f, 0.0f, 0.2f);
     viscosity_blend = clamp_float_value(cfg->velocity_damping * dt_f, 0.0f, 0.25f);
-    iterations = cfg->fluid_solver_iterations > 0 ? cfg->fluid_solver_iterations : 0;
-    if (iterations < 8) iterations = 8;
-    if (iterations > 48) iterations = 48;
+    iterations = sim_runtime_3d_solver_iterations_for_config(cfg);
 
     apply_solid_mask(volume, solid_mask);
     advect_velocity(volume, scratch, solid_mask, dt_cells);

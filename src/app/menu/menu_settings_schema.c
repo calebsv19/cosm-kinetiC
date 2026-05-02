@@ -3,7 +3,7 @@
 static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT] = {
     [MENU_SETTINGS_FIELD_GRID_X] = {
         .id = MENU_SETTINGS_FIELD_GRID_X,
-        .label = "Grid X",
+        .label = "X Cells",
         .kind = MENU_SETTINGS_FIELD_KIND_INT,
         .min_value = 32.0,
         .max_value = 512.0,
@@ -16,7 +16,7 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
     },
     [MENU_SETTINGS_FIELD_GRID_Y] = {
         .id = MENU_SETTINGS_FIELD_GRID_Y,
-        .label = "Grid Y",
+        .label = "Y Cells",
         .kind = MENU_SETTINGS_FIELD_KIND_INT,
         .min_value = 32.0,
         .max_value = 512.0,
@@ -27,9 +27,43 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
                          MENU_SETTINGS_PROVIDER_BIT_WIND,
         .first_rollout = true
     },
+    [MENU_SETTINGS_FIELD_GRID_Z] = {
+        .id = MENU_SETTINGS_FIELD_GRID_Z,
+        .label = "Z Cells",
+        .kind = MENU_SETTINGS_FIELD_KIND_INT,
+        .min_value = 0.0,
+        .max_value = 256.0,
+        .step = 16.0,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_3D_APPLIED_AXIS] = {
+        .id = MENU_SETTINGS_FIELD_3D_APPLIED_AXIS,
+        .label = "Applied Axis",
+        .kind = MENU_SETTINGS_FIELD_KIND_ACTION,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_3D,
+        .first_rollout = true,
+        .runtime_display_only = true
+    },
+    [MENU_SETTINGS_FIELD_3D_APPLIED_DEPTH] = {
+        .id = MENU_SETTINGS_FIELD_3D_APPLIED_DEPTH,
+        .label = "Applied Z",
+        .kind = MENU_SETTINGS_FIELD_KIND_ACTION,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_3D,
+        .first_rollout = true,
+        .runtime_display_only = true
+    },
+    [MENU_SETTINGS_FIELD_3D_DEPTH_POLICY] = {
+        .id = MENU_SETTINGS_FIELD_3D_DEPTH_POLICY,
+        .label = "Z Policy",
+        .kind = MENU_SETTINGS_FIELD_KIND_ACTION,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_3D,
+        .first_rollout = true,
+        .runtime_display_only = true
+    },
     [MENU_SETTINGS_FIELD_QUALITY_PRESET] = {
         .id = MENU_SETTINGS_FIELD_QUALITY_PRESET,
-        .label = "Quality Preset",
+        .label = "Preset",
         .kind = MENU_SETTINGS_FIELD_KIND_ACTION,
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
@@ -39,7 +73,7 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
     },
     [MENU_SETTINGS_FIELD_PHYSICS_SUBSTEPS] = {
         .id = MENU_SETTINGS_FIELD_PHYSICS_SUBSTEPS,
-        .label = "Physics Substeps",
+        .label = "Substeps",
         .kind = MENU_SETTINGS_FIELD_KIND_INT,
         .min_value = 1.0,
         .max_value = 32.0,
@@ -52,7 +86,7 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
     },
     [MENU_SETTINGS_FIELD_SOLVER_ITERATIONS] = {
         .id = MENU_SETTINGS_FIELD_SOLVER_ITERATIONS,
-        .label = "Solver Iterations",
+        .label = "Solver",
         .kind = MENU_SETTINGS_FIELD_KIND_INT,
         .min_value = 1.0,
         .max_value = 64.0,
@@ -77,7 +111,7 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
     },
     [MENU_SETTINGS_FIELD_DENSITY_DECAY] = {
         .id = MENU_SETTINGS_FIELD_DENSITY_DECAY,
-        .label = "Density Decay",
+        .label = "Decay",
         .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
         .min_value = 0.0,
         .max_value = 1.0,

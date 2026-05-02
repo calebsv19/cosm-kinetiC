@@ -17,34 +17,44 @@ static bool test_quality_mapping(void) {
     cfg.quality_index = 0;
     cfg.grid_w = 96;
     cfg.grid_h = 96;
+    if (sim_runtime_3d_requested_major_axis_cells_for_config(&cfg) != 96) return false;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 96) return false;
     cfg.quality_index = 1;
     cfg.grid_w = 128;
     cfg.grid_h = 128;
+    if (sim_runtime_3d_requested_major_axis_cells_for_config(&cfg) != 128) return false;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 128) return false;
     cfg.quality_index = 2;
     cfg.grid_w = 256;
     cfg.grid_h = 256;
+    if (sim_runtime_3d_requested_major_axis_cells_for_config(&cfg) != 256) return false;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 256) return false;
     cfg.quality_index = 3;
     cfg.grid_w = 384;
     cfg.grid_h = 384;
+    if (sim_runtime_3d_requested_major_axis_cells_for_config(&cfg) != 384) return false;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 256) return false;
     cfg.quality_index = 4;
     cfg.grid_w = 256;
     cfg.grid_h = 256;
+    if (sim_runtime_3d_requested_major_axis_cells_for_config(&cfg) != 256) return false;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 256) return false;
     cfg.quality_index = 5;
     cfg.grid_w = 64;
     cfg.grid_h = 64;
+    if (sim_runtime_3d_requested_major_axis_cells_for_config(&cfg) != 64) return false;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 64) return false;
     cfg.quality_index = -1;
     cfg.grid_w = 220;
     cfg.grid_h = 48;
+    if (sim_runtime_3d_requested_major_axis_cells_for_config(&cfg) != 220) return false;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 220) return false;
     cfg.grid_w = 96;
     cfg.grid_h = 96;
+    cfg.grid_d = 0;
     if (sim_runtime_3d_major_axis_cells_for_config(&cfg) != 96) return false;
+    if (sim_runtime_3d_requested_depth_cells_for_config(&cfg) != 0) return false;
+    if (sim_runtime_3d_applied_depth_cells_for_requested(cfg.grid_d) != 0) return false;
     return true;
 }
 
@@ -60,6 +70,11 @@ static bool test_legacy_domain_derivation(void) {
     preset.domain_height = 2.0f;
 
     if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.requested_major_axis_cells != 256) return false;
+    if (desc.applied_major_axis_cells != 256) return false;
+    if (desc.requested_depth_cells != 0) return false;
+    if (desc.applied_depth_cells != 128) return false;
+    if (desc.depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_LEGACY_MIN_XY) return false;
     if (desc.grid_w != 256) return false;
     if (desc.grid_h != 128) return false;
     if (desc.grid_d != 128) return false;
@@ -84,6 +99,11 @@ static bool test_tiny3d_debug_profile_derivation(void) {
     preset.domain_height = 2.0f;
 
     if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.requested_major_axis_cells != 64) return false;
+    if (desc.applied_major_axis_cells != 64) return false;
+    if (desc.requested_depth_cells != 0) return false;
+    if (desc.applied_depth_cells != 32) return false;
+    if (desc.depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_LEGACY_MIN_XY) return false;
     if (desc.grid_w != 64) return false;
     if (desc.grid_h != 32) return false;
     if (desc.grid_d != 32) return false;
@@ -114,6 +134,11 @@ static bool test_runtime_visual_precedence(void) {
     visual.scene_domain.max.z = 1.0;
 
     if (!sim_runtime_3d_domain_desc_resolve(&cfg, &preset, &visual, &desc)) return false;
+    if (desc.requested_major_axis_cells != 128) return false;
+    if (desc.applied_major_axis_cells != 128) return false;
+    if (desc.requested_depth_cells != 0) return false;
+    if (desc.applied_depth_cells != 86) return false;
+    if (desc.depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_SCENE_DOMAIN_BOUNDS) return false;
     if (!nearly_equal(desc.world_min_x, -2.0f)) return false;
     if (!nearly_equal(desc.world_min_y, -1.0f)) return false;
     if (!nearly_equal(desc.world_min_z, -3.0f)) return false;
@@ -134,12 +159,86 @@ static bool test_runtime_visual_precedence(void) {
     visual.retained_scene.bounds.max.y = 2.0;
     visual.retained_scene.bounds.max.z = 0.5;
     if (!sim_runtime_3d_domain_desc_resolve(&cfg, &preset, &visual, &desc)) return false;
+    if (desc.requested_major_axis_cells != 128) return false;
+    if (desc.applied_major_axis_cells != 128) return false;
+    if (desc.requested_depth_cells != 0) return false;
+    if (desc.applied_depth_cells != 32) return false;
+    if (desc.depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_RETAINED_SCENE_BOUNDS) return false;
     if (!nearly_equal(desc.world_min_x, -1.0f)) return false;
     if (!nearly_equal(desc.world_max_y, 2.0f)) return false;
     if (!nearly_equal(desc.world_max_z, 0.5f)) return false;
     if (desc.grid_h != 128) return false;
     if (desc.grid_w != 96) return false;
     if (desc.grid_d != 32) return false;
+
+    return true;
+}
+
+static bool test_explicit_depth_cells_override(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimRuntime3DDomainDesc desc = {0};
+
+    cfg.grid_w = 128;
+    cfg.grid_h = 128;
+    cfg.grid_d = 64;
+    preset.domain_width = 4.0f;
+    preset.domain_height = 2.0f;
+
+    if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.requested_major_axis_cells != 128) return false;
+    if (desc.applied_major_axis_cells != 128) return false;
+    if (desc.requested_depth_cells != 64) return false;
+    if (desc.applied_depth_cells != 64) return false;
+    if (desc.depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS) return false;
+    if (desc.grid_w != 128) return false;
+    if (desc.grid_h != 64) return false;
+    if (desc.grid_d != 64) return false;
+    if (!nearly_equal(desc.voxel_size, 4.0f / 128.0f)) return false;
+
+    cfg.grid_w = 192;
+    cfg.grid_h = 192;
+    cfg.grid_d = 32;
+    preset.domain_width = 4.0f;
+    preset.domain_height = 4.0f;
+    if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.requested_depth_cells != 32) return false;
+    if (desc.applied_depth_cells != 32) return false;
+    if (desc.depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS) return false;
+    if (desc.grid_w != 32) return false;
+    if (desc.grid_h != 32) return false;
+    if (desc.grid_d != 32) return false;
+    if (!nearly_equal(desc.voxel_size, 4.0f / 32.0f)) return false;
+
+    return true;
+}
+
+static bool test_requested_xy_cells_independently_shape_isotropic_fit(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimRuntime3DDomainDesc desc = {0};
+
+    cfg.grid_w = 96;
+    cfg.grid_h = 192;
+    cfg.grid_d = 0;
+    preset.domain_width = 2.0f;
+    preset.domain_height = 4.0f;
+
+    if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.requested_major_axis_cells != 192) return false;
+    if (desc.applied_major_axis_cells != 192) return false;
+    if (desc.grid_w != 96) return false;
+    if (desc.grid_h != 192) return false;
+    if (desc.grid_d != 96) return false;
+    if (!nearly_equal(desc.voxel_size, 4.0f / 192.0f)) return false;
+
+    cfg.grid_w = 96;
+    cfg.grid_h = 96;
+    if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.grid_w != 48) return false;
+    if (desc.grid_h != 96) return false;
+    if (desc.grid_d != 48) return false;
+    if (!nearly_equal(desc.voxel_size, 4.0f / 96.0f)) return false;
 
     return true;
 }
@@ -192,6 +291,14 @@ int main(void) {
     }
     if (!test_runtime_visual_precedence()) {
         fprintf(stderr, "sim_runtime_3d_domain_contract_test: runtime visual precedence failed\n");
+        return 1;
+    }
+    if (!test_explicit_depth_cells_override()) {
+        fprintf(stderr, "sim_runtime_3d_domain_contract_test: explicit depth override failed\n");
+        return 1;
+    }
+    if (!test_requested_xy_cells_independently_shape_isotropic_fit()) {
+        fprintf(stderr, "sim_runtime_3d_domain_contract_test: requested xy fit failed\n");
         return 1;
     }
     if (!test_volume_init_and_clear()) {

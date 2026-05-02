@@ -16,6 +16,7 @@ AppConfig app_config_default(void) {
 
     cfg.grid_w = 256;
     cfg.grid_h = 256;
+    cfg.grid_d = 0;
 
     cfg.min_dt = 1.0 / 165.0;
     cfg.max_dt = 1.0 / 30.0;

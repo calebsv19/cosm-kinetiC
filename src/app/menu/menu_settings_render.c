@@ -23,6 +23,13 @@ static int font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
     return physics_sim_text_logical_pixels(renderer, h);
 }
 
+static int text_width(SDL_Renderer *renderer, TTF_Font *font, const char *text) {
+    int w = 0;
+    if (!font || !text || text[0] == '\0') return 0;
+    if (TTF_SizeUTF8(font, text, &w, NULL) != 0) return 0;
+    return physics_sim_text_logical_pixels(renderer, w);
+}
+
 static void fit_text_to_width(SDL_Renderer *renderer,
                               TTF_Font *font,
                               const char *text,
@@ -63,12 +70,19 @@ static void draw_field_cell(SDL_Renderer *renderer,
                             TTF_Font *font_small,
                             const MenuSettingsFieldLayout *layout,
                             const char *label,
-                            const char *value) {
+                            const char *value,
+                            bool interactive) {
+    char label_fit[96];
     char value_fit[128];
-    TTF_Font *value_font = font_small ? font_small : font;
-    int body_h = font_height(renderer, value_font, 16);
+    TTF_Font *text_font = font_small ? font_small : font;
+    int body_h = font_height(renderer, text_font, 16);
+    int body_y = 0;
+    int label_x = 0;
+    int label_w = 0;
+    int value_right = 0;
     int value_x = 0;
     int value_w = 0;
+    int value_text_w = 0;
     if (!renderer || !font || !layout || !label || !value) return;
 
     SDL_SetRenderDrawColor(renderer,
@@ -83,38 +97,88 @@ static void draw_field_cell(SDL_Renderer *renderer,
                            menu_color_accent().b,
                            120);
     SDL_RenderDrawRect(renderer, &layout->cell_rect);
+    body_y = layout->cell_rect.y + (layout->cell_rect.h - body_h) / 2;
+    label_x = layout->cell_rect.x + 8;
+    value_right = interactive ? (layout->dec_rect.x - 8)
+                              : (layout->cell_rect.x + layout->cell_rect.w - 8);
+    label_w = layout->cell_rect.w / 2 - 16;
+    if (interactive) label_w -= 8;
+    if (label_w < 56) label_w = 56;
+    fit_text_to_width(renderer, text_font, label, label_w, label_fit, sizeof(label_fit));
     menu_draw_text(renderer,
-                   font_small ? font_small : font,
-                   label,
-                   layout->cell_rect.x + 8,
-                   layout->cell_rect.y + 4,
+                   text_font,
+                   label_fit[0] ? label_fit : label,
+                   label_x,
+                   body_y,
                    menu_color_text_dim());
 
-    value_x = layout->cell_rect.x + 8;
-    value_w = layout->dec_rect.x - value_x - 8;
+    value_x = layout->cell_rect.x + layout->cell_rect.w / 2;
+    value_w = value_right - value_x;
     if (value_w < 48) value_w = 48;
-    fit_text_to_width(renderer, value_font, value, value_w, value_fit, sizeof(value_fit));
+    fit_text_to_width(renderer, text_font, value, value_w, value_fit, sizeof(value_fit));
+    value_text_w = text_width(renderer, text_font, value_fit[0] ? value_fit : value);
+    value_x = value_right - value_text_w;
+    if (value_x < layout->cell_rect.x + layout->cell_rect.w / 2) {
+        value_x = layout->cell_rect.x + layout->cell_rect.w / 2;
+    }
     menu_draw_text(renderer,
-                   value_font,
+                   text_font,
                    value_fit[0] ? value_fit : value,
                    value_x,
-                   layout->cell_rect.y + layout->cell_rect.h - body_h - 4,
+                   body_y,
                    menu_color_text());
-    menu_draw_button(renderer, &layout->dec_rect, "-", font_small ? font_small : font, false);
-    menu_draw_button(renderer, &layout->inc_rect, "+", font_small ? font_small : font, false);
+    if (interactive) {
+        menu_draw_button(renderer, &layout->dec_rect, "-", text_font, false);
+        menu_draw_button(renderer, &layout->inc_rect, "+", text_font, false);
+    }
 }
 
-static void render_field_value_label(const MenuSettingsShellState *state,
+static bool field_is_interactive(const MenuSettingsFieldDef *def) {
+    return def && !def->runtime_display_only;
+}
+
+static const char *field_label_for_context(const SceneMenuInteraction *ctx,
+                                           const MenuSettingsFieldDef *def) {
+    if (!def) return "";
+    if (ctx && ctx->settings_shell.provider != MENU_SETTINGS_PROVIDER_3D &&
+        def->id == MENU_SETTINGS_FIELD_GRID_X) {
+        return "Grid";
+    }
+    return def->label;
+}
+
+static int draft_requested_3d_depth(const MenuSettingsDraft *draft) {
+    if (!draft || draft->grid_z <= 0) return 0;
+    return draft->grid_z;
+}
+
+static void render_field_value_label(const SceneMenuInteraction *ctx,
                                      MenuSettingsFieldId field,
                                      char *out,
                                      size_t out_size) {
-    const MenuSettingsDraft *draft = draft_or_null(state);
+    const MenuSettingsDraft *draft = draft_or_null(ctx ? &ctx->settings_shell : NULL);
     if (!out || out_size == 0u) return;
     out[0] = '\0';
     switch (field) {
     case MENU_SETTINGS_FIELD_GRID_X:
-        snprintf(out, out_size, "%dx%d", draft ? draft->grid_x : 0, draft ? draft->grid_y : 0);
+        if (ctx && ctx->settings_shell.provider == MENU_SETTINGS_PROVIDER_3D) {
+            snprintf(out, out_size, "%d", draft ? draft->grid_x : 0);
+        } else {
+            snprintf(out, out_size, "%dx%d", draft ? draft->grid_x : 0, draft ? draft->grid_y : 0);
+        }
         break;
+    case MENU_SETTINGS_FIELD_GRID_Y:
+        snprintf(out, out_size, "%d", draft ? draft->grid_y : 0);
+        break;
+    case MENU_SETTINGS_FIELD_GRID_Z: {
+        int requested_depth = draft_requested_3d_depth(draft);
+        if (requested_depth > 0) {
+            snprintf(out, out_size, "%d", requested_depth);
+        } else {
+            snprintf(out, out_size, "Auto");
+        }
+        break;
+    }
     case MENU_SETTINGS_FIELD_PHYSICS_SUBSTEPS:
         snprintf(out, out_size, "%d", draft ? draft->physics_substeps : 0);
         break;
@@ -122,7 +186,8 @@ static void render_field_value_label(const MenuSettingsShellState *state,
         snprintf(out, out_size, "%d", draft ? draft->fluid_solver_iterations : 0);
         break;
     case MENU_SETTINGS_FIELD_QUALITY_PRESET:
-        snprintf(out, out_size, "%s", menu_settings_render_quality_name(state));
+        snprintf(out, out_size, "%s",
+                 menu_settings_render_quality_name(ctx ? &ctx->settings_shell : NULL));
         break;
     case MENU_SETTINGS_FIELD_DENSITY_DIFFUSION:
         snprintf(out, out_size, "%.5g", draft ? draft->density_diffusion : 0.0f);
@@ -265,13 +330,14 @@ void menu_settings_draw_simulation_panel(SceneMenuInteraction *ctx) {
     for (i = 0; i < layout_count; ++i) {
         const MenuSettingsFieldDef *def = menu_settings_schema_field(layouts[i].field);
         if (!def) continue;
-        render_field_value_label(&ctx->settings_shell, layouts[i].field, value, sizeof(value));
+        render_field_value_label(ctx, layouts[i].field, value, sizeof(value));
         draw_field_cell(ctx->renderer,
                         ctx->font,
                         ctx->font_small,
                         &layouts[i],
-                        def->label,
-                        value);
+                        field_label_for_context(ctx, def),
+                        value,
+                        field_is_interactive(def));
     }
 
     menu_draw_toggle(ctx->renderer,

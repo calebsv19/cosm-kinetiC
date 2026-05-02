@@ -3,6 +3,8 @@
 #include "app/quality_profiles.h"
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_settings_schema.h"
+#include "app/sim_runtime_3d_domain.h"
+#include "app/sim_runtime_3d_solver.h"
 
 static int clamp_int_value(int value, int min_value, int max_value) {
     if (value < min_value) return min_value;
@@ -75,6 +77,7 @@ static void load_draft_values(MenuSettingsDraft *draft,
     if (!draft || !cfg) return;
     draft->grid_x = cfg->grid_w;
     draft->grid_y = cfg->grid_h;
+    draft->grid_z = cfg->grid_d;
     draft->quality_index = selection_quality_index_for_space(selection,
                                                              space_mode,
                                                              cfg->quality_index);
@@ -108,6 +111,7 @@ static bool draft_matches_runtime(const MenuSettingsDraft *draft,
                                                          cfg->quality_index);
     return !(draft->grid_x != cfg->grid_w ||
              draft->grid_y != cfg->grid_h ||
+             draft->grid_z != cfg->grid_d ||
              draft->quality_index != selection_quality ||
              draft->physics_substeps != cfg->physics_substeps ||
              draft->fluid_solver_iterations != cfg->fluid_solver_iterations ||
@@ -213,6 +217,7 @@ void menu_settings_shell_apply_to_runtime(const MenuSettingsShellState *state,
     if (!state || !cfg) return;
     cfg->grid_w = state->draft.grid_x;
     cfg->grid_h = state->draft.grid_y;
+    cfg->grid_d = state->draft.grid_z;
     cfg->quality_index = state->draft.quality_index;
     cfg->physics_substeps = state->draft.physics_substeps;
     cfg->fluid_solver_iterations = state->draft.fluid_solver_iterations;
@@ -288,15 +293,9 @@ void menu_settings_shell_apply_quality(MenuSettingsShellState *state, int index)
     if (!state) return;
     cfg.grid_w = state->draft.grid_x;
     cfg.grid_h = state->draft.grid_y;
+    cfg.grid_d = state->draft.grid_z;
     cfg.physics_substeps = state->draft.physics_substeps;
     cfg.fluid_solver_iterations = state->draft.fluid_solver_iterations;
-    cfg.density_diffusion = state->draft.density_diffusion;
-    cfg.density_decay = state->draft.density_decay;
-    cfg.fluid_buoyancy_force = state->draft.fluid_buoyancy_force;
-    cfg.velocity_damping = state->draft.velocity_damping;
-    cfg.emitter_density_multiplier = state->draft.emitter_density_multiplier;
-    cfg.emitter_velocity_multiplier = state->draft.emitter_velocity_multiplier;
-    cfg.emitter_sink_multiplier = state->draft.emitter_sink_multiplier;
     cfg.enable_render_blur = state->draft.enable_render_blur;
     catalog = catalog_for_provider(state->provider);
     quality_profile_apply_for_catalog(&cfg, catalog, index);
@@ -304,26 +303,12 @@ void menu_settings_shell_apply_quality(MenuSettingsShellState *state, int index)
     state->draft.grid_y = cfg.grid_h;
     state->draft.physics_substeps = cfg.physics_substeps;
     state->draft.fluid_solver_iterations = cfg.fluid_solver_iterations;
-    state->draft.density_diffusion = cfg.density_diffusion;
-    state->draft.density_decay = cfg.density_decay;
-    state->draft.fluid_buoyancy_force = cfg.fluid_buoyancy_force;
-    state->draft.velocity_damping = cfg.velocity_damping;
-    state->draft.emitter_density_multiplier = cfg.emitter_density_multiplier;
-    state->draft.emitter_velocity_multiplier = cfg.emitter_velocity_multiplier;
-    state->draft.emitter_sink_multiplier = cfg.emitter_sink_multiplier;
     state->draft.enable_render_blur = cfg.enable_render_blur;
     state->draft.quality_index = cfg.quality_index;
     mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_X);
     mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_Y);
     mark_field_dirty(state, MENU_SETTINGS_FIELD_PHYSICS_SUBSTEPS);
     mark_field_dirty(state, MENU_SETTINGS_FIELD_SOLVER_ITERATIONS);
-    mark_field_dirty(state, MENU_SETTINGS_FIELD_DENSITY_DIFFUSION);
-    mark_field_dirty(state, MENU_SETTINGS_FIELD_DENSITY_DECAY);
-    mark_field_dirty(state, MENU_SETTINGS_FIELD_BUOYANCY);
-    mark_field_dirty(state, MENU_SETTINGS_FIELD_VELOCITY_DAMPING);
-    mark_field_dirty(state, MENU_SETTINGS_FIELD_EMITTER_DENSITY_MULTIPLIER);
-    mark_field_dirty(state, MENU_SETTINGS_FIELD_EMITTER_VELOCITY_MULTIPLIER);
-    mark_field_dirty(state, MENU_SETTINGS_FIELD_EMITTER_SINK_MULTIPLIER);
     mark_field_dirty(state, MENU_SETTINGS_FIELD_ENABLE_RENDER_BLUR);
     mark_field_dirty(state, MENU_SETTINGS_FIELD_QUALITY_PRESET);
 }
@@ -341,19 +326,42 @@ void menu_settings_shell_nudge_field(MenuSettingsShellState *state,
         state->draft.grid_x = schema_clamped_int(field,
                                                  state->draft.grid_x +
                                                      (int)(def->step * direction));
-        state->draft.grid_y = schema_clamped_int(MENU_SETTINGS_FIELD_GRID_Y,
-                                                 state->draft.grid_y +
-                                                     (int)(def->step * direction));
+        if (state->provider == MENU_SETTINGS_PROVIDER_3D) {
+            state->draft.grid_x =
+                sim_runtime_3d_applied_major_axis_cells_for_requested(state->draft.grid_x);
+        }
+        if (state->provider != MENU_SETTINGS_PROVIDER_3D) {
+            state->draft.grid_y = schema_clamped_int(MENU_SETTINGS_FIELD_GRID_Y,
+                                                     state->draft.grid_y +
+                                                         (int)(def->step * direction));
+        }
         menu_settings_shell_set_custom_quality(state);
         mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_X);
-        mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_Y);
+        if (state->provider != MENU_SETTINGS_PROVIDER_3D) {
+            mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_Y);
+        }
         return;
     case MENU_SETTINGS_FIELD_GRID_Y:
         state->draft.grid_y = schema_clamped_int(field,
                                                  state->draft.grid_y +
                                                      (int)(def->step * direction));
+        if (state->provider == MENU_SETTINGS_PROVIDER_3D) {
+            state->draft.grid_y =
+                sim_runtime_3d_applied_major_axis_cells_for_requested(state->draft.grid_y);
+        }
         menu_settings_shell_set_custom_quality(state);
         mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_Y);
+        return;
+    case MENU_SETTINGS_FIELD_GRID_Z:
+        state->draft.grid_z = schema_clamped_int(field,
+                                                 state->draft.grid_z +
+                                                     (int)(def->step * direction));
+        if (state->provider == MENU_SETTINGS_PROVIDER_3D && state->draft.grid_z > 0) {
+            state->draft.grid_z =
+                sim_runtime_3d_applied_depth_cells_for_requested(state->draft.grid_z);
+        }
+        menu_settings_shell_set_custom_quality(state);
+        mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_Z);
         return;
     case MENU_SETTINGS_FIELD_PHYSICS_SUBSTEPS:
         state->draft.physics_substeps =
@@ -368,6 +376,11 @@ void menu_settings_shell_nudge_field(MenuSettingsShellState *state,
             schema_clamped_int(field,
                                state->draft.fluid_solver_iterations +
                                    (int)(def->step * direction));
+        if (state->provider == MENU_SETTINGS_PROVIDER_3D) {
+            state->draft.fluid_solver_iterations =
+                sim_runtime_3d_solver_iterations_for_requested(
+                    state->draft.fluid_solver_iterations);
+        }
         menu_settings_shell_set_custom_quality(state);
         mark_field_dirty(state, field);
         return;

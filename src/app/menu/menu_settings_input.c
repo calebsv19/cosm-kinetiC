@@ -6,6 +6,7 @@
 #include "config/config_loader.h"
 #include "app/menu/menu_settings_draft.h"
 #include "app/menu/menu_settings_layout.h"
+#include "app/menu/menu_settings_schema.h"
 #include "app/menu/menu_state.h"
 
 static void sync_quality_index(SceneMenuInteraction *ctx) {
@@ -108,6 +109,8 @@ bool menu_settings_handle_primary_click(SceneMenuInteraction *ctx, int x, int y)
                                                             layouts,
                                                             MENU_SETTINGS_FIELD_COUNT);
     for (i = 0; i < layout_count; ++i) {
+        const MenuSettingsFieldDef *def = menu_settings_schema_field(layouts[i].field);
+        if (!def || def->runtime_display_only) continue;
         if (menu_point_in_rect(x, y, &layouts[i].dec_rect)) {
             if (layouts[i].field == MENU_SETTINGS_FIELD_QUALITY_PRESET) {
                 menu_cycle_quality(ctx, -1);

@@ -3,6 +3,8 @@
 size_t menu_settings_provider_3d_fields(const MenuSettingsFieldId **out_fields) {
     static const MenuSettingsFieldId fields[] = {
         MENU_SETTINGS_FIELD_GRID_X,
+        MENU_SETTINGS_FIELD_GRID_Y,
+        MENU_SETTINGS_FIELD_GRID_Z,
         MENU_SETTINGS_FIELD_PHYSICS_SUBSTEPS,
         MENU_SETTINGS_FIELD_SOLVER_ITERATIONS,
         MENU_SETTINGS_FIELD_QUALITY_PRESET,

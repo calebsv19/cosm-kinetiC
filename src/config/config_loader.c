@@ -139,6 +139,7 @@ static void apply_grid_settings(const char *json, AppConfig *cfg) {
     double val;
     if (json_block_number(&block, "width", &val))  cfg->grid_w = (int)val;
     if (json_block_number(&block, "height", &val)) cfg->grid_h = (int)val;
+    if (json_block_number(&block, "depth", &val))  cfg->grid_d = (int)val;
 }
 
 static void apply_timing_settings(const char *json, AppConfig *cfg) {
@@ -467,7 +468,8 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "  },\n");
     fprintf(f, "  \"grid\": {\n");
     fprintf(f, "    \"width\": %d,\n", cfg->grid_w);
-    fprintf(f, "    \"height\": %d\n", cfg->grid_h);
+    fprintf(f, "    \"height\": %d,\n", cfg->grid_h);
+    fprintf(f, "    \"depth\": %d\n", cfg->grid_d);
     fprintf(f, "  },\n");
     fprintf(f, "  \"simulation\": {\n");
     fprintf(f, "    \"mode\": %d,\n", cfg->sim_mode);
