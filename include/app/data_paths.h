@@ -33,6 +33,8 @@ const char *physics_sim_resolve_import_dir_for_root(const char *configured_root,
                                                     char *buffer,
                                                     size_t buffer_size);
 const char *physics_sim_resolve_snapshot_output_dir(const char *configured_dir);
+size_t physics_sim_runtime_scene_catalog_roots(const char *configured_input_root,
+                                               const char ***out_roots);
 
 bool physics_sim_ensure_runtime_dirs(void);
 

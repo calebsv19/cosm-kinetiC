@@ -160,6 +160,9 @@ bool test_scene_editor_session_overlay_mutation_updates_selected_object(void) {
     if (!physics_sim_editor_session_set_selected_emitter_type(&session, EMITTER_VELOCITY_JET, true)) {
         return false;
     }
+    if (!physics_sim_editor_session_set_selected_emitter_strength(&session, 96.5f)) {
+        return false;
+    }
 
     {
         const PhysicsSimObjectOverlay *selected_overlay = physics_sim_editor_session_selected_object_overlay(&session);
@@ -171,7 +174,7 @@ bool test_scene_editor_session_overlay_mutation_updates_selected_object(void) {
         if (fabs(selected_overlay->initial_velocity.z - 1.25) > 1e-9) return false;
         if (!selected_emitter) return false;
         if (selected_emitter->type != EMITTER_VELOCITY_JET) return false;
-        if (fabs(selected_emitter->strength - 40.0) > 1e-9) return false;
+        if (fabs(selected_emitter->strength - 96.5) > 1e-9) return false;
         if (strcmp(physics_sim_editor_session_emitter_type_label(selected_emitter->type), "Jet") != 0) return false;
     }
 
@@ -273,6 +276,10 @@ bool test_scene_editor_session_overlay_json_build_and_merge(void) {
         free(runtime_json);
         return false;
     }
+    if (!physics_sim_editor_session_set_selected_emitter_strength(&session, 96.5f)) {
+        free(runtime_json);
+        return false;
+    }
     if (!physics_sim_editor_session_set_scene_domain_size(&session, 18.0, 12.0, 6.0)) {
         free(runtime_json);
         return false;
@@ -318,6 +325,7 @@ bool test_scene_editor_session_overlay_json_build_and_merge(void) {
          strstr(overlay_json, "\"emitter\"") != NULL &&
          strstr(overlay_json, "\"type\"") != NULL &&
          strstr(overlay_json, "Jet") != NULL &&
+         strstr(overlay_json, "96.5") != NULL &&
          strstr(overlay_json, "\"logical_clock\"") != NULL &&
          strstr(merged_json, "\"physics_sim\"") != NULL &&
          strstr(merged_json, "\"scene_domain\"") != NULL &&
@@ -528,6 +536,10 @@ bool test_runtime_scene_bridge_apply_merged_emitter_overlay_affects_solver_emitt
         free(runtime_json);
         return false;
     }
+    if (!physics_sim_editor_session_set_selected_emitter_strength(&session, 96.5f)) {
+        free(runtime_json);
+        return false;
+    }
     if (!physics_sim_editor_session_build_overlay_json(&session,
                                                        &overlay_json,
                                                        diagnostics,
@@ -558,7 +570,7 @@ bool test_runtime_scene_bridge_apply_merged_emitter_overlay_affects_solver_emitt
     if (preset.emitters[0].type != EMITTER_VELOCITY_JET) return false;
     if (preset.emitters[0].attached_object != 1) return false;
     if (preset.emitters[0].attached_import != -1) return false;
-    if (fabsf(preset.emitters[0].strength - 40.0f) > 1e-6f) return false;
+    if (fabsf(preset.emitters[0].strength - 96.5f) > 1e-6f) return false;
     if (fabsf(preset.emitters[0].position_x - 0.5f) > 1e-6f) return false;
     if (fabsf(preset.emitters[0].position_y - 0.5f) > 1e-6f) return false;
     if (fabsf(preset.emitters[0].position_z - 0.25f) > 1e-6f) return false;
@@ -613,6 +625,10 @@ bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void) {
         return false;
     }
     if (!physics_sim_editor_session_set_selected_emitter_type(&saved_session, EMITTER_VELOCITY_JET, true)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_set_selected_emitter_strength(&saved_session, 96.5f)) {
         free(runtime_json);
         return false;
     }
@@ -726,7 +742,7 @@ bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void) {
              fabs(selected_overlay->initial_velocity.y - (-1.25)) <= 1e-9 &&
              fabs(selected_overlay->initial_velocity.z - 2.00) <= 1e-9 &&
              selected_emitter->type == EMITTER_VELOCITY_JET &&
-             fabs(selected_emitter->strength - 40.0) <= 1e-9 &&
+             fabs(selected_emitter->strength - 96.5) <= 1e-9 &&
              !scene_domain->seeded_from_retained_bounds &&
              fabs(width - 14.0) <= 1e-9 &&
              fabs(height - 9.0) <= 1e-9 &&

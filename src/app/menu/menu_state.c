@@ -9,11 +9,18 @@
 #include "app/quality_profiles.h"
 #include "app/scene_controller.h"
 #include "app/data_paths.h"
+#include "app/menu/menu_settings_draft.h"
+#include "app/menu/menu_settings_render.h"
 #include "import/runtime_scene_bridge.h"
 #include "render/text_upload_policy.h"
 
-static int quality_count(void) {
-    return quality_profile_count();
+static SpaceMode current_space_mode_for_quality(const SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return SPACE_MODE_2D;
+    return menu_normalize_space_mode(ctx->cfg->space_mode);
+}
+
+static int quality_count(const SceneMenuInteraction *ctx) {
+    return quality_profile_count_for_space_mode(current_space_mode_for_quality(ctx));
 }
 
 static int menu_preset_row_height(const SceneMenuInteraction *ctx) {
@@ -31,27 +38,20 @@ static int menu_preset_row_height(const SceneMenuInteraction *ctx) {
 }
 
 void menu_apply_quality_profile_index(SceneMenuInteraction *ctx, int index) {
-    if (!ctx || !ctx->cfg) return;
-    quality_profile_apply(ctx->cfg, index);
-    menu_clamp_grid_size(ctx->cfg);
-    ctx->quality_index = (index >= 0 && index < quality_count()) ? index : -1;
-    if (ctx->selection) {
-        ctx->selection->quality_index = ctx->quality_index;
-    }
+    if (!ctx) return;
+    menu_settings_shell_apply_quality(&ctx->settings_shell, index);
+    ctx->quality_index = ctx->settings_shell.draft.quality_index;
 }
 
 void menu_set_custom_quality(SceneMenuInteraction *ctx) {
-    if (!ctx || !ctx->cfg) return;
-    ctx->quality_index = -1;
-    ctx->cfg->quality_index = -1;
-    if (ctx->selection) {
-        ctx->selection->quality_index = -1;
-    }
+    if (!ctx) return;
+    menu_settings_shell_set_custom_quality(&ctx->settings_shell);
+    ctx->quality_index = ctx->settings_shell.draft.quality_index;
 }
 
 void menu_cycle_quality(SceneMenuInteraction *ctx, int delta) {
     if (!ctx) return;
-    int count = quality_count();
+    int count = quality_count(ctx);
     if (count <= 0) return;
     int current = ctx->quality_index;
     if (current < 0) current = 0;
@@ -61,7 +61,7 @@ void menu_cycle_quality(SceneMenuInteraction *ctx, int delta) {
 
 const char *menu_current_quality_name(const SceneMenuInteraction *ctx) {
     if (!ctx) return "Custom";
-    return quality_profile_name(ctx->quality_index);
+    return menu_settings_render_quality_name(&ctx->settings_shell);
 }
 
 void menu_run_headless_batch(SceneMenuInteraction *ctx) {
@@ -72,7 +72,9 @@ void menu_run_headless_batch(SceneMenuInteraction *ctx) {
     }
     AppConfig cfg_copy = *ctx->cfg;
     if (ctx->quality_index >= 0) {
-        quality_profile_apply(&cfg_copy, ctx->quality_index);
+        quality_profile_apply_for_space_mode(&cfg_copy,
+                                             current_space_mode_for_quality(ctx),
+                                             ctx->quality_index);
     }
     HeadlessOptions opts = {
         .enabled = true,
@@ -120,6 +122,18 @@ void menu_clear_status(SceneMenuInteraction *ctx) {
     ctx->status_wait_ack = false;
 }
 
+void menu_clear_retained_scene_selection(SceneMenuInteraction *ctx) {
+    if (!ctx) return;
+    if (ctx->selection) {
+        ctx->selection->retained_scene_index = -1;
+        ctx->selection->retained_runtime_scene_path[0] = '\0';
+    }
+    memset(&ctx->editor_bootstrap.retained_scene, 0, sizeof(ctx->editor_bootstrap.retained_scene));
+    ctx->editor_bootstrap.has_retained_scene = false;
+    ctx->editor_bootstrap.retained_runtime_scene_path[0] = '\0';
+    ctx->retained_runtime_scene_path[0] = '\0';
+}
+
 bool menu_point_in_rect(int x, int y, const SDL_Rect *rect) {
     return x >= rect->x && x < rect->x + rect->w &&
            y >= rect->y && y < rect->y + rect->h;
@@ -161,7 +175,7 @@ void menu_refresh_scene_library(SceneMenuInteraction *ctx) {
     physics_sim_editor_scene_library_refresh(&ctx->scene_library,
                                              ctx->active_preset ? ctx->active_preset : ctx->preset_output,
                                              NULL,
-                                             physics_sim_default_runtime_scene_sample_dir(),
+                                             ctx->cfg ? ctx->cfg->input_root : NULL,
                                              current_path);
     ctx->scene_library.mode = menu_showing_retained_catalog(ctx)
                                   ? PHYSICS_SIM_SCENE_LIBRARY_MODE_3D
@@ -172,10 +186,15 @@ void menu_refresh_scene_library(SceneMenuInteraction *ctx) {
         if (retained_index >= 0) {
             ctx->selection->retained_scene_index = retained_index;
             ctx->scene_library.retained_scenes.selected_index = retained_index;
-        } else if (ctx->scene_library.retained_scenes.selected_index >= 0) {
-            ctx->selection->retained_scene_index = ctx->scene_library.retained_scenes.selected_index;
         } else {
-            ctx->selection->retained_scene_index = -1;
+            if (current_path && current_path[0]) {
+                menu_clear_retained_scene_selection(ctx);
+            }
+            if (ctx->scene_library.retained_scenes.selected_index >= 0) {
+                ctx->selection->retained_scene_index = ctx->scene_library.retained_scenes.selected_index;
+            } else {
+                ctx->selection->retained_scene_index = -1;
+            }
         }
     }
 }
@@ -433,10 +452,7 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
 
     if (!ctx || !ctx->cfg || !ctx->selection) return false;
     if (ctx->scene_library.retained_scenes.count <= 0) {
-        ctx->selection->retained_scene_index = -1;
-        ctx->selection->retained_runtime_scene_path[0] = '\0';
-        ctx->editor_bootstrap.has_retained_scene = false;
-        ctx->retained_runtime_scene_path[0] = '\0';
+        menu_clear_retained_scene_selection(ctx);
         menu_refresh_scene_library(ctx);
         return false;
     }
@@ -576,6 +592,13 @@ void menu_switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode) {
     ctx->active_mode = normalized;
     if (ctx->cfg) ctx->cfg->sim_mode = normalized;
     if (ctx->selection) ctx->selection->sim_mode = normalized;
+    menu_settings_shell_sync_provider(&ctx->settings_shell,
+                                      normalized,
+                                      ctx->cfg ? ctx->cfg->space_mode : SPACE_MODE_2D);
+    menu_settings_shell_sync_quality_context(&ctx->settings_shell,
+                                             ctx->selection,
+                                             ctx->cfg ? ctx->cfg->space_mode : SPACE_MODE_2D);
+    ctx->quality_index = ctx->settings_shell.draft.quality_index;
     menu_refresh_scene_library(ctx);
     if (menu_showing_retained_catalog(ctx)) {
         (void)menu_select_retained_scene(ctx,
@@ -606,6 +629,13 @@ void menu_switch_space_mode(SceneMenuInteraction *ctx, SpaceMode new_mode) {
     if (!ctx || !ctx->cfg) return;
     if (menu_normalize_space_mode(ctx->cfg->space_mode) == normalized) return;
     ctx->cfg->space_mode = normalized;
+    menu_settings_shell_sync_provider(&ctx->settings_shell,
+                                      ctx->active_mode,
+                                      normalized);
+    menu_settings_shell_sync_quality_context(&ctx->settings_shell,
+                                             ctx->selection,
+                                             normalized);
+    ctx->quality_index = ctx->settings_shell.draft.quality_index;
     menu_refresh_scene_library(ctx);
     if (menu_showing_retained_catalog(ctx)) {
         (void)menu_select_retained_scene(ctx,
@@ -766,7 +796,8 @@ void menu_clamp_grid_size(AppConfig *cfg) {
 void menu_begin_headless_frames_edit(SceneMenuInteraction *ctx) {
     if (!ctx) return;
     char buffer[32];
-    int frames = ctx->cfg ? ctx->cfg->headless_frame_count : 0;
+    const MenuSettingsDraft *draft = menu_settings_shell_draft(&ctx->settings_shell);
+    int frames = draft ? draft->headless_frame_count : 0;
     if (frames < 0) frames = 0;
     snprintf(buffer, sizeof(buffer), "%d", frames);
     text_input_begin(&ctx->headless_frames_input, buffer, sizeof(buffer) - 1);
@@ -782,8 +813,8 @@ void menu_finish_headless_frames_edit(SceneMenuInteraction *ctx, bool apply) {
             long frames = strtol(value, &end, 10);
             if (end != value) {
                 if (frames < 0) frames = 0;
-                if (ctx->cfg) ctx->cfg->headless_frame_count = (int)frames;
-                if (ctx->selection) ctx->selection->headless_frame_count = (int)frames;
+                menu_settings_shell_set_headless_frame_count(&ctx->settings_shell, (int)frames);
+                ctx->quality_index = ctx->settings_shell.draft.quality_index;
             }
         }
     }
@@ -794,7 +825,8 @@ void menu_finish_headless_frames_edit(SceneMenuInteraction *ctx, bool apply) {
 void menu_begin_viscosity_edit(SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return;
     char buffer[32];
-    float v = ctx->cfg ? ctx->cfg->velocity_damping : 0.0f;
+    const MenuSettingsDraft *draft = menu_settings_shell_draft(&ctx->settings_shell);
+    float v = draft ? draft->velocity_damping : 0.0f;
     if (v < 0.0f) v = 0.0f;
     snprintf(buffer, sizeof(buffer), "%.8f", v);
     text_input_begin(&ctx->viscosity_input, buffer, sizeof(buffer) - 1);
@@ -809,9 +841,8 @@ void menu_finish_viscosity_edit(SceneMenuInteraction *ctx, bool apply) {
             char *end = NULL;
             double v = strtod(value, &end);
             if (end != value && isfinite(v)) {
-                if (v < 0.0) v = 0.0;
-                if (v > 0.1) v = 0.1;
-                ctx->cfg->velocity_damping = (float)v;
+                menu_settings_shell_set_velocity_damping(&ctx->settings_shell, (float)v);
+                ctx->quality_index = ctx->settings_shell.draft.quality_index;
             }
         }
     }
@@ -822,7 +853,8 @@ void menu_finish_viscosity_edit(SceneMenuInteraction *ctx, bool apply) {
 void menu_begin_inflow_edit(SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return;
     char buffer[32];
-    float v = ctx->cfg ? ctx->cfg->tunnel_inflow_speed : 0.0f;
+    const MenuSettingsDraft *draft = menu_settings_shell_draft(&ctx->settings_shell);
+    float v = draft ? draft->tunnel_inflow_speed : 0.0f;
     snprintf(buffer, sizeof(buffer), "%.6f", v);
     text_input_begin(&ctx->inflow_input, buffer, sizeof(buffer) - 1);
     ctx->editing_inflow = true;
@@ -836,12 +868,8 @@ void menu_finish_inflow_edit(SceneMenuInteraction *ctx, bool apply) {
             char *end = NULL;
             double v = strtod(value, &end);
             if (end != value && isfinite(v)) {
-                if (v < 0.0) v = 0.0;
-                if (v > 500.0) v = 500.0;
-                ctx->cfg->tunnel_inflow_speed = (float)v;
-                if (ctx->selection) {
-                    ctx->selection->tunnel_inflow_speed = (float)v;
-                }
+                menu_settings_shell_set_tunnel_inflow_speed(&ctx->settings_shell, (float)v);
+                ctx->quality_index = ctx->settings_shell.draft.quality_index;
             }
         }
     }

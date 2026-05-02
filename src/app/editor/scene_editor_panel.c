@@ -849,28 +849,27 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     draw_text(renderer, state->font_small,
               "Space Mode",
               state->right_panel_rect.x + 12,
-              state->right_panel_rect.y + 28,
+              state->right_panel_rect.y + 40,
               COLOR_TEXT_DIM);
     draw_text(renderer, state->font_small,
               editor_space_mode_label(state->cfg.space_mode),
               state->right_panel_rect.x + 12,
-              state->right_panel_rect.y + 48,
+              state->right_panel_rect.y + 60,
               COLOR_TEXT);
-    draw_text(renderer, state->font_small,
-              physics_sim_editor_session_has_retained_scene(&state->session) ? "Scene Domain" : "Domain",
-              state->right_panel_rect.x + 12,
-              state->right_panel_rect.y + 78,
-              COLOR_TEXT_DIM);
 
     const FluidEmitter *selected_em = NULL;
+    const PhysicsSimEmitterOverlay *selected_retained_em =
+        physics_sim_editor_session_selected_object_emitter(&state->session);
     if (state->selected_emitter >= 0 &&
         state->selected_emitter < (int)state->working.emitter_count) {
         selected_em = &state->working.emitters[state->selected_emitter];
     }
+    if (!physics_sim_editor_session_has_retained_scene(&state->session)) {
+        scene_editor_draw_numeric_field(renderer, state->font_small,
+                                        &state->radius_field, selected_em, NULL);
+    }
     scene_editor_draw_numeric_field(renderer, state->font_small,
-                                    &state->radius_field, selected_em);
-    scene_editor_draw_numeric_field(renderer, state->font_small,
-                                    &state->strength_field, selected_em);
+                                    &state->strength_field, selected_em, selected_retained_em);
     if (physics_sim_editor_session_has_physics_overlay(&state->session)) {
         int label_h = panel_font_height(renderer, state->font_small, 16);
         draw_text(renderer,

@@ -57,16 +57,17 @@ static void project_point_local(const SceneEditorViewportState *viewport,
 int retained_runtime_overlay_readout_stride_for_cell_count(size_t cell_count) {
     if (cell_count <= 4096u) return 1;
     if (cell_count <= 32768u) return 2;
-    if (cell_count <= 65536u) return 3;
-    if (cell_count <= 196608u) return 4;
-    return 6;
+    if (cell_count <= 131072u) return 3;
+    if (cell_count <= 524288u) return 4;
+    return 5;
 }
 
 float retained_runtime_overlay_readout_density_threshold(float max_density) {
-    if (max_density <= 0.0f) return 0.015f;
+    if (max_density <= 0.0f) return 0.01f;
     {
-        float threshold = max_density * 0.12f;
-        if (threshold < 0.015f) threshold = 0.015f;
+        /* Keep the overlay cheap but show more of the plume body than only the hottest core. */
+        float threshold = max_density * 0.08f;
+        if (threshold < 0.01f) threshold = 0.01f;
         return threshold;
     }
 }

@@ -2,6 +2,7 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -137,6 +138,21 @@ static bool physics_sim_dir_exists(const char *path) {
     return true;
 }
 
+static void physics_sim_append_unique_root(const char **roots,
+                                           size_t *count,
+                                           size_t cap,
+                                           const char *candidate) {
+    if (!roots || !count || !candidate || !candidate[0]) return;
+    for (size_t i = 0; i < *count; ++i) {
+        if (strcmp(roots[i], candidate) == 0) {
+            return;
+        }
+    }
+    if (*count >= cap) return;
+    roots[*count] = candidate;
+    (*count)++;
+}
+
 const char *physics_sim_resolve_preset_load_path_for_root(const char *configured_root,
                                                           char *buffer,
                                                           size_t buffer_size) {
@@ -178,6 +194,22 @@ const char *physics_sim_resolve_snapshot_output_dir(const char *configured_dir) 
         return configured_dir;
     }
     return k_default_snapshot_dir;
+}
+
+size_t physics_sim_runtime_scene_catalog_roots(const char *configured_input_root,
+                                               const char ***out_roots) {
+    static char input_root_direct[PATH_MAX];
+    static const char *roots[2];
+    size_t count = 0;
+    const char *input_root = physics_sim_resolve_input_root(configured_input_root);
+
+    if (snprintf(input_root_direct, sizeof(input_root_direct), "%s", input_root) < (int)sizeof(input_root_direct)) {
+        physics_sim_append_unique_root(roots, &count, sizeof(roots) / sizeof(roots[0]), input_root_direct);
+    }
+    if (out_roots) {
+        *out_roots = roots;
+    }
+    return count;
 }
 
 bool physics_sim_ensure_runtime_dirs(void) {

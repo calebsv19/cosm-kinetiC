@@ -170,11 +170,17 @@ static void editor_layout_controls(SceneEditorState *state) {
     state->radius_field.rect = (SDL_Rect){right_x, inspector_top + 24, right_field_w, field_h};
     state->radius_field.label = "Radius";
     state->radius_field.target = FIELD_RADIUS;
-    state->strength_field.rect = (SDL_Rect){right_x,
-                                            state->radius_field.rect.y + state->radius_field.rect.h + 14,
-                                            right_field_w,
-                                            field_h};
-    state->strength_field.label = "Strength";
+    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+        state->radius_field.rect = (SDL_Rect){0};
+        state->strength_field.rect = (SDL_Rect){right_x, inspector_top + 8, right_field_w, field_h};
+        state->strength_field.label = "Emitter Strength";
+    } else {
+        state->strength_field.rect = (SDL_Rect){right_x,
+                                                state->radius_field.rect.y + state->radius_field.rect.h + 14,
+                                                right_field_w,
+                                                field_h};
+        state->strength_field.label = "Strength";
+    }
     state->strength_field.target = FIELD_STRENGTH;
 
     overlay_top = state->strength_field.rect.y + state->strength_field.rect.h + 18;
@@ -451,7 +457,7 @@ bool scene_editor_run(SDL_Window *window,
     physics_sim_editor_scene_library_refresh(&state.scene_library,
                                              &state.working,
                                              &state.session,
-                                             physics_sim_default_runtime_scene_sample_dir(),
+                                             state.cfg.input_root,
                                              state.retained_runtime_scene_path);
     state.save_scene_success = false;
     snprintf(state.save_scene_diagnostics,

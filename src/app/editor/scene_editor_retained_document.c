@@ -1,9 +1,11 @@
 #include "app/editor/scene_editor_retained_document.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 
 static void scene_editor_sanitize_runtime_scene_name(const char *input,
                                                      char *out,
@@ -37,12 +39,32 @@ static void scene_editor_filename_stem_from_path(const char *path,
                                                  char *out,
                                                  size_t out_size) {
     const char *filename = NULL;
+    const char *leaf = NULL;
     size_t len = 0;
     if (!out || out_size == 0) return;
     out[0] = '\0';
     if (!path || !path[0]) return;
     filename = strrchr(path, '/');
     filename = filename ? filename + 1 : path;
+    if (strcmp(filename, "scene_runtime.json") == 0 ||
+        strcmp(filename, "scene_authoring.json") == 0 ||
+        strcmp(filename, "manifest.json") == 0 ||
+        strcmp(filename, "scene_bundle.json") == 0) {
+        char parent_buf[512];
+        size_t parent_len = 0;
+        if (filename > path) {
+            parent_len = (size_t)(filename - path - 1);
+        }
+        if (parent_len >= sizeof(parent_buf)) {
+            parent_len = sizeof(parent_buf) - 1u;
+        }
+        if (parent_len > 0) {
+            memcpy(parent_buf, path, parent_len);
+            parent_buf[parent_len] = '\0';
+            leaf = strrchr(parent_buf, '/');
+            filename = leaf ? leaf + 1 : parent_buf;
+        }
+    }
     len = strlen(filename);
     if (len > 5u && strcmp(filename + len - 5u, ".json") == 0) {
         len -= 5u;
@@ -151,15 +173,6 @@ static bool scene_editor_runtime_scene_find_existing_path_by_scene_id(const char
     return false;
 }
 
-static bool scene_editor_runtime_scene_path_exists(const char *path) {
-    FILE *f = NULL;
-    if (!path || !path[0]) return false;
-    f = fopen(path, "rb");
-    if (!f) return false;
-    fclose(f);
-    return true;
-}
-
 static bool scene_editor_runtime_scene_replace_scene_id_json(const char *json_text,
                                                              const char *scene_id,
                                                              char **out_json_text) {
@@ -206,11 +219,79 @@ static bool scene_editor_runtime_scene_replace_scene_id_json(const char *json_te
     return true;
 }
 
+static bool scene_editor_read_text_file_dynamic(const char *path,
+                                                char **out_text) {
+    FILE *f = NULL;
+    long file_size = 0;
+    char *text = NULL;
+    if (!path || !path[0] || !out_text) return false;
+    *out_text = NULL;
+    f = fopen(path, "rb");
+    if (!f) return false;
+    if (fseek(f, 0, SEEK_END) != 0) goto fail;
+    file_size = ftell(f);
+    if (file_size < 0) goto fail;
+    if (fseek(f, 0, SEEK_SET) != 0) goto fail;
+    text = (char *)malloc((size_t)file_size + 1u);
+    if (!text) goto fail;
+    if (file_size > 0 &&
+        fread(text, 1, (size_t)file_size, f) != (size_t)file_size) {
+        goto fail;
+    }
+    text[file_size] = '\0';
+    fclose(f);
+    *out_text = text;
+    return true;
+
+fail:
+    if (f) fclose(f);
+    free(text);
+    return false;
+}
+
+static bool scene_editor_path_exists(const char *path) {
+    struct stat st = {0};
+    if (!path || !path[0]) return false;
+    return stat(path, &st) == 0;
+}
+
+static bool scene_editor_ensure_dir_exists(const char *path) {
+    if (!path || !path[0]) return false;
+    if (mkdir(path, 0755) == 0) return true;
+    return errno == EEXIST;
+}
+
+bool scene_editor_retained_document_compose_contract_paths(const char *scene_dir,
+                                                           char *out_runtime_path,
+                                                           size_t out_runtime_path_size,
+                                                           char *out_authoring_path,
+                                                           size_t out_authoring_path_size) {
+    if (!scene_dir || !scene_dir[0]) return false;
+    if (!out_runtime_path || out_runtime_path_size == 0) return false;
+    if (!out_authoring_path || out_authoring_path_size == 0) return false;
+    if (snprintf(out_runtime_path,
+                 out_runtime_path_size,
+                 "%s/%s",
+                 scene_dir,
+                 "scene_runtime.json") >= (int)out_runtime_path_size) {
+        return false;
+    }
+    if (snprintf(out_authoring_path,
+                 out_authoring_path_size,
+                 "%s/%s",
+                 scene_dir,
+                 "scene_authoring.json") >= (int)out_authoring_path_size) {
+        return false;
+    }
+    return true;
+}
+
 void scene_editor_retained_document_name_from_path(const char *runtime_scene_path,
                                                    const char *provenance_scene_id,
                                                    char *out_name,
                                                    size_t out_name_size) {
     const char *filename = NULL;
+    const char *leaf = NULL;
     size_t len = 0;
     if (!out_name || out_name_size == 0) return;
     out_name[0] = '\0';
@@ -218,6 +299,25 @@ void scene_editor_retained_document_name_from_path(const char *runtime_scene_pat
     if (runtime_scene_path && runtime_scene_path[0]) {
         filename = strrchr(runtime_scene_path, '/');
         filename = filename ? filename + 1 : runtime_scene_path;
+        if (strcmp(filename, "scene_runtime.json") == 0 ||
+            strcmp(filename, "scene_authoring.json") == 0 ||
+            strcmp(filename, "manifest.json") == 0 ||
+            strcmp(filename, "scene_bundle.json") == 0) {
+            char parent_buf[512];
+            size_t parent_len = 0;
+            if (filename > runtime_scene_path) {
+                parent_len = (size_t)(filename - runtime_scene_path - 1);
+            }
+            if (parent_len >= sizeof(parent_buf)) {
+                parent_len = sizeof(parent_buf) - 1u;
+            }
+            if (parent_len > 0) {
+                memcpy(parent_buf, runtime_scene_path, parent_len);
+                parent_buf[parent_len] = '\0';
+                leaf = strrchr(parent_buf, '/');
+                filename = leaf ? leaf + 1 : parent_buf;
+            }
+        }
         len = strlen(filename);
         if (len > 5u && strcmp(filename + len - 5u, ".json") == 0) {
             len -= 5u;
@@ -246,7 +346,7 @@ bool scene_editor_retained_document_resolve_save_path(const char *runtime_dir,
     if (!runtime_dir || !runtime_dir[0] || !out_path || out_path_size == 0) return false;
     out_path[0] = '\0';
 
-    if (scene_editor_retained_document_is_runtime_user_path(runtime_dir, current_document_path)) {
+    if (current_document_path && current_document_path[0]) {
         snprintf(out_path, out_path_size, "%s", current_document_path);
         return true;
     }
@@ -286,10 +386,16 @@ bool scene_editor_retained_document_duplicate_scene_file(const char *source_path
     long file_size = 0;
     char *json_text = NULL;
     char *updated_json = NULL;
+    char *authoring_text = NULL;
     char source_stem[128];
     char source_scene_id[128];
     char duplicate_stem[128];
     char duplicate_scene_id[128];
+    char duplicate_scene_dir[512];
+    char duplicate_runtime_path[512];
+    char duplicate_authoring_path[512];
+    char source_dir[512];
+    char source_authoring_path[512];
     int suffix = 0;
 
     if (out_path && out_path_size > 0) out_path[0] = '\0';
@@ -324,6 +430,28 @@ bool scene_editor_retained_document_duplicate_scene_file(const char *source_path
     if (!scene_editor_load_scene_id_from_file(source_path, source_scene_id, sizeof(source_scene_id))) {
         scene_editor_sanitize_runtime_scene_name(source_stem, source_scene_id, sizeof(source_scene_id));
     }
+    snprintf(source_dir, sizeof(source_dir), "%s", source_path);
+    {
+        char *slash = strrchr(source_dir, '/');
+        if (slash) {
+            *slash = '\0';
+        } else {
+            source_dir[0] = '\0';
+        }
+    }
+    if (source_dir[0] &&
+        scene_editor_retained_document_compose_contract_paths(source_dir,
+                                                              duplicate_runtime_path,
+                                                              sizeof(duplicate_runtime_path),
+                                                              source_authoring_path,
+                                                              sizeof(source_authoring_path)) &&
+        scene_editor_read_text_file_dynamic(source_authoring_path, &authoring_text)) {
+        /* keep source authoring sidecar when present */
+    } else {
+        authoring_text = (char *)malloc(4u);
+        if (!authoring_text) goto file_error;
+        memcpy(authoring_text, "{}\n", 4u);
+    }
 
     for (suffix = 0; suffix < 1000; ++suffix) {
         if (suffix == 0) {
@@ -333,14 +461,33 @@ bool scene_editor_retained_document_duplicate_scene_file(const char *source_path
             snprintf(duplicate_stem, sizeof(duplicate_stem), "%s_copy_%d", source_stem, suffix + 1);
             snprintf(duplicate_scene_id, sizeof(duplicate_scene_id), "%s_copy_%d", source_scene_id, suffix + 1);
         }
-        if (snprintf(out_path, out_path_size, "%s/%s.json", runtime_dir, duplicate_stem) >= (int)out_path_size) {
+        if (snprintf(duplicate_scene_dir,
+                     sizeof(duplicate_scene_dir),
+                     "%s/%s",
+                     runtime_dir,
+                     duplicate_stem) >= (int)sizeof(duplicate_scene_dir)) {
             if (out_diagnostics && out_diagnostics_size > 0) {
                 snprintf(out_diagnostics, out_diagnostics_size, "%s", "Duplicate path too long.");
             }
             free(json_text);
+            free(authoring_text);
             return false;
         }
-        if (!scene_editor_runtime_scene_path_exists(out_path)) {
+        if (!scene_editor_retained_document_compose_contract_paths(duplicate_scene_dir,
+                                                                   duplicate_runtime_path,
+                                                                   sizeof(duplicate_runtime_path),
+                                                                   duplicate_authoring_path,
+                                                                   sizeof(duplicate_authoring_path))) {
+            if (out_diagnostics && out_diagnostics_size > 0) {
+                snprintf(out_diagnostics, out_diagnostics_size, "%s", "Duplicate path too long.");
+            }
+            free(json_text);
+            free(authoring_text);
+            return false;
+        }
+        if (!scene_editor_path_exists(duplicate_scene_dir) &&
+            !scene_editor_path_exists(duplicate_runtime_path) &&
+            !scene_editor_path_exists(duplicate_authoring_path)) {
             break;
         }
     }
@@ -349,6 +496,7 @@ bool scene_editor_retained_document_duplicate_scene_file(const char *source_path
             snprintf(out_diagnostics, out_diagnostics_size, "%s", "No duplicate scene slot available.");
         }
         free(json_text);
+        free(authoring_text);
         out_path[0] = '\0';
         return false;
     }
@@ -358,18 +506,31 @@ bool scene_editor_retained_document_duplicate_scene_file(const char *source_path
             snprintf(out_diagnostics, out_diagnostics_size, "%s", "Failed to rewrite scene id.");
         }
         free(json_text);
+        free(authoring_text);
         out_path[0] = '\0';
         return false;
     }
     free(json_text);
     json_text = NULL;
 
-    f = fopen(out_path, "wb");
+    if (!scene_editor_ensure_dir_exists(duplicate_scene_dir)) {
+        if (out_diagnostics && out_diagnostics_size > 0) {
+            snprintf(out_diagnostics, out_diagnostics_size, "%s", "Failed to create duplicate scene directory.");
+        }
+        free(updated_json);
+        free(authoring_text);
+        out_path[0] = '\0';
+        return false;
+    }
+
+    f = fopen(duplicate_runtime_path, "wb");
     if (!f) {
         if (out_diagnostics && out_diagnostics_size > 0) {
             snprintf(out_diagnostics, out_diagnostics_size, "%s", "Failed to create duplicate scene.");
         }
+        remove(duplicate_scene_dir);
         free(updated_json);
+        free(authoring_text);
         out_path[0] = '\0';
         return false;
     }
@@ -378,14 +539,45 @@ bool scene_editor_retained_document_duplicate_scene_file(const char *source_path
             snprintf(out_diagnostics, out_diagnostics_size, "%s", "Failed to write duplicate scene.");
         }
         fclose(f);
+        remove(duplicate_runtime_path);
+        remove(duplicate_scene_dir);
         free(updated_json);
+        free(authoring_text);
         out_path[0] = '\0';
         return false;
     }
     fclose(f);
+    f = fopen(duplicate_authoring_path, "wb");
+    if (!f) {
+        if (out_diagnostics && out_diagnostics_size > 0) {
+            snprintf(out_diagnostics, out_diagnostics_size, "%s", "Failed to create duplicate authoring scene.");
+        }
+        remove(duplicate_runtime_path);
+        remove(duplicate_scene_dir);
+        free(updated_json);
+        free(authoring_text);
+        out_path[0] = '\0';
+        return false;
+    }
+    if (fwrite(authoring_text, 1, strlen(authoring_text), f) != strlen(authoring_text)) {
+        if (out_diagnostics && out_diagnostics_size > 0) {
+            snprintf(out_diagnostics, out_diagnostics_size, "%s", "Failed to write duplicate authoring scene.");
+        }
+        fclose(f);
+        remove(duplicate_authoring_path);
+        remove(duplicate_runtime_path);
+        remove(duplicate_scene_dir);
+        free(updated_json);
+        free(authoring_text);
+        out_path[0] = '\0';
+        return false;
+    }
+    fclose(f);
+    snprintf(out_path, out_path_size, "%s", duplicate_runtime_path);
     free(updated_json);
+    free(authoring_text);
     if (out_diagnostics && out_diagnostics_size > 0) {
-        snprintf(out_diagnostics, out_diagnostics_size, "Duplicated scene to %s.json", duplicate_stem);
+        snprintf(out_diagnostics, out_diagnostics_size, "Duplicated scene to %s", duplicate_stem);
     }
     return true;
 
@@ -395,6 +587,7 @@ file_error:
     }
     if (f) fclose(f);
     free(json_text);
+    free(authoring_text);
     out_path[0] = '\0';
     return false;
 }

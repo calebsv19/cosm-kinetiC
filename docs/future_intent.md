@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-04-18
+Last updated: 2026-04-29
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -11,6 +11,10 @@ Last updated: 2026-04-18
 ## Immediate Next Direction
 - `physics_sim` producer-side truthful `3D` export is now complete through `PSBU-11D`.
 - The next cross-program boundary is downstream `ray_tracing` work, not more producer-side export churn in `physics_sim`.
+- Inside `physics_sim`, any next local follow-up should stay bounded to retained-scene usability/document hygiene:
+  - scene-library discovery/path clarity
+  - menu/input-root ergonomics
+  - large-scene editor viewport handling
 - The deferred handoff is:
   - load raw `.vf3d` and additive `VF3H` `.pack`
   - resolve truthful `scene_bundle.json` / `manifest.json` metadata
@@ -199,7 +203,7 @@ Last updated: 2026-04-18
     - `initial_velocity` remains deferred because the current legacy runtime path still has no honest per-object sink for it
   - `PS4D-5A` slice 1 complete:
     - the editor now owns a real app-local scene-library model split between 2D preset entries and retained 3D runtime-scene entries
-    - retained-scene discovery currently scans `physics_sim/config/samples/*.json`
+    - this old single-root discovery note is superseded by the current multi-root input-path behavior described in `docs/current_truth.md`
     - the retained-scene open affordance now routes through the selected catalog entry instead of a hardcoded fixture-only path
   - `PS4D-5B` slice 1 complete:
     - the top-level menu now splits `2D` custom presets vs retained `3D` runtime-scene entries by `space_mode`

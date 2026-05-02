@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "app/editor/scene_editor.h"
+#include "app/menu/menu_settings_input.h"
 #include "app/menu/menu_render.h"
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_window.h"
@@ -103,7 +104,10 @@ static bool menu_apply_input_root(SceneMenuInteraction *ctx, const char *path) {
              sizeof(ctx->cfg->input_root),
              "%s",
              path);
+    menu_clear_retained_scene_selection(ctx);
     menu_persist_runtime_config(ctx->cfg);
+    menu_ensure_slot_for_mode(ctx);
+    menu_update_scrollbar(ctx);
     return true;
 }
 
@@ -147,7 +151,7 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         char selected[512];
         if (menu_pick_input_root_macos(selected, sizeof(selected))) {
             if (menu_apply_input_root(ctx, selected)) {
-                menu_set_status(ctx, "Input root updated (applies on next launch).", false);
+                menu_set_status(ctx, "Input root updated.", false);
             }
         } else {
             menu_set_status(ctx, "Input root folder dialog canceled/unavailable.", false);
@@ -166,7 +170,9 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
     } else if (ctx->editing_input_root) {
         menu_finish_input_root_edit(ctx, true);
         menu_persist_runtime_config(ctx->cfg);
-        menu_set_status(ctx, "Input root updated (applies on next launch).", false);
+        menu_ensure_slot_for_mode(ctx);
+        menu_update_scrollbar(ctx);
+        menu_set_status(ctx, "Input root updated.", false);
     }
 
     if (menu_point_in_rect(x, y, &ctx->output_root_folder_button.rect)) {
@@ -250,6 +256,9 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         }
         if (ctx->editing_viscosity) {
             menu_finish_viscosity_edit(ctx, true);
+        }
+        if (menu_settings_has_pending_changes(ctx)) {
+            menu_settings_commit(ctx, false);
         }
         if (ctx->cfg->headless_enabled) {
             ctx->headless_pending = true;
@@ -406,36 +415,7 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         return;
     }
 
-    if (menu_point_in_rect(x, y, &ctx->grid_dec_button.rect)) {
-        ctx->cfg->grid_w = ctx->cfg->grid_h =
-            (ctx->cfg->grid_w > 32) ? ctx->cfg->grid_w - 32 : 32;
-        menu_set_custom_quality(ctx);
-        return;
-    }
-
-    if (menu_point_in_rect(x, y, &ctx->grid_inc_button.rect)) {
-        ctx->cfg->grid_w = ctx->cfg->grid_h =
-            (ctx->cfg->grid_w < 512) ? ctx->cfg->grid_w + 32 : 512;
-        menu_set_custom_quality(ctx);
-        return;
-    }
-
-    if (menu_point_in_rect(x, y, &ctx->quality_prev_button.rect)) {
-        menu_cycle_quality(ctx, -1);
-        return;
-    }
-    if (menu_point_in_rect(x, y, &ctx->quality_next_button.rect)) {
-        menu_cycle_quality(ctx, 1);
-        return;
-    }
-
-    if (menu_point_in_rect(x, y, &ctx->volume_toggle_rect)) {
-        ctx->cfg->save_volume_frames = !ctx->cfg->save_volume_frames;
-        return;
-    }
-
-    if (menu_point_in_rect(x, y, &ctx->render_toggle_rect)) {
-        ctx->cfg->save_render_frames = !ctx->cfg->save_render_frames;
+    if (menu_settings_handle_primary_click(ctx, x, y)) {
         return;
     }
 
@@ -642,7 +622,9 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
             menu_finish_input_root_edit(ctx, true);
             menu_persist_runtime_config(ctx->cfg);
-            menu_set_status(ctx, "Input root updated (applies on next launch).", false);
+            menu_ensure_slot_for_mode(ctx);
+            menu_update_scrollbar(ctx);
+            menu_set_status(ctx, "Input root updated.", false);
         } else if (key == SDLK_ESCAPE) {
             menu_finish_input_root_edit(ctx, false);
         } else {
@@ -667,7 +649,7 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         char selected[512];
         if (menu_pick_input_root_macos(selected, sizeof(selected))) {
             if (menu_apply_input_root(ctx, selected)) {
-                menu_set_status(ctx, "Input root updated (applies on next launch).", false);
+                menu_set_status(ctx, "Input root updated.", false);
             }
         } else {
             menu_set_status(ctx, "Input root folder dialog canceled/unavailable.", false);

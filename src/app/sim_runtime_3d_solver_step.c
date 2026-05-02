@@ -13,6 +13,47 @@ static bool cell_is_solid(const uint8_t *solid_mask, size_t idx) {
     return solid_mask && solid_mask[idx] != 0u;
 }
 
+static float sample_solid_fallback_value(const float *field,
+                                         const SimRuntime3DDomainDesc *desc,
+                                         const uint8_t *solid_mask,
+                                         int x,
+                                         int y,
+                                         int z) {
+    float sum = 0.0f;
+    int count = 0;
+    if (!field || !desc) return 0.0f;
+
+    for (int dz = -1; dz <= 1; ++dz) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
+                size_t idx = 0;
+                if ((dx != 0) + (dy != 0) + (dz != 0) != 1) continue;
+                idx = sim_runtime_3d_volume_index_clamped(desc, x + dx, y + dy, z + dz);
+                if (cell_is_solid(solid_mask, idx)) continue;
+                sum += field[idx];
+                count += 1;
+            }
+        }
+    }
+
+    return count > 0 ? (sum / (float)count) : 0.0f;
+}
+
+static float sample_field_value_wall_aware(const float *field,
+                                           const SimRuntime3DDomainDesc *desc,
+                                           const uint8_t *solid_mask,
+                                           int x,
+                                           int y,
+                                           int z) {
+    size_t idx = 0;
+    if (!field || !desc) return 0.0f;
+    idx = sim_runtime_3d_volume_index(desc, x, y, z);
+    if (!cell_is_solid(solid_mask, idx)) {
+        return field[idx];
+    }
+    return sample_solid_fallback_value(field, desc, solid_mask, x, y, z);
+}
+
 static float sample_field_trilinear_masked(const float *field,
                                            const SimRuntime3DDomainDesc *desc,
                                            const uint8_t *solid_mask,
@@ -63,23 +104,14 @@ static float sample_field_trilinear_masked(const float *field,
     tz = z - (float)z0;
 
     {
-        size_t i000 = sim_runtime_3d_volume_index(desc, x0, y0, z0);
-        size_t i100 = sim_runtime_3d_volume_index(desc, x1, y0, z0);
-        size_t i010 = sim_runtime_3d_volume_index(desc, x0, y1, z0);
-        size_t i110 = sim_runtime_3d_volume_index(desc, x1, y1, z0);
-        size_t i001 = sim_runtime_3d_volume_index(desc, x0, y0, z1);
-        size_t i101 = sim_runtime_3d_volume_index(desc, x1, y0, z1);
-        size_t i011 = sim_runtime_3d_volume_index(desc, x0, y1, z1);
-        size_t i111 = sim_runtime_3d_volume_index(desc, x1, y1, z1);
-
-        c000 = cell_is_solid(solid_mask, i000) ? 0.0f : field[i000];
-        c100 = cell_is_solid(solid_mask, i100) ? 0.0f : field[i100];
-        c010 = cell_is_solid(solid_mask, i010) ? 0.0f : field[i010];
-        c110 = cell_is_solid(solid_mask, i110) ? 0.0f : field[i110];
-        c001 = cell_is_solid(solid_mask, i001) ? 0.0f : field[i001];
-        c101 = cell_is_solid(solid_mask, i101) ? 0.0f : field[i101];
-        c011 = cell_is_solid(solid_mask, i011) ? 0.0f : field[i011];
-        c111 = cell_is_solid(solid_mask, i111) ? 0.0f : field[i111];
+        c000 = sample_field_value_wall_aware(field, desc, solid_mask, x0, y0, z0);
+        c100 = sample_field_value_wall_aware(field, desc, solid_mask, x1, y0, z0);
+        c010 = sample_field_value_wall_aware(field, desc, solid_mask, x0, y1, z0);
+        c110 = sample_field_value_wall_aware(field, desc, solid_mask, x1, y1, z0);
+        c001 = sample_field_value_wall_aware(field, desc, solid_mask, x0, y0, z1);
+        c101 = sample_field_value_wall_aware(field, desc, solid_mask, x1, y0, z1);
+        c011 = sample_field_value_wall_aware(field, desc, solid_mask, x0, y1, z1);
+        c111 = sample_field_value_wall_aware(field, desc, solid_mask, x1, y1, z1);
     }
 
     c00 = c000 * (1.0f - tx) + c100 * tx;
@@ -384,6 +416,53 @@ static void project_velocity(SimRuntime3DVolume *volume,
     }
 }
 
+static void enforce_no_through_wall_velocity(SimRuntime3DVolume *volume,
+                                             const uint8_t *solid_mask) {
+    const SimRuntime3DDomainDesc *desc = NULL;
+    if (!volume || !solid_mask) return;
+    desc = &volume->desc;
+
+    for (int z = 0; z < desc->grid_d; ++z) {
+        for (int y = 0; y < desc->grid_h; ++y) {
+            for (int x = 0; x < desc->grid_w; ++x) {
+                size_t idx = sim_runtime_3d_volume_index(desc, x, y, z);
+                if (cell_is_solid(solid_mask, idx)) continue;
+
+                if (x > 0 &&
+                    cell_is_solid(solid_mask, sim_runtime_3d_volume_index(desc, x - 1, y, z)) &&
+                    volume->velocity_x[idx] < 0.0f) {
+                    volume->velocity_x[idx] = 0.0f;
+                }
+                if (x + 1 < desc->grid_w &&
+                    cell_is_solid(solid_mask, sim_runtime_3d_volume_index(desc, x + 1, y, z)) &&
+                    volume->velocity_x[idx] > 0.0f) {
+                    volume->velocity_x[idx] = 0.0f;
+                }
+                if (y > 0 &&
+                    cell_is_solid(solid_mask, sim_runtime_3d_volume_index(desc, x, y - 1, z)) &&
+                    volume->velocity_y[idx] < 0.0f) {
+                    volume->velocity_y[idx] = 0.0f;
+                }
+                if (y + 1 < desc->grid_h &&
+                    cell_is_solid(solid_mask, sim_runtime_3d_volume_index(desc, x, y + 1, z)) &&
+                    volume->velocity_y[idx] > 0.0f) {
+                    volume->velocity_y[idx] = 0.0f;
+                }
+                if (z > 0 &&
+                    cell_is_solid(solid_mask, sim_runtime_3d_volume_index(desc, x, y, z - 1)) &&
+                    volume->velocity_z[idx] < 0.0f) {
+                    volume->velocity_z[idx] = 0.0f;
+                }
+                if (z + 1 < desc->grid_d &&
+                    cell_is_solid(solid_mask, sim_runtime_3d_volume_index(desc, x, y, z + 1)) &&
+                    volume->velocity_z[idx] > 0.0f) {
+                    volume->velocity_z[idx] = 0.0f;
+                }
+            }
+        }
+    }
+}
+
 static void advect_density(SimRuntime3DVolume *volume,
                            const SimRuntime3DSolverScratch *scratch,
                            const uint8_t *solid_mask,
@@ -468,6 +547,7 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                    dt_f);
     compute_divergence(volume, scratch, solid_mask);
     project_velocity(volume, scratch, solid_mask, iterations);
+    enforce_no_through_wall_velocity(volume, solid_mask);
     advect_density(volume, scratch, solid_mask, dt_cells, diffusion_blend, cfg->density_decay, dt);
     apply_solid_mask(volume, solid_mask);
     return true;

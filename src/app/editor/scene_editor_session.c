@@ -20,6 +20,12 @@ static float session_emitter_default_strength(FluidEmitterType type) {
     }
 }
 
+static float session_clamp_emitter_strength(float strength) {
+    if (strength < 0.1f) strength = 0.1f;
+    if (strength > 5000.0f) strength = 5000.0f;
+    return strength;
+}
+
 static float session_clamp_emitter_radius(float radius) {
     if (radius < 0.02f) radius = 0.02f;
     if (radius > 0.6f) radius = 0.6f;
@@ -398,12 +404,21 @@ bool physics_sim_editor_session_set_selected_emitter_type(PhysicsSimEditorSessio
         overlay->emitter.radius = session_default_emitter_radius_for_object(object);
     }
     overlay->emitter.radius = session_clamp_emitter_radius(overlay->emitter.radius);
-    overlay->emitter.strength = session_emitter_default_strength(type);
+    overlay->emitter.strength = session_clamp_emitter_strength(session_emitter_default_strength(type));
     if (overlay->emitter.direction.x == 0.0 &&
         overlay->emitter.direction.y == 0.0 &&
         overlay->emitter.direction.z == 0.0) {
         overlay->emitter.direction = session_default_emitter_direction_for_object(object);
     }
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_set_selected_emitter_strength(PhysicsSimEditorSession *session,
+                                                              float strength) {
+    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    overlay->emitter.strength = session_clamp_emitter_strength(strength);
     session->physics_overlay.derived_defaults = false;
     return true;
 }
@@ -818,7 +833,7 @@ bool physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(PhysicsS
                 }
                 if (json_object_object_get_ex(emitter, "strength", &strength) &&
                     (json_object_is_type(strength, json_type_double) || json_object_is_type(strength, json_type_int))) {
-                    overlay->emitter.strength = (float)json_object_get_double(strength);
+                    overlay->emitter.strength = session_clamp_emitter_strength((float)json_object_get_double(strength));
                 }
                 if (json_object_object_get_ex(emitter, "direction", &direction) &&
                     json_object_is_type(direction, json_type_object)) {

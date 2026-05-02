@@ -1,10 +1,10 @@
 #include "app/editor/scene_editor_retained_document.h"
 
+#include <stdio.h>
+#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <string.h>
 
 static bool write_text_file(const char *path, const char *text) {
     FILE *f = fopen(path, "wb");
@@ -38,10 +38,19 @@ static bool test_document_name_prefers_path_stem_over_scene_id(void) {
     return strcmp(name, "ps4d_runtime_scene_visual_test") == 0;
 }
 
-static bool test_save_path_prefers_document_name_over_provenance_scene_id(void) {
+static bool test_document_name_prefers_scene_directory_for_runtime_contract_file(void) {
+    char name[128];
+    scene_editor_retained_document_name_from_path("/tmp/simple_plane/scene_runtime.json",
+                                                  "scene_line_drawing_simple_plane",
+                                                  name,
+                                                  sizeof(name));
+    return strcmp(name, "simple_plane") == 0;
+}
+
+static bool test_save_path_prefers_document_name_over_provenance_scene_id_when_current_path_missing(void) {
     char path[256];
     bool ok = scene_editor_retained_document_resolve_save_path("/tmp/physics_sim_retained_doc_empty",
-                                                               "config/samples/ps4d_runtime_scene_visual_test.json",
+                                                               "",
                                                                "custom_scene_name",
                                                                "scene_unique_contract_test",
                                                                path,
@@ -62,6 +71,18 @@ static bool test_save_path_reuses_current_runtime_document_path(void) {
     return strcmp(path, "data/runtime/scenes/already_saved.json") == 0;
 }
 
+static bool test_save_path_reuses_current_authored_scene_runtime_path(void) {
+    char path[256];
+    bool ok = scene_editor_retained_document_resolve_save_path("data/runtime/scenes",
+                                                               "/Users/test/simple_plane/scene_runtime.json",
+                                                               "renamed_scene",
+                                                               "scene_line_drawing_simple_plane",
+                                                               path,
+                                                               sizeof(path));
+    if (!ok) return false;
+    return strcmp(path, "/Users/test/simple_plane/scene_runtime.json") == 0;
+}
+
 static bool test_save_path_reuses_existing_runtime_scene_id_file(void) {
     char temp_dir[256];
     char existing_path[320];
@@ -74,7 +95,7 @@ static bool test_save_path_reuses_existing_runtime_scene_id_file(void) {
         return false;
     }
     if (!scene_editor_retained_document_resolve_save_path(temp_dir,
-                                                          "config/samples/ps4d_runtime_scene_visual_test.json",
+                                                          "",
                                                           "ps4d_runtime_scene_visual_test",
                                                           "scene_ps4d_visual_test",
                                                           resolved_path,
@@ -88,45 +109,96 @@ static bool test_save_path_reuses_existing_runtime_scene_id_file(void) {
     return strcmp(resolved_path, existing_path) == 0;
 }
 
-static bool test_duplicate_scene_file_creates_copy_with_new_scene_id(void) {
+static bool test_duplicate_scene_file_creates_scene_directory_copy_with_new_scene_id(void) {
     char temp_dir[256];
-    char source_path[320];
-    char duplicate_path[320];
-    char duplicate_text[512];
+    char source_dir[320];
+    char source_runtime_path[320];
+    char source_authoring_path[320];
+    char duplicate_runtime_path[320];
+    char duplicate_scene_dir[320];
+    char duplicate_authoring_path[320];
+    char duplicate_runtime_text[512];
+    char duplicate_authoring_text[512];
     char diagnostics[256];
     int pid = (int)getpid();
     snprintf(temp_dir, sizeof(temp_dir), "/tmp/physics_sim_retained_doc_dup_%d", pid);
     (void)mkdir(temp_dir, 0755);
-    snprintf(source_path, sizeof(source_path), "%s/%s", temp_dir, "scene_ps4d_visual_test.json");
-    if (!write_text_file(source_path, "{\n  \"scene_id\": \"scene_ps4d_visual_test\",\n  \"objects\": []\n}\n")) {
+    snprintf(source_dir, sizeof(source_dir), "%s/%s", temp_dir, "scene_ps4d_visual_test");
+    snprintf(source_runtime_path, sizeof(source_runtime_path), "%s/%s", source_dir, "scene_runtime.json");
+    snprintf(source_authoring_path, sizeof(source_authoring_path), "%s/%s", source_dir, "scene_authoring.json");
+    (void)mkdir(source_dir, 0755);
+    if (!write_text_file(source_runtime_path, "{\n  \"scene_id\": \"scene_ps4d_visual_test\",\n  \"objects\": []\n}\n") ||
+        !write_text_file(source_authoring_path, "{\n  \"scene_name\": \"Scene PS4D Visual Test\"\n}\n")) {
+        remove(source_runtime_path);
+        remove(source_authoring_path);
+        rmdir(source_dir);
+        rmdir(temp_dir);
         return false;
     }
-    if (!scene_editor_retained_document_duplicate_scene_file(source_path,
+    if (!scene_editor_retained_document_duplicate_scene_file(source_runtime_path,
                                                              temp_dir,
-                                                             duplicate_path,
-                                                             sizeof(duplicate_path),
+                                                             duplicate_runtime_path,
+                                                             sizeof(duplicate_runtime_path),
                                                              diagnostics,
                                                              sizeof(diagnostics))) {
-        remove(source_path);
+        remove(source_runtime_path);
+        remove(source_authoring_path);
+        rmdir(source_dir);
         rmdir(temp_dir);
         return false;
     }
-    if (!read_text_file(duplicate_path, duplicate_text, sizeof(duplicate_text))) {
-        remove(duplicate_path);
-        remove(source_path);
+
+    snprintf(duplicate_scene_dir, sizeof(duplicate_scene_dir), "%s", duplicate_runtime_path);
+    {
+        char *slash = strrchr(duplicate_scene_dir, '/');
+        if (!slash) {
+            remove(source_runtime_path);
+            remove(source_authoring_path);
+            rmdir(source_dir);
+            rmdir(temp_dir);
+            return false;
+        }
+        *slash = '\0';
+    }
+    if (!scene_editor_retained_document_compose_contract_paths(duplicate_scene_dir,
+                                                               duplicate_runtime_path,
+                                                               sizeof(duplicate_runtime_path),
+                                                               duplicate_authoring_path,
+                                                               sizeof(duplicate_authoring_path))) {
+        remove(source_runtime_path);
+        remove(source_authoring_path);
+        rmdir(source_dir);
         rmdir(temp_dir);
         return false;
     }
-    remove(duplicate_path);
-    remove(source_path);
+    if (!read_text_file(duplicate_runtime_path, duplicate_runtime_text, sizeof(duplicate_runtime_text)) ||
+        !read_text_file(duplicate_authoring_path, duplicate_authoring_text, sizeof(duplicate_authoring_text))) {
+        remove(duplicate_runtime_path);
+        remove(duplicate_authoring_path);
+        rmdir(duplicate_scene_dir);
+        remove(source_runtime_path);
+        remove(source_authoring_path);
+        rmdir(source_dir);
+        rmdir(temp_dir);
+        return false;
+    }
+
+    remove(duplicate_runtime_path);
+    remove(duplicate_authoring_path);
+    rmdir(duplicate_scene_dir);
+    remove(source_runtime_path);
+    remove(source_authoring_path);
+    rmdir(source_dir);
     rmdir(temp_dir);
-    return strstr(duplicate_path, "scene_ps4d_visual_test_copy.json") != NULL &&
-           strstr(duplicate_text, "\"scene_id\": \"scene_ps4d_visual_test_copy\"") != NULL;
+
+    return strstr(duplicate_runtime_path, "scene_ps4d_visual_test_copy/scene_runtime.json") != NULL &&
+           strstr(duplicate_runtime_text, "\"scene_id\": \"scene_ps4d_visual_test_copy\"") != NULL &&
+           strstr(duplicate_authoring_text, "\"scene_name\": \"Scene PS4D Visual Test\"") != NULL;
 }
 
 static bool test_runtime_user_path_detection_handles_absolute_paths(void) {
     return scene_editor_retained_document_is_runtime_user_path("/repo/data/runtime/scenes",
-                                                               "/repo/data/runtime/scenes/custom_scene.json") &&
+                                                               "/repo/data/runtime/scenes/custom_scene/scene_runtime.json") &&
            !scene_editor_retained_document_is_runtime_user_path("/repo/data/runtime/scenes",
                                                                 "/repo/config/samples/ps4d_runtime_scene_visual_test.json");
 }
@@ -136,7 +208,11 @@ int main(void) {
         fprintf(stderr, "scene_editor_retained_document_contract_test: document name seed failed\n");
         return 1;
     }
-    if (!test_save_path_prefers_document_name_over_provenance_scene_id()) {
+    if (!test_document_name_prefers_scene_directory_for_runtime_contract_file()) {
+        fprintf(stderr, "scene_editor_retained_document_contract_test: runtime contract name seed failed\n");
+        return 1;
+    }
+    if (!test_save_path_prefers_document_name_over_provenance_scene_id_when_current_path_missing()) {
         fprintf(stderr, "scene_editor_retained_document_contract_test: save path resolution failed\n");
         return 1;
     }
@@ -144,11 +220,15 @@ int main(void) {
         fprintf(stderr, "scene_editor_retained_document_contract_test: runtime path reuse failed\n");
         return 1;
     }
+    if (!test_save_path_reuses_current_authored_scene_runtime_path()) {
+        fprintf(stderr, "scene_editor_retained_document_contract_test: authored runtime path reuse failed\n");
+        return 1;
+    }
     if (!test_save_path_reuses_existing_runtime_scene_id_file()) {
         fprintf(stderr, "scene_editor_retained_document_contract_test: existing scene-id save path reuse failed\n");
         return 1;
     }
-    if (!test_duplicate_scene_file_creates_copy_with_new_scene_id()) {
+    if (!test_duplicate_scene_file_creates_scene_directory_copy_with_new_scene_id()) {
         fprintf(stderr, "scene_editor_retained_document_contract_test: duplicate scene file failed\n");
         return 1;
     }

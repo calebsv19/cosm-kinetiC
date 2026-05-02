@@ -23,6 +23,7 @@ typedef struct PhysicsSimSceneLibraryEntry {
     bool active;
     bool user_scene;
     char display_name[128];
+    char group_name[128];
     char source_path[512];
     char scene_id[128];
     int object_count;
@@ -44,7 +45,7 @@ typedef struct PhysicsSimEditorSceneLibrary {
 void physics_sim_editor_scene_library_refresh(PhysicsSimEditorSceneLibrary *library,
                                               const FluidScenePreset *working_preset,
                                               const PhysicsSimEditorSession *session,
-                                              const char *runtime_scene_dir,
+                                              const char *configured_input_root,
                                               const char *current_runtime_scene_path);
 const PhysicsSimSceneLibraryEntry *physics_sim_editor_scene_library_selected_legacy(const PhysicsSimEditorSceneLibrary *library);
 const PhysicsSimSceneLibraryEntry *physics_sim_editor_scene_library_selected_retained(const PhysicsSimEditorSceneLibrary *library);

@@ -104,9 +104,52 @@ static void test_viewport_frame_bounds_allows_large_scene_zoom_out(void) {
                                        22.0f,
                                        12.0f);
 
-    assert(viewport.orbit_distance > 24.0f);
-    assert(viewport.orbit_distance <= 96.0f);
+    assert(viewport.orbit_distance > 96.0f);
     assert(scene_editor_viewport_active_zoom(&viewport) < 0.15f);
+}
+
+static void test_viewport_3d_wheel_uses_scene_relative_zoom_limit(void) {
+    SceneEditorViewportState viewport = {0};
+    int near_screen_x = 0;
+    int far_screen_x = 0;
+    int screen_y = 0;
+
+    scene_editor_viewport_init(&viewport, SPACE_MODE_3D, SPACE_MODE_2D);
+    scene_editor_viewport_frame_bounds(&viewport,
+                                       900,
+                                       640,
+                                       -30.0f,
+                                       -18.0f,
+                                       -8.0f,
+                                       36.0f,
+                                       22.0f,
+                                       12.0f);
+
+    scene_editor_viewport_project_point3(&viewport,
+                                         0,
+                                         0,
+                                         900,
+                                         640,
+                                         viewport.center_x + 20.0f,
+                                         viewport.center_y,
+                                         viewport.center_z,
+                                         &near_screen_x,
+                                         &screen_y);
+    assert(scene_editor_viewport_apply_wheel(&viewport, -4));
+    assert(viewport.orbit_distance > 120.0f);
+    assert(scene_editor_viewport_active_zoom(&viewport) < 0.03f);
+    scene_editor_viewport_project_point3(&viewport,
+                                         0,
+                                         0,
+                                         900,
+                                         640,
+                                         viewport.center_x + 20.0f,
+                                         viewport.center_y,
+                                         viewport.center_z,
+                                         &far_screen_x,
+                                         &screen_y);
+    assert(far_screen_x > 0);
+    assert(near_screen_x > far_screen_x);
 }
 
 static void test_viewport_frame_bounds_2d_respects_surface_aspect(void) {
@@ -146,6 +189,7 @@ int main(void) {
     test_viewport_3d_orbit_and_distance_update();
     test_viewport_frame_bounds_centers_retained_scene();
     test_viewport_frame_bounds_allows_large_scene_zoom_out();
+    test_viewport_3d_wheel_uses_scene_relative_zoom_limit();
     test_viewport_frame_bounds_2d_respects_surface_aspect();
     return 0;
 }

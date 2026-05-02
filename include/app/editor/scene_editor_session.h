@@ -123,6 +123,8 @@ bool physics_sim_editor_session_set_selected_motion_mode(PhysicsSimEditorSession
 bool physics_sim_editor_session_set_selected_emitter_type(PhysicsSimEditorSession *session,
                                                           FluidEmitterType type,
                                                           bool toggle_clear);
+bool physics_sim_editor_session_set_selected_emitter_strength(PhysicsSimEditorSession *session,
+                                                              float strength);
 bool physics_sim_editor_session_set_scene_domain_size(PhysicsSimEditorSession *session,
                                                       double width,
                                                       double height,

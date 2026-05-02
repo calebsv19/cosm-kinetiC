@@ -127,7 +127,8 @@ void scene_editor_draw_button(SDL_Renderer *renderer,
 void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
                                      TTF_Font *font,
                                      const NumericField *field,
-                                     const FluidEmitter *selected_emitter) {
+                                     const FluidEmitter *selected_emitter,
+                                     const PhysicsSimEmitterOverlay *selected_overlay_emitter) {
     char label_fit[128];
     char display_fit[64];
     const char *label_text = NULL;
@@ -152,6 +153,11 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
     char display[32] = {0};
     if (field->editing) {
         snprintf(display, sizeof(display), "%s", field->buffer);
+    } else if (selected_overlay_emitter) {
+        float value = (field->target == FIELD_RADIUS)
+                          ? selected_overlay_emitter->radius
+                          : selected_overlay_emitter->strength;
+        snprintf(display, sizeof(display), "%.3f", value);
     } else if (selected_emitter) {
         float value = (field->target == FIELD_RADIUS) ? selected_emitter->radius : selected_emitter->strength;
         snprintf(display, sizeof(display), "%.3f", value);

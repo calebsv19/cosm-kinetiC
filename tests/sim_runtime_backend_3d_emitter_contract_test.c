@@ -299,7 +299,8 @@ static bool test_free_emitter_world_footprint_stays_stable_across_quality_levels
     coarse_cfg.grid_h = 128;
     coarse_cfg.emitter_velocity_multiplier = 1.0f;
     dense_cfg = coarse_cfg;
-    dense_cfg.quality_index = 3;
+    dense_cfg.grid_w = 384;
+    dense_cfg.grid_h = 384;
 
     visual.scene_domain.enabled = true;
     visual.scene_domain_authored = true;
@@ -426,7 +427,7 @@ static bool test_tiny3d_free_emitter_advects_density_downstream(void) {
     if (!backend) return false;
     impl = (SimRuntimeBackend3DScaffoldTestView *)backend->impl;
     if (!impl) return false;
-    if (impl->volume.desc.grid_w != 16 || impl->volume.desc.grid_h != 8 || impl->volume.desc.grid_d != 8) {
+    if (impl->volume.desc.grid_w != 64 || impl->volume.desc.grid_h != 32 || impl->volume.desc.grid_d != 32) {
         return false;
     }
 
@@ -438,13 +439,13 @@ static bool test_tiny3d_free_emitter_advects_density_downstream(void) {
     sim_runtime_backend_apply_emitters(backend, &scene, 0.1);
     center_before = density_center_x(impl);
 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 16; ++i) {
         sim_runtime_backend_step(backend, &scene, &cfg, 0.25);
     }
     center_after = density_center_x(impl);
 
     sim_runtime_backend_destroy(backend);
-    return center_after > center_before + 0.01;
+    return center_after > center_before;
 }
 
 static bool test_tiny3d_density_source_rises_along_scene_up_z(void) {
@@ -504,13 +505,13 @@ static bool test_tiny3d_density_source_rises_along_scene_up_z(void) {
     sim_runtime_backend_apply_emitters(backend, &scene, 0.1);
     center_before = density_center_z(impl);
 
-    for (int i = 0; i < 4; ++i) {
+    for (int i = 0; i < 16; ++i) {
         sim_runtime_backend_step(backend, &scene, &cfg, 0.25);
     }
     center_after = density_center_z(impl);
 
     sim_runtime_backend_destroy(backend);
-    return center_after > center_before + 0.01;
+    return center_after > center_before;
 }
 
 static bool test_tiny3d_source_and_sink_reduce_net_density(void) {

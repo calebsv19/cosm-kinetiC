@@ -168,11 +168,28 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         return;
     }
 
-    if (!editor_retained_scene_read_only(state)) {
+    {
         NumericField *fields[] = {&state->radius_field, &state->strength_field};
+        bool retained_scene_active = physics_sim_editor_session_has_retained_scene(&state->session);
+        bool retained_emitter_active =
+            physics_sim_editor_session_selected_object_emitter(&state->session) != NULL;
+        bool legacy_emitter_active =
+            state->selected_emitter >= 0 && state->selected_emitter < (int)state->working.emitter_count;
         for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); ++i) {
-            if (scene_editor_input_point_in_rect(&fields[i]->rect, x, y)) {
-                begin_field_edit(state, fields[i]);
+            NumericField *field = fields[i];
+            bool enabled = false;
+            if (retained_scene_active) {
+                enabled = retained_emitter_active &&
+                          field->target == FIELD_STRENGTH &&
+                          field->rect.w > 0 &&
+                          field->rect.h > 0;
+            } else {
+                enabled = legacy_emitter_active &&
+                          field->rect.w > 0 &&
+                          field->rect.h > 0;
+            }
+            if (enabled && scene_editor_input_point_in_rect(&field->rect, x, y)) {
+                begin_field_edit(state, field);
                 return;
             }
         }

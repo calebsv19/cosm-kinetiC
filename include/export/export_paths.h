@@ -9,6 +9,8 @@
 #define EXPORT_RENDER_SUBDIR "render_frames"
 #define EXPORT_RENDER_VIDEO_SUBDIR "render_vid"
 
+bool export_paths_set_root(const char *root_dir);
+
 // Build a per-run volume directory: export/volume_frames/<run_name>
 // run_name is typically the preset name, sanitized.
 bool export_paths_volume_run(const char *run_name, char *out_dir, size_t out_size);

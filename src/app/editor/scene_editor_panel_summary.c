@@ -134,24 +134,31 @@ void draw_center_pane_summary(SceneEditorState *state) {
 void draw_right_panel_summary(SceneEditorState *state) {
     char selected_line_a[160];
     char selected_line_b[160];
+    char emitter_line[160];
     char domain_line[160];
     char domain_runtime_line[160];
+    char wrapped[2][192];
     const CoreSceneObjectContract *selected_retained = NULL;
     const PhysicsSimObjectOverlay *selected_overlay = NULL;
+    const PhysicsSimEmitterOverlay *selected_emitter = NULL;
     const PhysicsSimDomainOverlay *scene_domain = NULL;
     int line_y = 0;
     int line_step = 0;
     int x = 0;
+    int text_w = 0;
     int summary_bottom = 0;
+    int current_y = 0;
     if (!state || !state->renderer) return;
 
     x = state->right_panel_rect.x + 12;
     line_y = state->overlay_summary_rect.y;
     line_step = panel_font_height(state->renderer, state->font_small, 17) + 7;
     if (line_step < 22) line_step = 22;
+    text_w = state->overlay_summary_rect.w;
 
     selected_line_a[0] = '\0';
     selected_line_b[0] = '\0';
+    emitter_line[0] = '\0';
     domain_line[0] = '\0';
     domain_runtime_line[0] = '\0';
     if (state->selection_kind == SELECTION_EMITTER &&
@@ -202,6 +209,7 @@ void draw_right_panel_summary(SceneEditorState *state) {
 
     selected_retained = physics_sim_editor_session_selected_object(&state->session);
     selected_overlay = physics_sim_editor_session_selected_object_overlay(&state->session);
+    selected_emitter = physics_sim_editor_session_selected_object_emitter(&state->session);
     if (selected_retained) {
         const char *object_id = selected_retained->object.object_id[0]
                                     ? selected_retained->object.object_id
@@ -218,6 +226,15 @@ void draw_right_panel_summary(SceneEditorState *state) {
                      "%s  %s",
                      physics_sim_editor_session_object_kind_label(selected_retained->kind),
                      physics_sim_editor_session_motion_mode_label(selected_overlay->motion_mode));
+        }
+        if (selected_emitter) {
+            snprintf(emitter_line,
+                     sizeof(emitter_line),
+                     "Emitter: %s  Strength %.1f",
+                     physics_sim_editor_session_emitter_type_label(selected_emitter->type),
+                     selected_emitter->strength);
+        } else {
+            snprintf(emitter_line, sizeof(emitter_line), "Emitter: none");
         }
     }
     scene_domain = physics_sim_editor_session_scene_domain(&state->session);
@@ -238,27 +255,46 @@ void draw_right_panel_summary(SceneEditorState *state) {
                  "Runtime domain: XY active; depth saved only");
     }
 
-    draw_text(state->renderer, state->font_small, selected_line_a, x, line_y, COLOR_TEXT);
+    current_y = line_y;
+    wrap_text_lines(state->renderer, state->font_small, selected_line_a, text_w, 2, wrapped, NULL);
+    for (int i = 0; i < 2 && wrapped[i][0]; ++i) {
+        draw_text(state->renderer, state->font_small, wrapped[i], x, current_y, COLOR_TEXT);
+        current_y += line_step;
+    }
     if (selected_line_b[0]) {
-        draw_text(state->renderer, state->font_small, selected_line_b, x, line_y + line_step, COLOR_TEXT_DIM);
+        wrap_text_lines(state->renderer, state->font_small, selected_line_b, text_w, 2, wrapped, NULL);
+        for (int i = 0; i < 2 && wrapped[i][0]; ++i) {
+            draw_text(state->renderer, state->font_small, wrapped[i], x, current_y, COLOR_TEXT_DIM);
+            current_y += line_step;
+        }
+    }
+    if (emitter_line[0]) {
+        wrap_text_lines(state->renderer, state->font_small, emitter_line, text_w, 2, wrapped, NULL);
+        for (int i = 0; i < 2 && wrapped[i][0]; ++i) {
+            draw_text(state->renderer, state->font_small, wrapped[i], x, current_y, COLOR_TEXT_DIM);
+            current_y += line_step;
+        }
     }
     if (domain_line[0]) {
-        draw_text(state->renderer, state->font_small, domain_line, x, line_y + line_step * 2, COLOR_TEXT_DIM);
+        wrap_text_lines(state->renderer, state->font_small, domain_line, text_w, 2, wrapped, NULL);
+        for (int i = 0; i < 2 && wrapped[i][0]; ++i) {
+            draw_text(state->renderer, state->font_small, wrapped[i], x, current_y, COLOR_TEXT_DIM);
+            current_y += line_step;
+        }
     }
     if (domain_runtime_line[0]) {
-        draw_text(state->renderer,
-                  state->font_small,
-                  domain_runtime_line,
-                  x,
-                  line_y + line_step * 3,
-                  COLOR_TEXT_DIM);
+        wrap_text_lines(state->renderer, state->font_small, domain_runtime_line, text_w, 2, wrapped, NULL);
+        for (int i = 0; i < 2 && wrapped[i][0]; ++i) {
+            draw_text(state->renderer, state->font_small, wrapped[i], x, current_y, COLOR_TEXT_DIM);
+            current_y += line_step;
+        }
     }
     summary_bottom = physics_sim_editor_session_has_retained_scene(&state->session)
                          ? state->btn_apply_overlay.rect.y - 12
                          : state->btn_save.rect.y - 12;
     draw_status_card(state,
                      x,
-                     line_y + line_step * (domain_runtime_line[0] ? 4 : (domain_line[0] ? 3 : 2)),
+                     current_y,
                      state->overlay_summary_rect.w,
                      summary_bottom);
 }

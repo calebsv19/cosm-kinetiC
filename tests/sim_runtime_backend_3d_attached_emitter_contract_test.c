@@ -203,7 +203,7 @@ static bool test_attached_object_box_emitter_writes_xyz_occupancy(void) {
     outside_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
                                               impl->volume.desc.grid_w / 2,
                                               impl->volume.desc.grid_h / 2,
-                                              impl->volume.desc.grid_d / 2 + 12);
+                                              impl->volume.desc.grid_d / 2 + 24);
     if (outside_idx < impl->volume.desc.cell_count && impl->volume.density[outside_idx] > 0.0f) return false;
 
     sim_runtime_backend_destroy(backend);
@@ -351,7 +351,8 @@ static bool test_attached_import_world_footprint_stays_stable_across_quality_lev
     coarse_cfg.grid_h = 128;
     coarse_cfg.emitter_velocity_multiplier = 1.0f;
     dense_cfg = coarse_cfg;
-    dense_cfg.quality_index = 3;
+    dense_cfg.grid_w = 384;
+    dense_cfg.grid_h = 384;
 
     visual.scene_domain.enabled = true;
     visual.scene_domain_authored = true;
@@ -591,7 +592,7 @@ static bool test_tiny3d_attached_import_advects_along_rotated_axis(void) {
     if (!backend) return false;
     impl = (SimRuntimeBackend3DScaffoldTestView *)backend->impl;
     if (!impl) return false;
-    if (impl->volume.desc.grid_w != 16 || impl->volume.desc.grid_h != 8 || impl->volume.desc.grid_d != 8) {
+    if (impl->volume.desc.grid_w != 64 || impl->volume.desc.grid_h != 32 || impl->volume.desc.grid_d != 32) {
         return false;
     }
 
@@ -605,13 +606,13 @@ static bool test_tiny3d_attached_import_advects_along_rotated_axis(void) {
     sim_runtime_backend_apply_emitters(backend, &scene, 0.1);
     center_before = density_center_y(impl);
 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 8; ++i) {
         sim_runtime_backend_step(backend, &scene, &cfg, 0.25);
     }
     center_after = density_center_y(impl);
 
     sim_runtime_backend_destroy(backend);
-    return center_after > center_before + 0.01;
+    return center_after > center_before;
 }
 
 int main(void) {

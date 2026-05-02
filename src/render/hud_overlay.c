@@ -101,6 +101,12 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
              mode_name,
              hud->grid_w, hud->grid_h);
 
+    char frame_line[64];
+    snprintf(frame_line,
+             sizeof(frame_line),
+             "Frame: %llu",
+             (unsigned long long)hud->frame_index);
+
     char space_line[120];
     snprintf(space_line,
              sizeof(space_line),
@@ -144,6 +150,27 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
                  hud->backend_domain_w,
                  hud->backend_domain_h,
                  hud->backend_cell_count);
+    }
+
+    char resolution_line[160];
+    if (hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD &&
+        hud->backend_requested_major_axis_cells > 0 &&
+        hud->backend_applied_major_axis_cells > 0) {
+        if (hud->backend_requested_major_axis_cells == hud->backend_applied_major_axis_cells) {
+            snprintf(resolution_line,
+                     sizeof(resolution_line),
+                     "3D resolution: requested axis %d, applied %d",
+                     hud->backend_requested_major_axis_cells,
+                     hud->backend_applied_major_axis_cells);
+        } else {
+            snprintf(resolution_line,
+                     sizeof(resolution_line),
+                     "3D resolution: requested axis %d, applied %d (cap)",
+                     hud->backend_requested_major_axis_cells,
+                     hud->backend_applied_major_axis_cells);
+        }
+    } else {
+        resolution_line[0] = '\0';
     }
 
     char domain_extent_line[160];
@@ -389,10 +416,12 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     const char *draw_lines[MAX_HUD_LINES];
     size_t line_count = 0;
     lines[line_count++] = status_line;
+    lines[line_count++] = frame_line;
     lines[line_count++] = space_line;
     lines[line_count++] = backend_line;
     lines[line_count++] = backend_kind_line;
     lines[line_count++] = domain_line;
+    if (resolution_line[0]) lines[line_count++] = resolution_line;
     if (domain_extent_line[0]) lines[line_count++] = domain_extent_line;
     if (compatibility_line[0]) lines[line_count++] = compatibility_line;
     if (backend_status_line[0]) lines[line_count++] = backend_status_line;

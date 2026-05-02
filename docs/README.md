@@ -21,6 +21,13 @@ Start here for public repository documentation.
   - authoritative volumetric runs emit `.vf3d` + `VF3H` `.pack`
   - planar runs stay on legacy `.vf2d` + `VFHD`
   - downstream `ray_tracing` ingest is the next separate lane, not part of this repo’s current public behavior
+- the retained-scene menu/editor lane is also current:
+  - `Input Root` updates refresh the `3D` catalog immediately
+  - retained-scene discovery treats the selected input root as the source of truth
+  - only direct child scene directories with both `scene_authoring.json` and `scene_runtime.json` are listed
+  - one grouped area layer is also supported: `<input-root>/<Area>/<Scene>/...`
+  - retained-scene rows now prefer `scene_authoring.json` `scene_name` metadata over raw directory stems
+  - the editor viewport now has scene-relative far-zoom headroom for oversized retained scenes
 
 ## Runtime Persistence Policy
 - tracked defaults remain under `config/`

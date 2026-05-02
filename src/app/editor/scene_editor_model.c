@@ -211,8 +211,15 @@ void begin_field_edit(SceneEditorState *state, NumericField *field) {
         state->active_field->editing = false;
     }
     memset(field->buffer, 0, sizeof(field->buffer));
-    if (state->selected_emitter >= 0 &&
-        state->selected_emitter < (int)state->working.emitter_count) {
+    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+        const PhysicsSimEmitterOverlay *em =
+            physics_sim_editor_session_selected_object_emitter(&state->session);
+        if (em) {
+            float value = (field->target == FIELD_RADIUS) ? em->radius : em->strength;
+            snprintf(field->buffer, sizeof(field->buffer), "%.3f", value);
+        }
+    } else if (state->selected_emitter >= 0 &&
+               state->selected_emitter < (int)state->working.emitter_count) {
         const FluidEmitter *em = &state->working.emitters[state->selected_emitter];
         float value = (field->target == FIELD_RADIUS) ? em->radius : em->strength;
         snprintf(field->buffer, sizeof(field->buffer), "%.3f", value);
@@ -232,27 +239,35 @@ void cancel_field_edit(SceneEditorState *state) {
 void commit_field_edit(SceneEditorState *state) {
     NumericField *field = current_field(state);
     if (!state || !field || !field->editing) return;
-    if (state->selected_emitter < 0 ||
-        state->selected_emitter >= (int)state->working.emitter_count) {
-        cancel_field_edit(state);
-        return;
-    }
     char *endptr = NULL;
     float value = strtof(field->buffer, &endptr);
     if (field->buffer[0] == '\0' || endptr == field->buffer) {
         cancel_field_edit(state);
         return;
     }
-    FluidEmitter *em = &state->working.emitters[state->selected_emitter];
-    if (field->target == FIELD_RADIUS) {
-        if (value < 0.01f) value = 0.01f;
-        if (value > 0.6f) value = 0.6f;
-        em->radius = value;
-    } else if (field->target == FIELD_STRENGTH) {
-        if (value < 0.1f) value = 0.1f;
-        em->strength = value;
+    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+        if (field->target == FIELD_STRENGTH &&
+            physics_sim_editor_session_set_selected_emitter_strength(&state->session, value)) {
+            set_dirty(state);
+        }
+    } else {
+        FluidEmitter *em = NULL;
+        if (state->selected_emitter < 0 ||
+            state->selected_emitter >= (int)state->working.emitter_count) {
+            cancel_field_edit(state);
+            return;
+        }
+        em = &state->working.emitters[state->selected_emitter];
+        if (field->target == FIELD_RADIUS) {
+            if (value < 0.01f) value = 0.01f;
+            if (value > 0.6f) value = 0.6f;
+            em->radius = value;
+        } else if (field->target == FIELD_STRENGTH) {
+            if (value < 0.1f) value = 0.1f;
+            em->strength = value;
+        }
+        set_dirty(state);
     }
-    set_dirty(state);
     field->editing = false;
     state->active_field = NULL;
 }

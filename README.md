@@ -71,6 +71,19 @@ This repository keeps public usage and implementation references in the repo lan
   - `make test-volume-frames-3d-tiny-parity-contract`
 - Downstream `ray_tracing` ingest and first-pass volume rendering are the next boundary; that consumer work is not landed in this repo yet.
 
+## Current Retained-Scene Catalog State
+- The `3D` menu/editor scene catalog now follows the configured `Input Root` live instead of requiring a relaunch.
+- Catalog discovery scans multiple roots in order:
+  - the selected input root directly
+  - `<input-root>/scenes`
+  - `<input-root>/samples`
+  - the default shipped sample lane
+  - the default runtime user-scene lane
+- Runtime-scene discovery accepts:
+  - flat runtime-scene `.json` files
+  - scene directories that contain `scene_runtime.json`
+- Discovery intentionally ignores bundle/helper files such as `manifest.json`, `scene_bundle.json`, and `scene_authoring.json` when they appear as flat siblings.
+
 Current trace lanes emitted by `physics_trace_tool`:
 - sample lanes: `frame_dt`, `solver_iterations`, `density_avg`
 - marker lane: `events` (`trace_start`, `trace_end`)
@@ -110,7 +123,9 @@ For the full current keybind set, including structural runtime/editor controls, 
 
 ### Scene editor & menu
 - Launch the app to enter the SDL scene menu. Custom preset slots are displayed on the left; double-click a slot name to rename it, single-click to select it, and hit **Edit Preset** to open the editor canvas. The menu also exposes active mode switching, grid/quality controls, and headless batch controls for fluid runs.
+- In `3D` retained-scene mode, changing `Input Root` refreshes the catalog immediately. Saved scene folders with `scene_runtime.json` can re-enter the normal menu/editor flow without copying them into one hardcoded samples directory first.
 - In the editor view, drag emitters to reposition them, drag the arrow handle on jets/sinks to rotate the flow direction, and press `+`/`-` (or the numpad equivalents) to grow/shrink the emitter radius/strength. Density sources render as orange, jets cyan, sinks magenta, and preset objects are editable/rotatable. Double-click the preset title above the canvas to rename it. Canvas code is split into render helpers (`scene_editor_canvas.c`), geometry helpers (`scene_editor_canvas_geom.c`), and hit testing (`scene_editor_canvas_hit.c`) under `src/app/editor/`.
+- Large retained scenes now get scene-relative orbit-distance and minimum-zoom limits in the `3D` editor viewport, so wide scene bounds can be framed without hitting the old fixed far-zoom ceiling too early.
 - Press `Enter` to apply edits or `Esc` to cancel and return to the menu. The simulation uses the latest edited slot when you click **Start**, and your edits persist via `data/runtime/custom_preset.txt` (fallback seed remains `config/custom_preset.txt`). Enabling headless mode queues a run, keeps the menu window up, and shows live status until it finishes (or you cancel with `Esc`).
 
 ### Structural mode

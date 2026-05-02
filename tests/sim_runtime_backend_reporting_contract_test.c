@@ -57,10 +57,10 @@ static bool test_3d_backend_reports_xyz_domain_and_compatibility_slice(void) {
     if (!backend) return false;
     if (!sim_runtime_backend_get_report(backend, &report)) return false;
     if (report.kind != SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD) return false;
-    if (report.domain_w != 42) return false;
-    if (report.domain_h != 56) return false;
-    if (report.domain_d != 14) return false;
-    if (report.cell_count != (size_t)42 * (size_t)56 * (size_t)14) return false;
+    if (report.domain_w != 96) return false;
+    if (report.domain_h != 128) return false;
+    if (report.domain_d != 32) return false;
+    if (report.cell_count != (size_t)96 * (size_t)128 * (size_t)32) return false;
     if (!report.volumetric_emitters_free_live) return false;
     if (!report.volumetric_emitters_attached_live) return false;
     if (!report.volumetric_obstacles_live) return false;
@@ -69,7 +69,7 @@ static bool test_3d_backend_reports_xyz_domain_and_compatibility_slice(void) {
     if (!nearly_equal(report.world_min_x, -1.0f)) return false;
     if (!nearly_equal(report.world_max_y, 2.0f)) return false;
     if (!nearly_equal(report.world_max_z, 0.5f)) return false;
-    if (!nearly_equal(report.voxel_size, 4.0f / 56.0f)) return false;
+    if (!nearly_equal(report.voxel_size, 4.0f / 128.0f)) return false;
     if (!report.scene_up_valid) return false;
     if (!nearly_equal(report.scene_up_x, 0.0f)) return false;
     if (!nearly_equal(report.scene_up_y, 0.0f)) return false;
@@ -77,9 +77,9 @@ static bool test_3d_backend_reports_xyz_domain_and_compatibility_slice(void) {
     if (report.scene_up_source != PHYSICS_SIM_RUNTIME_SCENE_UP_FALLBACK_POSITIVE_Z) return false;
     if (!report.compatibility_view_2d_available) return false;
     if (!report.compatibility_view_2d_derived) return false;
-    if (report.compatibility_slice_z != 7) return false;
+    if (report.compatibility_slice_z != 16) return false;
     if (!report.secondary_debug_slice_stack_live) return false;
-    if (report.secondary_debug_slice_stack_radius != 2) return false;
+    if (report.secondary_debug_slice_stack_radius != 3) return false;
     if (!report.debug_volume_view_3d_available) return false;
     if (report.debug_volume_solid_cells == 0) return false;
     if (report.debug_volume_active_density_cells != 0) return false;
@@ -136,11 +136,11 @@ static bool test_3d_backend_debug_volume_view_exposes_density_and_obstacle_truth
     if (!sim_runtime_backend_apply_brush_sample(backend, &cfg, &sample)) return false;
 
     if (!sim_runtime_backend_get_debug_volume_view_3d(backend, &volume)) return false;
-    if (volume.width != 16 || volume.height != 16 || volume.depth != 16) return false;
-    if (volume.cell_count != (size_t)16 * (size_t)16 * (size_t)16) return false;
+    if (volume.width != 64 || volume.height != 64 || volume.depth != 64) return false;
+    if (volume.cell_count != (size_t)64 * (size_t)64 * (size_t)64) return false;
     if (!nearly_equal(volume.world_min_x, -1.0f)) return false;
     if (!nearly_equal(volume.world_max_z, 1.0f)) return false;
-    if (!nearly_equal(volume.voxel_size, 0.125f)) return false;
+    if (!nearly_equal(volume.voxel_size, 0.03125f)) return false;
     if (!volume.density || !volume.solid_mask) return false;
 
     for (size_t i = 0; i < volume.cell_count; ++i) {
@@ -416,7 +416,7 @@ static bool test_3d_backend_live_slice_selection_changes_report_and_view(void) {
 
     if (!sim_runtime_backend_step_compatibility_slice(backend, 1)) return false;
     if (!sim_runtime_backend_get_report(backend, &report)) return false;
-    if (report.compatibility_slice_z != 29) return false;
+    if (report.compatibility_slice_z != 65) return false;
     if (!sim_runtime_backend_get_fluid_view_2d(backend, &fluid)) return false;
     for (size_t i = 0; i < fluid.cell_count; ++i) {
         if (fluid.density[i] > 0.0001f) return false;
@@ -424,7 +424,7 @@ static bool test_3d_backend_live_slice_selection_changes_report_and_view(void) {
 
     if (!sim_runtime_backend_step_compatibility_slice(backend, -1)) return false;
     if (!sim_runtime_backend_get_report(backend, &report)) return false;
-    if (report.compatibility_slice_z != 28) return false;
+    if (report.compatibility_slice_z != 64) return false;
     if (!sim_runtime_backend_get_fluid_view_2d(backend, &fluid)) return false;
     active_cells = 0;
     for (size_t i = 0; i < fluid.cell_count; ++i) {

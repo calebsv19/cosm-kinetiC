@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "app/menu/menu_settings_layout.h"
 #include "app/menu/menu_state.h"
 #include "render/text_upload_policy.h"
 
@@ -62,8 +63,8 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     int title_h = 32;
     int body_h = 22;
     int small_h = 18;
-    int control_h = 40;
-    int compact_h = 34;
+    int control_h = 38;
+    int compact_h = 30;
     int left_margin = 28;
     int right_margin = 28;
     int list_top = PRESET_LIST_MARGIN_Y;
@@ -71,11 +72,9 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     int panel_w = 360;
     int panel_y = PRESET_LIST_MARGIN_Y;
     int panel_h = 320;
-    int ui_gap = 12;
-    int config_pad = 12;
-    int icon_w = 36;
+    int ui_gap = 10;
+    int config_pad = 10;
     int action_w = 190;
-    int section_gap = 12;
     int output_button_w = 84;
     int output_buttons_total_w = 0;
     int list_w = 0;
@@ -89,21 +88,17 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     int io_panel_h = 0;
     int io_panel_y = 0;
     int row_y = 0;
-    int row_gap = 8;
+    int row_gap = 6;
     if (!ctx) return;
     retained_catalog = menu_showing_retained_catalog(ctx);
 
     title_h = scene_menu_font_height(ctx->renderer, ctx->font_title, 32);
     body_h = scene_menu_font_height(ctx->renderer, ctx->font, 22);
     small_h = scene_menu_font_height(ctx->renderer, ctx->font_small ? ctx->font_small : ctx->font, 18);
-    control_h = body_h + 16;
-    if (control_h < 38) control_h = 38;
-    compact_h = small_h + 14;
-    if (compact_h < 32) compact_h = 32;
-    icon_w = compact_h;
-    section_gap = small_h / 2 + 8;
-    if (section_gap < 10) section_gap = 10;
-
+    control_h = body_h + 12;
+    if (control_h < 34) control_h = 34;
+    compact_h = small_h + 10;
+    if (compact_h < 28) compact_h = 28;
     list_top = 34 + title_h + 20;
     if (list_top < 82) list_top = 82;
     if (list_top > win_h - 280) list_top = win_h - 280;
@@ -184,13 +179,38 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     ctx->quit_button.rect.x = left_margin;
     ctx->quit_button.rect.y = footer_y + (control_h - compact_h) / 2;
 
-    io_rows_h = compact_h * 6 + row_gap * 5;
+    panel_y = list_top + compact_h + top_hint_h + 12;
+    ctx->config_panel_rect = (SDL_Rect){panel_x, panel_y, panel_w, 0};
+    panel_h = menu_settings_layout_panel_height(ctx);
+    ctx->config_panel_rect.h = panel_h;
+    menu_settings_layout_toggle_rects(ctx,
+                                      &ctx->volume_toggle_rect,
+                                      &ctx->render_toggle_rect,
+                                      &ctx->blur_toggle_rect);
+    menu_settings_layout_action_rects(ctx,
+                                      &ctx->settings_apply_button.rect,
+                                      &ctx->settings_save_button.rect,
+                                      &ctx->settings_reset_button.rect,
+                                      &ctx->settings_restore_saved_button.rect,
+                                      &ctx->settings_defaults_button.rect);
+    ctx->grid_dec_button.rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->grid_inc_button.rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->substeps_dec_button.rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->substeps_inc_button.rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->solver_dec_button.rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->solver_inc_button.rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->quality_prev_button.rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->quality_next_button.rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->inflow_rect = (SDL_Rect){0, 0, 0, 0};
+    ctx->viscosity_rect = (SDL_Rect){0, 0, 0, 0};
+
+    io_rows_h = compact_h * 4 + row_gap * 3;
     io_panel_h = small_h + 8 + io_rows_h + config_pad * 2;
-    io_panel_y = ctx->start_button.rect.y - io_panel_h - 12;
-    if (io_panel_y < list_top + compact_h + top_hint_h + 56) {
-        io_panel_y = list_top + compact_h + top_hint_h + 56;
+    io_panel_y = ctx->start_button.rect.y - io_panel_h - 10;
+    if (io_panel_y < ctx->config_panel_rect.y + ctx->config_panel_rect.h + 10) {
+        io_panel_y = ctx->config_panel_rect.y + ctx->config_panel_rect.h + 10;
     }
-    row_y = io_panel_y + config_pad + small_h + 8;
+    row_y = io_panel_y + config_pad + small_h + 6;
 
     ctx->output_root_rect = (SDL_Rect){
         panel_x + config_pad,
@@ -200,20 +220,6 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     };
     row_y += compact_h + row_gap;
     ctx->input_root_rect = (SDL_Rect){
-        ctx->output_root_rect.x,
-        row_y,
-        ctx->output_root_rect.w,
-        compact_h
-    };
-    row_y += compact_h + row_gap;
-    ctx->inflow_rect = (SDL_Rect){
-        ctx->output_root_rect.x,
-        row_y,
-        ctx->output_root_rect.w,
-        compact_h
-    };
-    row_y += compact_h + row_gap;
-    ctx->viscosity_rect = (SDL_Rect){
         ctx->output_root_rect.x,
         row_y,
         ctx->output_root_rect.w,
@@ -231,50 +237,6 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
         ctx->output_root_rect.x,
         row_y,
         ctx->output_root_rect.w,
-        compact_h
-    };
-
-    panel_y = list_top + compact_h + top_hint_h + 16;
-    panel_h = io_panel_y - panel_y - 12;
-    if (panel_h < 180) panel_h = 180;
-    ctx->config_panel_rect = (SDL_Rect){panel_x, panel_y, panel_w, panel_h};
-
-    ctx->grid_dec_button.rect = (SDL_Rect){
-        panel_x + panel_w - config_pad - icon_w * 2 - 8,
-        panel_y + config_pad + small_h + body_h + 18,
-        icon_w,
-        compact_h
-    };
-    ctx->grid_inc_button.rect = (SDL_Rect){
-        ctx->grid_dec_button.rect.x + icon_w + 8,
-        ctx->grid_dec_button.rect.y,
-        icon_w,
-        compact_h
-    };
-
-    ctx->quality_prev_button.rect = (SDL_Rect){
-        panel_x + config_pad,
-        ctx->grid_dec_button.rect.y + compact_h + section_gap + small_h + 4,
-        icon_w,
-        compact_h
-    };
-    ctx->quality_next_button.rect = (SDL_Rect){
-        panel_x + panel_w - config_pad - icon_w,
-        ctx->quality_prev_button.rect.y,
-        icon_w,
-        compact_h
-    };
-
-    ctx->volume_toggle_rect = (SDL_Rect){
-        panel_x + config_pad,
-        ctx->quality_prev_button.rect.y + compact_h + section_gap,
-        panel_w - config_pad * 2,
-        compact_h
-    };
-    ctx->render_toggle_rect = (SDL_Rect){
-        panel_x + config_pad,
-        ctx->volume_toggle_rect.y + compact_h + 8,
-        panel_w - config_pad * 2,
         compact_h
     };
 
@@ -308,15 +270,4 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
         output_button_w,
         ctx->input_root_rect.h
     };
-
-    {
-        int controls_bottom = ctx->render_toggle_rect.y + ctx->render_toggle_rect.h + config_pad;
-        int needed_h = controls_bottom - panel_y;
-        int max_h = io_panel_y - panel_y - 12;
-        if (max_h < 120) max_h = 120;
-        if (panel_h < needed_h) panel_h = needed_h;
-        if (panel_h > max_h) panel_h = max_h;
-        if (panel_h < 120) panel_h = 120;
-        ctx->config_panel_rect.h = panel_h;
-    }
 }

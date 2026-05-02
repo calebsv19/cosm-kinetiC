@@ -2,6 +2,7 @@
 #include "app/data_paths.h"
 
 #include <dirent.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,21 +29,35 @@ static long long scene_library_path_modified_unix(const char *path) {
     return (long long)st.st_mtime;
 }
 
-static bool scene_library_has_json_suffix(const char *name) {
-    size_t len = 0;
-    if (!name) return false;
-    len = strlen(name);
-    if (len < 6u) return false;
-    return strcmp(name + len - 5u, ".json") == 0;
-}
-
-static void scene_library_display_name_from_filename(const char *filename,
-                                                     char *out,
-                                                     size_t out_size) {
+static void scene_library_display_name_from_path(const char *path,
+                                                 char *out,
+                                                 size_t out_size) {
+    const char *filename = NULL;
     size_t len = 0;
     if (!out || out_size == 0) return;
     out[0] = '\0';
-    if (!filename) return;
+    if (!path || !path[0]) return;
+    filename = strrchr(path, '/');
+    filename = filename ? filename + 1 : path;
+    if (strcmp(filename, "scene_runtime.json") == 0 ||
+        strcmp(filename, "scene_authoring.json") == 0 ||
+        strcmp(filename, "manifest.json") == 0 ||
+        strcmp(filename, "scene_bundle.json") == 0) {
+        char parent_buf[PATH_MAX];
+        size_t parent_len = 0;
+        if (filename > path) {
+            parent_len = (size_t)(filename - path - 1);
+        }
+        if (parent_len > 0) {
+            if (parent_len >= sizeof(parent_buf)) {
+                parent_len = sizeof(parent_buf) - 1u;
+            }
+            memcpy(parent_buf, path, parent_len);
+            parent_buf[parent_len] = '\0';
+            filename = strrchr(parent_buf, '/');
+            filename = filename ? filename + 1 : parent_buf;
+        }
+    }
     len = strlen(filename);
     if (len > 5u && strcmp(filename + len - 5u, ".json") == 0) {
         len -= 5u;
@@ -52,6 +67,66 @@ static void scene_library_display_name_from_filename(const char *filename,
     }
     memcpy(out, filename, len);
     out[len] = '\0';
+}
+
+static bool scene_library_entry_load_string_key(const char *path,
+                                                const char *key,
+                                                char *out_value,
+                                                size_t out_value_size) {
+    FILE *f = NULL;
+    long file_size = 0;
+    char *json_text = NULL;
+    char *cursor = NULL;
+    char *value = NULL;
+    size_t value_len = 0;
+    bool ok = false;
+
+    if (!path || !path[0] || !key || !key[0]) return false;
+    if (!out_value || out_value_size == 0) return false;
+    out_value[0] = '\0';
+
+    f = fopen(path, "rb");
+    if (!f) return false;
+    if (fseek(f, 0, SEEK_END) != 0) goto cleanup;
+    file_size = ftell(f);
+    if (file_size <= 0) goto cleanup;
+    if (fseek(f, 0, SEEK_SET) != 0) goto cleanup;
+
+    json_text = (char *)malloc((size_t)file_size + 1u);
+    if (!json_text) goto cleanup;
+    if (fread(json_text, 1, (size_t)file_size, f) != (size_t)file_size) goto cleanup;
+    json_text[file_size] = '\0';
+
+    cursor = strstr(json_text, key);
+    if (!cursor) goto cleanup;
+    cursor += strlen(key);
+    while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n') cursor++;
+    if (*cursor != ':') goto cleanup;
+    cursor++;
+    while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n') cursor++;
+    if (*cursor != '\"') goto cleanup;
+    cursor++;
+    value = cursor;
+    while (*cursor != '\0' && *cursor != '\"') {
+        if (*cursor == '\\' && cursor[1] != '\0') {
+            cursor += 2;
+        } else {
+            cursor++;
+        }
+    }
+    if (*cursor != '\"') goto cleanup;
+    value_len = (size_t)(cursor - value);
+    if (value_len + 1u > out_value_size) {
+        value_len = out_value_size - 1u;
+    }
+    memcpy(out_value, value, value_len);
+    out_value[value_len] = '\0';
+    ok = out_value[0] != '\0';
+
+cleanup:
+    free(json_text);
+    if (f) fclose(f);
+    return ok;
 }
 
 static bool scene_library_entry_load_scene_id(const char *path,
@@ -117,6 +192,8 @@ cleanup:
 static int scene_library_entry_compare_by_name(const void *lhs, const void *rhs) {
     const PhysicsSimSceneLibraryEntry *a = (const PhysicsSimSceneLibraryEntry *)lhs;
     const PhysicsSimSceneLibraryEntry *b = (const PhysicsSimSceneLibraryEntry *)rhs;
+    int by_group = strcmp(a->group_name, b->group_name);
+    if (by_group != 0) return by_group;
     int by_name = strcmp(a->display_name, b->display_name);
     if (by_name != 0) return by_name;
     return strcmp(a->source_path, b->source_path);
@@ -184,6 +261,135 @@ static bool scene_library_entry_is_active(const PhysicsSimEditorSession *session
     return false;
 }
 
+static bool scene_library_path_is_directory(const char *path) {
+    struct stat st = {0};
+    if (!path || !path[0]) return false;
+    if (stat(path, &st) != 0) return false;
+    return S_ISDIR(st.st_mode);
+}
+
+static bool scene_library_path_is_regular_file(const char *path) {
+    struct stat st = {0};
+    if (!path || !path[0]) return false;
+    if (stat(path, &st) != 0) return false;
+    return S_ISREG(st.st_mode);
+}
+
+static bool scene_library_compose_scene_contract_paths(const char *scene_dir,
+                                                       char *out_runtime_path,
+                                                       size_t out_runtime_path_size,
+                                                       char *out_authoring_path,
+                                                       size_t out_authoring_path_size) {
+    if (!scene_dir || !scene_dir[0]) return false;
+    if (!out_runtime_path || out_runtime_path_size == 0) return false;
+    if (!out_authoring_path || out_authoring_path_size == 0) return false;
+    if (snprintf(out_runtime_path,
+                 out_runtime_path_size,
+                 "%s/%s",
+                 scene_dir,
+                 "scene_runtime.json") >= (int)out_runtime_path_size) {
+        return false;
+    }
+    if (snprintf(out_authoring_path,
+                 out_authoring_path_size,
+                 "%s/%s",
+                 scene_dir,
+                 "scene_authoring.json") >= (int)out_authoring_path_size) {
+        return false;
+    }
+    return true;
+}
+
+static bool scene_library_directory_has_scene_contract(const char *scene_dir,
+                                                       char *out_runtime_path,
+                                                       size_t out_runtime_path_size) {
+    char runtime_path[PATH_MAX];
+    char authoring_path[PATH_MAX];
+    if (!scene_library_compose_scene_contract_paths(scene_dir,
+                                                    runtime_path,
+                                                    sizeof(runtime_path),
+                                                    authoring_path,
+                                                    sizeof(authoring_path))) {
+        return false;
+    }
+    if (!scene_library_path_is_regular_file(runtime_path) ||
+        !scene_library_path_is_regular_file(authoring_path)) {
+        return false;
+    }
+    if (out_runtime_path && out_runtime_path_size > 0) {
+        snprintf(out_runtime_path, out_runtime_path_size, "%s", runtime_path);
+    }
+    return true;
+}
+
+static void scene_library_append_retained_entry(PhysicsSimSceneLibraryCatalog *catalog,
+                                                const PhysicsSimEditorSession *session,
+                                                const char *current_runtime_scene_path,
+                                                const char *runtime_scene_user_dir,
+                                                const char *runtime_path,
+                                                const char *authoring_path,
+                                                const char *group_name) {
+    PhysicsSimSceneLibraryEntry entry = {0};
+    if (!catalog || !runtime_path || !runtime_path[0]) return;
+    entry.kind = PHYSICS_SIM_SCENE_LIBRARY_ENTRY_RUNTIME_SCENE;
+    entry.object_count = -1;
+    snprintf(entry.source_path, sizeof(entry.source_path), "%s", runtime_path);
+    if (group_name && group_name[0]) {
+        snprintf(entry.group_name, sizeof(entry.group_name), "%s", group_name);
+    }
+    if (!scene_library_entry_load_string_key(authoring_path,
+                                             "\"scene_name\"",
+                                             entry.display_name,
+                                             sizeof(entry.display_name)) &&
+        !scene_library_entry_load_string_key(authoring_path,
+                                             "\"display_name\"",
+                                             entry.display_name,
+                                             sizeof(entry.display_name))) {
+        scene_library_display_name_from_path(entry.source_path,
+                                             entry.display_name,
+                                             sizeof(entry.display_name));
+    }
+    entry.user_scene = scene_library_path_is_under_dir(runtime_scene_user_dir, entry.source_path);
+    entry.modified_unix = scene_library_path_modified_unix(entry.source_path);
+    if (!scene_library_entry_load_scene_id(entry.source_path,
+                                           entry.scene_id,
+                                           sizeof(entry.scene_id))) {
+        snprintf(entry.scene_id, sizeof(entry.scene_id), "%s", entry.display_name);
+    }
+    entry.active = scene_library_entry_is_active(session,
+                                                 current_runtime_scene_path,
+                                                 &entry);
+    scene_library_insert_entry_sorted(catalog, &entry, current_runtime_scene_path);
+}
+
+static void scene_library_try_append_scene_dir(PhysicsSimSceneLibraryCatalog *catalog,
+                                               const PhysicsSimEditorSession *session,
+                                               const char *current_runtime_scene_path,
+                                               const char *runtime_scene_user_dir,
+                                               const char *scene_dir,
+                                               const char *group_name) {
+    char runtime_path[PATH_MAX];
+    char authoring_path[PATH_MAX];
+    if (!scene_library_compose_scene_contract_paths(scene_dir,
+                                                    runtime_path,
+                                                    sizeof(runtime_path),
+                                                    authoring_path,
+                                                    sizeof(authoring_path))) {
+        return;
+    }
+    if (!scene_library_path_is_regular_file(runtime_path) ||
+        !scene_library_path_is_regular_file(authoring_path)) {
+        return;
+    }
+    scene_library_append_retained_entry(catalog,
+                                        session,
+                                        current_runtime_scene_path,
+                                        runtime_scene_user_dir,
+                                        runtime_path,
+                                        authoring_path,
+                                        group_name);
+}
+
 static void scene_library_seed_legacy_catalog(PhysicsSimSceneLibraryCatalog *catalog,
                                               const FluidScenePreset *working_preset) {
     PhysicsSimSceneLibraryEntry entry = {0};
@@ -203,70 +409,66 @@ static void scene_library_seed_legacy_catalog(PhysicsSimSceneLibraryCatalog *cat
 
 static void scene_library_seed_retained_catalog(PhysicsSimSceneLibraryCatalog *catalog,
                                                 const PhysicsSimEditorSession *session,
-                                                const char *runtime_scene_dir,
+                                                const char *configured_input_root,
                                                 const char *current_runtime_scene_path) {
+    const char **roots = NULL;
+    size_t root_count = physics_sim_runtime_scene_catalog_roots(configured_input_root, &roots);
     const char *runtime_scene_user_dir = physics_sim_default_runtime_scene_user_dir();
-    DIR *dir = NULL;
-    struct dirent *dent = NULL;
     if (!catalog) return;
-
-    if (runtime_scene_dir && runtime_scene_dir[0]) {
-        dir = opendir(runtime_scene_dir);
-        if (dir) {
-            while ((dent = readdir(dir)) != NULL) {
-                PhysicsSimSceneLibraryEntry entry = {0};
-                if (dent->d_name[0] == '.') continue;
-                if (!scene_library_has_json_suffix(dent->d_name)) continue;
-                entry.kind = PHYSICS_SIM_SCENE_LIBRARY_ENTRY_RUNTIME_SCENE;
-                entry.object_count = -1;
-                scene_library_display_name_from_filename(dent->d_name,
-                                                         entry.display_name,
-                                                         sizeof(entry.display_name));
-                snprintf(entry.source_path, sizeof(entry.source_path), "%s/%s", runtime_scene_dir, dent->d_name);
-                entry.user_scene = scene_library_path_is_under_dir(runtime_scene_user_dir, entry.source_path);
-                entry.modified_unix = scene_library_path_modified_unix(entry.source_path);
-                if (!scene_library_entry_load_scene_id(entry.source_path,
-                                                       entry.scene_id,
-                                                       sizeof(entry.scene_id))) {
-                    snprintf(entry.scene_id, sizeof(entry.scene_id), "%s", entry.display_name);
-                }
-                entry.active = scene_library_entry_is_active(session,
-                                                             current_runtime_scene_path,
-                                                             &entry);
-                scene_library_insert_entry_sorted(catalog, &entry, current_runtime_scene_path);
+    for (size_t root_index = 0; root_index < root_count; ++root_index) {
+        const char *root = roots[root_index];
+        DIR *dir = NULL;
+        struct dirent *dent = NULL;
+        if (!root || !root[0]) continue;
+        scene_library_try_append_scene_dir(catalog,
+                                           session,
+                                           current_runtime_scene_path,
+                                           runtime_scene_user_dir,
+                                           root,
+                                           NULL);
+        dir = opendir(root);
+        if (!dir) continue;
+        while ((dent = readdir(dir)) != NULL) {
+            char candidate_path[PATH_MAX];
+            DIR *group_dir = NULL;
+            struct dirent *group_dent = NULL;
+            if (dent->d_name[0] == '.') continue;
+            if (snprintf(candidate_path, sizeof(candidate_path), "%s/%s", root, dent->d_name) >= (int)sizeof(candidate_path)) {
+                continue;
             }
-            closedir(dir);
-        }
-    }
-
-    if (runtime_scene_user_dir && runtime_scene_user_dir[0] &&
-        (!runtime_scene_dir || strcmp(runtime_scene_user_dir, runtime_scene_dir) != 0)) {
-        dir = opendir(runtime_scene_user_dir);
-        if (dir) {
-            while ((dent = readdir(dir)) != NULL) {
-                PhysicsSimSceneLibraryEntry entry = {0};
-                if (dent->d_name[0] == '.') continue;
-                if (!scene_library_has_json_suffix(dent->d_name)) continue;
-                entry.kind = PHYSICS_SIM_SCENE_LIBRARY_ENTRY_RUNTIME_SCENE;
-                entry.object_count = -1;
-                scene_library_display_name_from_filename(dent->d_name,
-                                                         entry.display_name,
-                                                         sizeof(entry.display_name));
-                snprintf(entry.source_path, sizeof(entry.source_path), "%s/%s", runtime_scene_user_dir, dent->d_name);
-                entry.user_scene = true;
-                entry.modified_unix = scene_library_path_modified_unix(entry.source_path);
-                if (!scene_library_entry_load_scene_id(entry.source_path,
-                                                       entry.scene_id,
-                                                       sizeof(entry.scene_id))) {
-                    snprintf(entry.scene_id, sizeof(entry.scene_id), "%s", entry.display_name);
-                }
-                entry.active = scene_library_entry_is_active(session,
-                                                             current_runtime_scene_path,
-                                                             &entry);
-                scene_library_insert_entry_sorted(catalog, &entry, current_runtime_scene_path);
+            if (!scene_library_path_is_directory(candidate_path)) continue;
+            if (scene_library_directory_has_scene_contract(candidate_path, NULL, 0u)) {
+                scene_library_try_append_scene_dir(catalog,
+                                                   session,
+                                                   current_runtime_scene_path,
+                                                   runtime_scene_user_dir,
+                                                   candidate_path,
+                                                   NULL);
+                continue;
             }
-            closedir(dir);
+            group_dir = opendir(candidate_path);
+            if (!group_dir) continue;
+            while ((group_dent = readdir(group_dir)) != NULL) {
+                char grouped_scene_path[PATH_MAX];
+                if (group_dent->d_name[0] == '.') continue;
+                if (snprintf(grouped_scene_path,
+                             sizeof(grouped_scene_path),
+                             "%s/%s",
+                             candidate_path,
+                             group_dent->d_name) >= (int)sizeof(grouped_scene_path)) {
+                    continue;
+                }
+                if (!scene_library_path_is_directory(grouped_scene_path)) continue;
+                scene_library_try_append_scene_dir(catalog,
+                                                   session,
+                                                   current_runtime_scene_path,
+                                                   runtime_scene_user_dir,
+                                                   grouped_scene_path,
+                                                   dent->d_name);
+            }
+            closedir(group_dir);
         }
+        closedir(dir);
     }
 
     if (catalog->count <= 0) {
@@ -289,7 +491,7 @@ static void scene_library_seed_retained_catalog(PhysicsSimSceneLibraryCatalog *c
 void physics_sim_editor_scene_library_refresh(PhysicsSimEditorSceneLibrary *library,
                                               const FluidScenePreset *working_preset,
                                               const PhysicsSimEditorSession *session,
-                                              const char *runtime_scene_dir,
+                                              const char *configured_input_root,
                                               const char *current_runtime_scene_path) {
     if (!library) return;
     memset(library, 0, sizeof(*library));
@@ -298,7 +500,7 @@ void physics_sim_editor_scene_library_refresh(PhysicsSimEditorSceneLibrary *libr
     scene_library_seed_legacy_catalog(&library->legacy_presets, working_preset);
     scene_library_seed_retained_catalog(&library->retained_scenes,
                                         session,
-                                        runtime_scene_dir,
+                                        configured_input_root,
                                         current_runtime_scene_path);
     library->mode = (session && session->has_retained_scene)
                         ? PHYSICS_SIM_SCENE_LIBRARY_MODE_3D

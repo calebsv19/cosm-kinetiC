@@ -18,7 +18,7 @@ static void scene_editor_refresh_library_after_save(SceneEditorState *state) {
     physics_sim_editor_scene_library_refresh(&state->scene_library,
                                              &state->working,
                                              &state->session,
-                                             physics_sim_default_runtime_scene_sample_dir(),
+                                             state->cfg.input_root,
                                              state->retained_runtime_scene_path);
 }
 
@@ -36,10 +36,10 @@ static bool scene_editor_resolve_runtime_scene_save_path(SceneEditorState *state
 }
 
 static const char *scene_editor_filename_from_path(const char *path) {
-    const char *filename = NULL;
-    if (!path || !path[0]) return "scene.json";
-    filename = strrchr(path, '/');
-    return filename ? filename + 1 : path;
+    static char label[128];
+    if (!path || !path[0]) return "scene";
+    scene_editor_retained_document_name_from_path(path, NULL, label, sizeof(label));
+    return label[0] ? label : "scene";
 }
 
 bool scene_editor_input_apply_retained_overlay(SceneEditorState *state) {
@@ -103,6 +103,7 @@ bool scene_editor_input_apply_retained_overlay(SceneEditorState *state) {
 
 bool scene_editor_input_save_retained_scene(SceneEditorState *state) {
     char target_path[512];
+    char apply_diag[256];
     CoreResult write_result = {0};
     const char *runtime_dir = physics_sim_default_runtime_scene_user_dir();
     bool reuses_saved_path = false;
@@ -117,11 +118,26 @@ bool scene_editor_input_save_retained_scene(SceneEditorState *state) {
         return false;
     }
     if (state->dirty) {
-        state->save_scene_success = false;
-        snprintf(state->save_scene_diagnostics,
-                 sizeof(state->save_scene_diagnostics),
-                 "Apply overlay before saving the scene.");
-        return false;
+        if (!scene_editor_input_apply_retained_overlay(state)) {
+            state->save_scene_success = false;
+            snprintf(state->save_scene_diagnostics,
+                     sizeof(state->save_scene_diagnostics),
+                     "Overlay apply failed before save: %s",
+                     state->overlay_apply_diagnostics[0]
+                         ? state->overlay_apply_diagnostics
+                         : "unknown error");
+            return false;
+        }
+        snprintf(apply_diag,
+                 sizeof(apply_diag),
+                 "%s",
+                 state->overlay_apply_diagnostics);
+        if (apply_diag[0]) {
+            snprintf(state->save_scene_diagnostics,
+                     sizeof(state->save_scene_diagnostics),
+                     "%s",
+                     apply_diag);
+        }
     }
     if (!physics_sim_ensure_runtime_dirs()) {
         state->save_scene_success = false;

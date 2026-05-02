@@ -383,6 +383,74 @@ static bool test_first_pass_buoyancy_uses_scene_up_axis(void) {
     return true;
 }
 
+static bool test_closed_ceiling_cancels_upward_wall_velocity(void) {
+    SimRuntime3DDomainDesc desc = test_desc();
+    SimRuntime3DVolume volume = {0};
+    SimRuntime3DSolverScratch scratch = {0};
+    AppConfig cfg = {0};
+    uint8_t solid_mask[216] = {0};
+    size_t center = 0;
+    size_t ceiling = 0;
+
+    desc.grid_w = 6;
+    desc.grid_h = 6;
+    desc.grid_d = 6;
+    desc.slice_cell_count = 36;
+    desc.cell_count = 216;
+    desc.world_max_x = 6.0f;
+    desc.world_max_y = 6.0f;
+    desc.world_max_z = 6.0f;
+
+    if (!sim_runtime_3d_volume_init(&volume, &desc)) return false;
+    if (!sim_runtime_3d_solver_scratch_init(&scratch, &desc)) {
+        sim_runtime_3d_volume_destroy(&volume);
+        return false;
+    }
+
+    cfg.fluid_solver_iterations = 12;
+    cfg.velocity_damping = 0.000006f;
+    cfg.density_diffusion = 0.0f;
+    cfg.density_decay = 0.0f;
+    cfg.fluid_buoyancy_force = 0.0f;
+
+    for (int y = 0; y < desc.grid_h; ++y) {
+        for (int x = 0; x < desc.grid_w; ++x) {
+            solid_mask[sim_runtime_3d_volume_index(&desc, x, y, desc.grid_d - 1)] = 1u;
+        }
+    }
+
+    center = sim_runtime_3d_volume_index(&desc, 3, 3, desc.grid_d - 2);
+    ceiling = sim_runtime_3d_volume_index(&desc, 3, 3, desc.grid_d - 1);
+    volume.density[center] = 10.0f;
+    volume.velocity_z[center] = 2.0f;
+
+    if (!sim_runtime_3d_solver_step_first_pass(&volume, &scratch, solid_mask, NULL, &cfg, 0.25)) {
+        sim_runtime_3d_solver_scratch_destroy(&scratch);
+        sim_runtime_3d_volume_destroy(&volume);
+        return false;
+    }
+
+    if (volume.velocity_z[center] > 0.0001f) {
+        sim_runtime_3d_solver_scratch_destroy(&scratch);
+        sim_runtime_3d_volume_destroy(&volume);
+        return false;
+    }
+    if (!nearly_equal(volume.density[ceiling], 0.0f)) {
+        sim_runtime_3d_solver_scratch_destroy(&scratch);
+        sim_runtime_3d_volume_destroy(&volume);
+        return false;
+    }
+    if (volume.density[center] <= 0.0f) {
+        sim_runtime_3d_solver_scratch_destroy(&scratch);
+        sim_runtime_3d_volume_destroy(&volume);
+        return false;
+    }
+
+    sim_runtime_3d_solver_scratch_destroy(&scratch);
+    sim_runtime_3d_volume_destroy(&volume);
+    return true;
+}
+
 int main(void) {
     if (!test_solver_scratch_capture_and_clear()) {
         fprintf(stderr, "sim_runtime_3d_solver_contract_test: scratch capture/clear failed\n");
@@ -414,6 +482,10 @@ int main(void) {
     }
     if (!test_first_pass_buoyancy_uses_scene_up_axis()) {
         fprintf(stderr, "sim_runtime_3d_solver_contract_test: scene-up buoyancy failed\n");
+        return 1;
+    }
+    if (!test_closed_ceiling_cancels_upward_wall_velocity()) {
+        fprintf(stderr, "sim_runtime_3d_solver_contract_test: closed-ceiling wall response failed\n");
         return 1;
     }
     fprintf(stdout, "sim_runtime_3d_solver_contract_test: success\n");

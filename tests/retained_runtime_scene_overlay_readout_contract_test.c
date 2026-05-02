@@ -34,14 +34,15 @@ static bool test_stride_scales_with_cell_budget(void) {
     return retained_runtime_overlay_readout_stride_for_cell_count(1024) == 1 &&
            retained_runtime_overlay_readout_stride_for_cell_count(8192) == 2 &&
            retained_runtime_overlay_readout_stride_for_cell_count(50000) == 3 &&
-           retained_runtime_overlay_readout_stride_for_cell_count(120000) == 4 &&
-           retained_runtime_overlay_readout_stride_for_cell_count(300000) == 6;
+           retained_runtime_overlay_readout_stride_for_cell_count(120000) == 3 &&
+           retained_runtime_overlay_readout_stride_for_cell_count(300000) == 4 &&
+           retained_runtime_overlay_readout_stride_for_cell_count(700000) == 5;
 }
 
 static bool test_density_threshold_tracks_peak_density_with_floor(void) {
-    return nearly_equal(retained_runtime_overlay_readout_density_threshold(0.0f), 0.015) &&
-           nearly_equal(retained_runtime_overlay_readout_density_threshold(0.05f), 0.015) &&
-           nearly_equal(retained_runtime_overlay_readout_density_threshold(1.0f), 0.12);
+    return nearly_equal(retained_runtime_overlay_readout_density_threshold(0.0f), 0.01) &&
+           nearly_equal(retained_runtime_overlay_readout_density_threshold(0.05f), 0.01) &&
+           nearly_equal(retained_runtime_overlay_readout_density_threshold(1.0f), 0.08);
 }
 
 static bool test_voxel_center_uses_world_min_and_voxel_size(void) {

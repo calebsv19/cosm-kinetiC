@@ -393,7 +393,10 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                 menu_draw_text_input(renderer, ctx->font, &label_rect, &ctx->rename_input);
             } else {
                 const char *label = "Untitled Preset";
+                const char *subtitle = NULL;
                 char label_buf[256];
+                char subtitle_buf[256];
+                char subtitle_text[256];
                 int label_h = menu_font_height(renderer, ctx->font, 16);
                 if (retained_catalog) {
                     const PhysicsSimSceneLibraryEntry *entry =
@@ -404,6 +407,20 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                     label = (entry && entry->display_name[0] != '\0')
                                 ? entry->display_name
                                 : "Untitled 3D Scene";
+                    if (entry) {
+                        if (entry->group_name[0] && entry->scene_id[0]) {
+                            snprintf(subtitle_text,
+                                     sizeof(subtitle_text),
+                                     "%s  |  %s",
+                                     entry->group_name,
+                                     entry->scene_id);
+                            subtitle = subtitle_text;
+                        } else if (entry->group_name[0]) {
+                            subtitle = entry->group_name;
+                        } else if (entry->scene_id[0]) {
+                            subtitle = entry->scene_id;
+                        }
+                    }
                 } else {
                     const CustomPresetSlot *slot =
                         preset_library_get_slot_const(ctx->library, slot_index);
@@ -417,10 +434,32 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                                        label_rect.w - 6,
                                        label_buf,
                                        sizeof(label_buf));
-                menu_draw_text(renderer, ctx->font, label_buf,
-                               label_rect.x,
-                               label_rect.y + (label_rect.h - label_h) / 2,
-                               text_color);
+                if (retained_catalog && subtitle && subtitle[0] != '\0') {
+                    SDL_Color subtitle_color = choose_readable_text(row_color, COLOR_TEXT_DIM);
+                    menu_fit_text_to_width(renderer,
+                                           small_font,
+                                           subtitle,
+                                           label_rect.w - 6,
+                                           subtitle_buf,
+                                           sizeof(subtitle_buf));
+                    menu_draw_text(renderer,
+                                   ctx->font,
+                                   label_buf,
+                                   label_rect.x,
+                                   label_rect.y + 2,
+                                   text_color);
+                    menu_draw_text(renderer,
+                                   small_font,
+                                   subtitle_buf,
+                                   label_rect.x,
+                                   label_rect.y + label_h + 6,
+                                   subtitle_color);
+                } else {
+                    menu_draw_text(renderer, ctx->font, label_buf,
+                                   label_rect.x,
+                                   label_rect.y + (label_rect.h - label_h) / 2,
+                                   text_color);
+                }
             }
 
             if (!retained_catalog) {

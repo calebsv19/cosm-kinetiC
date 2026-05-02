@@ -231,11 +231,11 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
         ok = fail_with_message("backend impl missing");
         goto cleanup;
     }
-    if (impl->volume.desc.grid_w != 16 || impl->volume.desc.grid_h != 8 || impl->volume.desc.grid_d != 8) {
+    if (impl->volume.desc.grid_w != 64 || impl->volume.desc.grid_h != 32 || impl->volume.desc.grid_d != 32) {
         ok = fail_with_message("tiny domain dimensions mismatch");
         goto cleanup;
     }
-    if (!nearly_equal(impl->volume.desc.voxel_size, 0.25f)) {
+    if (!nearly_equal(impl->volume.desc.voxel_size, 0.0625f)) {
         ok = fail_with_message("tiny domain voxel size mismatch");
         goto cleanup;
     }
@@ -384,7 +384,7 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
     }
     memset(&reader, 0, sizeof(reader));
 
-    if (raw_header.grid_w != 16u || raw_header.grid_h != 8u || raw_header.grid_d != 8u) {
+    if (raw_header.grid_w != 64u || raw_header.grid_h != 32u || raw_header.grid_d != 32u) {
         ok = fail_with_message("raw tiny header dimensions mismatch");
         goto cleanup;
     }
@@ -444,9 +444,9 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
         !cJSON_IsString(cJSON_GetObjectItem(manifest, "frame_contract")) ||
         strcmp(cJSON_GetObjectItem(manifest, "frame_contract")->valuestring, "vf3d") != 0 ||
         !cJSON_IsNumber(cJSON_GetObjectItem(manifest, "grid_d")) ||
-        cJSON_GetObjectItem(manifest, "grid_d")->valueint != 8 ||
+        cJSON_GetObjectItem(manifest, "grid_d")->valueint != 32 ||
         !cJSON_IsNumber(cJSON_GetObjectItem(manifest, "voxel_size")) ||
-        !nearly_equal((float)cJSON_GetObjectItem(manifest, "voxel_size")->valuedouble, 0.25f) ||
+        !nearly_equal((float)cJSON_GetObjectItem(manifest, "voxel_size")->valuedouble, 0.0625f) ||
         !cJSON_IsNumber(cJSON_GetObjectItem(manifest, "solid_mask_crc32")) ||
         (uint32_t)cJSON_GetObjectItem(manifest, "solid_mask_crc32")->valuedouble != raw_header.solid_mask_crc32) {
         ok = fail_with_message("manifest metadata mismatch");
@@ -459,11 +459,11 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
         !cJSON_IsString(cJSON_GetObjectItem(space_contract, "axis_authority")) ||
         strcmp(cJSON_GetObjectItem(space_contract, "axis_authority")->valuestring, "xyz") != 0 ||
         !cJSON_IsNumber(cJSON_GetObjectItem(space_contract, "grid_w")) ||
-        cJSON_GetObjectItem(space_contract, "grid_w")->valueint != 16 ||
+        cJSON_GetObjectItem(space_contract, "grid_w")->valueint != 64 ||
         !cJSON_IsNumber(cJSON_GetObjectItem(space_contract, "grid_h")) ||
-        cJSON_GetObjectItem(space_contract, "grid_h")->valueint != 8 ||
+        cJSON_GetObjectItem(space_contract, "grid_h")->valueint != 32 ||
         !cJSON_IsNumber(cJSON_GetObjectItem(space_contract, "grid_d")) ||
-        cJSON_GetObjectItem(space_contract, "grid_d")->valueint != 8 ||
+        cJSON_GetObjectItem(space_contract, "grid_d")->valueint != 32 ||
         !cJSON_IsObject(entry) ||
         !cJSON_IsString(cJSON_GetObjectItem(entry, "frame_contract")) ||
         strcmp(cJSON_GetObjectItem(entry, "frame_contract")->valuestring, "vf3d") != 0) {

@@ -166,6 +166,8 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
     SceneMenuSelection selection = {
         .custom_slot_index = library.active_slot,
         .quality_index = cfg.quality_index,
+        .quality_index_2d = cfg.quality_index,
+        .quality_index_3d = cfg.quality_index,
         .headless_frame_count = cfg.headless_frame_count,
         .sim_mode = cfg.sim_mode,
         .tunnel_inflow_speed = cfg.tunnel_inflow_speed
@@ -186,7 +188,7 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
 
     if (cfg.headless_enabled) {
         if (cfg.headless_quality_index >= 0) {
-            quality_profile_apply(&cfg, cfg.headless_quality_index);
+            quality_profile_apply_for_space_mode(&cfg, cfg.space_mode, cfg.headless_quality_index);
         }
 
         int slot_index = cfg.headless_custom_slot;

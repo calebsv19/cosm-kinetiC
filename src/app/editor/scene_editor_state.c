@@ -49,15 +49,15 @@ static void editor_refresh_scene_library(SceneEditorState *state) {
     physics_sim_editor_scene_library_refresh(&state->scene_library,
                                              &state->working,
                                              &state->session,
-                                             physics_sim_default_runtime_scene_sample_dir(),
+                                             state->cfg.input_root,
                                              state->retained_runtime_scene_path);
 }
 
 static const char *editor_filename_from_path(const char *path) {
-    const char *filename = NULL;
-    if (!path || !path[0]) return "scene.json";
-    filename = strrchr(path, '/');
-    return filename ? filename + 1 : path;
+    static char label[128];
+    if (!path || !path[0]) return "scene";
+    scene_editor_retained_document_name_from_path(path, NULL, label, sizeof(label));
+    return label[0] ? label : "scene";
 }
 
 static void editor_refresh_retained_save_diagnostics(SceneEditorState *state, const char *prefix) {
@@ -200,7 +200,7 @@ void editor_update_dimension_rects(SceneEditorState *state) {
     int field_count = physics_sim_editor_session_has_retained_scene(&state->session) ? 3 : 2;
     int available_w = state->right_panel_rect.w - inset * 2 - gap * (field_count - 1);
     int field_w = 0;
-    int rect_y = state->right_panel_rect.y + 52;
+    int rect_y = state->right_panel_rect.y + 94;
     int start_x = state->right_panel_rect.x + inset;
     if (available_w < field_count * 60) available_w = field_count * 60;
     field_w = available_w / field_count;

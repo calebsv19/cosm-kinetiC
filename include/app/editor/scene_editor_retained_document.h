@@ -26,4 +26,10 @@ bool scene_editor_retained_document_duplicate_scene_file(const char *source_path
                                                          char *out_diagnostics,
                                                          size_t out_diagnostics_size);
 
+bool scene_editor_retained_document_compose_contract_paths(const char *scene_dir,
+                                                           char *out_runtime_path,
+                                                           size_t out_runtime_path_size,
+                                                           char *out_authoring_path,
+                                                           size_t out_authoring_path_size);
+
 #endif

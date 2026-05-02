@@ -16,6 +16,7 @@
 #include "app/scene_loop_policy.h"
 #include "app/scene_controller_util.h"
 #include "app/sim_mode.h"
+#include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_backend.h"
 #include "app/quality_profiles.h"
 #include "app/data_paths.h"
@@ -24,6 +25,7 @@
 #include "render/renderer_sdl.h"
 #include "render/retained_runtime_scene_overlay.h"
 #include "render/vk_shared_device.h"
+#include "export/export_paths.h"
 #include "export/volume_frames.h"
 #include "export/render_frames.h"
 #include "timing.h"
@@ -570,7 +572,7 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         return frame;
     }
 
-    quality_label = quality_profile_name(cfg->quality_index);
+    quality_label = quality_profile_name_for_space_mode(cfg->space_mode, cfg->quality_index);
     (void)scene_backend_report(scene, &backend_report);
     if (backend_report.compatibility_view_2d_available &&
         scene_backend_compatibility_slice_activity(scene,
@@ -594,6 +596,7 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .grid_h = scene->config ? scene->config->grid_h : cfg->grid_h,
         .window_w = cfg->window_w,
         .window_h = cfg->window_h,
+        .frame_index = update_frame->frame_index,
         .paused = scene->paused,
         .sim_mode = cfg->sim_mode,
         .requested_space_mode = scene->mode_route.requested_space_mode,
@@ -601,6 +604,15 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .backend_lane = scene->mode_route.backend_lane,
         .backend_uses_canonical_2d_solver = scene->mode_route.backend_uses_canonical_2d_solver,
         .backend_kind = backend_report.kind,
+        .backend_requested_major_axis_cells = (scene->mode_route.backend_lane == SIM_BACKEND_CONTROLLED_3D)
+                                                  ? (((scene->config ? scene->config->grid_w : cfg->grid_w) >
+                                                      (scene->config ? scene->config->grid_h : cfg->grid_h))
+                                                         ? (scene->config ? scene->config->grid_w : cfg->grid_w)
+                                                         : (scene->config ? scene->config->grid_h : cfg->grid_h))
+                                                  : 0,
+        .backend_applied_major_axis_cells = (scene->mode_route.backend_lane == SIM_BACKEND_CONTROLLED_3D)
+                                                ? sim_runtime_3d_major_axis_cells_for_config(scene->config ? scene->config : cfg)
+                                                : 0,
         .backend_domain_w = backend_report.domain_w,
         .backend_domain_h = backend_report.domain_h,
         .backend_domain_d = backend_report.domain_d,
@@ -738,6 +750,12 @@ int scene_controller_run(const AppConfig *initial_cfg,
     SimModeRoute mode_route = {0};
     const SimModeHooks *mode_hooks = NULL;
     char runtime_scene_diagnostics[256];
+    if (!export_paths_set_root(snapshot_dir)) {
+        fprintf(stderr,
+                "[export] Failed to apply output root '%s'; using default export root.\n",
+                snapshot_dir ? snapshot_dir : "");
+        (void)export_paths_set_root(NULL);
+    }
     if (runtime_launch &&
         runtime_launch->has_retained_scene &&
         runtime_launch->retained_runtime_scene_path[0] &&

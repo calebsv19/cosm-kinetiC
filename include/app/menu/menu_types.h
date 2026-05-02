@@ -7,6 +7,7 @@
 
 #include "app/scene_menu.h"
 #include "app/editor/scene_editor_scene_library.h"
+#include "app/menu/menu_settings_types.h"
 #include "input/input.h"
 #include "ui/text_input.h"
 #include "ui/scrollbar.h"
@@ -33,6 +34,7 @@ typedef struct MenuButton {
 
 typedef struct SceneMenuInteraction {
     AppConfig *cfg;
+    MenuSettingsShellState settings_shell;
     const FluidScenePreset *presets;
     size_t preset_count;
     SceneMenuSelection *selection;
@@ -58,8 +60,17 @@ typedef struct SceneMenuInteraction {
     MenuButton quit_button;
     MenuButton grid_dec_button;
     MenuButton grid_inc_button;
+    MenuButton substeps_dec_button;
+    MenuButton substeps_inc_button;
+    MenuButton solver_dec_button;
+    MenuButton solver_inc_button;
     MenuButton quality_prev_button;
     MenuButton quality_next_button;
+    MenuButton settings_apply_button;
+    MenuButton settings_save_button;
+    MenuButton settings_reset_button;
+    MenuButton settings_restore_saved_button;
+    MenuButton settings_defaults_button;
     MenuButton headless_toggle_button;
     MenuButton mode_toggle_button;
     MenuButton space_toggle_button;
@@ -70,6 +81,7 @@ typedef struct SceneMenuInteraction {
     SDL_Rect config_panel_rect;
     SDL_Rect volume_toggle_rect;
     SDL_Rect render_toggle_rect;
+    SDL_Rect blur_toggle_rect;
     bool *running;
     bool *start_requested;
     InputContextManager *context_mgr;

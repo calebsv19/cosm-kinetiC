@@ -11,9 +11,24 @@
 #endif
 
 static bool s_initialized = false;
-static char s_volume_dir[256] = {0};
-static char s_render_dir[256] = {0};
-static char s_render_video_dir[256] = {0};
+static char s_root_dir[512] = {0};
+static char s_volume_dir[512] = {0};
+static char s_render_dir[512] = {0};
+static char s_render_video_dir[512] = {0};
+
+bool export_paths_set_root(const char *root_dir) {
+    const char *target_root = (root_dir && root_dir[0]) ? root_dir : EXPORT_ROOT_DIR;
+    if (snprintf(s_root_dir, sizeof(s_root_dir), "%s", target_root) >= (int)sizeof(s_root_dir)) {
+        s_root_dir[0] = '\0';
+        return false;
+    }
+    s_initialized = false;
+    s_volume_dir[0] = '\0';
+    s_render_dir[0] = '\0';
+    s_render_video_dir[0] = '\0';
+    return true;
+}
+
 static bool ensure_dir(const char *path) {
     if (!path || !*path) return false;
     int result = 0;
@@ -31,20 +46,22 @@ static bool ensure_dir(const char *path) {
 }
 
 bool export_paths_init(void) {
+    const char *root_dir = NULL;
     if (s_initialized) return true;
+    root_dir = s_root_dir[0] ? s_root_dir : EXPORT_ROOT_DIR;
 
-    if (!ensure_dir(EXPORT_ROOT_DIR)) {
+    if (!ensure_dir(root_dir)) {
         fprintf(stderr, "[export] Failed to create %s (%s)\n",
-                EXPORT_ROOT_DIR, strerror(errno));
+                root_dir, strerror(errno));
         return false;
     }
 
     snprintf(s_volume_dir, sizeof(s_volume_dir),
-             "%s/%s", EXPORT_ROOT_DIR, EXPORT_VOLUME_SUBDIR);
+             "%s/%s", root_dir, EXPORT_VOLUME_SUBDIR);
     snprintf(s_render_dir, sizeof(s_render_dir),
-             "%s/%s", EXPORT_ROOT_DIR, EXPORT_RENDER_SUBDIR);
+             "%s/%s", root_dir, EXPORT_RENDER_SUBDIR);
     snprintf(s_render_video_dir, sizeof(s_render_video_dir),
-             "%s/%s", EXPORT_ROOT_DIR, EXPORT_RENDER_VIDEO_SUBDIR);
+             "%s/%s", root_dir, EXPORT_RENDER_VIDEO_SUBDIR);
 
     if (!ensure_dir(s_volume_dir)) {
         fprintf(stderr, "[export] Failed to create %s (%s)\n",

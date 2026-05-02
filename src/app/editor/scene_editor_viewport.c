@@ -6,7 +6,8 @@
 #define VIEWPORT_3D_BASE_DISTANCE 3.5f
 #define VIEWPORT_3D_MIN_DISTANCE 0.75f
 #define VIEWPORT_3D_MAX_DISTANCE 96.0f
-#define VIEWPORT_3D_MIN_ZOOM 0.03f
+#define VIEWPORT_3D_SCENE_DISTANCE_FACTOR 6.0f
+#define VIEWPORT_3D_MIN_ZOOM 0.0025f
 #define VIEWPORT_3D_MAX_ZOOM 4.0f
 
 static float viewport_clampf(float value, float min_value, float max_value) {
@@ -19,6 +20,33 @@ static float viewport_wrap_degrees(float value) {
     while (value > 180.0f) value -= 360.0f;
     while (value < -180.0f) value += 360.0f;
     return value;
+}
+
+static float scene_editor_viewport_orbit_distance_limit(const SceneEditorViewportState *state) {
+    float max_distance = VIEWPORT_3D_MAX_DISTANCE;
+    float span_x = 0.0f;
+    float span_y = 0.0f;
+    float span_z = 0.0f;
+    float max_span = 0.0f;
+    if (!state || !state->has_scene_bounds) return max_distance;
+
+    span_x = fabsf(state->scene_max_x - state->scene_min_x);
+    span_y = fabsf(state->scene_max_y - state->scene_min_y);
+    span_z = fabsf(state->scene_max_z - state->scene_min_z);
+    max_span = fmaxf(span_x, fmaxf(span_y, span_z));
+    if (max_span <= 0.001f) return max_distance;
+
+    max_distance = fmaxf(max_distance, max_span * VIEWPORT_3D_SCENE_DISTANCE_FACTOR);
+    return max_distance;
+}
+
+static float scene_editor_viewport_min_zoom(const SceneEditorViewportState *state) {
+    float min_zoom = VIEWPORT_3D_MIN_ZOOM;
+    float distance_limit = scene_editor_viewport_orbit_distance_limit(state);
+    if (distance_limit > VIEWPORT_3D_MIN_DISTANCE) {
+        min_zoom = fmaxf(min_zoom, VIEWPORT_3D_BASE_DISTANCE / distance_limit);
+    }
+    return min_zoom;
 }
 
 static void scene_editor_viewport_set_default_scene_bounds(SceneEditorViewportState *state) {
@@ -55,9 +83,9 @@ float scene_editor_viewport_active_zoom(const SceneEditorViewportState *state) {
     if (state->requested_mode == SPACE_MODE_3D) {
         float distance = viewport_clampf(state->orbit_distance,
                                          VIEWPORT_3D_MIN_DISTANCE,
-                                         VIEWPORT_3D_MAX_DISTANCE);
+                                         scene_editor_viewport_orbit_distance_limit(state));
         zoom = VIEWPORT_3D_BASE_DISTANCE / distance;
-        return viewport_clampf(zoom, VIEWPORT_3D_MIN_ZOOM, VIEWPORT_3D_MAX_ZOOM);
+        return viewport_clampf(zoom, scene_editor_viewport_min_zoom(state), VIEWPORT_3D_MAX_ZOOM);
     }
     return viewport_clampf(state->orthographic_zoom, 0.5f, 8.0f);
 }
@@ -219,11 +247,11 @@ void scene_editor_viewport_frame_bounds(SceneEditorViewportState *state,
             fit_zoom = VIEWPORT_3D_BASE_DISTANCE /
                        viewport_clampf(max_span * 1.8f + 1.0f,
                                        VIEWPORT_3D_MIN_DISTANCE,
-                                       VIEWPORT_3D_MAX_DISTANCE);
+                                       scene_editor_viewport_orbit_distance_limit(state));
         }
         state->orbit_distance = viewport_clampf(VIEWPORT_3D_BASE_DISTANCE / fit_zoom,
                                                 VIEWPORT_3D_MIN_DISTANCE,
-                                                VIEWPORT_3D_MAX_DISTANCE);
+                                                scene_editor_viewport_orbit_distance_limit(state));
     } else {
         float zoom_x = ((float)surface_w * fit) / (fmaxf(span_x, 0.001f) * min_dim);
         float zoom_y = ((float)surface_h * fit) / (fmaxf(span_y, 0.001f) * min_dim);
@@ -309,7 +337,7 @@ bool scene_editor_viewport_apply_wheel(SceneEditorViewportState *state, int whee
         float next_distance = state->orbit_distance * powf(0.9f, (float)wheel_y);
         next_distance = viewport_clampf(next_distance,
                                         VIEWPORT_3D_MIN_DISTANCE,
-                                        VIEWPORT_3D_MAX_DISTANCE);
+                                        scene_editor_viewport_orbit_distance_limit(state));
         if (fabsf(next_distance - state->orbit_distance) <= 0.0001f) return false;
         state->orbit_distance = next_distance;
     } else {

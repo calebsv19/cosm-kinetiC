@@ -13,6 +13,7 @@ const char *menu_current_quality_name(const SceneMenuInteraction *ctx);
 
 void menu_set_status(SceneMenuInteraction *ctx, const char *text, bool wait_ack);
 void menu_clear_status(SceneMenuInteraction *ctx);
+void menu_clear_retained_scene_selection(SceneMenuInteraction *ctx);
 
 void menu_run_headless_batch(SceneMenuInteraction *ctx);
 

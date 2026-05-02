@@ -2,6 +2,7 @@
 #define RENDERER_SDL_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "app/scene_state.h"
 
@@ -12,6 +13,7 @@ typedef struct RendererHudInfo {
     int         grid_h;
     int         window_w;
     int         window_h;
+    uint64_t    frame_index;
     size_t      emitter_count;
     size_t      stroke_samples;
     bool        paused;
@@ -21,6 +23,8 @@ typedef struct RendererHudInfo {
     SimBackendLane backend_lane;
     bool        backend_uses_canonical_2d_solver;
     SimRuntimeBackendKind backend_kind;
+    int         backend_requested_major_axis_cells;
+    int         backend_applied_major_axis_cells;
     int         backend_domain_w;
     int         backend_domain_h;
     int         backend_domain_d;

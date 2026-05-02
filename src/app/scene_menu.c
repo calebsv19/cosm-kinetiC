@@ -8,6 +8,9 @@
 
 #include "app/menu/menu_input.h"
 #include "app/menu/menu_render.h"
+#include "app/menu/menu_settings_input.h"
+#include "app/menu/menu_settings_draft.h"
+#include "app/menu/menu_settings_render.h"
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_types.h"
 #include "app/menu/menu_window.h"
@@ -212,8 +215,17 @@ restart_menu:
         .quit_button = {.rect = {20, MENU_HEIGHT - 70, 120, 40}, .label = "Quit"},
         .grid_dec_button = {.rect = {MENU_WIDTH - 260, 180, 40, 40}, .label = "-"},
         .grid_inc_button = {.rect = {MENU_WIDTH - 100, 180, 40, 40}, .label = "+"},
+        .substeps_dec_button = {.rect = {0, 0, 0, 0}, .label = "-"},
+        .substeps_inc_button = {.rect = {0, 0, 0, 0}, .label = "+"},
+        .solver_dec_button = {.rect = {0, 0, 0, 0}, .label = "-"},
+        .solver_inc_button = {.rect = {0, 0, 0, 0}, .label = "+"},
         .quality_prev_button = {.rect = {0, 0, 0, 0}, .label = "<"},
         .quality_next_button = {.rect = {0, 0, 0, 0}, .label = ">"},
+        .settings_apply_button = {.rect = {0, 0, 0, 0}, .label = "Apply"},
+        .settings_save_button = {.rect = {0, 0, 0, 0}, .label = "Save Current"},
+        .settings_reset_button = {.rect = {0, 0, 0, 0}, .label = "Revert"},
+        .settings_restore_saved_button = {.rect = {0, 0, 0, 0}, .label = "Restore Saved"},
+        .settings_defaults_button = {.rect = {0, 0, 0, 0}, .label = "Defaults"},
         .headless_toggle_button = {.rect = {MENU_WIDTH - 220, MENU_HEIGHT - 130, 180, 40}, .label = "Headless"},
         .mode_toggle_button = {.rect = {MENU_WIDTH - 220, 60, 180, 36}, .label = "Mode"},
         .space_toggle_button = {.rect = {MENU_WIDTH - 220, 104, 180, 36}, .label = "Space"},
@@ -247,6 +259,7 @@ restart_menu:
         .headless_frames_rect = {0, 0, 0, 0},
         .inflow_rect = {0, 0, 0, 0},
         .viscosity_rect = {0, 0, 0, 0},
+        .blur_toggle_rect = {0, 0, 0, 0},
         .input_root_rect = {0, 0, 0, 0},
         .output_root_rect = {0, 0, 0, 0},
         .active_mode = selection_mode
@@ -261,6 +274,11 @@ restart_menu:
     scrollbar_init(&ctx.scrollbar);
     menu_refresh_scene_library(&ctx);
     menu_update_scrollbar(&ctx);
+    menu_settings_shell_init(&ctx.settings_shell,
+                             ctx.cfg,
+                             &current_selection,
+                             ctx.active_mode,
+                             ctx.cfg ? ctx.cfg->space_mode : SPACE_MODE_2D);
 
     InputContextManager context_mgr;
     input_context_manager_init(&context_mgr);
@@ -269,6 +287,7 @@ restart_menu:
     ctx.quality_index = current_selection.quality_index;
     if (ctx.quality_index >= 0) {
         menu_apply_quality_profile_index(&ctx, ctx.quality_index);
+        menu_settings_commit(&ctx, false);
     } else {
         ctx.quality_index = -1;
         if (ctx.cfg) ctx.cfg->quality_index = -1;
@@ -527,63 +546,8 @@ restart_menu:
                 }
             }
 
-            SDL_Color panel_color = menu_color_panel();
             SDL_Color accent_color = menu_color_accent();
-            SDL_Rect config_panel = ctx.config_panel_rect;
-            menu_draw_panel(ctx.renderer, &config_panel);
-            SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 120);
-            SDL_RenderDrawRect(ctx.renderer, &config_panel);
-            menu_draw_text(ctx.renderer,
-                           ctx.font_small ? ctx.font_small : ctx.font,
-                           "Simulation Settings",
-                           config_panel.x + 10,
-                           config_panel.y + 8,
-                           menu_color_text_dim());
-
-            int grid_label_y = config_panel.y + small_h + 14;
-            int grid_value_y = ctx.grid_dec_button.rect.y + (ctx.grid_dec_button.rect.h - body_h) / 2;
-            menu_draw_text(ctx.renderer,
-                           ctx.font,
-                           "Grid Resolution",
-                           config_panel.x + 12,
-                           grid_label_y,
-                           menu_color_text_dim());
-            char buffer[64];
-            snprintf(buffer, sizeof(buffer), "%dx%d cells", cfg->grid_w, cfg->grid_h);
-            menu_draw_text(ctx.renderer,
-                           ctx.font,
-                           buffer,
-                           config_panel.x + 12,
-                           grid_value_y,
-                           menu_color_text());
-            menu_draw_button(ctx.renderer, &ctx.grid_dec_button.rect, ctx.grid_dec_button.label, ctx.font, false);
-            menu_draw_button(ctx.renderer, &ctx.grid_inc_button.rect, ctx.grid_inc_button.label, ctx.font, false);
-
-            menu_draw_text(ctx.renderer,
-                           ctx.font,
-                           "Quality",
-                           config_panel.x + 12,
-                           ctx.quality_prev_button.rect.y - small_h - 8,
-                           menu_color_text_dim());
-            menu_draw_button(ctx.renderer, &ctx.quality_prev_button.rect, ctx.quality_prev_button.label, ctx.font, false);
-            menu_draw_button(ctx.renderer, &ctx.quality_next_button.rect, ctx.quality_next_button.label, ctx.font, false);
-            const char *quality_name = menu_current_quality_name(&ctx);
-            char quality_buf[128];
-            int quality_x = ctx.quality_prev_button.rect.x + ctx.quality_prev_button.rect.w + 8;
-            int quality_w = ctx.quality_next_button.rect.x - 8 - quality_x;
-            if (quality_w < 10) quality_w = 10;
-            scene_menu_fit_text_to_width(ctx.renderer, ctx.font, quality_name, quality_w, quality_buf, sizeof(quality_buf));
-            menu_draw_text(ctx.renderer,
-                           ctx.font,
-                           quality_buf,
-                           quality_x,
-                           ctx.quality_prev_button.rect.y + (ctx.quality_prev_button.rect.h - body_h) / 2,
-                           menu_color_text());
-
-            menu_draw_toggle(ctx.renderer, toggle_font, &ctx.volume_toggle_rect,
-                             "Save Volume Frames", ctx.cfg->save_volume_frames);
-            menu_draw_toggle(ctx.renderer, toggle_font, &ctx.render_toggle_rect,
-                             "Save Render Frames", ctx.cfg->save_render_frames);
+            menu_settings_draw_simulation_panel(&ctx);
 
             SDL_Rect io_panel = {
                 .x = ctx.output_root_rect.x - 12,
@@ -603,7 +567,7 @@ restart_menu:
                            io_panel.y + 8,
                            menu_color_text_dim());
 
-            SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
+            SDL_SetRenderDrawColor(ctx.renderer, menu_color_panel().r, menu_color_panel().g, menu_color_panel().b, 255);
             SDL_RenderFillRect(ctx.renderer, &ctx.headless_frames_rect);
             SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 180);
             SDL_RenderDrawRect(ctx.renderer, &ctx.headless_frames_rect);
@@ -612,7 +576,9 @@ restart_menu:
             } else {
                 char frames_label[64];
                 char frames_fit[64];
-                snprintf(frames_label, sizeof(frames_label), "Frames: %d", ctx.cfg->headless_frame_count);
+                menu_settings_render_headless_frames_label(&ctx.settings_shell,
+                                                           frames_label,
+                                                           sizeof(frames_label));
                 scene_menu_fit_text_to_width(ctx.renderer,
                                        ctx.font,
                                        frames_label,
@@ -627,55 +593,7 @@ restart_menu:
                                menu_color_text());
             }
 
-            SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
-            SDL_RenderFillRect(ctx.renderer, &ctx.viscosity_rect);
-            SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 140);
-            SDL_RenderDrawRect(ctx.renderer, &ctx.viscosity_rect);
-            if (ctx.editing_viscosity) {
-                menu_draw_text_input(ctx.renderer, ctx.font_small, &ctx.viscosity_rect, &ctx.viscosity_input);
-            } else {
-                char viscosity_label[64];
-                char viscosity_fit[64];
-                snprintf(viscosity_label, sizeof(viscosity_label), "Viscosity: %.6g", ctx.cfg->velocity_damping);
-                scene_menu_fit_text_to_width(ctx.renderer,
-                                       ctx.font_small,
-                                       viscosity_label,
-                                       ctx.viscosity_rect.w - 16,
-                                       viscosity_fit,
-                                       sizeof(viscosity_fit));
-                menu_draw_text(ctx.renderer,
-                               ctx.font_small,
-                               viscosity_fit,
-                               ctx.viscosity_rect.x + 8,
-                               ctx.viscosity_rect.y + (ctx.viscosity_rect.h - small_h) / 2,
-                               menu_color_text());
-            }
-
-            SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
-            SDL_RenderFillRect(ctx.renderer, &ctx.inflow_rect);
-            SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 120);
-            SDL_RenderDrawRect(ctx.renderer, &ctx.inflow_rect);
-            if (ctx.editing_inflow) {
-                menu_draw_text_input(ctx.renderer, ctx.font_small, &ctx.inflow_rect, &ctx.inflow_input);
-            } else {
-                char inflow_label[64];
-                char inflow_fit[64];
-                snprintf(inflow_label, sizeof(inflow_label), "Inflow: %.3f", ctx.cfg->tunnel_inflow_speed);
-                scene_menu_fit_text_to_width(ctx.renderer,
-                                       ctx.font_small,
-                                       inflow_label,
-                                       ctx.inflow_rect.w - 16,
-                                       inflow_fit,
-                                       sizeof(inflow_fit));
-                menu_draw_text(ctx.renderer,
-                               ctx.font_small,
-                               inflow_fit,
-                               ctx.inflow_rect.x + 8,
-                               ctx.inflow_rect.y + (ctx.inflow_rect.h - small_h) / 2,
-                               menu_color_text());
-            }
-
-            SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
+            SDL_SetRenderDrawColor(ctx.renderer, menu_color_panel().r, menu_color_panel().g, menu_color_panel().b, 255);
             SDL_RenderFillRect(ctx.renderer, &ctx.input_root_rect);
             SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 160);
             SDL_RenderDrawRect(ctx.renderer, &ctx.input_root_rect);
@@ -721,7 +639,7 @@ restart_menu:
                 }
             }
 
-            SDL_SetRenderDrawColor(ctx.renderer, panel_color.r, panel_color.g, panel_color.b, 255);
+            SDL_SetRenderDrawColor(ctx.renderer, menu_color_panel().r, menu_color_panel().g, menu_color_panel().b, 255);
             SDL_RenderFillRect(ctx.renderer, &ctx.output_root_rect);
             SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 160);
             SDL_RenderDrawRect(ctx.renderer, &ctx.output_root_rect);
@@ -800,8 +718,8 @@ restart_menu:
             if (status_x > max_x) status_x = max_x;
             if (status_x < 20) status_x = 20;
             int status_y = ctx.headless_frames_rect.y - text_h - 10;
-            if (status_y > ctx.inflow_rect.y - text_h - 10) {
-                status_y = ctx.inflow_rect.y - text_h - 10;
+            if (status_y > ctx.output_root_rect.y - text_h - 10) {
+                status_y = ctx.output_root_rect.y - text_h - 10;
             }
             if (status_y < 20) status_y = 20;
             menu_draw_text(ctx.renderer,

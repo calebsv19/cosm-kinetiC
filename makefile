@@ -5,6 +5,30 @@ CC        := cc
 CSTD      := -std=c11
 
 UNAME_S   := $(shell uname -s)
+PKG_CONFIG ?= pkg-config
+TARGET_CONTRACT_HELPER ?= ../bin/desktop_release_target_contract.sh
+HOST_ARCH := $(shell uname -m)
+TARGET_ARCH ?= $(HOST_ARCH)
+RELEASE_PLATFORM ?= $(UNAME_S)
+RELEASE_ARCH ?= $(TARGET_ARCH)
+TARGET_HOMEBREW_PREFIX :=
+TARGET_ALT_HOMEBREW_PREFIX :=
+TARGET_PKG_CONFIG_LIBDIR :=
+TARGET_DEP_SEARCH_ROOTS :=
+ARCH_FLAGS :=
+
+ifeq ($(UNAME_S),Darwin)
+HOST_ARCH := $(strip $(shell "$(TARGET_CONTRACT_HELPER)" get host_arch))
+TARGET_ARCH_INPUT := $(TARGET_ARCH)
+TARGET_ARCH := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH_INPUT)" "$(TARGET_CONTRACT_HELPER)" get target_arch))
+RELEASE_PLATFORM := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH)" "$(TARGET_CONTRACT_HELPER)" get release_platform))
+RELEASE_ARCH := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH)" "$(TARGET_CONTRACT_HELPER)" get release_arch))
+TARGET_HOMEBREW_PREFIX := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH)" "$(TARGET_CONTRACT_HELPER)" get homebrew_prefix))
+TARGET_ALT_HOMEBREW_PREFIX := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH)" "$(TARGET_CONTRACT_HELPER)" get alt_homebrew_prefix))
+TARGET_PKG_CONFIG_LIBDIR := $(TARGET_HOMEBREW_PREFIX)/lib/pkgconfig:$(TARGET_HOMEBREW_PREFIX)/share/pkgconfig
+TARGET_DEP_SEARCH_ROOTS := $(TARGET_HOMEBREW_PREFIX):$(TARGET_ALT_HOMEBREW_PREFIX)
+ARCH_FLAGS := -arch $(TARGET_ARCH)
+endif
 
 # =========================
 #  Project structure
@@ -52,7 +76,7 @@ RELEASE_CHANNEL ?= stable
 RELEASE_PRODUCT_NAME := kinetiC
 RELEASE_PROGRAM_KEY := physics_sim
 RELEASE_BUNDLE_ID := com.cosm.kinetic
-RELEASE_ARTIFACT_BASENAME := $(RELEASE_PRODUCT_NAME)-$(RELEASE_VERSION)-macOS-$(RELEASE_CHANNEL)
+RELEASE_ARTIFACT_BASENAME := $(RELEASE_PRODUCT_NAME)-$(RELEASE_VERSION)-$(RELEASE_PLATFORM)-$(RELEASE_ARCH)-$(RELEASE_CHANNEL)
 RELEASE_DIR := build/release
 RELEASE_APP_ZIP := $(RELEASE_DIR)/$(RELEASE_ARTIFACT_BASENAME).zip
 RELEASE_MANIFEST := $(RELEASE_DIR)/$(RELEASE_ARTIFACT_BASENAME).manifest.txt
@@ -71,12 +95,19 @@ $(info USING MAKEFILE AT: $(abspath $(lastword $(MAKEFILE_LIST))))
 # =========================
 #  SDL2 via sdl2-config (if available)
 # =========================
-SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
-SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
+SDL_CFLAGS :=
+SDL_LIBS   :=
 VULKAN_CFLAGS :=
 VULKAN_LIBS :=
+JSON_CFLAGS :=
+JSON_LIBS :=
+
+ifneq ($(UNAME_S),Darwin)
+SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
+SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
 JSON_CFLAGS := $(shell pkg-config --cflags json-c 2>/dev/null)
 JSON_LIBS := $(shell pkg-config --libs json-c 2>/dev/null)
+endif
 
 # =========================
 #  Base flags
@@ -84,9 +115,9 @@ JSON_LIBS := $(shell pkg-config --libs json-c 2>/dev/null)
 WARN      := -Wall -Wextra -Wpedantic
 DEBUG     := -g
 
-CFLAGS    := $(CSTD) $(WARN) $(DEBUG) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools
+CFLAGS    := $(CSTD) $(WARN) $(DEBUG) $(ARCH_FLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools
 CFLAGS    += -DPHYSICS_SIM_REPO_ROOT=\"$(abspath .)\"
-LDFLAGS   :=
+LDFLAGS   := $(ARCH_FLAGS)
 LIBS      :=
 
 ifeq ($(SHIM_MODE),shadow)
@@ -125,15 +156,36 @@ ifeq ($(UNAME_S),Darwin)
     # macOS: clock_gettime is in libSystem, no -lrt needed
     # We *do not* use SDL_CFLAGS here, because it adds -I/opt/homebrew/include/SDL2,
     # which conflicts with our #include <SDL2/SDL.h> pattern.
-    CFLAGS  += -D_POSIX_C_SOURCE=200809L -I/opt/homebrew/include -D_THREAD_SAFE
-    LDFLAGS += -L/opt/homebrew/lib
-    LIBS    += -lSDL2 -lSDL2_ttf
+    SDL_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags sdl2 2>/dev/null)
+    SDL_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs sdl2 2>/dev/null)
+    JSON_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags json-c 2>/dev/null)
+    JSON_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs json-c 2>/dev/null)
+    CFLAGS  += -D_POSIX_C_SOURCE=200809L -D_THREAD_SAFE
+    ifneq ($(strip $(SDL_CFLAGS)),)
+        CFLAGS += $(SDL_CFLAGS)
+    else
+        CFLAGS += -I$(TARGET_HOMEBREW_PREFIX)/include
+    endif
+    ifneq ($(strip $(JSON_CFLAGS)),)
+        CFLAGS += $(JSON_CFLAGS)
+    else
+        CFLAGS += -I$(TARGET_HOMEBREW_PREFIX)/include
+    endif
+    ifneq ($(strip $(SDL_LIBS)),)
+        LIBS += $(SDL_LIBS) -lSDL2_ttf
+    else
+        LDFLAGS += -L$(TARGET_HOMEBREW_PREFIX)/lib
+        LIBS += -lSDL2 -lSDL2_ttf
+    endif
+    ifeq ($(strip $(JSON_LIBS)),)
+        JSON_LIBS := -L$(TARGET_HOMEBREW_PREFIX)/lib -ljson-c
+    endif
 
-    VULKAN_CFLAGS := $(shell pkg-config --cflags vulkan 2>/dev/null)
-    VULKAN_LIBS := $(shell pkg-config --libs vulkan 2>/dev/null)
+    VULKAN_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags vulkan 2>/dev/null)
+    VULKAN_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs vulkan 2>/dev/null)
     ifeq ($(strip $(VULKAN_CFLAGS)$(VULKAN_LIBS)),)
-        VULKAN_CFLAGS := -I/opt/homebrew/include
-        VULKAN_LIBS := -L/opt/homebrew/lib -lvulkan
+        VULKAN_CFLAGS := -I$(TARGET_HOMEBREW_PREFIX)/include
+        VULKAN_LIBS := -L$(TARGET_HOMEBREW_PREFIX)/lib -lvulkan
     endif
     VULKAN_LIBS += -framework Metal -framework QuartzCore -framework Cocoa -framework IOKit -framework CoreVideo
     CFLAGS += -DVK_USE_PLATFORM_METAL_EXT
@@ -144,7 +196,7 @@ JSON_LIBS := -ljson-c
 endif
 ifeq ($(UNAME_S),Darwin)
 ifeq ($(strip $(JSON_CFLAGS)),)
-JSON_CFLAGS := -I/opt/homebrew/include
+JSON_CFLAGS := -I$(TARGET_HOMEBREW_PREFIX)/include
 endif
 endif
 
@@ -1043,7 +1095,7 @@ package-desktop: all
 	@cp "$(PACKAGE_INFO_PLIST_SRC)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
 	@cp "$(TARGET)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
 	@cp "$(PACKAGE_LAUNCHER_SRC)" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
-	@"$(PACKAGE_DYLIB_BUNDLER)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_FRAMEWORKS_DIR)"
+	@PACKAGE_DEP_SEARCH_ROOTS="$(TARGET_DEP_SEARCH_ROOTS)" "$(PACKAGE_DYLIB_BUNDLER)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_FRAMEWORKS_DIR)"
 	@chmod +x "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
 	@cp -R config "$(PACKAGE_RESOURCES_DIR)/"
 	@mkdir -p "$(PACKAGE_RESOURCES_DIR)/data/runtime" "$(PACKAGE_RESOURCES_DIR)/data/snapshots"
@@ -1185,7 +1237,7 @@ release-sign: release-bundle-audit
 	fi
 	@echo "release-sign complete."
 
-release-verify:
+release-verify: release-sign
 	@codesign --verify --deep --strict "$(PACKAGE_APP_DIR)"
 	@if [ "$(RELEASE_CODESIGN_IDENTITY)" = "-" ]; then \
 		echo "release-verify note: ad-hoc identity in use; skipping spctl Gatekeeper assessment"; \
@@ -1256,7 +1308,7 @@ release-verify-notarized: release-verify
 	@xcrun stapler validate "$(PACKAGE_APP_DIR)"
 	@echo "release-verify-notarized passed."
 
-release-artifact:
+release-artifact: release-verify
 	@mkdir -p "$(RELEASE_DIR)"
 	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(PACKAGE_APP_DIR)" "$(RELEASE_APP_ZIP)"
 	@shasum -a 256 "$(RELEASE_APP_ZIP)" > "$(RELEASE_APP_ZIP).sha256"
@@ -1266,6 +1318,8 @@ release-artifact:
 		echo "bundle_id=$(RELEASE_BUNDLE_ID)"; \
 		echo "version=$(RELEASE_VERSION)"; \
 		echo "channel=$(RELEASE_CHANNEL)"; \
+		echo "platform=$(RELEASE_PLATFORM)"; \
+		echo "arch=$(RELEASE_ARCH)"; \
 		echo "artifact=$(RELEASE_APP_ZIP)"; \
 		echo "sha256_file=$(RELEASE_APP_ZIP).sha256"; \
 	} > "$(RELEASE_MANIFEST)"

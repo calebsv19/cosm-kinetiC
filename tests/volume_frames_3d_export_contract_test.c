@@ -3,6 +3,7 @@
 #include "app/sim_runtime_backend_3d_scaffold_internal.h"
 #include "core_io.h"
 #include "core_pack.h"
+#include "export/export_paths.h"
 #include "export/volume_frames.h"
 #include "export/volume_frames_vf3d.h"
 
@@ -11,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "cJSON.h"
@@ -63,6 +65,7 @@ static bool test_volume_frames_write_routes_authoritative_3d_runs_to_vf3d(void) 
     SimRuntimeBackend3DScaffold *impl = NULL;
     char original_cwd[PATH_MAX];
     char temp_dir[] = "/tmp/physics_sim_vf3d_export_contract_XXXXXX";
+    char output_root[PATH_MAX];
     char raw_path[PATH_MAX];
     char pack_path[PATH_MAX];
     char manifest_path[PATH_MAX];
@@ -95,6 +98,13 @@ static bool test_volume_frames_write_routes_authoritative_3d_runs_to_vf3d(void) 
     }
     if (chdir(temp_dir) != 0) {
         return fail_with_message("failed to enter temp dir");
+    }
+    snprintf(output_root, sizeof(output_root), "%s/custom_output_root", temp_dir);
+    if (mkdir(output_root, 0755) != 0) {
+        return fail_with_message("failed to create custom output root");
+    }
+    if (!export_paths_set_root(output_root)) {
+        return fail_with_message("failed to bind custom export root");
     }
 
     cfg.quality_index = 5;
@@ -152,22 +162,22 @@ static bool test_volume_frames_write_routes_authoritative_3d_runs_to_vf3d(void) 
     }
 
     snprintf(raw_path, sizeof(raw_path),
-             "%s/export/volume_frames/%s/frame_%06d.vf3d",
-             temp_dir,
+             "%s/volume_frames/%s/frame_%06d.vf3d",
+             output_root,
              preset.name,
              11);
     snprintf(pack_path, sizeof(pack_path),
-             "%s/export/volume_frames/%s/frame_%06d.pack",
-             temp_dir,
+             "%s/volume_frames/%s/frame_%06d.pack",
+             output_root,
              preset.name,
              11);
     snprintf(manifest_path, sizeof(manifest_path),
-             "%s/export/volume_frames/%s/manifest.json",
-             temp_dir,
+             "%s/volume_frames/%s/manifest.json",
+             output_root,
              preset.name);
     snprintf(bundle_path, sizeof(bundle_path),
-             "%s/export/volume_frames/%s/scene_bundle.json",
-             temp_dir,
+             "%s/volume_frames/%s/scene_bundle.json",
+             output_root,
              preset.name);
 
     if (!core_io_path_exists(raw_path)) {

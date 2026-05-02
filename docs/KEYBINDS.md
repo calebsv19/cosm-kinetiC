@@ -76,6 +76,12 @@ Keyboard handling:
 
 Notes:
 - Menu actions are mostly pointer-driven, with keyboard focused on text editing and cancel/confirm flow.
+- Updating `Input Root` refreshes the `3D` retained-scene list immediately.
+- Retained-scene discovery accepts:
+  - direct child scene directories under the selected root
+  - each listed scene directory must contain both `scene_authoring.json` and `scene_runtime.json`
+  - one grouped layer under the selected root: `<Area>/<Scene>/scene_authoring.json` + `scene_runtime.json`
+  - retained-scene labels prefer optional authoring `scene_name` metadata when present
 
 ## Scene Editor Input
 

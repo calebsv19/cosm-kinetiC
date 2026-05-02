@@ -5,6 +5,7 @@
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
 
+#include "app/editor/scene_editor_session.h"
 #include "app/scene_presets.h"
 
 typedef struct EditorButton {
@@ -34,6 +35,7 @@ void scene_editor_draw_button(SDL_Renderer *renderer,
 void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
                                      TTF_Font *font,
                                      const NumericField *field,
-                                     const FluidEmitter *selected_emitter);
+                                     const FluidEmitter *selected_emitter,
+                                     const PhysicsSimEmitterOverlay *selected_overlay_emitter);
 
 #endif // SCENE_EDITOR_WIDGETS_H

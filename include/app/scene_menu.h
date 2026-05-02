@@ -18,6 +18,8 @@ typedef struct SceneMenuSelection {
     int  retained_scene_index;
     char retained_runtime_scene_path[512];
     int  quality_index;
+    int  quality_index_2d;
+    int  quality_index_3d;
     int  headless_frame_count;
     SimulationMode sim_mode;
     float tunnel_inflow_speed;
