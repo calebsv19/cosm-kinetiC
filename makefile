@@ -41,6 +41,7 @@ SHARED_ROOT ?= third_party/codework_shared
 VK_RENDERER_DIR := $(SHARED_ROOT)/vk_renderer
 KIT_VIZ_DIR := $(SHARED_ROOT)/kit/kit_viz
 KIT_RENDER_DIR := $(SHARED_ROOT)/kit/kit_render
+KIT_PANE_DIR := $(SHARED_ROOT)/kit/kit_pane
 SHARED_ASSETS_DIR := $(SHARED_ROOT)/assets
 CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
 SHIM_MODE ?= off
@@ -301,7 +302,7 @@ CORE_PANE_DIR := $(SHARED_ROOT)/core/core_pane
 CORE_TRACE_DIR := $(SHARED_ROOT)/core/core_trace
 CORE_THEME_DIR := $(SHARED_ROOT)/core/core_theme
 CORE_FONT_DIR := $(SHARED_ROOT)/core/core_font
-CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include
+CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(KIT_PANE_DIR)/include
 
 CORE_BASE_SRCS := $(CORE_BASE_DIR)/src/core_base.c
 CORE_IO_SRCS := $(CORE_IO_DIR)/src/core_io.c
@@ -321,6 +322,7 @@ KIT_RENDER_SRCS := \
 	$(KIT_RENDER_DIR)/src/kit_render_external_text.c \
 	$(KIT_RENDER_DIR)/src/kit_render_backend_null.c \
 	$(KIT_RENDER_DIR)/src/kit_render_backend_vk.c
+KIT_PANE_SRCS := $(KIT_PANE_DIR)/src/kit_pane.c
 CORE_BASE_OBJS := $(patsubst $(CORE_BASE_DIR)/src/%.c,$(BUILD_DIR)/core_base/%.o,$(CORE_BASE_SRCS))
 CORE_IO_OBJS := $(patsubst $(CORE_IO_DIR)/src/%.c,$(BUILD_DIR)/core_io/%.o,$(CORE_IO_SRCS))
 CORE_DATA_OBJS := $(patsubst $(CORE_DATA_DIR)/src/%.c,$(BUILD_DIR)/core_data/%.o,$(CORE_DATA_SRCS))
@@ -335,7 +337,8 @@ CORE_THEME_OBJS := $(patsubst $(CORE_THEME_DIR)/src/%.c,$(BUILD_DIR)/core_theme/
 CORE_FONT_OBJS := $(patsubst $(CORE_FONT_DIR)/src/%.c,$(BUILD_DIR)/core_font/%.o,$(CORE_FONT_SRCS))
 KIT_VIZ_OBJS := $(patsubst $(KIT_VIZ_DIR)/src/%.c,$(BUILD_DIR)/kit_viz/%.o,$(KIT_VIZ_SRCS))
 KIT_RENDER_OBJS := $(patsubst $(KIT_RENDER_DIR)/src/%.c,$(BUILD_DIR)/kit_render/%.o,$(KIT_RENDER_SRCS))
-OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_OBJECT_OBJS) $(CORE_UNITS_OBJS) $(CORE_PANE_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(KIT_VIZ_OBJS) $(KIT_RENDER_OBJS)
+KIT_PANE_OBJS := $(patsubst $(KIT_PANE_DIR)/src/%.c,$(BUILD_DIR)/kit_pane/%.o,$(KIT_PANE_SRCS))
+OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_OBJECT_OBJS) $(CORE_UNITS_OBJS) $(CORE_PANE_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(KIT_VIZ_OBJS) $(KIT_RENDER_OBJS) $(KIT_PANE_OBJS)
 DEPS := $(OBJS:.o=.d)
 CORE_PACK_TOOL_SRCS := \
 	$(VF2D_PACK_TOOL_SRC) \
@@ -733,7 +736,14 @@ SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS := \
 SCENE_EDITOR_PANE_HOST_TEST_SRCS := \
 	tests/scene_editor_pane_host_contract_test.c \
 	$(SRC_DIR)/app/editor/scene_editor_pane_host.c \
-	$(CORE_PANE_DIR)/src/core_pane.c
+	$(CORE_PANE_DIR)/src/core_pane.c \
+	$(KIT_PANE_DIR)/src/kit_pane.c \
+	$(KIT_RENDER_DIR)/src/kit_render.c \
+	$(KIT_RENDER_DIR)/src/kit_render_backend_null.c \
+	$(KIT_RENDER_DIR)/src/kit_render_backend_vk.c \
+	$(CORE_THEME_DIR)/src/core_theme.c \
+	$(CORE_FONT_DIR)/src/core_font.c \
+	$(CORE_BASE_DIR)/src/core_base.c
 
 SCENE_EDITOR_VIEWPORT_TEST_SRCS := \
 	tests/scene_editor_viewport_contract_test.c \
@@ -907,7 +917,7 @@ test-scene-editor-scene-library-contract: $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS
 test-scene-editor-pane-host-contract: $(SCENE_EDITOR_PANE_HOST_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_PANE_DIR)/include \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_PANE_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_RENDER_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_pane_host_contract_test $(SCENE_EDITOR_PANE_HOST_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_pane_host_contract_test
 
@@ -1095,6 +1105,10 @@ $(BUILD_DIR)/kit_viz/%.o: $(KIT_VIZ_DIR)/src/%.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/kit_render/%.o: $(KIT_RENDER_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/kit_pane/%.o: $(KIT_PANE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 

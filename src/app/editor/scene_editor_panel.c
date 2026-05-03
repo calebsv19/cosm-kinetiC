@@ -7,6 +7,7 @@
 #include "app/menu/menu_render.h"
 
 #include <SDL2/SDL_ttf.h>
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -24,6 +25,17 @@ SDL_Color COLOR_STATUS_ERR  = {235, 130, 130, 255};
 
 static SDL_Rect scene_editor_draw_surface_rect(const SceneEditorState *state) {
     return editor_active_viewport_rect(state);
+}
+
+static SDL_Rect scene_editor_splitter_rect_to_sdl(CorePaneRect rect) {
+    SDL_Rect out = {0};
+    out.x = (int)lroundf(rect.x);
+    out.y = (int)lroundf(rect.y);
+    out.w = (int)lroundf(rect.width);
+    out.h = (int)lroundf(rect.height);
+    if (out.w < 0) out.w = 0;
+    if (out.h < 0) out.h = 0;
+    return out;
 }
 
 static const char *editor_space_mode_label(SpaceMode mode) {
@@ -184,6 +196,38 @@ int panel_font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
     font_h = TTF_FontHeight(font);
     if (font_h <= 0) return fallback;
     return physics_sim_text_logical_pixels(renderer, font_h);
+}
+
+static void draw_pane_splitter_handle(SceneEditorState *state) {
+    CorePaneRect splitter_rect = {0};
+    SDL_Rect draw_rect = {0};
+    SDL_Color fill = COLOR_TEXT_DIM;
+    bool hovered = false;
+    bool active = false;
+
+    if (!state || !state->renderer) return;
+    if (!scene_editor_pane_host_visible_splitter(&state->pane_host,
+                                                 &splitter_rect,
+                                                 &hovered,
+                                                 &active)) {
+        return;
+    }
+
+    draw_rect = scene_editor_splitter_rect_to_sdl(splitter_rect);
+    if (draw_rect.w <= 0 || draw_rect.h <= 0) return;
+
+    if (active) {
+        fill = (SDL_Color){230, 178, 92, 228};
+    } else if (hovered) {
+        fill = (SDL_Color){214, 220, 232, 170};
+    } else {
+        fill.a = 128;
+    }
+
+    SDL_SetRenderDrawColor(state->renderer, fill.r, fill.g, fill.b, fill.a);
+    SDL_RenderFillRect(state->renderer, &draw_rect);
+    SDL_SetRenderDrawColor(state->renderer, COLOR_BG.r, COLOR_BG.g, COLOR_BG.b, 220);
+    SDL_RenderDrawRect(state->renderer, &draw_rect);
 }
 
 static void draw_object_list(SceneEditorState *state) {
@@ -825,6 +869,7 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     }
 
     SDL_RenderSetClipRect(renderer, NULL);
+    draw_pane_splitter_handle(state);
 
     draw_hover_tooltip(state);
     draw_dimension_fields(state);

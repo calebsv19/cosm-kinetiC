@@ -331,7 +331,7 @@ static void editor_layout_controls(SceneEditorState *state) {
     editor_update_list_track(&state->import_view, &state->import_rect);
 }
 
-static void editor_reflow_layout(SceneEditorState *state) {
+void editor_reflow_layout(SceneEditorState *state) {
     if (!state) return;
     editor_update_canvas_layout(state);
     editor_layout_controls(state);
@@ -671,6 +671,24 @@ bool scene_editor_run(SDL_Window *window,
             state.layout_win_w = win_w;
             state.layout_win_h = win_h;
             editor_reflow_layout(&state);
+            scene_editor_pane_host_update_pointer(&state.pane_host,
+                                                  (float)state.pointer_x,
+                                                  (float)state.pointer_y);
+        }
+
+        int drawable_w = win_w;
+        int drawable_h = win_h;
+        SDL_Vulkan_GetDrawableSize(window, &drawable_w, &drawable_h);
+        if (drawable_w <= 0 || drawable_h <= 0) {
+            SDL_Delay(16);
+            continue;
+        }
+        VkExtent2D swap_extent = ((VkRenderer *)renderer)->context.swapchain.extent;
+        if ((uint32_t)drawable_w != swap_extent.width ||
+            (uint32_t)drawable_h != swap_extent.height) {
+            vk_renderer_recreate_swapchain((VkRenderer *)renderer, window);
+            vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
+            continue;
         }
 
         VkCommandBuffer cmd = VK_NULL_HANDLE;

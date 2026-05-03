@@ -186,6 +186,7 @@ typedef enum SceneEditorDimensionField {
 
 void set_dirty(SceneEditorState *state);
 float sanitize_domain_dimension(float value);
+void editor_reflow_layout(SceneEditorState *state);
 void editor_update_dimension_rects(SceneEditorState *state);
 void editor_update_canvas_layout(SceneEditorState *state);
 SDL_Rect editor_name_rect(const SceneEditorState *state);

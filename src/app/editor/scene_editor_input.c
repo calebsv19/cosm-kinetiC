@@ -46,6 +46,11 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         state->pointer_down_y = y;
     }
 
+    if (ptr->button == SDL_BUTTON_LEFT &&
+        scene_editor_pane_host_begin_splitter_drag(&state->pane_host, (float)x, (float)y)) {
+        return;
+    }
+
     if (scene_editor_input_try_begin_viewport_navigation(state, ptr)) {
         return;
     }
@@ -302,6 +307,12 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
 void editor_pointer_up(void *user, const InputPointerState *ptr) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !ptr) return;
+    if (ptr->button == SDL_BUTTON_LEFT &&
+        scene_editor_pane_host_splitter_drag_active(&state->pane_host)) {
+        scene_editor_pane_host_end_splitter_drag(&state->pane_host);
+        scene_editor_pane_host_update_pointer(&state->pane_host, (float)ptr->x, (float)ptr->y);
+        return;
+    }
     if (state->viewport.navigation_active) {
         scene_editor_viewport_end_navigation(&state->viewport);
         scene_editor_canvas_set_viewport_state(&state->viewport);
@@ -387,6 +398,13 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
     if (!state || !ptr) return;
     state->pointer_x = ptr->x;
     state->pointer_y = ptr->y;
+    if (scene_editor_pane_host_splitter_drag_active(&state->pane_host)) {
+        if (scene_editor_pane_host_update_splitter_drag(&state->pane_host, (float)ptr->x, (float)ptr->y)) {
+            editor_reflow_layout(state);
+        }
+        return;
+    }
+    scene_editor_pane_host_update_pointer(&state->pane_host, (float)ptr->x, (float)ptr->y);
     if (state->viewport.navigation_active) {
         SDL_Rect viewport_rect = editor_active_viewport_rect(state);
         if (scene_editor_viewport_update_navigation(&state->viewport,

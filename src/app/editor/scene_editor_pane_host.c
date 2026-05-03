@@ -11,6 +11,10 @@ enum {
     SCENE_EDITOR_PANE_ID_RIGHT = 2103u
 };
 
+enum {
+    SCENE_EDITOR_PANE_SPLITTER_HANDLE_THICKNESS = 8u
+};
+
 static void scene_editor_pane_host_set_error(SceneEditorPaneHost *host, const char *fmt, ...) {
     va_list args;
     if (!host || !fmt) return;
@@ -29,10 +33,81 @@ static uint32_t scene_editor_pane_host_id_for_role(SceneEditorPaneRole role) {
     }
 }
 
+static CorePaneRect scene_editor_pane_host_bounds_rect(float width, float height) {
+    return (CorePaneRect){ 0.0f, 0.0f, width, height };
+}
+
 static float pane_host_clamp(float value, float min_value, float max_value) {
     if (value < min_value) return min_value;
     if (value > max_value) return max_value;
     return value;
+}
+
+static bool scene_editor_pane_host_find_rect_for_pane_id(const SceneEditorPaneHost *host,
+                                                          uint32_t pane_id,
+                                                          CorePaneRect *out_rect) {
+    uint32_t i = 0u;
+
+    if (!host || !out_rect || pane_id == 0u) return false;
+    for (i = 0u; i < host->leaf_count; ++i) {
+        if (host->leaves[i].id == pane_id) {
+            *out_rect = host->leaves[i].rect;
+            return true;
+        }
+    }
+    return false;
+}
+
+static void scene_editor_pane_host_sync_targets_from_leaves(SceneEditorPaneHost *host) {
+    CorePaneRect rect = {0};
+
+    if (!host) return;
+    if (scene_editor_pane_host_find_rect_for_pane_id(host, SCENE_EDITOR_PANE_ID_LEFT, &rect)) {
+        host->target_left_width = rect.width;
+    }
+    if (scene_editor_pane_host_find_rect_for_pane_id(host, SCENE_EDITOR_PANE_ID_RIGHT, &rect)) {
+        host->target_right_width = rect.width;
+    }
+}
+
+static bool scene_editor_pane_host_solve_current(SceneEditorPaneHost *host, float width, float height) {
+    CorePaneRect bounds;
+    CorePaneValidationReport report;
+
+    if (!host) return false;
+
+    bounds = scene_editor_pane_host_bounds_rect(width, height);
+    memset(&report, 0, sizeof(report));
+    if (!core_pane_validate_graph(host->nodes,
+                                  host->node_count,
+                                  host->root_index,
+                                  bounds,
+                                  &report)) {
+        scene_editor_pane_host_set_error(host,
+                                         "pane graph invalid code=%s node=%u rel=%u",
+                                         core_pane_validation_code_string(report.code),
+                                         report.node_index,
+                                         report.related_index);
+        return false;
+    }
+
+    if (!core_pane_solve(host->nodes,
+                         host->node_count,
+                         host->root_index,
+                         bounds,
+                         host->leaves,
+                         SCENE_EDITOR_PANE_LEAF_CAPACITY,
+                         &host->leaf_count)) {
+        scene_editor_pane_host_set_error(host, "pane solve failed");
+        return false;
+    }
+
+    scene_editor_pane_host_sync_targets_from_leaves(host);
+    host->bounds_width = width;
+    host->bounds_height = height;
+    host->initialized = true;
+    host->last_error[0] = '\0';
+    return true;
 }
 
 static void scene_editor_pane_host_seed_graph(SceneEditorPaneHost *host) {
@@ -74,8 +149,6 @@ static void scene_editor_pane_host_seed_graph(SceneEditorPaneHost *host) {
 }
 
 bool scene_editor_pane_host_rebuild(SceneEditorPaneHost *host, float width, float height) {
-    CorePaneRect bounds;
-    CorePaneValidationReport report;
     float target_left = 0.0f;
     float target_right = 0.0f;
     float remaining = 0.0f;
@@ -107,37 +180,7 @@ bool scene_editor_pane_host_rebuild(SceneEditorPaneHost *host, float width, floa
     host->nodes[2].constraints = (CorePaneConstraints){ 360.0f, 220.0f };
     host->nodes[2].ratio_01 = pane_host_clamp(target_center / remaining, 0.55f, 0.82f);
 
-    bounds = (CorePaneRect){ 0.0f, 0.0f, width, height };
-    memset(&report, 0, sizeof(report));
-    if (!core_pane_validate_graph(host->nodes,
-                                  host->node_count,
-                                  host->root_index,
-                                  bounds,
-                                  &report)) {
-        scene_editor_pane_host_set_error(host,
-                                         "pane graph invalid code=%s node=%u rel=%u",
-                                         core_pane_validation_code_string(report.code),
-                                         report.node_index,
-                                         report.related_index);
-        return false;
-    }
-
-    if (!core_pane_solve(host->nodes,
-                         host->node_count,
-                         host->root_index,
-                         bounds,
-                         host->leaves,
-                         SCENE_EDITOR_PANE_LEAF_CAPACITY,
-                         &host->leaf_count)) {
-        scene_editor_pane_host_set_error(host, "pane solve failed");
-        return false;
-    }
-
-    host->bounds_width = width;
-    host->bounds_height = height;
-    host->initialized = true;
-    host->last_error[0] = '\0';
-    return true;
+    return scene_editor_pane_host_solve_current(host, width, height);
 }
 
 bool scene_editor_pane_host_init(SceneEditorPaneHost *host, float width, float height) {
@@ -145,6 +188,8 @@ bool scene_editor_pane_host_init(SceneEditorPaneHost *host, float width, float h
     memset(host, 0, sizeof(*host));
     host->target_left_width = 284.0f;
     host->target_right_width = 284.0f;
+    kit_pane_splitter_interaction_init(&host->splitter_interaction,
+                                       (float)SCENE_EDITOR_PANE_SPLITTER_HANDLE_THICKNESS);
     scene_editor_pane_host_seed_graph(host);
     return scene_editor_pane_host_rebuild(host, width, height);
 }
@@ -157,23 +202,106 @@ void scene_editor_pane_host_set_targets(SceneEditorPaneHost *host,
     if (right_width > 0.0f) host->target_right_width = right_width;
 }
 
+void scene_editor_pane_host_update_pointer(SceneEditorPaneHost *host,
+                                           float pointer_x,
+                                           float pointer_y) {
+    CoreResult result;
+
+    if (!host || !host->initialized) return;
+    result = kit_pane_splitter_interaction_set_hover(&host->splitter_interaction,
+                                                     host->nodes,
+                                                     host->node_count,
+                                                     host->root_index,
+                                                     scene_editor_pane_host_bounds_rect(host->bounds_width,
+                                                                                        host->bounds_height),
+                                                     pointer_x,
+                                                     pointer_y);
+    if (result.code != CORE_OK && result.code != CORE_ERR_NOT_FOUND) {
+        scene_editor_pane_host_set_error(host, "splitter hover failed (%d)", (int)result.code);
+    }
+}
+
+bool scene_editor_pane_host_begin_splitter_drag(SceneEditorPaneHost *host,
+                                                float pointer_x,
+                                                float pointer_y) {
+    CoreResult result;
+
+    if (!host || !host->initialized) return false;
+    result = kit_pane_splitter_interaction_begin_drag(&host->splitter_interaction,
+                                                      host->nodes,
+                                                      host->node_count,
+                                                      host->root_index,
+                                                      scene_editor_pane_host_bounds_rect(host->bounds_width,
+                                                                                         host->bounds_height),
+                                                      pointer_x,
+                                                      pointer_y);
+    return result.code == CORE_OK;
+}
+
+bool scene_editor_pane_host_update_splitter_drag(SceneEditorPaneHost *host,
+                                                 float pointer_x,
+                                                 float pointer_y) {
+    CoreResult result;
+    int changed = 0;
+
+    if (!host || !host->initialized || !host->splitter_interaction.drag_active) return false;
+    result = kit_pane_splitter_interaction_update_drag(&host->splitter_interaction,
+                                                       host->nodes,
+                                                       host->node_count,
+                                                       pointer_x,
+                                                       pointer_y,
+                                                       &changed);
+    if (result.code != CORE_OK) {
+        scene_editor_pane_host_set_error(host, "splitter drag update failed (%d)", (int)result.code);
+        return false;
+    }
+    if (changed) {
+        if (!scene_editor_pane_host_solve_current(host, host->bounds_width, host->bounds_height)) {
+            return false;
+        }
+    }
+    return changed != 0;
+}
+
+void scene_editor_pane_host_end_splitter_drag(SceneEditorPaneHost *host) {
+    if (!host) return;
+    kit_pane_splitter_interaction_end_drag(&host->splitter_interaction);
+}
+
+bool scene_editor_pane_host_splitter_drag_active(const SceneEditorPaneHost *host) {
+    if (!host) return false;
+    return host->splitter_interaction.drag_active != 0;
+}
+
+bool scene_editor_pane_host_visible_splitter(const SceneEditorPaneHost *host,
+                                             CorePaneRect *out_rect,
+                                             bool *out_hovered,
+                                             bool *out_active) {
+    int hovered = 0;
+    int active = 0;
+
+    if (out_hovered) *out_hovered = false;
+    if (out_active) *out_active = false;
+    if (!host) return false;
+    if (!kit_pane_splitter_interaction_current(&host->splitter_interaction,
+                                               out_rect,
+                                               &hovered,
+                                               &active)) {
+        return false;
+    }
+    if (out_hovered) *out_hovered = hovered != 0;
+    if (out_active) *out_active = active != 0;
+    return true;
+}
+
 bool scene_editor_pane_host_get_rect_for_role(const SceneEditorPaneHost *host,
                                               SceneEditorPaneRole role,
                                               CorePaneRect *out_rect) {
     uint32_t pane_id = 0u;
-    uint32_t i = 0u;
 
     if (!host || !out_rect || !host->initialized) return false;
     pane_id = scene_editor_pane_host_id_for_role(role);
-    if (pane_id == 0u) return false;
-
-    for (i = 0u; i < host->leaf_count; ++i) {
-        if (host->leaves[i].id == pane_id) {
-            *out_rect = host->leaves[i].rect;
-            return true;
-        }
-    }
-    return false;
+    return scene_editor_pane_host_find_rect_for_pane_id(host, pane_id, out_rect);
 }
 
 const char *scene_editor_pane_host_last_error(const SceneEditorPaneHost *host) {

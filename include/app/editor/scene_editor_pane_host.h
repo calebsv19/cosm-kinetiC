@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "core_pane.h"
+#include "kit_pane.h"
 
 typedef enum SceneEditorPaneRole {
     SCENE_EDITOR_PANE_LEFT = 0,
@@ -27,6 +28,7 @@ typedef struct SceneEditorPaneHost {
     float bounds_height;
     float target_left_width;
     float target_right_width;
+    KitPaneSplitterInteraction splitter_interaction;
     bool initialized;
     char last_error[160];
 } SceneEditorPaneHost;
@@ -36,6 +38,21 @@ bool scene_editor_pane_host_rebuild(SceneEditorPaneHost *host, float width, floa
 void scene_editor_pane_host_set_targets(SceneEditorPaneHost *host,
                                         float left_width,
                                         float right_width);
+void scene_editor_pane_host_update_pointer(SceneEditorPaneHost *host,
+                                           float pointer_x,
+                                           float pointer_y);
+bool scene_editor_pane_host_begin_splitter_drag(SceneEditorPaneHost *host,
+                                                float pointer_x,
+                                                float pointer_y);
+bool scene_editor_pane_host_update_splitter_drag(SceneEditorPaneHost *host,
+                                                 float pointer_x,
+                                                 float pointer_y);
+void scene_editor_pane_host_end_splitter_drag(SceneEditorPaneHost *host);
+bool scene_editor_pane_host_splitter_drag_active(const SceneEditorPaneHost *host);
+bool scene_editor_pane_host_visible_splitter(const SceneEditorPaneHost *host,
+                                             CorePaneRect *out_rect,
+                                             bool *out_hovered,
+                                             bool *out_active);
 bool scene_editor_pane_host_get_rect_for_role(const SceneEditorPaneHost *host,
                                               SceneEditorPaneRole role,
                                               CorePaneRect *out_rect);
