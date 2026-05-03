@@ -14,11 +14,13 @@
 #include "import/runtime_scene_bridge.h"
 #include "input/input.h"
 #include "input/stroke_buffer.h"
+#include "core_sim.h"
 #include "physics/objects/object_manager.h"
 
 typedef struct SceneState {
     double time;
     double dt;
+    CoreSimLoopState runtime_loop;
     bool paused;
     bool emitters_enabled;
     SimModeRoute mode_route;

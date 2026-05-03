@@ -30,6 +30,8 @@ SceneState scene_create(const AppConfig *cfg,
 
     s.time = 0.0;
     s.dt = 0.0;
+    (void)core_sim_loop_init(&s.runtime_loop, NULL);
+    core_sim_loop_set_paused(&s.runtime_loop, false);
     s.paused = false;
     s.emitters_enabled = true;
     if (mode_route) {

@@ -1,7 +1,7 @@
 #include "app/menu/menu_settings_draft.h"
 
+#include "app/menu/menu_mode_utils.h"
 #include "app/quality_profiles.h"
-#include "app/menu/menu_state.h"
 #include "app/menu/menu_settings_schema.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"

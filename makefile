@@ -414,6 +414,8 @@ STABLE_TEST_TARGETS := \
 	test-sim-runtime-3d-space-contract \
 	test-sim-runtime-3d-domain-contract \
 	test-sim-runtime-3d-solver-contract \
+	test-scene-core-sim-runtime-step-contract \
+	test-menu-settings-shell-contract \
 	test-quality-profiles-contract \
 	test-config-loader-contract \
 	test-sim-runtime-backend-reporting-contract \
@@ -436,7 +438,7 @@ STABLE_TEST_TARGETS := \
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool runtime_scene_emitter_diag_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-sim-runtime-emitter-contract test-sim-runtime-obstacle-contract test-sim-runtime-backend-3d-emitter-contract test-sim-runtime-backend-3d-attached-emitter-contract test-sim-runtime-backend-3d-obstacle-contract test-sim-runtime-backend-3d-retained-obstacle-contract test-sim-runtime-3d-anchor-contract test-sim-runtime-3d-footprint-contract test-sim-runtime-3d-space-contract test-sim-runtime-3d-domain-contract test-sim-runtime-3d-solver-contract test-quality-profiles-contract test-config-loader-contract test-sim-runtime-backend-reporting-contract test-sim-runtime-backend-dispatch-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-retained-runtime-scene-overlay-geom-contract test-retained-runtime-scene-overlay-readout-contract test-retained-runtime-scene-overlay-space-contract test-scene-runtime-launch-projection-contract test-runtime-scene-3d-truth-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff test-volume-frames-3d-export-contract test-volume-frames-3d-tiny-parity-contract shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool runtime_scene_emitter_diag_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-sim-runtime-emitter-contract test-sim-runtime-obstacle-contract test-sim-runtime-backend-3d-emitter-contract test-sim-runtime-backend-3d-attached-emitter-contract test-sim-runtime-backend-3d-obstacle-contract test-sim-runtime-backend-3d-retained-obstacle-contract test-sim-runtime-3d-anchor-contract test-sim-runtime-3d-footprint-contract test-sim-runtime-3d-space-contract test-sim-runtime-3d-domain-contract test-sim-runtime-3d-solver-contract test-scene-core-sim-runtime-step-contract test-menu-settings-shell-contract test-quality-profiles-contract test-config-loader-contract test-sim-runtime-backend-reporting-contract test-sim-runtime-backend-dispatch-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-retained-runtime-scene-overlay-geom-contract test-retained-runtime-scene-overlay-readout-contract test-retained-runtime-scene-overlay-space-contract test-scene-runtime-launch-projection-contract test-runtime-scene-3d-truth-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff test-volume-frames-3d-export-contract test-volume-frames-3d-tiny-parity-contract shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -612,6 +614,31 @@ SIM_RUNTIME_3D_SOLVER_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(CORE_SIM_DIR)/src/core_sim.c
+
+SCENE_CORE_SIM_RUNTIME_STEP_TEST_SRCS := \
+	tests/scene_core_sim_runtime_step_contract_test.c \
+	$(SRC_DIR)/app/scene_core_sim_runtime_step.c \
+	$(SRC_DIR)/app/scene_apply.c \
+	$(SRC_DIR)/physics/objects/object_manager.c \
+	$(SRC_DIR)/physics/rigid/rigid2d.c \
+	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
+
+MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS := \
+	tests/menu_settings_shell_contract_test.c \
+	$(SRC_DIR)/app/menu/menu_settings_schema.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_common.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_2d.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_3d.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_wind.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_structural.c \
+	$(SRC_DIR)/app/menu/menu_settings_draft.c \
+	$(SRC_DIR)/app/quality_profiles.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c
 
 QUALITY_PROFILES_CONTRACT_TEST_SRCS := \
 	tests/quality_profiles_contract_test.c \
@@ -864,6 +891,20 @@ test-sim-runtime-3d-solver-contract: $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS)
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_3d_solver_contract_test $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_3d_solver_contract_test
+
+test-scene-core-sim-runtime-step-contract: $(SCENE_CORE_SIM_RUNTIME_STEP_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-o $(BUILD_DIR)/scene_core_sim_runtime_step_contract_test $(SCENE_CORE_SIM_RUNTIME_STEP_TEST_SRCS) -lm
+	$(BUILD_DIR)/scene_core_sim_runtime_step_contract_test
+
+test-menu-settings-shell-contract: $(MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/menu_settings_shell_contract_test $(MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/menu_settings_shell_contract_test
 
 test-quality-profiles-contract: $(QUALITY_PROFILES_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)

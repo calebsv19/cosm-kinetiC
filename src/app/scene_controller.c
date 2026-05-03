@@ -15,6 +15,7 @@
 #include "app/scene_loop_diag.h"
 #include "app/scene_loop_policy.h"
 #include "app/scene_controller_util.h"
+#include "app/scene_core_sim_runtime_step.h"
 #include "app/sim_mode.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
@@ -484,60 +485,12 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
         scene->dt = dt;
         ts_start_timer("physics");
         {
-            AppConfig step_cfg = *cfg;
-            SimModeStepPolicy step_policy = sim_mode_step_policy(&scene->mode_route,
-                                                                 scene->preset ? scene->preset->dimension_mode
-                                                                              : SCENE_DIMENSION_MODE_2D);
-            if (step_policy.constrained_3d_active) {
-                if (step_cfg.physics_substeps < step_policy.min_substeps) {
-                    step_cfg.physics_substeps = step_policy.min_substeps;
-                }
-                step_cfg.fluid_buoyancy_force *= step_policy.buoyancy_scale;
-            }
-            int substeps = step_cfg.physics_substeps > 0 ? step_cfg.physics_substeps : 1;
-            double sub_dt = dt / (double)substeps;
-            for (int i = 0; i < substeps; ++i) {
-                if (mode_hooks && mode_hooks->pre_substep) {
-                    mode_hooks->pre_substep(scene, sub_dt);
-                }
-
-                scene_apply_emitters(scene, sub_dt);
-                scene_apply_boundary_flows(scene, sub_dt);
-                scene_enforce_obstacles(scene);
-
-                ts_start_timer("fluid_step");
-                {
-                    sim_runtime_backend_step(scene->backend,
-                                             scene,
-                                             &step_cfg,
-                                             sub_dt);
-                }
-                ts_stop_timer("fluid_step");
-
-                scene_enforce_obstacles(scene);
-                scene_enforce_boundary_flows(scene);
-
-                if (mode_hooks && mode_hooks->post_substep) {
-                    mode_hooks->post_substep(scene, sub_dt);
-                }
-
-                object_manager_step(&scene->objects, sub_dt, &step_cfg, scene->objects_gravity_enabled);
-                for (size_t ii = 0; ii < scene->import_shape_count; ++ii) {
-                    int body_idx = scene->import_body_map[ii];
-                    if (body_idx < 0 || body_idx >= scene->objects.count) continue;
-                    RigidBody2D *b = &scene->objects.objects[body_idx].body;
-                    scene->import_shapes[ii].position_x = b->position.x / (float)cfg->window_w;
-                    scene->import_shapes[ii].position_y = b->position.y / (float)cfg->window_h;
-                    scene->import_shapes[ii].rotation_deg = b->angle * 180.0f / (float)M_PI;
-                }
-                scene_rasterize_dynamic_obstacles(scene);
-                sim_runtime_backend_inject_object_motion(scene->backend, scene);
-                scene->time += sub_dt;
-            }
+            (void)physics_sim_scene_core_sim_step(scene, cfg, mode_hooks, dt, NULL);
         }
         ts_stop_timer("physics");
         frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_SIM_STEP;
     } else {
+        physics_sim_scene_core_sim_set_paused(scene, true);
         scene_enforce_obstacles(scene);
     }
 

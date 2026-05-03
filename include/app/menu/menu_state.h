@@ -1,11 +1,10 @@
 #ifndef MENU_STATE_H
 #define MENU_STATE_H
 
+#include "app/menu/menu_mode_utils.h"
 #include "app/menu/menu_types.h"
 
 bool menu_point_in_rect(int x, int y, const SDL_Rect *rect);
-
-void menu_clamp_grid_size(AppConfig *cfg);
 void menu_apply_quality_profile_index(SceneMenuInteraction *ctx, int index);
 void menu_set_custom_quality(SceneMenuInteraction *ctx);
 void menu_cycle_quality(SceneMenuInteraction *ctx, int delta);
@@ -16,11 +15,6 @@ void menu_clear_status(SceneMenuInteraction *ctx);
 void menu_clear_retained_scene_selection(SceneMenuInteraction *ctx);
 
 void menu_run_headless_batch(SceneMenuInteraction *ctx);
-
-SimulationMode menu_normalize_sim_mode(SimulationMode mode);
-const char *menu_mode_label(SimulationMode mode);
-SpaceMode menu_normalize_space_mode(SpaceMode mode);
-const char *menu_space_mode_label(SpaceMode mode);
 
 int menu_visible_slot_count(const SceneMenuInteraction *ctx);
 int menu_slot_index_from_visible_row(const SceneMenuInteraction *ctx, int row_index);
