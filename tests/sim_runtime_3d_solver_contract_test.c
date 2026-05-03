@@ -1,4 +1,5 @@
 #include "app/sim_runtime_3d_solver.h"
+#include "app/sim_runtime_3d_solver_core_sim.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -462,6 +463,63 @@ static bool test_closed_ceiling_cancels_upward_wall_velocity(void) {
     return true;
 }
 
+static bool test_core_sim_solver_shell_runs_single_first_pass(void) {
+    SimRuntime3DDomainDesc desc = test_desc();
+    SimRuntime3DVolume volume = {0};
+    SimRuntime3DSolverScratch scratch = {0};
+    CoreSimLoopState loop = {0};
+    CoreSimFrameOutcome outcome = {0};
+    AppConfig cfg = {0};
+    size_t center = 0;
+    bool ok = false;
+
+    desc.grid_w = 6;
+    desc.grid_h = 6;
+    desc.grid_d = 6;
+    desc.slice_cell_count = 36;
+    desc.cell_count = 216;
+    desc.world_max_x = 6.0f;
+    desc.world_max_y = 6.0f;
+    desc.world_max_z = 6.0f;
+
+    if (!sim_runtime_3d_volume_init(&volume, &desc)) return false;
+    if (!sim_runtime_3d_solver_scratch_init(&scratch, &desc)) {
+        sim_runtime_3d_volume_destroy(&volume);
+        return false;
+    }
+
+    cfg.fluid_solver_iterations = 8;
+    cfg.velocity_damping = 0.98f;
+    cfg.density_diffusion = 0.10f;
+    cfg.density_decay = 0.0f;
+    cfg.fluid_buoyancy_force = 1.0f;
+
+    center = sim_runtime_3d_volume_index(&desc, 2, 3, 3);
+    volume.density[center] = 12.0f;
+    volume.velocity_x[center] = 2.0f;
+
+    ok = sim_runtime_3d_solver_core_sim_step_first_pass(&loop,
+                                                        &volume,
+                                                        &scratch,
+                                                        NULL,
+                                                        NULL,
+                                                        &cfg,
+                                                        0.5,
+                                                        &outcome);
+    ok = ok &&
+         outcome.status == CORE_SIM_STATUS_OK &&
+         outcome.ticks_executed == 1u &&
+         outcome.passes_executed == 1u &&
+         outcome.failed_pass_id == 0u &&
+         (outcome.reason_bits & CORE_SIM_FRAME_REASON_TICK_EXECUTED) != 0u &&
+         (outcome.reason_bits & CORE_SIM_FRAME_REASON_RENDER_REQUESTED) != 0u &&
+         volume.density[center] < 12.0f;
+
+    sim_runtime_3d_solver_scratch_destroy(&scratch);
+    sim_runtime_3d_volume_destroy(&volume);
+    return ok;
+}
+
 int main(void) {
     if (!test_solver_scratch_capture_and_clear()) {
         fprintf(stderr, "sim_runtime_3d_solver_contract_test: scratch capture/clear failed\n");
@@ -501,6 +559,10 @@ int main(void) {
     }
     if (!test_closed_ceiling_cancels_upward_wall_velocity()) {
         fprintf(stderr, "sim_runtime_3d_solver_contract_test: closed-ceiling wall response failed\n");
+        return 1;
+    }
+    if (!test_core_sim_solver_shell_runs_single_first_pass()) {
+        fprintf(stderr, "sim_runtime_3d_solver_contract_test: core-sim solver shell failed\n");
         return 1;
     }
     fprintf(stdout, "sim_runtime_3d_solver_contract_test: success\n");

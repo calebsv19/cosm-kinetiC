@@ -4,6 +4,7 @@
 #include "app/sim_runtime_backend_3d_scaffold_internal.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
+#include "app/sim_runtime_3d_solver_core_sim.h"
 #include "app/sim_runtime_obstacle.h"
 
 #include <math.h>
@@ -27,6 +28,7 @@ static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
     if (!state) return;
     sim_runtime_3d_volume_clear(&state->volume);
     sim_runtime_3d_solver_scratch_clear(&state->solver_scratch);
+    core_sim_loop_reset(&state->solver_loop);
     backend_3d_scaffold_reset_obstacles(state);
     state->emitter_step_emitters_applied = 0;
     state->emitter_step_free_emitters_applied = 0;
@@ -309,12 +311,14 @@ static void backend_3d_scaffold_step(SimRuntimeBackend *backend,
         scene_up_axis.y = state->scene_up_y;
         scene_up_axis.z = state->scene_up_z;
     }
-    if (!sim_runtime_3d_solver_step_first_pass(&state->volume,
-                                               &state->solver_scratch,
-                                               state->obstacle_occupancy,
-                                               &scene_up_axis,
-                                               cfg,
-                                               dt)) {
+    if (!sim_runtime_3d_solver_core_sim_step_first_pass(&state->solver_loop,
+                                                        &state->volume,
+                                                        &state->solver_scratch,
+                                                        state->obstacle_occupancy,
+                                                        &scene_up_axis,
+                                                        cfg,
+                                                        dt,
+                                                        NULL)) {
         return;
     }
     state->debug_volume_stats_dirty = true;
@@ -584,6 +588,10 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
         return NULL;
     }
     if (!sim_runtime_3d_solver_scratch_init(&state->solver_scratch, &desc)) {
+        backend_3d_scaffold_destroy(backend);
+        return NULL;
+    }
+    if (!core_sim_loop_init(&state->solver_loop, NULL)) {
         backend_3d_scaffold_destroy(backend);
         return NULL;
     }

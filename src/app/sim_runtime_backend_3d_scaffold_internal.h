@@ -9,10 +9,12 @@
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
 #include "app/sim_runtime_backend.h"
+#include "core_sim.h"
 
 typedef struct SimRuntimeBackend3DScaffold {
     SimRuntime3DVolume volume;
     SimRuntime3DSolverScratch solver_scratch;
+    CoreSimLoopState solver_loop;
     SimRuntimeObstacleContract obstacle_contract;
     const struct SceneState *scene_ref;
     int compatibility_slice_z;

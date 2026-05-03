@@ -299,10 +299,11 @@ CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
 CORE_OBJECT_DIR := $(SHARED_ROOT)/core/core_object
 CORE_UNITS_DIR := $(SHARED_ROOT)/core/core_units
 CORE_PANE_DIR := $(SHARED_ROOT)/core/core_pane
+CORE_SIM_DIR ?= ../shared/core/core_sim
 CORE_TRACE_DIR := $(SHARED_ROOT)/core/core_trace
 CORE_THEME_DIR := $(SHARED_ROOT)/core/core_theme
 CORE_FONT_DIR := $(SHARED_ROOT)/core/core_font
-CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(KIT_PANE_DIR)/include
+CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_SIM_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(KIT_PANE_DIR)/include
 
 CORE_BASE_SRCS := $(CORE_BASE_DIR)/src/core_base.c
 CORE_IO_SRCS := $(CORE_IO_DIR)/src/core_io.c
@@ -313,6 +314,7 @@ CORE_SCENE_COMPILE_SRCS := $(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c
 CORE_OBJECT_SRCS := $(CORE_OBJECT_DIR)/src/core_object.c
 CORE_UNITS_SRCS := $(CORE_UNITS_DIR)/src/core_units.c
 CORE_PANE_SRCS := $(CORE_PANE_DIR)/src/core_pane.c
+CORE_SIM_SRCS := $(CORE_SIM_DIR)/src/core_sim.c
 CORE_TRACE_SRCS := $(CORE_TRACE_DIR)/src/core_trace.c
 CORE_THEME_SRCS := $(CORE_THEME_DIR)/src/core_theme.c
 CORE_FONT_SRCS := $(CORE_FONT_DIR)/src/core_font.c
@@ -332,13 +334,14 @@ CORE_SCENE_COMPILE_OBJS := $(patsubst $(CORE_SCENE_COMPILE_DIR)/src/%.c,$(BUILD_
 CORE_OBJECT_OBJS := $(patsubst $(CORE_OBJECT_DIR)/src/%.c,$(BUILD_DIR)/core_object/%.o,$(CORE_OBJECT_SRCS))
 CORE_UNITS_OBJS := $(patsubst $(CORE_UNITS_DIR)/src/%.c,$(BUILD_DIR)/core_units/%.o,$(CORE_UNITS_SRCS))
 CORE_PANE_OBJS := $(patsubst $(CORE_PANE_DIR)/src/%.c,$(BUILD_DIR)/core_pane/%.o,$(CORE_PANE_SRCS))
+CORE_SIM_OBJS := $(patsubst $(CORE_SIM_DIR)/src/%.c,$(BUILD_DIR)/core_sim/%.o,$(CORE_SIM_SRCS))
 CORE_TRACE_OBJS := $(patsubst $(CORE_TRACE_DIR)/src/%.c,$(BUILD_DIR)/core_trace/%.o,$(CORE_TRACE_SRCS))
 CORE_THEME_OBJS := $(patsubst $(CORE_THEME_DIR)/src/%.c,$(BUILD_DIR)/core_theme/%.o,$(CORE_THEME_SRCS))
 CORE_FONT_OBJS := $(patsubst $(CORE_FONT_DIR)/src/%.c,$(BUILD_DIR)/core_font/%.o,$(CORE_FONT_SRCS))
 KIT_VIZ_OBJS := $(patsubst $(KIT_VIZ_DIR)/src/%.c,$(BUILD_DIR)/kit_viz/%.o,$(KIT_VIZ_SRCS))
 KIT_RENDER_OBJS := $(patsubst $(KIT_RENDER_DIR)/src/%.c,$(BUILD_DIR)/kit_render/%.o,$(KIT_RENDER_SRCS))
 KIT_PANE_OBJS := $(patsubst $(KIT_PANE_DIR)/src/%.c,$(BUILD_DIR)/kit_pane/%.o,$(KIT_PANE_SRCS))
-OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_OBJECT_OBJS) $(CORE_UNITS_OBJS) $(CORE_PANE_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(KIT_VIZ_OBJS) $(KIT_RENDER_OBJS) $(KIT_PANE_OBJS)
+OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_OBJECT_OBJS) $(CORE_UNITS_OBJS) $(CORE_PANE_OBJS) $(CORE_SIM_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(KIT_VIZ_OBJS) $(KIT_RENDER_OBJS) $(KIT_PANE_OBJS)
 DEPS := $(OBJS:.o=.d)
 CORE_PACK_TOOL_SRCS := \
 	$(VF2D_PACK_TOOL_SRC) \
@@ -606,7 +609,9 @@ SIM_RUNTIME_3D_SOLVER_TEST_SRCS := \
 	tests/sim_runtime_3d_solver_contract_test.c \
 	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
-	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
 
 QUALITY_PROFILES_CONTRACT_TEST_SRCS := \
 	tests/quality_profiles_contract_test.c \
@@ -856,7 +861,7 @@ test-sim-runtime-3d-solver-contract: $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
 		-I$(INC_DIR) -I$(SRC_DIR) \
-		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_3d_solver_contract_test $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_3d_solver_contract_test
 
@@ -1089,6 +1094,10 @@ $(BUILD_DIR)/core_units/%.o: $(CORE_UNITS_DIR)/src/%.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/core_pane/%.o: $(CORE_PANE_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/core_sim/%.o: $(CORE_SIM_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
