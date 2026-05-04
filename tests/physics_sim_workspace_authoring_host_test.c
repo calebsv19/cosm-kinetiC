@@ -279,6 +279,46 @@ static void test_font_theme_overlay_controls_preview_state(void) {
     assert(host.font_theme_needs_theme_apply == 1u);
 }
 
+static void test_cancel_preview_restores_captured_text_size(void) {
+    PhysicsSimWorkspaceAuthoringHostState host;
+    AppConfig cfg;
+    SDL_Event alt_c;
+    SDL_Event alt_v;
+    SDL_Event click;
+    int x = 0;
+    int y = 0;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.text_zoom_step = 0;
+    physics_sim_workspace_authoring_host_reset(&host);
+    physics_sim_workspace_authoring_host_set_viewport(&host, 1280, 720);
+
+    alt_c = authoring_key_event(SDL_KEYDOWN, SDL_SCANCODE_C, SDLK_c, KMOD_ALT);
+    alt_v = authoring_key_event(SDL_KEYDOWN, SDL_SCANCODE_V, SDLK_v, KMOD_ALT);
+    assert(physics_sim_workspace_authoring_host_handle_sdl_event(&host, &alt_c, 0, &cfg));
+    assert(physics_sim_workspace_authoring_host_handle_sdl_event(&host, &alt_v, 0, &cfg));
+    assert(host.font_theme_baseline_ready == 1u);
+    assert(physics_sim_workspace_authoring_host_cycle_overlay(&host).code == CORE_OK);
+    assert(physics_sim_workspace_authoring_host_font_theme_overlay_active(&host));
+
+    authoring_font_theme_button_point(1280,
+                                      720,
+                                      KIT_WORKSPACE_AUTHORING_FONT_THEME_BUTTON_TEXT_SIZE_INC,
+                                      &x,
+                                      &y);
+    click = authoring_mouse_down(x, y);
+    assert(physics_sim_workspace_authoring_host_handle_sdl_event(&host, &click, 0, &cfg));
+    assert(cfg.text_zoom_step == 1);
+    assert(host.font_theme_pending_changes == 1u);
+
+    assert(physics_sim_workspace_authoring_host_cancel_preview(&host, &cfg).code == CORE_OK);
+    assert(!physics_sim_workspace_authoring_host_active(&host));
+    assert(host.cancel_count == 1u);
+    assert(host.font_theme_baseline_ready == 0u);
+    assert(cfg.text_zoom_step == 0);
+    assert(host.font_theme_needs_font_reload == 1u);
+}
+
 int main(void) {
     test_entry_chord_and_cancel();
     test_text_entry_blocks_inactive_entry_chord();
@@ -287,5 +327,6 @@ int main(void) {
     test_overlay_buttons_control_state();
     test_pane_overlay_rows_use_scene_editor_pane_host();
     test_font_theme_overlay_controls_preview_state();
+    test_cancel_preview_restores_captured_text_size();
     return 0;
 }

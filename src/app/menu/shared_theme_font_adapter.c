@@ -11,7 +11,9 @@
 
 static bool g_theme_runtime_initialized = false;
 static CoreThemePresetId g_theme_runtime_preset = CORE_THEME_PRESET_GREYSCALE;
-static const char* k_theme_persist_path = "theme_preset.txt";
+static const char* k_theme_persist_path = "data/runtime/theme_preset.txt";
+static const char* k_theme_legacy_persist_path = "theme_preset.txt";
+static const char* k_font_persist_path = "data/runtime/font_preset.txt";
 static const CoreThemePresetId k_theme_cycle_order[] = {
     CORE_THEME_PRESET_DAW_DEFAULT,
     CORE_THEME_PRESET_MAP_FORGE_DEFAULT,
@@ -67,6 +69,11 @@ static void trim_trailing_whitespace(char* text) {
         text[len - 1] = '\0';
         --len;
     }
+}
+
+static void ensure_runtime_persist_dir(void) {
+    (void)mkdir("data", 0777);
+    (void)mkdir("data/runtime", 0777);
 }
 
 static SDL_Color theme_color_or_default(const CoreThemePreset* preset,
@@ -297,6 +304,9 @@ bool physics_sim_shared_theme_load_persisted(void) {
     char preset_name[128];
     file = fopen(k_theme_persist_path, "r");
     if (!file) {
+        file = fopen(k_theme_legacy_persist_path, "r");
+    }
+    if (!file) {
         return false;
     }
     if (!fgets(preset_name, sizeof(preset_name), file)) {
@@ -317,6 +327,7 @@ bool physics_sim_shared_theme_save_persisted(void) {
     if (!physics_sim_shared_theme_current_preset(preset_name, sizeof(preset_name))) {
         return false;
     }
+    ensure_runtime_persist_dir();
     file = fopen(k_theme_persist_path, "w");
     if (!file) {
         return false;
@@ -346,17 +357,56 @@ bool physics_sim_shared_font_current_preset(char* out_name, size_t out_name_size
     }
     preset_name = getenv("PHYSICS_SIM_FONT_PRESET");
     if (!preset_name || !preset_name[0]) {
-        preset_name = "daw_default";
+        preset_name = "ide";
     }
     r = core_font_get_preset_by_name(preset_name, &preset);
     if (r.code != CORE_OK) {
-        preset_name = core_font_preset_name(CORE_FONT_PRESET_DAW_DEFAULT);
+        preset_name = "ide";
+        r = core_font_get_preset_by_name(preset_name, &preset);
+        if (r.code != CORE_OK) {
+            preset_name = core_font_preset_name(CORE_FONT_PRESET_DAW_DEFAULT);
+        }
         if (!preset_name || !preset_name[0]) {
             return false;
         }
     }
     strncpy(out_name, preset_name, out_name_size - 1);
     out_name[out_name_size - 1] = '\0';
+    return true;
+}
+
+bool physics_sim_shared_font_load_persisted(void) {
+    FILE* file;
+    char preset_name[128];
+    file = fopen(k_font_persist_path, "r");
+    if (!file) {
+        return false;
+    }
+    if (!fgets(preset_name, sizeof(preset_name), file)) {
+        fclose(file);
+        return false;
+    }
+    fclose(file);
+    trim_trailing_whitespace(preset_name);
+    if (!preset_name[0]) {
+        return false;
+    }
+    return physics_sim_shared_font_set_preset(preset_name);
+}
+
+bool physics_sim_shared_font_save_persisted(void) {
+    FILE* file;
+    char preset_name[128];
+    if (!physics_sim_shared_font_current_preset(preset_name, sizeof(preset_name))) {
+        return false;
+    }
+    ensure_runtime_persist_dir();
+    file = fopen(k_font_persist_path, "w");
+    if (!file) {
+        return false;
+    }
+    fprintf(file, "%s\n", preset_name);
+    fclose(file);
     return true;
 }
 

@@ -14,6 +14,7 @@
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_types.h"
 #include "app/menu/menu_window.h"
+#include "app/menu/shared_theme_font_adapter.h"
 #include "app/menu/workspace_authoring/physics_sim_workspace_authoring_host.h"
 #include "app/menu/workspace_authoring/physics_sim_workspace_authoring_overlay.h"
 #include "app/data_paths.h"
@@ -87,16 +88,8 @@ static bool menu_apply_text_zoom_shortcut(SceneMenuInteraction *ctx,
     return true;
 }
 
-static bool menu_workspace_authoring_event_filter(void *user,
-                                                  const SDL_Event *event) {
-    SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
-    int consumed = 0;
-    if (!ctx) return false;
-    consumed = physics_sim_workspace_authoring_host_handle_sdl_event(
-        &ctx->workspace_authoring,
-        event,
-        menu_text_entry_active(ctx),
-        ctx->cfg);
+static void menu_workspace_authoring_apply_pending_visuals(SceneMenuInteraction *ctx) {
+    if (!ctx) return;
     if (ctx->workspace_authoring.font_theme_needs_theme_apply) {
         (void)menu_apply_shared_theme(ctx);
         ctx->workspace_authoring.font_theme_needs_theme_apply = 0u;
@@ -107,6 +100,44 @@ static bool menu_workspace_authoring_event_filter(void *user,
         }
         menu_update_scrollbar(ctx);
         ctx->workspace_authoring.font_theme_needs_font_reload = 0u;
+    }
+}
+
+static void menu_workspace_authoring_persist_accepted(SceneMenuInteraction *ctx) {
+    if (!ctx) return;
+    if (!physics_sim_shared_theme_save_persisted()) {
+        fprintf(stderr, "[menu] Failed to persist authoring theme preset.\n");
+    }
+    if (!physics_sim_shared_font_save_persisted()) {
+        fprintf(stderr, "[menu] Failed to persist authoring font preset.\n");
+    }
+    menu_persist_runtime_config(ctx->cfg);
+}
+
+static void menu_workspace_authoring_cancel_active_preview(SceneMenuInteraction *ctx) {
+    if (!ctx || !physics_sim_workspace_authoring_host_active(&ctx->workspace_authoring)) {
+        return;
+    }
+    (void)physics_sim_workspace_authoring_host_cancel_preview(&ctx->workspace_authoring,
+                                                              ctx->cfg);
+    menu_workspace_authoring_apply_pending_visuals(ctx);
+}
+
+static bool menu_workspace_authoring_event_filter(void *user,
+                                                  const SDL_Event *event) {
+    SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
+    uint32_t before_apply_count = 0u;
+    int consumed = 0;
+    if (!ctx) return false;
+    before_apply_count = ctx->workspace_authoring.apply_count;
+    consumed = physics_sim_workspace_authoring_host_handle_sdl_event(
+        &ctx->workspace_authoring,
+        event,
+        menu_text_entry_active(ctx),
+        ctx->cfg);
+    menu_workspace_authoring_apply_pending_visuals(ctx);
+    if (ctx->workspace_authoring.apply_count != before_apply_count) {
+        menu_workspace_authoring_persist_accepted(ctx);
     }
     return consumed ? true : false;
 }
@@ -806,6 +837,7 @@ restart_menu:
     if (ctx.editing_output_root) {
         menu_finish_output_root_edit(&ctx, false);
     }
+    menu_workspace_authoring_cancel_active_preview(&ctx);
 
     menu_destroy_window(&ctx);
     if (device_lost && ctx.use_shared_device) {

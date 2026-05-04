@@ -145,7 +145,7 @@ static void physics_sim_workspace_authoring_capture_font_theme_baseline(
                                                 sizeof(host->baseline_font_preset))) {
         physics_sim_workspace_authoring_copy_text(host->baseline_font_preset,
                                                   sizeof(host->baseline_font_preset),
-                                                  "daw_default");
+                                                  "ide");
     }
     host->font_theme_baseline_ready = 1u;
     host->font_theme_pending_changes = 0u;
@@ -254,6 +254,14 @@ CoreResult physics_sim_workspace_authoring_host_cancel(
     host->overlay_mode = PHYSICS_SIM_WORKSPACE_AUTHORING_OVERLAY_PANE;
     host->last_event_exited = 1u;
     return core_result_ok();
+}
+
+CoreResult physics_sim_workspace_authoring_host_cancel_preview(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    AppConfig *cfg) {
+    if (!host) return physics_sim_workspace_authoring_invalid("null authoring host");
+    physics_sim_workspace_authoring_restore_font_theme_baseline(host, cfg);
+    return physics_sim_workspace_authoring_host_cancel(host);
 }
 
 int physics_sim_workspace_authoring_host_apply_font_theme_button(
@@ -376,8 +384,7 @@ static int physics_sim_workspace_authoring_host_handle_overlay_click(
         host->overlay_button_click_count += 1u;
         return 1;
     case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_CANCEL:
-        physics_sim_workspace_authoring_restore_font_theme_baseline(host, cfg);
-        (void)physics_sim_workspace_authoring_host_cancel(host);
+        (void)physics_sim_workspace_authoring_host_cancel_preview(host, cfg);
         host->overlay_button_click_count += 1u;
         return 1;
     case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_ADD:
@@ -517,8 +524,7 @@ int physics_sim_workspace_authoring_host_handle_sdl_event(
     }
     if (chord_pair_pressed) {
         if (physics_sim_workspace_authoring_host_active(host)) {
-            physics_sim_workspace_authoring_restore_font_theme_baseline(host, cfg);
-            (void)physics_sim_workspace_authoring_host_cancel(host);
+            (void)physics_sim_workspace_authoring_host_cancel_preview(host, cfg);
         } else {
             (void)physics_sim_workspace_authoring_host_enter(host);
             physics_sim_workspace_authoring_capture_font_theme_baseline(host, cfg);
@@ -569,8 +575,7 @@ int physics_sim_workspace_authoring_host_handle_sdl_event(
     }
 
     if (key == KIT_WORKSPACE_AUTHORING_KEY_ESCAPE) {
-        physics_sim_workspace_authoring_restore_font_theme_baseline(host, cfg);
-        (void)physics_sim_workspace_authoring_host_cancel(host);
+        (void)physics_sim_workspace_authoring_host_cancel_preview(host, cfg);
         physics_sim_workspace_authoring_note_consumed(host, 0);
         return 1;
     }

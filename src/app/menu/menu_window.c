@@ -114,6 +114,7 @@ bool menu_create_window(SceneMenuInteraction *ctx) {
     if (!ctx) return false;
 
     physics_sim_shared_theme_load_persisted();
+    physics_sim_shared_font_load_persisted();
 
     SDL_Window *window = SDL_CreateWindow(
         "Physics Sim - Scene Editor",
@@ -180,7 +181,6 @@ bool menu_reload_fonts(SceneMenuInteraction *ctx) {
 
 void menu_destroy_window(SceneMenuInteraction *ctx) {
     if (!ctx) return;
-    physics_sim_shared_theme_save_persisted();
     menu_close_fonts(ctx);
 
     if (ctx->renderer) {

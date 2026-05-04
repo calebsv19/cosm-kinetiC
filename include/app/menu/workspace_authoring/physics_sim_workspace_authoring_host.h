@@ -74,6 +74,9 @@ CoreResult physics_sim_workspace_authoring_host_apply(
     PhysicsSimWorkspaceAuthoringHostState *host);
 CoreResult physics_sim_workspace_authoring_host_cancel(
     PhysicsSimWorkspaceAuthoringHostState *host);
+CoreResult physics_sim_workspace_authoring_host_cancel_preview(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    AppConfig *cfg);
 CoreResult physics_sim_workspace_authoring_host_cycle_overlay(
     PhysicsSimWorkspaceAuthoringHostState *host);
 int physics_sim_workspace_authoring_host_handle_sdl_event(
