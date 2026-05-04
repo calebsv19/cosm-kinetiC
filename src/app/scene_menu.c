@@ -15,6 +15,7 @@
 #include "app/menu/menu_types.h"
 #include "app/menu/menu_window.h"
 #include "app/menu/workspace_authoring/physics_sim_workspace_authoring_host.h"
+#include "app/menu/workspace_authoring/physics_sim_workspace_authoring_overlay.h"
 #include "app/data_paths.h"
 #include "app/scene_loop_diag.h"
 #include "app/scene_loop_policy.h"
@@ -374,6 +375,9 @@ restart_menu:
         }
         scene_menu_update_dynamic_layout(&ctx, win_w, win_h);
         menu_update_scrollbar(&ctx);
+        physics_sim_workspace_authoring_host_set_viewport(&ctx.workspace_authoring,
+                                                          win_w,
+                                                          win_h);
 
         InputCommands cmds;
         input_poll_events_with_wait(&cmds,
@@ -742,6 +746,7 @@ restart_menu:
                       status_y,
                       ctx.status_wait_ack ? menu_color_accent() : menu_color_text_dim());
         }
+        physics_sim_workspace_authoring_overlay_draw(&ctx, win_w, win_h);
 
         VkResult end = vk_renderer_end_frame((VkRenderer *)ctx.renderer, cmd);
         if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {

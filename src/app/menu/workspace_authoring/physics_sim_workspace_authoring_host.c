@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+#include "kit_workspace_authoring_ui.h"
+
 static CoreResult physics_sim_workspace_authoring_invalid(const char *message) {
     CoreResult result = { CORE_ERR_INVALID_ARG, message };
     return result;
@@ -94,6 +96,15 @@ void physics_sim_workspace_authoring_host_reset(
     host->overlay_mode = PHYSICS_SIM_WORKSPACE_AUTHORING_OVERLAY_PANE;
 }
 
+void physics_sim_workspace_authoring_host_set_viewport(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    int width,
+    int height) {
+    if (!host) return;
+    host->viewport_width = width > 0 ? (uint32_t)width : 0u;
+    host->viewport_height = height > 0 ? (uint32_t)height : 0u;
+}
+
 int physics_sim_workspace_authoring_host_active(
     const PhysicsSimWorkspaceAuthoringHostState *host) {
     return host && host->active ? 1 : 0;
@@ -165,6 +176,48 @@ CoreResult physics_sim_workspace_authoring_host_cycle_overlay(
     return core_result_ok();
 }
 
+static int physics_sim_workspace_authoring_host_handle_overlay_click(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    int x,
+    int y) {
+    KitWorkspaceAuthoringOverlayButton buttons[4];
+    KitWorkspaceAuthoringOverlayButtonId hit = KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_NONE;
+    uint32_t count = 0u;
+    if (!host || !physics_sim_workspace_authoring_host_active(host)) return 0;
+    if (host->viewport_width == 0u) return 0;
+
+    count = kit_workspace_authoring_ui_build_overlay_buttons(
+        (int)host->viewport_width,
+        1,
+        physics_sim_workspace_authoring_host_pane_overlay_active(host),
+        buttons,
+        (uint32_t)(sizeof(buttons) / sizeof(buttons[0])));
+    hit = kit_workspace_authoring_ui_overlay_hit_test(buttons, count, (float)x, (float)y);
+    host->last_overlay_button_id = (uint32_t)hit;
+    switch (hit) {
+    case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_MODE:
+        (void)physics_sim_workspace_authoring_host_cycle_overlay(host);
+        host->overlay_button_click_count += 1u;
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_APPLY:
+        (void)physics_sim_workspace_authoring_host_apply(host);
+        host->overlay_button_click_count += 1u;
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_CANCEL:
+        (void)physics_sim_workspace_authoring_host_cancel(host);
+        host->overlay_button_click_count += 1u;
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_ADD:
+        host->add_stub_count += 1u;
+        host->overlay_button_click_count += 1u;
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_NONE:
+    default:
+        break;
+    }
+    return 0;
+}
+
 int physics_sim_workspace_authoring_host_handle_sdl_event(
     PhysicsSimWorkspaceAuthoringHostState *host,
     const SDL_Event *event,
@@ -190,10 +243,33 @@ int physics_sim_workspace_authoring_host_handle_sdl_event(
         return 0;
     }
 
+    if (event->type == SDL_MOUSEMOTION &&
+        physics_sim_workspace_authoring_host_active(host)) {
+        host->last_pointer_x = event->motion.x > 0 ? (uint32_t)event->motion.x : 0u;
+        host->last_pointer_y = event->motion.y > 0 ? (uint32_t)event->motion.y : 0u;
+        host->last_pointer_ready = 1u;
+        physics_sim_workspace_authoring_note_consumed(host, 1);
+        return 1;
+    }
+
+    if (event->type == SDL_MOUSEBUTTONDOWN &&
+        event->button.button == SDL_BUTTON_LEFT &&
+        physics_sim_workspace_authoring_host_active(host)) {
+        int overlay_hit = 0;
+        host->last_pointer_x = event->button.x > 0 ? (uint32_t)event->button.x : 0u;
+        host->last_pointer_y = event->button.y > 0 ? (uint32_t)event->button.y : 0u;
+        host->last_pointer_ready = 1u;
+        overlay_hit = physics_sim_workspace_authoring_host_handle_overlay_click(
+            host,
+            event->button.x,
+            event->button.y);
+        physics_sim_workspace_authoring_note_consumed(host, overlay_hit ? 0 : 1);
+        return 1;
+    }
+
     if (physics_sim_workspace_authoring_host_active(host) &&
         (event->type == SDL_MOUSEBUTTONDOWN ||
          event->type == SDL_MOUSEBUTTONUP ||
-         event->type == SDL_MOUSEMOTION ||
          event->type == SDL_MOUSEWHEEL ||
          event->type == SDL_TEXTINPUT)) {
         physics_sim_workspace_authoring_note_consumed(host, 1);

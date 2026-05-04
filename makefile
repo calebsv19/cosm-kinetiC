@@ -226,7 +226,9 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/render/TimerHUD/*' \
 	! -path '$(SRC_DIR)/render/TimerHUD_legacy_backup/*')
 VK_RENDERER_SRCS := $(shell find $(VK_RENDERER_DIR)/src -name '*.c')
-KIT_WORKSPACE_AUTHORING_SRCS := $(KIT_WORKSPACE_AUTHORING_DIR)/src/kit_workspace_authoring.c
+KIT_WORKSPACE_AUTHORING_SRCS := \
+	$(KIT_WORKSPACE_AUTHORING_DIR)/src/kit_workspace_authoring.c \
+	$(KIT_WORKSPACE_AUTHORING_DIR)/src/ui/kit_workspace_authoring_ui_overlay.c
 TIMER_HUD_SRCS := $(shell find $(TIMER_HUD_DIR)/src -name '*.c')
 TIMER_HUD_EXTERNAL_SRCS := $(TIMER_HUD_DIR)/external/cJSON.c
 
@@ -772,8 +774,17 @@ SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS := \
 PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS := \
 	tests/physics_sim_workspace_authoring_host_test.c \
 	$(SRC_DIR)/app/menu/workspace_authoring/physics_sim_workspace_authoring_host.c \
+	$(SRC_DIR)/app/menu/workspace_authoring/physics_sim_workspace_authoring_overlay_model.c \
+	$(SRC_DIR)/app/editor/scene_editor_pane_host.c \
 	$(KIT_WORKSPACE_AUTHORING_DIR)/src/kit_workspace_authoring.c \
+	$(KIT_WORKSPACE_AUTHORING_DIR)/src/ui/kit_workspace_authoring_ui_overlay.c \
 	$(CORE_PANE_DIR)/src/core_pane.c \
+	$(KIT_PANE_DIR)/src/kit_pane.c \
+	$(KIT_RENDER_DIR)/src/kit_render.c \
+	$(KIT_RENDER_DIR)/src/kit_render_backend_null.c \
+	$(KIT_RENDER_DIR)/src/kit_render_backend_vk.c \
+	$(CORE_THEME_DIR)/src/core_theme.c \
+	$(CORE_FONT_DIR)/src/core_font.c \
 	$(CORE_BASE_DIR)/src/core_base.c
 
 SCENE_EDITOR_PANE_HOST_TEST_SRCS := \
@@ -974,7 +985,7 @@ test-scene-editor-scene-library-contract: $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS
 test-physics-sim-workspace-authoring-host: $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -I$(KIT_WORKSPACE_AUTHORING_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_PANE_DIR)/include \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(KIT_WORKSPACE_AUTHORING_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_PANE_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_RENDER_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include \
 		-o $(BUILD_DIR)/physics_sim_workspace_authoring_host_test $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS) -lm
 	$(BUILD_DIR)/physics_sim_workspace_authoring_host_test
 

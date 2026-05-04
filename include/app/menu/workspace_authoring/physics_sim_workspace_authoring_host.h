@@ -31,10 +31,22 @@ typedef struct PhysicsSimWorkspaceAuthoringHostState {
     uint32_t last_event_entered;
     uint32_t last_event_exited;
     uint32_t captured_runtime_event_count;
+    uint32_t viewport_width;
+    uint32_t viewport_height;
+    uint32_t last_pointer_x;
+    uint32_t last_pointer_y;
+    uint32_t last_pointer_ready;
+    uint32_t overlay_button_click_count;
+    uint32_t add_stub_count;
+    uint32_t last_overlay_button_id;
 } PhysicsSimWorkspaceAuthoringHostState;
 
 void physics_sim_workspace_authoring_host_reset(
     PhysicsSimWorkspaceAuthoringHostState *host);
+void physics_sim_workspace_authoring_host_set_viewport(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    int width,
+    int height);
 int physics_sim_workspace_authoring_host_active(
     const PhysicsSimWorkspaceAuthoringHostState *host);
 int physics_sim_workspace_authoring_host_pane_overlay_active(
