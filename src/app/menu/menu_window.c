@@ -90,6 +90,24 @@ static bool menu_open_fonts(SceneMenuInteraction *ctx) {
     return true;
 }
 
+bool menu_apply_shared_theme(SceneMenuInteraction *ctx) {
+    PhysicsSimMenuThemePalette shared_palette = {0};
+    MenuThemePalette menu_palette;
+    if (!ctx) return false;
+    if (!physics_sim_shared_theme_resolve_menu_palette(&shared_palette)) {
+        return false;
+    }
+    menu_palette.background = shared_palette.background_fill;
+    menu_palette.panel = shared_palette.panel_fill;
+    menu_palette.text = shared_palette.text_primary;
+    menu_palette.text_dim = shared_palette.text_muted;
+    menu_palette.accent = shared_palette.accent_primary;
+    menu_palette.button_bg = shared_palette.button_fill;
+    menu_palette.button_bg_active = shared_palette.button_active_fill;
+    menu_set_theme_palette(&menu_palette);
+    return true;
+}
+
 bool menu_create_window(SceneMenuInteraction *ctx) {
     int win_w = MENU_WIDTH;
     int win_h = MENU_HEIGHT;
@@ -150,21 +168,7 @@ bool menu_create_window(SceneMenuInteraction *ctx) {
 
     vk_renderer_set_logical_size((VkRenderer *)ctx->renderer, (float)win_w, (float)win_h);
 
-    {
-        PhysicsSimMenuThemePalette shared_palette = {0};
-        if (physics_sim_shared_theme_resolve_menu_palette(&shared_palette)) {
-            MenuThemePalette menu_palette = {
-                .background = shared_palette.background_fill,
-                .panel = shared_palette.panel_fill,
-                .text = shared_palette.text_primary,
-                .text_dim = shared_palette.text_muted,
-                .accent = shared_palette.accent_primary,
-                .button_bg = shared_palette.button_fill,
-                .button_bg_active = shared_palette.button_active_fill
-            };
-            menu_set_theme_palette(&menu_palette);
-        }
-    }
+    (void)menu_apply_shared_theme(ctx);
 
     return menu_open_fonts(ctx);
 }

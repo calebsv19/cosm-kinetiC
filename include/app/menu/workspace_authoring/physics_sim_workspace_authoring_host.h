@@ -4,8 +4,10 @@
 #include <SDL2/SDL.h>
 #include <stdint.h>
 
+#include "app/app_config.h"
 #include "core_base.h"
 #include "kit_workspace_authoring.h"
+#include "kit_workspace_authoring_ui.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +41,19 @@ typedef struct PhysicsSimWorkspaceAuthoringHostState {
     uint32_t overlay_button_click_count;
     uint32_t add_stub_count;
     uint32_t last_overlay_button_id;
+    int baseline_text_zoom_step;
+    char baseline_theme_preset[64];
+    char baseline_font_preset[64];
+    uint8_t font_theme_baseline_ready;
+    uint8_t font_theme_pending_changes;
+    uint8_t font_theme_needs_font_reload;
+    uint8_t font_theme_needs_theme_apply;
+    uint8_t font_theme_status_active;
+    uint32_t font_theme_button_click_count;
+    uint32_t font_theme_change_count;
+    uint32_t font_theme_status_count;
+    uint32_t last_font_theme_button_id;
+    char font_theme_status[160];
 } PhysicsSimWorkspaceAuthoringHostState;
 
 void physics_sim_workspace_authoring_host_reset(
@@ -64,7 +79,12 @@ CoreResult physics_sim_workspace_authoring_host_cycle_overlay(
 int physics_sim_workspace_authoring_host_handle_sdl_event(
     PhysicsSimWorkspaceAuthoringHostState *host,
     const SDL_Event *event,
-    int text_entry_active);
+    int text_entry_active,
+    AppConfig *cfg);
+int physics_sim_workspace_authoring_host_apply_font_theme_button(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    AppConfig *cfg,
+    KitWorkspaceAuthoringFontThemeButtonId button_id);
 
 #ifdef __cplusplus
 }

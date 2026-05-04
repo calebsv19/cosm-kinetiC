@@ -22,6 +22,8 @@ bool physics_sim_shared_theme_set_preset(const char* preset_name);
 bool physics_sim_shared_theme_current_preset(char* out_name, size_t out_name_size);
 bool physics_sim_shared_theme_load_persisted(void);
 bool physics_sim_shared_theme_save_persisted(void);
+bool physics_sim_shared_font_set_preset(const char* preset_name);
+bool physics_sim_shared_font_current_preset(char* out_name, size_t out_name_size);
 bool physics_sim_shared_font_resolve_menu_title(char* out_path, size_t out_path_size, int* out_point_size);
 bool physics_sim_shared_font_resolve_menu_body(char* out_path, size_t out_path_size, int* out_point_size);
 bool physics_sim_shared_font_resolve_menu_small(char* out_path, size_t out_path_size, int* out_point_size);

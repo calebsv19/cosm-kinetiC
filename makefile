@@ -228,7 +228,8 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 VK_RENDERER_SRCS := $(shell find $(VK_RENDERER_DIR)/src -name '*.c')
 KIT_WORKSPACE_AUTHORING_SRCS := \
 	$(KIT_WORKSPACE_AUTHORING_DIR)/src/kit_workspace_authoring.c \
-	$(KIT_WORKSPACE_AUTHORING_DIR)/src/ui/kit_workspace_authoring_ui_overlay.c
+	$(KIT_WORKSPACE_AUTHORING_DIR)/src/ui/kit_workspace_authoring_ui_overlay.c \
+	$(KIT_WORKSPACE_AUTHORING_DIR)/src/ui/kit_workspace_authoring_ui_font_theme.c
 TIMER_HUD_SRCS := $(shell find $(TIMER_HUD_DIR)/src -name '*.c')
 TIMER_HUD_EXTERNAL_SRCS := $(TIMER_HUD_DIR)/external/cJSON.c
 
@@ -775,9 +776,13 @@ PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS := \
 	tests/physics_sim_workspace_authoring_host_test.c \
 	$(SRC_DIR)/app/menu/workspace_authoring/physics_sim_workspace_authoring_host.c \
 	$(SRC_DIR)/app/menu/workspace_authoring/physics_sim_workspace_authoring_overlay_model.c \
+	$(SRC_DIR)/app/menu/shared_theme_font_adapter.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/editor/scene_editor_pane_host.c \
 	$(KIT_WORKSPACE_AUTHORING_DIR)/src/kit_workspace_authoring.c \
 	$(KIT_WORKSPACE_AUTHORING_DIR)/src/ui/kit_workspace_authoring_ui_overlay.c \
+	$(KIT_WORKSPACE_AUTHORING_DIR)/src/ui/kit_workspace_authoring_ui_font_theme.c \
 	$(CORE_PANE_DIR)/src/core_pane.c \
 	$(KIT_PANE_DIR)/src/kit_pane.c \
 	$(KIT_RENDER_DIR)/src/kit_render.c \

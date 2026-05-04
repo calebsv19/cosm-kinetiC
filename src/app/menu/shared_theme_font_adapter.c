@@ -183,7 +183,7 @@ static bool resolve_menu_font_for_tier(CoreFontTextSizeTier tier,
 
     preset_name = getenv("PHYSICS_SIM_FONT_PRESET");
     if (!preset_name || !preset_name[0]) {
-        preset_name = "daw_default";
+        preset_name = "ide";
     }
 
     r = core_font_get_preset_by_name(preset_name, &preset);
@@ -323,6 +323,40 @@ bool physics_sim_shared_theme_save_persisted(void) {
     }
     fprintf(file, "%s\n", preset_name);
     fclose(file);
+    return true;
+}
+
+bool physics_sim_shared_font_set_preset(const char* preset_name) {
+    CoreFontPreset preset = {0};
+    if (!preset_name || !preset_name[0]) {
+        return false;
+    }
+    if (core_font_get_preset_by_name(preset_name, &preset).code != CORE_OK) {
+        return false;
+    }
+    return setenv("PHYSICS_SIM_FONT_PRESET", preset_name, 1) == 0;
+}
+
+bool physics_sim_shared_font_current_preset(char* out_name, size_t out_name_size) {
+    const char* preset_name = NULL;
+    CoreFontPreset preset = {0};
+    CoreResult r;
+    if (!out_name || out_name_size == 0) {
+        return false;
+    }
+    preset_name = getenv("PHYSICS_SIM_FONT_PRESET");
+    if (!preset_name || !preset_name[0]) {
+        preset_name = "daw_default";
+    }
+    r = core_font_get_preset_by_name(preset_name, &preset);
+    if (r.code != CORE_OK) {
+        preset_name = core_font_preset_name(CORE_FONT_PRESET_DAW_DEFAULT);
+        if (!preset_name || !preset_name[0]) {
+            return false;
+        }
+    }
+    strncpy(out_name, preset_name, out_name_size - 1);
+    out_name[out_name_size - 1] = '\0';
     return true;
 }
 

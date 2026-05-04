@@ -2,6 +2,9 @@
 
 #include <string.h>
 
+#include "app/menu/shared_theme_font_adapter.h"
+#include "core_font.h"
+#include "core_theme.h"
 #include "kit_workspace_authoring_ui.h"
 
 static CoreResult physics_sim_workspace_authoring_invalid(const char *message) {
@@ -89,6 +92,95 @@ static void physics_sim_workspace_authoring_note_consumed(
     }
 }
 
+static void physics_sim_workspace_authoring_copy_text(char *dst,
+                                                      size_t dst_size,
+                                                      const char *src) {
+    if (!dst || dst_size == 0) return;
+    if (!src) {
+        dst[0] = '\0';
+        return;
+    }
+    strncpy(dst, src, dst_size - 1);
+    dst[dst_size - 1] = '\0';
+}
+
+static void physics_sim_workspace_authoring_note_font_theme_status(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    const char *status) {
+    if (!host || !status) return;
+    physics_sim_workspace_authoring_copy_text(host->font_theme_status,
+                                              sizeof(host->font_theme_status),
+                                              status);
+    host->font_theme_status_active = 1u;
+    host->font_theme_status_count += 1u;
+}
+
+static void physics_sim_workspace_authoring_note_font_theme_changed(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    int needs_font_reload,
+    int needs_theme_apply) {
+    if (!host) return;
+    host->font_theme_pending_changes = 1u;
+    host->font_theme_change_count += 1u;
+    if (needs_font_reload) {
+        host->font_theme_needs_font_reload = 1u;
+    }
+    if (needs_theme_apply) {
+        host->font_theme_needs_theme_apply = 1u;
+    }
+}
+
+static void physics_sim_workspace_authoring_capture_font_theme_baseline(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    const AppConfig *cfg) {
+    if (!host || host->font_theme_baseline_ready) return;
+    host->baseline_text_zoom_step = cfg ? cfg->text_zoom_step : 0;
+    if (!physics_sim_shared_theme_current_preset(host->baseline_theme_preset,
+                                                 sizeof(host->baseline_theme_preset))) {
+        physics_sim_workspace_authoring_copy_text(host->baseline_theme_preset,
+                                                  sizeof(host->baseline_theme_preset),
+                                                  "greyscale");
+    }
+    if (!physics_sim_shared_font_current_preset(host->baseline_font_preset,
+                                                sizeof(host->baseline_font_preset))) {
+        physics_sim_workspace_authoring_copy_text(host->baseline_font_preset,
+                                                  sizeof(host->baseline_font_preset),
+                                                  "daw_default");
+    }
+    host->font_theme_baseline_ready = 1u;
+    host->font_theme_pending_changes = 0u;
+    host->font_theme_status_active = 0u;
+    host->font_theme_status[0] = '\0';
+}
+
+static void physics_sim_workspace_authoring_clear_font_theme_baseline(
+    PhysicsSimWorkspaceAuthoringHostState *host) {
+    if (!host) return;
+    host->font_theme_baseline_ready = 0u;
+    host->font_theme_pending_changes = 0u;
+    host->font_theme_status_active = 0u;
+    host->font_theme_status[0] = '\0';
+}
+
+static void physics_sim_workspace_authoring_restore_font_theme_baseline(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    AppConfig *cfg) {
+    if (!host || !host->font_theme_baseline_ready) return;
+    if (cfg) {
+        cfg->text_zoom_step = app_config_text_zoom_step_clamp(host->baseline_text_zoom_step);
+        host->font_theme_needs_font_reload = 1u;
+    }
+    if (host->baseline_theme_preset[0] &&
+        physics_sim_shared_theme_set_preset(host->baseline_theme_preset)) {
+        host->font_theme_needs_theme_apply = 1u;
+    }
+    if (host->baseline_font_preset[0] &&
+        physics_sim_shared_font_set_preset(host->baseline_font_preset)) {
+        host->font_theme_needs_font_reload = 1u;
+    }
+    physics_sim_workspace_authoring_clear_font_theme_baseline(host);
+}
+
 void physics_sim_workspace_authoring_host_reset(
     PhysicsSimWorkspaceAuthoringHostState *host) {
     if (!host) return;
@@ -164,6 +256,84 @@ CoreResult physics_sim_workspace_authoring_host_cancel(
     return core_result_ok();
 }
 
+int physics_sim_workspace_authoring_host_apply_font_theme_button(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    AppConfig *cfg,
+    KitWorkspaceAuthoringFontThemeButtonId button_id) {
+    KitWorkspaceAuthoringFontThemeAction action;
+    const char *preset_name = NULL;
+    if (!host ||
+        !physics_sim_workspace_authoring_host_font_theme_overlay_active(host) ||
+        !kit_workspace_authoring_ui_font_theme_button_enabled(button_id)) {
+        return 0;
+    }
+
+    host->last_font_theme_button_id = (uint32_t)button_id;
+    action = kit_workspace_authoring_ui_font_theme_action_for_button(button_id);
+    switch (action.type) {
+    case KIT_WORKSPACE_AUTHORING_FONT_THEME_ACTION_TEXT_SIZE_DEC:
+        if (cfg) {
+            int next_step = app_config_text_zoom_step_clamp(cfg->text_zoom_step - 1);
+            if (next_step != cfg->text_zoom_step) {
+                cfg->text_zoom_step = next_step;
+                physics_sim_workspace_authoring_note_font_theme_changed(host, 1, 0);
+            }
+        }
+        physics_sim_workspace_authoring_note_font_theme_status(host, "Text size decreased.");
+        host->font_theme_button_click_count += 1u;
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_FONT_THEME_ACTION_TEXT_SIZE_INC:
+        if (cfg) {
+            int next_step = app_config_text_zoom_step_clamp(cfg->text_zoom_step + 1);
+            if (next_step != cfg->text_zoom_step) {
+                cfg->text_zoom_step = next_step;
+                physics_sim_workspace_authoring_note_font_theme_changed(host, 1, 0);
+            }
+        }
+        physics_sim_workspace_authoring_note_font_theme_status(host, "Text size increased.");
+        host->font_theme_button_click_count += 1u;
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_FONT_THEME_ACTION_TEXT_SIZE_RESET:
+        if (cfg && cfg->text_zoom_step != 0) {
+            cfg->text_zoom_step = 0;
+            physics_sim_workspace_authoring_note_font_theme_changed(host, 1, 0);
+        }
+        physics_sim_workspace_authoring_note_font_theme_status(host, "Text size reset.");
+        host->font_theme_button_click_count += 1u;
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_FONT_THEME_ACTION_SET_FONT_PRESET:
+        preset_name = core_font_preset_name(action.font_preset_id);
+        if (preset_name && physics_sim_shared_font_set_preset(preset_name)) {
+            physics_sim_workspace_authoring_note_font_theme_changed(host, 1, 0);
+            physics_sim_workspace_authoring_note_font_theme_status(host, "Font preset changed.");
+            host->font_theme_button_click_count += 1u;
+            return 1;
+        }
+        physics_sim_workspace_authoring_note_font_theme_status(host, "Font preset change failed.");
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_FONT_THEME_ACTION_SET_THEME_PRESET:
+        preset_name = core_theme_preset_name(action.theme_preset_id);
+        if (preset_name && physics_sim_shared_theme_set_preset(preset_name)) {
+            physics_sim_workspace_authoring_note_font_theme_changed(host, 0, 1);
+            physics_sim_workspace_authoring_note_font_theme_status(host, "Theme preset changed.");
+            host->font_theme_button_click_count += 1u;
+            return 1;
+        }
+        physics_sim_workspace_authoring_note_font_theme_status(host, "Theme preset change failed.");
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_FONT_THEME_ACTION_CUSTOM_THEME_STATUS:
+        physics_sim_workspace_authoring_note_font_theme_status(
+            host,
+            action.custom_status_text ? action.custom_status_text : "Custom theme action requested.");
+        host->font_theme_button_click_count += 1u;
+        return 1;
+    case KIT_WORKSPACE_AUTHORING_FONT_THEME_ACTION_NONE:
+    default:
+        break;
+    }
+    return 0;
+}
+
 CoreResult physics_sim_workspace_authoring_host_cycle_overlay(
     PhysicsSimWorkspaceAuthoringHostState *host) {
     if (!host) return physics_sim_workspace_authoring_invalid("null authoring host");
@@ -178,6 +348,7 @@ CoreResult physics_sim_workspace_authoring_host_cycle_overlay(
 
 static int physics_sim_workspace_authoring_host_handle_overlay_click(
     PhysicsSimWorkspaceAuthoringHostState *host,
+    AppConfig *cfg,
     int x,
     int y) {
     KitWorkspaceAuthoringOverlayButton buttons[4];
@@ -200,10 +371,12 @@ static int physics_sim_workspace_authoring_host_handle_overlay_click(
         host->overlay_button_click_count += 1u;
         return 1;
     case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_APPLY:
+        physics_sim_workspace_authoring_clear_font_theme_baseline(host);
         (void)physics_sim_workspace_authoring_host_apply(host);
         host->overlay_button_click_count += 1u;
         return 1;
     case KIT_WORKSPACE_AUTHORING_OVERLAY_BUTTON_CANCEL:
+        physics_sim_workspace_authoring_restore_font_theme_baseline(host, cfg);
         (void)physics_sim_workspace_authoring_host_cancel(host);
         host->overlay_button_click_count += 1u;
         return 1;
@@ -218,10 +391,33 @@ static int physics_sim_workspace_authoring_host_handle_overlay_click(
     return 0;
 }
 
+static int physics_sim_workspace_authoring_host_handle_font_theme_click(
+    PhysicsSimWorkspaceAuthoringHostState *host,
+    AppConfig *cfg,
+    int x,
+    int y) {
+    KitWorkspaceAuthoringFontThemeLayout layout;
+    KitWorkspaceAuthoringFontThemeButtonId hit;
+    if (!host || !physics_sim_workspace_authoring_host_font_theme_overlay_active(host)) return 0;
+    if (host->viewport_width == 0u || host->viewport_height == 0u) return 0;
+    if (!kit_workspace_authoring_ui_font_theme_build_layout(NULL,
+                                                            (int)host->viewport_width,
+                                                            (int)host->viewport_height,
+                                                            &layout)) {
+        return 0;
+    }
+    hit = kit_workspace_authoring_ui_font_theme_hit_button(&layout, (float)x, (float)y);
+    if (hit == KIT_WORKSPACE_AUTHORING_FONT_THEME_BUTTON_NONE) {
+        return 0;
+    }
+    return physics_sim_workspace_authoring_host_apply_font_theme_button(host, cfg, hit);
+}
+
 int physics_sim_workspace_authoring_host_handle_sdl_event(
     PhysicsSimWorkspaceAuthoringHostState *host,
     const SDL_Event *event,
-    int text_entry_active) {
+    int text_entry_active,
+    AppConfig *cfg) {
     KitWorkspaceAuthoringKey key = KIT_WORKSPACE_AUTHORING_KEY_UNKNOWN;
     uint32_t mod_bits = 0u;
     int authoring_alt_only = 0;
@@ -261,8 +457,17 @@ int physics_sim_workspace_authoring_host_handle_sdl_event(
         host->last_pointer_ready = 1u;
         overlay_hit = physics_sim_workspace_authoring_host_handle_overlay_click(
             host,
+            cfg,
             event->button.x,
             event->button.y);
+        if (!overlay_hit &&
+            physics_sim_workspace_authoring_host_handle_font_theme_click(host,
+                                                                         cfg,
+                                                                         event->button.x,
+                                                                         event->button.y)) {
+            physics_sim_workspace_authoring_note_consumed(host, 0);
+            return 1;
+        }
         physics_sim_workspace_authoring_note_consumed(host, overlay_hit ? 0 : 1);
         return 1;
     }
@@ -312,9 +517,11 @@ int physics_sim_workspace_authoring_host_handle_sdl_event(
     }
     if (chord_pair_pressed) {
         if (physics_sim_workspace_authoring_host_active(host)) {
+            physics_sim_workspace_authoring_restore_font_theme_baseline(host, cfg);
             (void)physics_sim_workspace_authoring_host_cancel(host);
         } else {
             (void)physics_sim_workspace_authoring_host_enter(host);
+            physics_sim_workspace_authoring_capture_font_theme_baseline(host, cfg);
         }
         host->entry_chord_armed_key = KIT_WORKSPACE_AUTHORING_KEY_UNKNOWN;
         physics_sim_workspace_authoring_note_consumed(host, 0);
@@ -332,12 +539,43 @@ int physics_sim_workspace_authoring_host_handle_sdl_event(
         return 0;
     }
 
+    if (physics_sim_workspace_authoring_host_font_theme_overlay_active(host) &&
+        ((mod_bits & (KIT_WORKSPACE_AUTHORING_MOD_CTRL | KIT_WORKSPACE_AUTHORING_MOD_GUI)) != 0u)) {
+        if (event->key.keysym.sym == SDLK_EQUALS || event->key.keysym.sym == SDLK_PLUS ||
+            event->key.keysym.sym == SDLK_KP_PLUS) {
+            (void)physics_sim_workspace_authoring_host_apply_font_theme_button(
+                host,
+                cfg,
+                KIT_WORKSPACE_AUTHORING_FONT_THEME_BUTTON_TEXT_SIZE_INC);
+            physics_sim_workspace_authoring_note_consumed(host, 0);
+            return 1;
+        }
+        if (event->key.keysym.sym == SDLK_MINUS || event->key.keysym.sym == SDLK_KP_MINUS) {
+            (void)physics_sim_workspace_authoring_host_apply_font_theme_button(
+                host,
+                cfg,
+                KIT_WORKSPACE_AUTHORING_FONT_THEME_BUTTON_TEXT_SIZE_DEC);
+            physics_sim_workspace_authoring_note_consumed(host, 0);
+            return 1;
+        }
+        if (event->key.keysym.sym == SDLK_0 || event->key.keysym.sym == SDLK_KP_0) {
+            (void)physics_sim_workspace_authoring_host_apply_font_theme_button(
+                host,
+                cfg,
+                KIT_WORKSPACE_AUTHORING_FONT_THEME_BUTTON_TEXT_SIZE_RESET);
+            physics_sim_workspace_authoring_note_consumed(host, 0);
+            return 1;
+        }
+    }
+
     if (key == KIT_WORKSPACE_AUTHORING_KEY_ESCAPE) {
+        physics_sim_workspace_authoring_restore_font_theme_baseline(host, cfg);
         (void)physics_sim_workspace_authoring_host_cancel(host);
         physics_sim_workspace_authoring_note_consumed(host, 0);
         return 1;
     }
     if (key == KIT_WORKSPACE_AUTHORING_KEY_ENTER) {
+        physics_sim_workspace_authoring_clear_font_theme_baseline(host);
         (void)physics_sim_workspace_authoring_host_apply(host);
         physics_sim_workspace_authoring_note_consumed(host, 0);
         return 1;

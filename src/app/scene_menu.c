@@ -90,11 +90,25 @@ static bool menu_apply_text_zoom_shortcut(SceneMenuInteraction *ctx,
 static bool menu_workspace_authoring_event_filter(void *user,
                                                   const SDL_Event *event) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
+    int consumed = 0;
     if (!ctx) return false;
-    return physics_sim_workspace_authoring_host_handle_sdl_event(
+    consumed = physics_sim_workspace_authoring_host_handle_sdl_event(
         &ctx->workspace_authoring,
         event,
-        menu_text_entry_active(ctx));
+        menu_text_entry_active(ctx),
+        ctx->cfg);
+    if (ctx->workspace_authoring.font_theme_needs_theme_apply) {
+        (void)menu_apply_shared_theme(ctx);
+        ctx->workspace_authoring.font_theme_needs_theme_apply = 0u;
+    }
+    if (ctx->workspace_authoring.font_theme_needs_font_reload) {
+        if (!menu_reload_fonts(ctx)) {
+            fprintf(stderr, "[menu] Failed to reload fonts after authoring font/theme update.\n");
+        }
+        menu_update_scrollbar(ctx);
+        ctx->workspace_authoring.font_theme_needs_font_reload = 0u;
+    }
+    return consumed ? true : false;
 }
 
 static void scene_menu_record_loop_diag(uint64_t frame_begin_counter,
