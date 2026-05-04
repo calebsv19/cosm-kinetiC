@@ -18,6 +18,7 @@ typedef struct InputWheelState {
 } InputWheelState;
 
 typedef struct InputContext {
+    bool (*on_sdl_event_filter)(void *user, const SDL_Event *event);
     void (*on_pointer_down)(void *user, const InputPointerState *state);
     void (*on_pointer_up)(void *user, const InputPointerState *state);
     void (*on_pointer_move)(void *user, const InputPointerState *state);

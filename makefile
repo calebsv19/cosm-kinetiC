@@ -42,6 +42,7 @@ VK_RENDERER_DIR := $(SHARED_ROOT)/vk_renderer
 KIT_VIZ_DIR := $(SHARED_ROOT)/kit/kit_viz
 KIT_RENDER_DIR := $(SHARED_ROOT)/kit/kit_render
 KIT_PANE_DIR := $(SHARED_ROOT)/kit/kit_pane
+KIT_WORKSPACE_AUTHORING_DIR := $(SHARED_ROOT)/kit/kit_workspace_authoring
 SHARED_ASSETS_DIR := $(SHARED_ROOT)/assets
 CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
 SHIM_MODE ?= off
@@ -225,12 +226,14 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/render/TimerHUD/*' \
 	! -path '$(SRC_DIR)/render/TimerHUD_legacy_backup/*')
 VK_RENDERER_SRCS := $(shell find $(VK_RENDERER_DIR)/src -name '*.c')
+KIT_WORKSPACE_AUTHORING_SRCS := $(KIT_WORKSPACE_AUTHORING_DIR)/src/kit_workspace_authoring.c
 TIMER_HUD_SRCS := $(shell find $(TIMER_HUD_DIR)/src -name '*.c')
 TIMER_HUD_EXTERNAL_SRCS := $(TIMER_HUD_DIR)/external/cJSON.c
 
 # Map src/foo/bar.c -> build/foo/bar.o
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 OBJS += $(patsubst $(VK_RENDERER_DIR)/src/%.c,$(BUILD_DIR)/vk_renderer/%.o,$(VK_RENDERER_SRCS))
+OBJS += $(patsubst $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c,$(BUILD_DIR)/kit_workspace_authoring/%.o,$(KIT_WORKSPACE_AUTHORING_SRCS))
 TIMER_HUD_OBJS := $(patsubst $(TIMER_HUD_DIR)/src/%.c,$(BUILD_DIR)/timer_hud/%.o,$(TIMER_HUD_SRCS))
 TIMER_HUD_EXTERNAL_OBJS := $(patsubst $(TIMER_HUD_DIR)/external/%.c,$(BUILD_DIR)/timer_hud_external/%.o,$(TIMER_HUD_EXTERNAL_SRCS))
 
@@ -303,7 +306,7 @@ CORE_SIM_DIR := $(SHARED_ROOT)/core/core_sim
 CORE_TRACE_DIR := $(SHARED_ROOT)/core/core_trace
 CORE_THEME_DIR := $(SHARED_ROOT)/core/core_theme
 CORE_FONT_DIR := $(SHARED_ROOT)/core/core_font
-CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_SIM_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(KIT_PANE_DIR)/include
+CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_SIM_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_WORKSPACE_AUTHORING_DIR)/include
 
 CORE_BASE_SRCS := $(CORE_BASE_DIR)/src/core_base.c
 CORE_IO_SRCS := $(CORE_IO_DIR)/src/core_io.c
@@ -424,6 +427,7 @@ STABLE_TEST_TARGETS := \
 	test-scene-objects-runtime-contract \
 	test-scene-editor-retained-document-contract \
 	test-scene-editor-scene-library-contract \
+	test-physics-sim-workspace-authoring-host \
 	test-scene-editor-pane-host-contract \
 	test-scene-editor-viewport-contract \
 	test-retained-runtime-scene-overlay-geom-contract \
@@ -438,7 +442,7 @@ STABLE_TEST_TARGETS := \
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool runtime_scene_emitter_diag_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-sim-runtime-emitter-contract test-sim-runtime-obstacle-contract test-sim-runtime-backend-3d-emitter-contract test-sim-runtime-backend-3d-attached-emitter-contract test-sim-runtime-backend-3d-obstacle-contract test-sim-runtime-backend-3d-retained-obstacle-contract test-sim-runtime-3d-anchor-contract test-sim-runtime-3d-footprint-contract test-sim-runtime-3d-space-contract test-sim-runtime-3d-domain-contract test-sim-runtime-3d-solver-contract test-scene-core-sim-runtime-step-contract test-menu-settings-shell-contract test-quality-profiles-contract test-config-loader-contract test-sim-runtime-backend-reporting-contract test-sim-runtime-backend-dispatch-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-retained-runtime-scene-overlay-geom-contract test-retained-runtime-scene-overlay-readout-contract test-retained-runtime-scene-overlay-space-contract test-scene-runtime-launch-projection-contract test-runtime-scene-3d-truth-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff test-volume-frames-3d-export-contract test-volume-frames-3d-tiny-parity-contract shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool runtime_scene_emitter_diag_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-sim-runtime-emitter-contract test-sim-runtime-obstacle-contract test-sim-runtime-backend-3d-emitter-contract test-sim-runtime-backend-3d-attached-emitter-contract test-sim-runtime-backend-3d-obstacle-contract test-sim-runtime-backend-3d-retained-obstacle-contract test-sim-runtime-3d-anchor-contract test-sim-runtime-3d-footprint-contract test-sim-runtime-3d-space-contract test-sim-runtime-3d-domain-contract test-sim-runtime-3d-solver-contract test-scene-core-sim-runtime-step-contract test-menu-settings-shell-contract test-quality-profiles-contract test-config-loader-contract test-sim-runtime-backend-reporting-contract test-sim-runtime-backend-dispatch-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-physics-sim-workspace-authoring-host test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-retained-runtime-scene-overlay-geom-contract test-retained-runtime-scene-overlay-readout-contract test-retained-runtime-scene-overlay-space-contract test-scene-runtime-launch-projection-contract test-runtime-scene-3d-truth-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff test-volume-frames-3d-export-contract test-volume-frames-3d-tiny-parity-contract shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -765,6 +769,13 @@ SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS := \
 	tests/scene_editor_retained_document_contract_test.c \
 	$(SRC_DIR)/app/editor/scene_editor_retained_document.c
 
+PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS := \
+	tests/physics_sim_workspace_authoring_host_test.c \
+	$(SRC_DIR)/app/menu/workspace_authoring/physics_sim_workspace_authoring_host.c \
+	$(KIT_WORKSPACE_AUTHORING_DIR)/src/kit_workspace_authoring.c \
+	$(CORE_PANE_DIR)/src/core_pane.c \
+	$(CORE_BASE_DIR)/src/core_base.c
+
 SCENE_EDITOR_PANE_HOST_TEST_SRCS := \
 	tests/scene_editor_pane_host_contract_test.c \
 	$(SRC_DIR)/app/editor/scene_editor_pane_host.c \
@@ -960,6 +971,13 @@ test-scene-editor-scene-library-contract: $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS
 		-o $(BUILD_DIR)/scene_editor_scene_library_contract_test $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_scene_library_contract_test
 
+test-physics-sim-workspace-authoring-host: $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(KIT_WORKSPACE_AUTHORING_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_PANE_DIR)/include \
+		-o $(BUILD_DIR)/physics_sim_workspace_authoring_host_test $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS) -lm
+	$(BUILD_DIR)/physics_sim_workspace_authoring_host_test
+
 test-scene-editor-pane-host-contract: $(SCENE_EDITOR_PANE_HOST_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
@@ -1099,6 +1117,10 @@ $(BUILD_DIR)/timer_hud_external/%.o: $(TIMER_HUD_DIR)/external/%.c
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/vk_renderer/%.o: $(VK_RENDERER_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/kit_workspace_authoring/%.o: $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 

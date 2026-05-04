@@ -16,6 +16,10 @@ static void input_handle_event(const SDL_Event *event,
     if (!event || !out) {
         return;
     }
+    if (ctx && ctx->on_sdl_event_filter &&
+        ctx->on_sdl_event_filter(ctx->user_data, event)) {
+        return;
+    }
 
     switch (event->type) {
     case SDL_QUIT:

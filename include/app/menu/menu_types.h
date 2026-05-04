@@ -8,6 +8,7 @@
 #include "app/scene_menu.h"
 #include "app/editor/scene_editor_scene_library.h"
 #include "app/menu/menu_settings_types.h"
+#include "app/menu/workspace_authoring/physics_sim_workspace_authoring_host.h"
 #include "input/input.h"
 #include "ui/text_input.h"
 #include "ui/scrollbar.h"
@@ -123,6 +124,7 @@ typedef struct SceneMenuInteraction {
     Uint32 last_inflow_click_ticks;
     SimulationMode active_mode;
     bool suppress_pointer_until_up;
+    PhysicsSimWorkspaceAuthoringHostState workspace_authoring;
 } SceneMenuInteraction;
 
 #endif

@@ -14,6 +14,7 @@
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_types.h"
 #include "app/menu/menu_window.h"
+#include "app/menu/workspace_authoring/physics_sim_workspace_authoring_host.h"
 #include "app/data_paths.h"
 #include "app/scene_loop_diag.h"
 #include "app/scene_loop_policy.h"
@@ -83,6 +84,16 @@ static bool menu_apply_text_zoom_shortcut(SceneMenuInteraction *ctx,
 
     menu_persist_runtime_config(ctx->cfg);
     return true;
+}
+
+static bool menu_workspace_authoring_event_filter(void *user,
+                                                  const SDL_Event *event) {
+    SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
+    if (!ctx) return false;
+    return physics_sim_workspace_authoring_host_handle_sdl_event(
+        &ctx->workspace_authoring,
+        event,
+        menu_text_entry_active(ctx));
 }
 
 static void scene_menu_record_loop_diag(uint64_t frame_begin_counter,
@@ -279,6 +290,7 @@ restart_menu:
                              &current_selection,
                              ctx.active_mode,
                              ctx.cfg ? ctx.cfg->space_mode : SPACE_MODE_2D);
+    physics_sim_workspace_authoring_host_reset(&ctx.workspace_authoring);
 
     InputContextManager context_mgr;
     input_context_manager_init(&context_mgr);
@@ -302,6 +314,7 @@ restart_menu:
     *selection = current_selection;
 
     InputContext menu_ctx = {
+        .on_sdl_event_filter = menu_workspace_authoring_event_filter,
         .on_pointer_down = menu_pointer_down,
         .on_pointer_up = menu_pointer_up,
         .on_pointer_move = menu_pointer_move,
