@@ -298,7 +298,7 @@ int structural_controller_run(AppConfig *cfg,
         "Physics Sim - Structural Mode",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         cfg->window_w, cfg->window_h,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
+        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!window) {
         fprintf(stderr, "[struct] Failed to create window: %s\n", SDL_GetError());
         if (ttf_initialized) {

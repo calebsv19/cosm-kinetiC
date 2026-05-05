@@ -124,7 +124,8 @@ bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH) {
         "Physics Sim - Fluid2D",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         windowW, windowH,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE |
+            SDL_WINDOW_ALLOW_HIGHDPI
     );
     if (!g_window) {
         fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());

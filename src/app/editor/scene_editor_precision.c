@@ -83,7 +83,8 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                                SDL_WINDOWPOS_CENTERED,
                                win_w,
                                win_h,
-                               SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
+                               SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN |
+                                   SDL_WINDOW_ALLOW_HIGHDPI);
         if (!win) return false;
 
         g_precision_window = win;

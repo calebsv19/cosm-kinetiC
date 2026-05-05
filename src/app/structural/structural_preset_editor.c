@@ -481,7 +481,7 @@ retry:
                 SDL_WINDOWPOS_CENTERED,
                 base_w,
                 base_h,
-                SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN);
+                SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
             if (!local_window) return false;
 
             struct_log_window_sizes(local_window, "after create");

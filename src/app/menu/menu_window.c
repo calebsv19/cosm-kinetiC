@@ -120,7 +120,8 @@ bool menu_create_window(SceneMenuInteraction *ctx) {
         "Physics Sim - Scene Editor",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         MENU_WIDTH, MENU_HEIGHT,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE |
+            SDL_WINDOW_ALLOW_HIGHDPI
     );
     if (!window) {
         fprintf(stderr, "Failed to create menu window: %s\n", SDL_GetError());
