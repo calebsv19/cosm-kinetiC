@@ -243,6 +243,31 @@ static bool test_requested_xy_cells_independently_shape_isotropic_fit(void) {
     return true;
 }
 
+static bool test_dense_volume_budget_cap(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimRuntime3DDomainDesc desc = {0};
+    size_t estimated_bytes = 0;
+
+    cfg.grid_w = 256;
+    cfg.grid_h = 256;
+    cfg.grid_d = 256;
+    preset.domain_width = 4.0f;
+    preset.domain_height = 4.0f;
+
+    if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.requested_major_axis_cells != 256) return false;
+    if (desc.requested_depth_cells != 256) return false;
+    if (desc.grid_w >= 256) return false;
+    if (desc.grid_h >= 256) return false;
+    if (desc.grid_d >= 256) return false;
+
+    estimated_bytes = sim_runtime_3d_domain_estimated_resident_bytes(&desc);
+    if (estimated_bytes == 0) return false;
+    if (estimated_bytes > sim_runtime_3d_domain_resident_bytes_budget()) return false;
+    return true;
+}
+
 static bool test_volume_init_and_clear(void) {
     AppConfig cfg = {0};
     FluidScenePreset preset = {0};
@@ -299,6 +324,10 @@ int main(void) {
     }
     if (!test_requested_xy_cells_independently_shape_isotropic_fit()) {
         fprintf(stderr, "sim_runtime_3d_domain_contract_test: requested xy fit failed\n");
+        return 1;
+    }
+    if (!test_dense_volume_budget_cap()) {
+        fprintf(stderr, "sim_runtime_3d_domain_contract_test: dense volume budget cap failed\n");
         return 1;
     }
     if (!test_volume_init_and_clear()) {

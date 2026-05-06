@@ -1,10 +1,10 @@
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
-#include "app/sim_runtime_backend_3d_scaffold_internal.h"
 #include "core_io.h"
 #include "core_pack.h"
 #include "export/volume_frames.h"
 #include "export/volume_frames_vf3d.h"
+#include "sim_runtime_backend_3d_test_support.h"
 
 #include <limits.h>
 #include <stdbool.h>
@@ -162,7 +162,7 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
     FluidScenePreset preset = {0};
     SceneState scene = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffold *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     char original_cwd[PATH_MAX];
     char temp_dir[] = "/tmp/physics_sim_vf3d_tiny_parity_XXXXXX";
     char raw_path[PATH_MAX];
@@ -190,10 +190,6 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
     float *pack_pressure = NULL;
     uint8_t *pack_solid = NULL;
     size_t cell_count = 0;
-    size_t idx_a = 0;
-    size_t idx_b = 0;
-    size_t idx_c = 0;
-    size_t idx_d = 0;
     bool ok = false;
 
     if (!getcwd(original_cwd, sizeof(original_cwd))) {
@@ -226,59 +222,36 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
         ok = fail_with_message("backend create failed");
         goto cleanup;
     }
-    impl = (SimRuntimeBackend3DScaffold *)backend->impl;
-    if (!impl) {
-        ok = fail_with_message("backend impl missing");
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) {
+        ok = fail_with_message("backend export view refresh failed");
         goto cleanup;
     }
-    if (impl->volume.desc.grid_w != 64 || impl->volume.desc.grid_h != 32 || impl->volume.desc.grid_d != 32) {
+    if (impl.volume.desc.grid_w != 64 || impl.volume.desc.grid_h != 32 || impl.volume.desc.grid_d != 32) {
         ok = fail_with_message("tiny domain dimensions mismatch");
         goto cleanup;
     }
-    if (!nearly_equal(impl->volume.desc.voxel_size, 0.0625f)) {
+    if (!nearly_equal(impl.volume.desc.voxel_size, 0.0625f)) {
         ok = fail_with_message("tiny domain voxel size mismatch");
         goto cleanup;
     }
 
-    cell_count = impl->volume.desc.cell_count;
-    sim_runtime_3d_volume_clear(&impl->volume);
-    memset(impl->obstacle_occupancy, 0, cell_count * sizeof(uint8_t));
-    impl->obstacle_volume_dirty = false;
-    impl->obstacle_slice_dirty = true;
-    impl->debug_volume_stats_dirty = true;
+    cell_count = impl.volume.desc.cell_count;
+    if (!sim_runtime_backend_3d_test_reset_truth(backend)) {
+        ok = fail_with_message("backend truth reset failed");
+        goto cleanup;
+    }
 
-    idx_a = sim_runtime_3d_volume_index(&impl->volume.desc, 1, 2, 3);
-    idx_b = sim_runtime_3d_volume_index(&impl->volume.desc, 5, 1, 2);
-    idx_c = sim_runtime_3d_volume_index(&impl->volume.desc, 9, 6, 4);
-    idx_d = sim_runtime_3d_volume_index(&impl->volume.desc, 14, 4, 7);
-
-    impl->volume.density[idx_a] = 1.0f;
-    impl->volume.velocity_x[idx_a] = 0.5f;
-    impl->volume.velocity_y[idx_a] = -0.25f;
-    impl->volume.velocity_z[idx_a] = 2.0f;
-    impl->volume.pressure[idx_a] = 4.0f;
-
-    impl->volume.density[idx_b] = 2.5f;
-    impl->volume.velocity_x[idx_b] = -1.0f;
-    impl->volume.velocity_y[idx_b] = 3.0f;
-    impl->volume.velocity_z[idx_b] = -2.0f;
-    impl->volume.pressure[idx_b] = 5.5f;
-
-    impl->volume.density[idx_c] = 0.75f;
-    impl->volume.velocity_x[idx_c] = 1.25f;
-    impl->volume.velocity_y[idx_c] = 1.5f;
-    impl->volume.velocity_z[idx_c] = 0.25f;
-    impl->volume.pressure[idx_c] = 6.25f;
-
-    impl->volume.density[idx_d] = 4.0f;
-    impl->volume.velocity_x[idx_d] = -3.5f;
-    impl->volume.velocity_y[idx_d] = 0.75f;
-    impl->volume.velocity_z[idx_d] = 1.0f;
-    impl->volume.pressure[idx_d] = 7.0f;
-
-    impl->obstacle_occupancy[idx_a] = 1u;
-    impl->obstacle_occupancy[idx_c] = 1u;
-    impl->obstacle_occupancy[idx_d] = 1u;
+    if (!sim_runtime_backend_3d_test_write_cell(backend, 1, 2, 3, 1.0f, 0.5f, -0.25f, 2.0f, 4.0f, 1u) ||
+        !sim_runtime_backend_3d_test_write_cell(backend, 5, 1, 2, 2.5f, -1.0f, 3.0f, -2.0f, 5.5f, 0u) ||
+        !sim_runtime_backend_3d_test_write_cell(backend, 9, 6, 4, 0.75f, 1.25f, 1.5f, 0.25f, 6.25f, 1u) ||
+        !sim_runtime_backend_3d_test_write_cell(backend, 14, 4, 7, 4.0f, -3.5f, 0.75f, 1.0f, 7.0f, 1u)) {
+        ok = fail_with_message("backend seed writes failed");
+        goto cleanup;
+    }
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) {
+        ok = fail_with_message("backend view refresh after seed failed");
+        goto cleanup;
+    }
 
     scene.time = 1.25;
     scene.dt = 0.05;
@@ -388,10 +361,10 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
         ok = fail_with_message("raw tiny header dimensions mismatch");
         goto cleanup;
     }
-    if (!nearly_equal(raw_header.voxel_size, impl->volume.desc.voxel_size) ||
-        !nearly_equal(raw_header.origin_x, impl->volume.desc.world_min_x) ||
-        !nearly_equal(raw_header.origin_y, impl->volume.desc.world_min_y) ||
-        !nearly_equal(raw_header.origin_z, impl->volume.desc.world_min_z)) {
+    if (!nearly_equal(raw_header.voxel_size, impl.volume.desc.voxel_size) ||
+        !nearly_equal(raw_header.origin_x, impl.volume.desc.world_min_x) ||
+        !nearly_equal(raw_header.origin_y, impl.volume.desc.world_min_y) ||
+        !nearly_equal(raw_header.origin_z, impl.volume.desc.world_min_z)) {
         ok = fail_with_message("raw tiny header space mismatch");
         goto cleanup;
     }
@@ -408,12 +381,12 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
         goto cleanup;
     }
 
-    if (memcmp(raw_density, impl->volume.density, cell_count * sizeof(float)) != 0 ||
-        memcmp(raw_velx, impl->volume.velocity_x, cell_count * sizeof(float)) != 0 ||
-        memcmp(raw_vely, impl->volume.velocity_y, cell_count * sizeof(float)) != 0 ||
-        memcmp(raw_velz, impl->volume.velocity_z, cell_count * sizeof(float)) != 0 ||
-        memcmp(raw_pressure, impl->volume.pressure, cell_count * sizeof(float)) != 0 ||
-        memcmp(raw_solid, impl->obstacle_occupancy, cell_count * sizeof(uint8_t)) != 0) {
+    if (memcmp(raw_density, impl.volume.density, cell_count * sizeof(float)) != 0 ||
+        memcmp(raw_velx, impl.volume.velocity_x, cell_count * sizeof(float)) != 0 ||
+        memcmp(raw_vely, impl.volume.velocity_y, cell_count * sizeof(float)) != 0 ||
+        memcmp(raw_velz, impl.volume.velocity_z, cell_count * sizeof(float)) != 0 ||
+        memcmp(raw_pressure, impl.volume.pressure, cell_count * sizeof(float)) != 0 ||
+        memcmp(raw_solid, impl.obstacle_occupancy, cell_count * sizeof(uint8_t)) != 0) {
         ok = fail_with_message("raw fixture payload diverged from backend truth");
         goto cleanup;
     }

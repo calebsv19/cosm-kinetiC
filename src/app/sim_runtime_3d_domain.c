@@ -14,6 +14,15 @@ enum {
     SIM_RUNTIME_3D_MAJOR_AXIS_MAX = 256
 };
 
+enum {
+    SIM_RUNTIME_3D_VOLUME_FIELD_COUNT = 5,
+    SIM_RUNTIME_3D_SCRATCH_FIELD_COUNT = 6,
+    SIM_RUNTIME_3D_SLICE_FLOAT_FIELD_COUNT = 7
+};
+
+static const size_t SIM_RUNTIME_3D_RESIDENT_BYTES_BUDGET =
+    (size_t)320u * 1024u * 1024u;
+
 static int clamp_int(int value, int min_value, int max_value) {
     if (value < min_value) return min_value;
     if (value > max_value) return max_value;
@@ -42,6 +51,129 @@ static bool compute_cell_counts(int grid_w,
     *out_slice_count = slice_count;
     *out_cell_count = slice_count * (size_t)grid_d;
     return true;
+}
+
+static bool estimate_resident_bytes_for_counts(size_t slice_count,
+                                               size_t cell_count,
+                                               size_t *out_bytes) {
+    size_t full_volume_float_count = 0;
+    size_t full_volume_float_bytes = 0;
+    size_t full_volume_mask_bytes = 0;
+    size_t slice_float_count = 0;
+    size_t slice_float_bytes = 0;
+    size_t slice_mask_bytes = 0;
+    size_t total = 0;
+
+    if (!out_bytes) return false;
+
+    if (cell_count > SIZE_MAX / (size_t)(SIM_RUNTIME_3D_VOLUME_FIELD_COUNT +
+                                         SIM_RUNTIME_3D_SCRATCH_FIELD_COUNT)) {
+        return false;
+    }
+    full_volume_float_count =
+        cell_count * (size_t)(SIM_RUNTIME_3D_VOLUME_FIELD_COUNT + SIM_RUNTIME_3D_SCRATCH_FIELD_COUNT);
+    if (full_volume_float_count > SIZE_MAX / sizeof(float)) return false;
+    full_volume_float_bytes = full_volume_float_count * sizeof(float);
+
+    if (cell_count > SIZE_MAX / sizeof(uint8_t)) return false;
+    full_volume_mask_bytes = cell_count * sizeof(uint8_t);
+
+    if (slice_count > SIZE_MAX / (size_t)SIM_RUNTIME_3D_SLICE_FLOAT_FIELD_COUNT) {
+        return false;
+    }
+    slice_float_count = slice_count * (size_t)SIM_RUNTIME_3D_SLICE_FLOAT_FIELD_COUNT;
+    if (slice_float_count > SIZE_MAX / sizeof(float)) return false;
+    slice_float_bytes = slice_float_count * sizeof(float);
+
+    if (slice_count > SIZE_MAX / sizeof(uint8_t)) return false;
+    slice_mask_bytes = slice_count * sizeof(uint8_t);
+
+    total = full_volume_float_bytes;
+    if (SIZE_MAX - total < full_volume_mask_bytes) return false;
+    total += full_volume_mask_bytes;
+    if (SIZE_MAX - total < slice_float_bytes) return false;
+    total += slice_float_bytes;
+    if (SIZE_MAX - total < slice_mask_bytes) return false;
+    total += slice_mask_bytes;
+
+    *out_bytes = total;
+    return true;
+}
+
+static bool fill_counts_from_voxel_size(float extent_x,
+                                        float extent_y,
+                                        float extent_z,
+                                        SimRuntime3DDomainDesc *desc) {
+    if (!desc || desc->voxel_size <= 0.0f) return false;
+
+    desc->grid_w = clamp_int((int)ceilf(extent_x / desc->voxel_size),
+                             SIM_RUNTIME_3D_GRID_MIN,
+                             INT_MAX);
+    desc->grid_h = clamp_int((int)ceilf(extent_y / desc->voxel_size),
+                             SIM_RUNTIME_3D_GRID_MIN,
+                             INT_MAX);
+    desc->grid_d = clamp_int((int)ceilf(extent_z / desc->voxel_size),
+                             SIM_RUNTIME_3D_GRID_MIN,
+                             INT_MAX);
+    desc->applied_major_axis_cells =
+        desc->grid_w > desc->grid_h ? desc->grid_w : desc->grid_h;
+    desc->applied_depth_cells = desc->grid_d;
+    return compute_cell_counts(desc->grid_w,
+                               desc->grid_h,
+                               desc->grid_d,
+                               &desc->slice_cell_count,
+                               &desc->cell_count);
+}
+
+static bool domain_desc_estimated_resident_bytes(const SimRuntime3DDomainDesc *desc,
+                                                 size_t *out_bytes) {
+    if (!desc) return false;
+    return estimate_resident_bytes_for_counts(desc->slice_cell_count,
+                                              desc->cell_count,
+                                              out_bytes);
+}
+
+static bool apply_resident_budget_limit(float extent_x,
+                                        float extent_y,
+                                        float extent_z,
+                                        SimRuntime3DDomainDesc *desc) {
+    size_t estimated_bytes = 0;
+
+    if (!desc) return false;
+    if (!domain_desc_estimated_resident_bytes(desc, &estimated_bytes)) return false;
+    if (estimated_bytes <= SIM_RUNTIME_3D_RESIDENT_BYTES_BUDGET) return true;
+
+    for (int pass = 0; pass < 16; ++pass) {
+        float next_voxel_size = 0.0f;
+        double scale = cbrt((double)estimated_bytes /
+                            (double)SIM_RUNTIME_3D_RESIDENT_BYTES_BUDGET);
+        int prev_w = desc->grid_w;
+        int prev_h = desc->grid_h;
+        int prev_d = desc->grid_d;
+
+        if (!(scale > 1.0)) break;
+        next_voxel_size = desc->voxel_size * (float)scale;
+        if (next_voxel_size <= desc->voxel_size) {
+            next_voxel_size = desc->voxel_size * 1.02f;
+        }
+
+        desc->voxel_size = next_voxel_size;
+        if (!fill_counts_from_voxel_size(extent_x, extent_y, extent_z, desc)) {
+            return false;
+        }
+        if (desc->grid_w == prev_w &&
+            desc->grid_h == prev_h &&
+            desc->grid_d == prev_d) {
+            desc->voxel_size *= 1.02f;
+            if (!fill_counts_from_voxel_size(extent_x, extent_y, extent_z, desc)) {
+                return false;
+            }
+        }
+        if (!domain_desc_estimated_resident_bytes(desc, &estimated_bytes)) return false;
+        if (estimated_bytes <= SIM_RUNTIME_3D_RESIDENT_BYTES_BUDGET) return true;
+    }
+
+    return estimated_bytes <= SIM_RUNTIME_3D_RESIDENT_BYTES_BUDGET;
 }
 
 static bool fill_desc_from_world_bounds(float min_x,
@@ -116,21 +248,10 @@ static bool fill_desc_from_world_bounds(float min_x,
         desc.voxel_size = 1.0f / (float)desc.applied_major_axis_cells;
     }
 
-    desc.grid_w = clamp_int((int)ceilf(extent_x / desc.voxel_size),
-                            SIM_RUNTIME_3D_GRID_MIN,
-                            INT_MAX);
-    desc.grid_h = clamp_int((int)ceilf(extent_y / desc.voxel_size),
-                            SIM_RUNTIME_3D_GRID_MIN,
-                            INT_MAX);
-    desc.grid_d = clamp_int((int)ceilf(extent_z / desc.voxel_size),
-                            SIM_RUNTIME_3D_GRID_MIN,
-                            INT_MAX);
-    desc.applied_depth_cells = desc.grid_d;
-    if (!compute_cell_counts(desc.grid_w,
-                             desc.grid_h,
-                             desc.grid_d,
-                             &desc.slice_cell_count,
-                             &desc.cell_count)) {
+    if (!fill_counts_from_voxel_size(extent_x, extent_y, extent_z, &desc)) {
+        return false;
+    }
+    if (!apply_resident_budget_limit(extent_x, extent_y, extent_z, &desc)) {
         return false;
     }
 
@@ -143,6 +264,16 @@ static bool fill_desc_from_world_bounds(float min_x,
 
     *out_desc = desc;
     return true;
+}
+
+size_t sim_runtime_3d_domain_estimated_resident_bytes(const SimRuntime3DDomainDesc *desc) {
+    size_t bytes = 0;
+    if (!domain_desc_estimated_resident_bytes(desc, &bytes)) return 0;
+    return bytes;
+}
+
+size_t sim_runtime_3d_domain_resident_bytes_budget(void) {
+    return SIM_RUNTIME_3D_RESIDENT_BYTES_BUDGET;
 }
 
 int sim_runtime_3d_requested_major_axis_cells_for_config(const AppConfig *cfg) {

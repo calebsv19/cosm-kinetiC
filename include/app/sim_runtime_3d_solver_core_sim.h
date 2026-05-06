@@ -19,6 +19,8 @@ bool sim_runtime_3d_solver_core_sim_step_first_pass(
     const SimRuntime3DForceAxis *scene_up_axis,
     const AppConfig *cfg,
     double dt,
-    CoreSimFrameOutcome *outcome);
+    float max_velocity_displacement_cells_limit,
+    CoreSimFrameOutcome *outcome,
+    SimRuntime3DSolverStepMetrics *out_metrics);
 
 #endif

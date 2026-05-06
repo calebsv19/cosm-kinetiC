@@ -26,6 +26,8 @@ AppConfig app_config_default(void) {
     cfg.physics_substeps = 2;
     cfg.command_batch_limit = 256;
     cfg.fluid_solver_iterations = 20;
+    cfg.fluid_3d_solver_region_cell_budget = 0;
+    cfg.fluid_3d_max_velocity_displacement_cells = 0.0f;
 
     cfg.density_diffusion = 0.0001f;
     cfg.velocity_damping  = 0.000006f; // interpreted as viscosity

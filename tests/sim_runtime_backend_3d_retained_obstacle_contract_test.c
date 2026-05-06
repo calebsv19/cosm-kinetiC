@@ -1,6 +1,7 @@
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
 #include "app/sim_runtime_backend_3d_scaffold_internal.h"
+#include "sim_runtime_backend_3d_test_support.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -29,7 +30,7 @@ static bool test_static_preset_object_marks_volumetric_occupancy(void) {
     AppConfig cfg = {0};
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffold *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     FluidScenePreset preset = {0};
     SceneState scene = {0};
     size_t center_idx = 0;
@@ -61,25 +62,24 @@ static bool test_static_preset_object_marks_volumetric_occupancy(void) {
 
     backend = create_backend(&cfg, &visual);
     if (!backend) return false;
-    impl = (SimRuntimeBackend3DScaffold *)backend->impl;
-    if (!impl) return false;
 
     scene.backend = backend;
     scene.preset = &preset;
     scene.config = &cfg;
 
     sim_runtime_backend_build_static_obstacles(backend, &scene);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
 
-    center_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                             impl->volume.desc.grid_w / 2,
-                                             impl->volume.desc.grid_h / 2,
-                                             impl->volume.desc.grid_d / 2);
-    wall_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                           impl->volume.desc.grid_w / 2,
-                                           impl->volume.desc.grid_h / 2,
+    center_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                             impl.volume.desc.grid_w / 2,
+                                             impl.volume.desc.grid_h / 2,
+                                             impl.volume.desc.grid_d / 2);
+    wall_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                           impl.volume.desc.grid_w / 2,
+                                           impl.volume.desc.grid_h / 2,
                                            0);
-    if (!impl->obstacle_occupancy[center_idx]) return false;
-    if (!impl->obstacle_occupancy[wall_idx]) return false;
+    if (!impl.obstacle_occupancy[center_idx]) return false;
+    if (!impl.obstacle_occupancy[wall_idx]) return false;
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -89,7 +89,7 @@ static bool test_attached_object_is_skipped_from_obstacle_occupancy(void) {
     AppConfig cfg = {0};
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffold *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     FluidScenePreset preset = {0};
     SceneState scene = {0};
     size_t center_idx = 0;
@@ -126,20 +126,19 @@ static bool test_attached_object_is_skipped_from_obstacle_occupancy(void) {
 
     backend = create_backend(&cfg, &visual);
     if (!backend) return false;
-    impl = (SimRuntimeBackend3DScaffold *)backend->impl;
-    if (!impl) return false;
 
     scene.backend = backend;
     scene.preset = &preset;
     scene.config = &cfg;
 
     sim_runtime_backend_build_static_obstacles(backend, &scene);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
 
-    center_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                             impl->volume.desc.grid_w / 2,
-                                             impl->volume.desc.grid_h / 2,
-                                             impl->volume.desc.grid_d / 2);
-    if (impl->obstacle_occupancy[center_idx]) return false;
+    center_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                             impl.volume.desc.grid_w / 2,
+                                             impl.volume.desc.grid_h / 2,
+                                             impl.volume.desc.grid_d / 2);
+    if (impl.obstacle_occupancy[center_idx]) return false;
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -149,7 +148,7 @@ static bool test_import_occupancy_tracks_live_transform_updates(void) {
     AppConfig cfg = {0};
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffold *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     FluidScenePreset preset = {0};
     SceneState scene = {0};
     int y = 0;
@@ -171,8 +170,6 @@ static bool test_import_occupancy_tracks_live_transform_updates(void) {
 
     backend = create_backend(&cfg, &visual);
     if (!backend) return false;
-    impl = (SimRuntimeBackend3DScaffold *)backend->impl;
-    if (!impl) return false;
 
     preset.import_shape_count = 1;
     scene.backend = backend;
@@ -191,26 +188,28 @@ static bool test_import_occupancy_tracks_live_transform_updates(void) {
     };
 
     sim_runtime_backend_build_obstacles(backend, &scene);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
 
-    y = impl->volume.desc.grid_h / 2;
-    z = impl->volume.desc.grid_d / 2;
-    left_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                           impl->volume.desc.grid_w / 4,
+    y = impl.volume.desc.grid_h / 2;
+    z = impl.volume.desc.grid_d / 2;
+    left_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                           impl.volume.desc.grid_w / 4,
                                            y,
                                            z);
-    right_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                            (impl->volume.desc.grid_w * 3) / 4,
+    right_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                            (impl.volume.desc.grid_w * 3) / 4,
                                             y,
                                             z);
-    if (!impl->obstacle_occupancy[left_idx]) return false;
-    if (impl->obstacle_occupancy[right_idx]) return false;
+    if (!impl.obstacle_occupancy[left_idx]) return false;
+    if (impl.obstacle_occupancy[right_idx]) return false;
 
     scene.import_shapes[0].position_x = 0.75f;
     scene.import_shapes[0].rotation_deg = 35.0f;
     sim_runtime_backend_rasterize_dynamic_obstacles(backend, &scene);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
 
-    if (impl->obstacle_occupancy[left_idx]) return false;
-    if (!impl->obstacle_occupancy[right_idx]) return false;
+    if (impl.obstacle_occupancy[left_idx]) return false;
+    if (!impl.obstacle_occupancy[right_idx]) return false;
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -220,7 +219,7 @@ static bool test_tilted_retained_object_uses_full_3d_orientation_for_occupancy(v
     AppConfig cfg = {0};
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffold *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     FluidScenePreset preset = {0};
     SceneState scene = {0};
     size_t along_normal_idx = 0;
@@ -262,25 +261,24 @@ static bool test_tilted_retained_object_uses_full_3d_orientation_for_occupancy(v
 
     backend = create_backend(&cfg, &visual);
     if (!backend) return false;
-    impl = (SimRuntimeBackend3DScaffold *)backend->impl;
-    if (!impl) return false;
 
     scene.backend = backend;
     scene.preset = &preset;
     scene.config = &cfg;
 
     sim_runtime_backend_build_static_obstacles(backend, &scene);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
 
-    along_normal_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                                   (impl->volume.desc.grid_w * 3) / 4,
-                                                   impl->volume.desc.grid_h / 2,
-                                                   impl->volume.desc.grid_d / 2);
-    along_legacy_z_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                                     impl->volume.desc.grid_w / 2,
-                                                     impl->volume.desc.grid_h / 2,
-                                                     (impl->volume.desc.grid_d * 3) / 4);
-    if (!impl->obstacle_occupancy[along_normal_idx]) return false;
-    if (impl->obstacle_occupancy[along_legacy_z_idx]) return false;
+    along_normal_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                                   (impl.volume.desc.grid_w * 3) / 4,
+                                                   impl.volume.desc.grid_h / 2,
+                                                   impl.volume.desc.grid_d / 2);
+    along_legacy_z_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                                     impl.volume.desc.grid_w / 2,
+                                                     impl.volume.desc.grid_h / 2,
+                                                     (impl.volume.desc.grid_d * 3) / 4);
+    if (!impl.obstacle_occupancy[along_normal_idx]) return false;
+    if (impl.obstacle_occupancy[along_legacy_z_idx]) return false;
 
     sim_runtime_backend_destroy(backend);
     return true;

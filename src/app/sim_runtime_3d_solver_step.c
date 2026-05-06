@@ -13,6 +13,10 @@ static bool cell_is_solid(const uint8_t *solid_mask, size_t idx) {
     return solid_mask && solid_mask[idx] != 0u;
 }
 
+static float vector_magnitude3(float x, float y, float z) {
+    return sqrtf(x * x + y * y + z * z);
+}
+
 static float sample_solid_fallback_value(const float *field,
                                          const SimRuntime3DDomainDesc *desc,
                                          const uint8_t *solid_mask,
@@ -133,6 +137,114 @@ static void apply_solid_mask(SimRuntime3DVolume *volume, const uint8_t *solid_ma
         volume->velocity_z[i] = 0.0f;
         volume->pressure[i] = 0.0f;
     }
+}
+
+static void apply_velocity_safety_clamp(SimRuntime3DVolume *volume,
+                                        SimRuntime3DSolverScratch *scratch,
+                                        const uint8_t *solid_mask,
+                                        float dt,
+                                        float max_velocity_displacement_cells_limit,
+                                        SimRuntime3DSolverStepMetrics *metrics) {
+    float voxel_size = 1.0f;
+    float allowed_speed = 0.0f;
+    if (!volume || !scratch || dt <= 0.0f || max_velocity_displacement_cells_limit <= 0.0f) return;
+    voxel_size = volume->desc.voxel_size > 0.0f ? volume->desc.voxel_size : 1.0f;
+    allowed_speed = (max_velocity_displacement_cells_limit * voxel_size) / dt;
+    if (allowed_speed <= 0.0f) return;
+
+    for (size_t i = 0; i < volume->desc.cell_count; ++i) {
+        float vx = 0.0f;
+        float vy = 0.0f;
+        float vz = 0.0f;
+        float magnitude = 0.0f;
+        float displacement_cells = 0.0f;
+        if (cell_is_solid(solid_mask, i)) continue;
+        vx = scratch->velocity_x_prev[i];
+        vy = scratch->velocity_y_prev[i];
+        vz = scratch->velocity_z_prev[i];
+        magnitude = vector_magnitude3(vx, vy, vz);
+        displacement_cells = (magnitude * dt) / voxel_size;
+        if (metrics) {
+            if (magnitude > metrics->max_velocity_magnitude_pre_clamp) {
+                metrics->max_velocity_magnitude_pre_clamp = magnitude;
+            }
+            if (displacement_cells > metrics->max_velocity_displacement_cells_pre_clamp) {
+                metrics->max_velocity_displacement_cells_pre_clamp = displacement_cells;
+            }
+        }
+        if (magnitude > allowed_speed) {
+            float scale = allowed_speed / magnitude;
+            vx *= scale;
+            vy *= scale;
+            vz *= scale;
+            scratch->velocity_x_prev[i] = vx;
+            scratch->velocity_y_prev[i] = vy;
+            scratch->velocity_z_prev[i] = vz;
+            volume->velocity_x[i] = vx;
+            volume->velocity_y[i] = vy;
+            volume->velocity_z[i] = vz;
+            magnitude = allowed_speed;
+            displacement_cells = max_velocity_displacement_cells_limit;
+            if (metrics) {
+                metrics->velocity_clamp_cell_count += 1u;
+            }
+        }
+        if (metrics) {
+            if (magnitude > metrics->max_velocity_magnitude_post_clamp) {
+                metrics->max_velocity_magnitude_post_clamp = magnitude;
+            }
+            if (displacement_cells > metrics->max_velocity_displacement_cells_post_clamp) {
+                metrics->max_velocity_displacement_cells_post_clamp = displacement_cells;
+            }
+        }
+    }
+}
+
+static float compute_max_abs_divergence_for_volume(const SimRuntime3DVolume *volume,
+                                                   const uint8_t *solid_mask) {
+    const SimRuntime3DDomainDesc *desc = NULL;
+    float inv_two_h = 0.5f;
+    float max_abs_divergence = 0.0f;
+    if (!volume) return 0.0f;
+    desc = &volume->desc;
+    inv_two_h = 0.5f / (desc->voxel_size > 0.0f ? desc->voxel_size : 1.0f);
+
+    for (int z = 0; z < desc->grid_d; ++z) {
+        for (int y = 0; y < desc->grid_h; ++y) {
+            for (int x = 0; x < desc->grid_w; ++x) {
+                size_t idx = sim_runtime_3d_volume_index(desc, x, y, z);
+                size_t i_r = sim_runtime_3d_volume_index_clamped(desc, x + 1, y, z);
+                size_t i_l = sim_runtime_3d_volume_index_clamped(desc, x - 1, y, z);
+                size_t i_u = sim_runtime_3d_volume_index_clamped(desc, x, y - 1, z);
+                size_t i_d = sim_runtime_3d_volume_index_clamped(desc, x, y + 1, z);
+                size_t i_f = sim_runtime_3d_volume_index_clamped(desc, x, y, z + 1);
+                size_t i_b = sim_runtime_3d_volume_index_clamped(desc, x, y, z - 1);
+                float vx_r = 0.0f;
+                float vx_l = 0.0f;
+                float vy_u = 0.0f;
+                float vy_d = 0.0f;
+                float vz_f = 0.0f;
+                float vz_b = 0.0f;
+                float divergence = 0.0f;
+                float abs_divergence = 0.0f;
+
+                if (cell_is_solid(solid_mask, idx)) continue;
+
+                vx_r = cell_is_solid(solid_mask, i_r) ? 0.0f : volume->velocity_x[i_r];
+                vx_l = cell_is_solid(solid_mask, i_l) ? 0.0f : volume->velocity_x[i_l];
+                vy_u = cell_is_solid(solid_mask, i_u) ? 0.0f : volume->velocity_y[i_u];
+                vy_d = cell_is_solid(solid_mask, i_d) ? 0.0f : volume->velocity_y[i_d];
+                vz_f = cell_is_solid(solid_mask, i_f) ? 0.0f : volume->velocity_z[i_f];
+                vz_b = cell_is_solid(solid_mask, i_b) ? 0.0f : volume->velocity_z[i_b];
+                divergence = ((vx_r - vx_l) + (vy_d - vy_u) + (vz_f - vz_b)) * inv_two_h;
+                abs_divergence = divergence < 0.0f ? -divergence : divergence;
+                if (abs_divergence > max_abs_divergence) {
+                    max_abs_divergence = abs_divergence;
+                }
+            }
+        }
+    }
+    return max_abs_divergence;
 }
 
 static void diffuse_scalar_field(float *field,
@@ -526,13 +638,16 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                                            const uint8_t *solid_mask,
                                            const SimRuntime3DForceAxis *scene_up_axis,
                                            const AppConfig *cfg,
-                                           double dt) {
+                                           double dt,
+                                           float max_velocity_displacement_cells_limit,
+                                           SimRuntime3DSolverStepMetrics *out_metrics) {
     float dt_f = 0.0f;
     float voxel_size = 1.0f;
     float dt_cells = 0.0f;
     float diffusion_blend = 0.0f;
     float viscosity_blend = 0.0f;
     int iterations = 0;
+    SimRuntime3DSolverStepMetrics metrics = {0};
     if (!volume || !scratch || !cfg || dt <= 0.0) return false;
     if (volume->desc.cell_count == 0 || scratch->desc.cell_count != volume->desc.cell_count) {
         return false;
@@ -545,6 +660,12 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
     diffusion_blend = clamp_float_value(cfg->density_diffusion * dt_f, 0.0f, 0.2f);
     viscosity_blend = clamp_float_value(cfg->velocity_damping * dt_f, 0.0f, 0.25f);
     iterations = sim_runtime_3d_solver_iterations_for_config(cfg);
+    apply_velocity_safety_clamp(volume,
+                                scratch,
+                                solid_mask,
+                                dt_f,
+                                max_velocity_displacement_cells_limit,
+                                &metrics);
 
     apply_solid_mask(volume, solid_mask);
     advect_velocity(volume, scratch, solid_mask, dt_cells);
@@ -558,7 +679,12 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
     compute_divergence(volume, scratch, solid_mask);
     project_velocity(volume, scratch, solid_mask, iterations);
     enforce_no_through_wall_velocity(volume, solid_mask);
+    metrics.max_abs_divergence_after_project =
+        compute_max_abs_divergence_for_volume(volume, solid_mask);
     advect_density(volume, scratch, solid_mask, dt_cells, diffusion_blend, cfg->density_decay, dt);
     apply_solid_mask(volume, solid_mask);
+    if (out_metrics) {
+        *out_metrics = metrics;
+    }
     return true;
 }

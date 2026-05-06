@@ -268,6 +268,7 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
@@ -277,6 +278,7 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
 	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
 	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
@@ -372,7 +374,7 @@ VF2D_DATASET_TOOL_SRCS := \
 	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(TIMER_HUD_DIR)/external/cJSON.c
-VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(TIMER_HUD_DIR)/external -DVOLUME_FRAMES_DATASET_TOOL_ONLY=1 $(SDL_CFLAGS)
+VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include -I$(TIMER_HUD_DIR)/external -DVOLUME_FRAMES_DATASET_TOOL_ONLY=1 $(SDL_CFLAGS)
 ifeq ($(UNAME_S),Darwin)
 VF2D_DATASET_TOOL_INCS += -I/opt/homebrew/include -D_THREAD_SAFE
 endif
@@ -507,73 +509,89 @@ SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_emitter_contract_test.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
 		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
 		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
-		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
-	$(SRC_DIR)/app/sim_runtime_obstacle.c
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
 
 SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_attached_emitter_contract_test.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
 		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
 		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
-		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
-	$(SRC_DIR)/app/sim_runtime_obstacle.c
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
 
 SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_obstacle_contract_test.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
 		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
 		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
-		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
-	$(SRC_DIR)/app/sim_runtime_obstacle.c
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
 
 SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_retained_obstacle_contract_test.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
 		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
 		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
-		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
-	$(SRC_DIR)/app/sim_runtime_obstacle.c
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
 
 SIM_RUNTIME_BACKEND_DISPATCH_TEST_SRCS := \
 	tests/sim_runtime_backend_dispatch_contract_test.c \
@@ -581,21 +599,27 @@ SIM_RUNTIME_BACKEND_DISPATCH_TEST_SRCS := \
 
 SIM_RUNTIME_BACKEND_REPORTING_TEST_SRCS := \
 	tests/sim_runtime_backend_reporting_contract_test.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
 		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
 		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
-		$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
-	$(SRC_DIR)/app/sim_runtime_obstacle.c
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
 
 SIM_RUNTIME_3D_ANCHOR_TEST_SRCS := \
 	tests/sim_runtime_3d_anchor_contract_test.c \
@@ -616,6 +640,8 @@ SIM_RUNTIME_3D_DOMAIN_TEST_SRCS := \
 
 SIM_RUNTIME_3D_SOLVER_TEST_SRCS := \
 	tests/sim_runtime_3d_solver_contract_test.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
@@ -707,6 +733,7 @@ RUNTIME_SCENE_3D_TRUTH_TEST_SRCS := \
 	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
@@ -716,13 +743,16 @@ RUNTIME_SCENE_3D_TRUTH_TEST_SRCS := \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
 	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
 	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
-	$(SRC_DIR)/app/sim_runtime_obstacle.c
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
 
 SCENE_RUNTIME_LAUNCH_PROJECTION_TEST_SRCS := \
 	tests/scene_runtime_launch_projection_contract_test.c \
@@ -1535,19 +1565,23 @@ VOLUME_FRAMES_3D_EXPORT_TEST_SRCS := \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
 	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
 	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
 	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c \
 	$(CORE_DATA_DIR)/src/core_data.c \
 	$(CORE_PACK_DIR)/src/core_pack.c \
 	$(CORE_PACK_DIR)/src/core_pack_vf2d.c \
@@ -1574,19 +1608,23 @@ VOLUME_FRAMES_3D_TINY_PARITY_TEST_SRCS := \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
-	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
-	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+		$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+		$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
+		$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
 	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c \
 	$(CORE_DATA_DIR)/src/core_data.c \
 	$(CORE_PACK_DIR)/src/core_pack.c \
 	$(CORE_PACK_DIR)/src/core_pack_vf2d.c \

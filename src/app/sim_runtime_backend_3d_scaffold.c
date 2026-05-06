@@ -1,10 +1,10 @@
 #include "app/sim_runtime_backend.h"
 
 #include "app/scene_state.h"
+#include "app/sim_runtime_backend_3d_runtime.h"
 #include "app/sim_runtime_backend_3d_scaffold_internal.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
-#include "app/sim_runtime_3d_solver_core_sim.h"
 #include "app/sim_runtime_obstacle.h"
 
 #include <math.h>
@@ -14,6 +14,8 @@
 static const float SCAFFOLD_BRUSH_DENSITY = 20.0f;
 static const float SCAFFOLD_BRUSH_VEL_SCALE = 35.0f;
 static const float SCAFFOLD_BRUSH_VELOCITY_DENSITY = 4.0f;
+static const int SCAFFOLD_BRICK_SIZE = 8;
+static const size_t SCAFFOLD_DENSE_MIRROR_MAX_CELLS = (size_t)5 * 1024 * 1024;
 
 static SimRuntimeBackend3DScaffold *backend_3d_scaffold_state(SimRuntimeBackend *backend) {
     return backend ? (SimRuntimeBackend3DScaffold *)backend->impl : NULL;
@@ -24,10 +26,211 @@ static const SimRuntimeBackend3DScaffold *backend_3d_scaffold_state_const(
     return backend ? (const SimRuntimeBackend3DScaffold *)backend->impl : NULL;
 }
 
+typedef struct Backend3DScaffoldSparseStatsAccum {
+    size_t active_density_cells;
+    float max_density;
+    float max_velocity_magnitude;
+    bool scene_up_velocity_valid;
+    float axis_x;
+    float axis_y;
+    float axis_z;
+    double scene_up_velocity_weighted_sum;
+    double scene_up_density_weight;
+    float scene_up_velocity_peak;
+} Backend3DScaffoldSparseStatsAccum;
+
+static bool backend_3d_scaffold_accumulate_sparse_stats(int x,
+                                                        int y,
+                                                        int z,
+                                                        float density,
+                                                        float velocity_x,
+                                                        float velocity_y,
+                                                        float velocity_z,
+                                                        float pressure,
+                                                        void *user_data) {
+    Backend3DScaffoldSparseStatsAccum *accum =
+        (Backend3DScaffoldSparseStatsAccum *)user_data;
+    const float density_threshold = 0.0001f;
+    float speed = 0.0f;
+    (void)x;
+    (void)y;
+    (void)z;
+    (void)pressure;
+    if (!accum) return false;
+    speed = sqrtf(velocity_x * velocity_x +
+                  velocity_y * velocity_y +
+                  velocity_z * velocity_z);
+    if (density > accum->max_density) {
+        accum->max_density = density;
+    }
+    if (speed > accum->max_velocity_magnitude) {
+        accum->max_velocity_magnitude = speed;
+    }
+    if (density > density_threshold) {
+        accum->active_density_cells++;
+        if (accum->scene_up_velocity_valid) {
+            float scene_up_velocity = velocity_x * accum->axis_x +
+                                      velocity_y * accum->axis_y +
+                                      velocity_z * accum->axis_z;
+            accum->scene_up_velocity_weighted_sum +=
+                (double)scene_up_velocity * (double)density;
+            accum->scene_up_density_weight += (double)density;
+            if (scene_up_velocity > accum->scene_up_velocity_peak) {
+                accum->scene_up_velocity_peak = scene_up_velocity;
+            }
+        }
+    }
+    return true;
+}
+
+static void backend_3d_scaffold_mark_fluid_dirty(SimRuntimeBackend3DScaffold *state) {
+    if (!state) return;
+    state->debug_volume_stats_dirty = true;
+    state->export_volume_cache_dirty = true;
+    state->fluid_slice_dirty = true;
+}
+
+static bool backend_3d_scaffold_ensure_export_cache(SimRuntimeBackend3DScaffold *state) {
+    if (!state) return false;
+    if (!state->export_volume_cache.density) {
+        state->export_volume_cache.desc = state->volume.desc;
+        if (!sim_runtime_3d_volume_init(&state->export_volume_cache, &state->volume.desc)) {
+            return false;
+        }
+    }
+    if (!state->export_solid_mask_cache) {
+        state->export_solid_mask_cache =
+            (uint8_t *)calloc(state->volume.desc.cell_count, sizeof(uint8_t));
+        if (!state->export_solid_mask_cache) return false;
+        state->export_volume_cache_dirty = true;
+    }
+    if (!state->export_volume_cache_dirty) return true;
+    if (!sim_runtime_3d_brick_store_materialize_full(&state->brick_store, &state->export_volume_cache)) {
+        return false;
+    }
+    backend_3d_scaffold_runtime_note_export_cache_materialized(state);
+    if (!backend_3d_scaffold_obstacle_materialize_full(state,
+                                                       state->export_solid_mask_cache,
+                                                       state->volume.desc.cell_count)) {
+        return false;
+    }
+    state->export_volume_cache_dirty = false;
+    return true;
+}
+
+static bool backend_3d_scaffold_get_domain_desc_3d(const SimRuntimeBackend *backend,
+                                                   SimRuntime3DDomainDesc *out_desc) {
+    const SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state_const(backend);
+    if (!state || !out_desc) return false;
+    *out_desc = state->volume.desc;
+    return true;
+}
+
+static bool backend_3d_scaffold_debug_write_volume_cell_3d(SimRuntimeBackend *backend,
+                                                           int x,
+                                                           int y,
+                                                           int z,
+                                                           float density,
+                                                           float velocity_x,
+                                                           float velocity_y,
+                                                           float velocity_z,
+                                                           float pressure,
+                                                           uint8_t solid) {
+    SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
+    size_t idx = 0;
+    if (!state) return false;
+    if (x < 0 || x >= state->volume.desc.grid_w ||
+        y < 0 || y >= state->volume.desc.grid_h ||
+        z < 0 || z >= state->volume.desc.grid_d) {
+        return false;
+    }
+    if (!sim_runtime_3d_brick_store_set_cell(&state->brick_store,
+                                             x,
+                                             y,
+                                             z,
+                                             density,
+                                             velocity_x,
+                                             velocity_y,
+                                             velocity_z,
+                                             pressure)) {
+        return false;
+    }
+    idx = sim_runtime_3d_volume_index(&state->volume.desc, x, y, z);
+    backend_3d_scaffold_set_obstacle_cell(state, x, y, z, solid != 0u);
+    if (backend_3d_scaffold_dense_mirror_live(state)) {
+        state->volume.density[idx] = density;
+        state->volume.velocity_x[idx] = velocity_x;
+        state->volume.velocity_y[idx] = velocity_y;
+        state->volume.velocity_z[idx] = velocity_z;
+        state->volume.pressure[idx] = pressure;
+    }
+    state->obstacle_volume_dirty = false;
+    state->obstacle_slice_dirty = true;
+    backend_3d_scaffold_mark_fluid_dirty(state);
+    return true;
+}
+
+static bool backend_3d_scaffold_debug_reset_volume_truth_3d(SimRuntimeBackend *backend) {
+    SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
+    if (!state) return false;
+    sim_runtime_3d_brick_store_clear(&state->brick_store);
+    backend_3d_scaffold_clear_obstacle_bricks(state);
+    if (backend_3d_scaffold_dense_mirror_live(state)) {
+        sim_runtime_3d_volume_clear(&state->volume);
+    }
+    if (state->export_volume_cache.density) {
+        sim_runtime_3d_volume_clear(&state->export_volume_cache);
+    }
+    if (state->obstacle_occupancy) {
+        memset(state->obstacle_occupancy, 0, state->volume.desc.cell_count * sizeof(uint8_t));
+    }
+    if (state->obstacle_brick_flags) {
+        memset(state->obstacle_brick_flags, 0, state->brick_store.brick_count * sizeof(uint8_t));
+    }
+    if (state->export_solid_mask_cache) {
+        memset(state->export_solid_mask_cache, 0, state->volume.desc.cell_count * sizeof(uint8_t));
+    }
+    state->obstacle_volume_dirty = false;
+    state->obstacle_dense_cache_dirty = true;
+    state->obstacle_slice_dirty = true;
+    backend_3d_scaffold_mark_fluid_dirty(state);
+    return true;
+}
+
+static bool backend_3d_scaffold_debug_zero_dense_mirror_3d(SimRuntimeBackend *backend) {
+    SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
+    if (!state) return false;
+    if (!backend_3d_scaffold_dense_mirror_live(state)) return true;
+    sim_runtime_3d_volume_clear(&state->volume);
+    backend_3d_scaffold_mark_fluid_dirty(state);
+    return true;
+}
+
+static bool backend_3d_scaffold_debug_zero_obstacle_dense_cache_3d(SimRuntimeBackend *backend) {
+    SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
+    if (!state) return false;
+    if (state->obstacle_occupancy) {
+        memset(state->obstacle_occupancy, 0, state->volume.desc.cell_count * sizeof(uint8_t));
+    }
+    if (state->export_solid_mask_cache) {
+        memset(state->export_solid_mask_cache, 0, state->volume.desc.cell_count * sizeof(uint8_t));
+    }
+    state->obstacle_dense_cache_dirty = true;
+    state->obstacle_slice_dirty = true;
+    state->export_volume_cache_dirty = true;
+    state->debug_volume_stats_dirty = true;
+    return true;
+}
+
 static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
     if (!state) return;
-    sim_runtime_3d_volume_clear(&state->volume);
+    sim_runtime_3d_brick_store_clear(&state->brick_store);
+    sim_runtime_3d_volume_clear(&state->solver_volume);
     sim_runtime_3d_solver_scratch_clear(&state->solver_scratch);
+    sim_runtime_3d_volume_clear(&state->export_volume_cache);
+    if (backend_3d_scaffold_dense_mirror_live(state)) {
+        sim_runtime_3d_volume_clear(&state->volume);
+    }
     core_sim_loop_reset(&state->solver_loop);
     backend_3d_scaffold_reset_obstacles(state);
     state->emitter_step_emitters_applied = 0;
@@ -45,11 +248,14 @@ static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
     state->debug_volume_scene_up_velocity_valid = false;
     state->debug_volume_scene_up_velocity_avg = 0.0f;
     state->debug_volume_scene_up_velocity_peak = 0.0f;
-    state->fluid_slice_dirty = true;
+    backend_3d_scaffold_runtime_reset_metrics(state);
+    backend_3d_scaffold_mark_fluid_dirty(state);
 }
 
 static void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DScaffold *state) {
     const float density_threshold = 0.0001f;
+    const SimRuntime3DVolume *stats_volume = NULL;
+    Backend3DScaffoldSparseStatsAccum sparse_accum = {0};
     float axis_x = 0.0f;
     float axis_y = 0.0f;
     float axis_z = 0.0f;
@@ -58,6 +264,12 @@ static void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DSca
     double scene_up_density_weight = 0.0;
     if (!state) return;
     if (!state->debug_volume_stats_dirty) return;
+    if (!backend_3d_scaffold_dense_mirror_live(state)) {
+        stats_volume = NULL;
+    } else {
+        if (!backend_3d_scaffold_ensure_obstacle_dense_cache(state)) return;
+        stats_volume = &state->volume;
+    }
 
     state->debug_volume_active_density_cells = 0;
     state->debug_volume_solid_cells = 0;
@@ -80,11 +292,39 @@ static void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DSca
         }
     }
 
-    for (size_t i = 0; i < state->volume.desc.cell_count; ++i) {
-        float density = state->volume.density[i];
-        float velocity_x = state->volume.velocity_x[i];
-        float velocity_y = state->volume.velocity_y[i];
-        float velocity_z = state->volume.velocity_z[i];
+    if (!stats_volume) {
+        sparse_accum.scene_up_velocity_valid = state->debug_volume_scene_up_velocity_valid;
+        sparse_accum.axis_x = axis_x;
+        sparse_accum.axis_y = axis_y;
+        sparse_accum.axis_z = axis_z;
+        state->debug_volume_solid_cells = backend_3d_scaffold_obstacle_solid_cell_count(state);
+        if (!sim_runtime_3d_brick_store_visit_active_cells(&state->brick_store,
+                                                           backend_3d_scaffold_accumulate_sparse_stats,
+                                                           &sparse_accum)) {
+            return;
+        }
+        state->debug_volume_active_density_cells = sparse_accum.active_density_cells;
+        state->debug_volume_max_density = sparse_accum.max_density;
+        state->debug_volume_max_velocity_magnitude = sparse_accum.max_velocity_magnitude;
+        if (state->debug_volume_scene_up_velocity_valid &&
+            sparse_accum.scene_up_density_weight > 0.0) {
+            state->debug_volume_scene_up_velocity_avg =
+                (float)(sparse_accum.scene_up_velocity_weighted_sum /
+                        sparse_accum.scene_up_density_weight);
+        }
+        if (state->debug_volume_scene_up_velocity_valid) {
+            state->debug_volume_scene_up_velocity_peak =
+                sparse_accum.scene_up_velocity_peak;
+        }
+        state->debug_volume_stats_dirty = false;
+        return;
+    }
+
+    for (size_t i = 0; i < stats_volume->desc.cell_count; ++i) {
+        float density = stats_volume->density[i];
+        float velocity_x = stats_volume->velocity_x[i];
+        float velocity_y = stats_volume->velocity_y[i];
+        float velocity_z = stats_volume->velocity_z[i];
         float speed = sqrtf(velocity_x * velocity_x +
                             velocity_y * velocity_y +
                             velocity_z * velocity_z);
@@ -121,7 +361,6 @@ static void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DSca
 
 static bool backend_3d_scaffold_sync_fluid_slice(SimRuntimeBackend3DScaffold *state) {
     const SimRuntime3DDomainDesc *desc = NULL;
-    size_t slice_start = 0;
     if (!state) return false;
     desc = &state->volume.desc;
     if (!state->fluid_slice_dirty) return true;
@@ -134,19 +373,28 @@ static bool backend_3d_scaffold_sync_fluid_slice(SimRuntimeBackend3DScaffold *st
         state->compatibility_slice_z >= desc->grid_d) {
         return false;
     }
-    slice_start = (size_t)state->compatibility_slice_z * desc->slice_cell_count;
-    memcpy(state->slice_density,
-           state->volume.density + slice_start,
-           desc->slice_cell_count * sizeof(float));
-    memcpy(state->slice_velocity_x,
-           state->volume.velocity_x + slice_start,
-           desc->slice_cell_count * sizeof(float));
-    memcpy(state->slice_velocity_y,
-           state->volume.velocity_y + slice_start,
-           desc->slice_cell_count * sizeof(float));
-    memcpy(state->slice_pressure,
-           state->volume.pressure + slice_start,
-           desc->slice_cell_count * sizeof(float));
+    if (backend_3d_scaffold_dense_mirror_live(state)) {
+        size_t slice_start = (size_t)state->compatibility_slice_z * desc->slice_cell_count;
+        memcpy(state->slice_density,
+               state->volume.density + slice_start,
+               desc->slice_cell_count * sizeof(float));
+        memcpy(state->slice_velocity_x,
+               state->volume.velocity_x + slice_start,
+               desc->slice_cell_count * sizeof(float));
+        memcpy(state->slice_velocity_y,
+               state->volume.velocity_y + slice_start,
+               desc->slice_cell_count * sizeof(float));
+        memcpy(state->slice_pressure,
+               state->volume.pressure + slice_start,
+               desc->slice_cell_count * sizeof(float));
+    } else if (!sim_runtime_3d_brick_store_fill_slice_xy(&state->brick_store,
+                                                         state->compatibility_slice_z,
+                                                         state->slice_density,
+                                                         state->slice_velocity_x,
+                                                         state->slice_velocity_y,
+                                                         state->slice_pressure)) {
+        return false;
+    }
     state->fluid_slice_dirty = false;
     return true;
 }
@@ -168,8 +416,16 @@ static bool backend_3d_scaffold_set_slice_z(SimRuntimeBackend3DScaffold *state, 
 static void backend_3d_scaffold_destroy(SimRuntimeBackend *backend) {
     SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
     if (state) {
+        backend_3d_scaffold_clear_obstacle_bricks(state);
+        sim_runtime_3d_brick_store_destroy(&state->brick_store);
         sim_runtime_3d_volume_destroy(&state->volume);
+        sim_runtime_3d_volume_destroy(&state->solver_volume);
+        sim_runtime_3d_volume_destroy(&state->export_volume_cache);
         sim_runtime_3d_solver_scratch_destroy(&state->solver_scratch);
+        free(state->solver_solid_mask);
+        free(state->export_solid_mask_cache);
+        free(state->obstacle_bricks);
+        free(state->obstacle_brick_flags);
         free(state->slice_density);
         free(state->slice_velocity_x);
         free(state->slice_velocity_y);
@@ -191,18 +447,10 @@ static bool backend_3d_scaffold_valid(const SimRuntimeBackend *backend) {
            state->volume.desc.grid_h > 0 &&
            state->volume.desc.grid_d > 0 &&
            state->volume.desc.cell_count > 0 &&
-           state->volume.density &&
-           state->volume.velocity_x &&
-           state->volume.velocity_y &&
-           state->volume.velocity_z &&
-           state->volume.pressure &&
-           state->solver_scratch.density_prev &&
-           state->solver_scratch.velocity_x_prev &&
-           state->solver_scratch.velocity_y_prev &&
-           state->solver_scratch.velocity_z_prev &&
-           state->solver_scratch.pressure_prev &&
-           state->solver_scratch.divergence &&
+           state->brick_store.bricks &&
+           state->obstacle_bricks &&
            state->obstacle_occupancy &&
+           state->obstacle_brick_flags &&
            state->slice_density &&
            state->slice_velocity_x &&
            state->slice_velocity_y &&
@@ -242,7 +490,6 @@ static bool backend_3d_scaffold_apply_brush_sample(SimRuntimeBackend *backend,
                                                    const AppConfig *cfg,
                                                    const StrokeSample *sample) {
     SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
-    size_t idx = 0;
     int gx = 0;
     int gy = 0;
     float inv_w = 0.0f;
@@ -252,7 +499,6 @@ static bool backend_3d_scaffold_apply_brush_sample(SimRuntimeBackend *backend,
     if (!state || !cfg || !sample || state->volume.desc.cell_count == 0) return false;
 
     backend_3d_scaffold_window_to_grid(state, cfg, sample->x, sample->y, &gx, &gy);
-    idx = sim_runtime_3d_volume_index(&state->volume.desc, gx, gy, state->compatibility_slice_z);
     inv_w = (float)(cfg->window_w > 0 ? cfg->window_w : 1);
     inv_h = (float)(cfg->window_h > 0 ? cfg->window_h : 1);
     vx = (sample->vx / inv_w) * SCAFFOLD_BRUSH_VEL_SCALE;
@@ -260,20 +506,53 @@ static bool backend_3d_scaffold_apply_brush_sample(SimRuntimeBackend *backend,
 
     switch (sample->mode) {
     case BRUSH_MODE_VELOCITY:
-        state->volume.velocity_x[idx] += vx;
-        state->volume.velocity_y[idx] += vy;
-        state->volume.density[idx] += SCAFFOLD_BRUSH_VELOCITY_DENSITY;
+        if (!sim_runtime_3d_brick_store_add_cell(&state->brick_store,
+                                                 gx,
+                                                 gy,
+                                                 state->compatibility_slice_z,
+                                                 SCAFFOLD_BRUSH_VELOCITY_DENSITY,
+                                                 vx,
+                                                 vy,
+                                                 0.0f,
+                                                 0.0f)) {
+            return false;
+        }
+        if (backend_3d_scaffold_dense_mirror_live(state)) {
+            size_t idx = sim_runtime_3d_volume_index(&state->volume.desc,
+                                                     gx,
+                                                     gy,
+                                                     state->compatibility_slice_z);
+            state->volume.velocity_x[idx] += vx;
+            state->volume.velocity_y[idx] += vy;
+            state->volume.density[idx] += SCAFFOLD_BRUSH_VELOCITY_DENSITY;
+        }
         break;
     case BRUSH_MODE_DENSITY:
     default:
-        state->volume.density[idx] += SCAFFOLD_BRUSH_DENSITY;
-        state->volume.velocity_x[idx] += vx * 0.25f;
-        state->volume.velocity_y[idx] += vy * 0.25f;
+        if (!sim_runtime_3d_brick_store_add_cell(&state->brick_store,
+                                                 gx,
+                                                 gy,
+                                                 state->compatibility_slice_z,
+                                                 SCAFFOLD_BRUSH_DENSITY,
+                                                 vx * 0.25f,
+                                                 vy * 0.25f,
+                                                 0.0f,
+                                                 0.0f)) {
+            return false;
+        }
+        if (backend_3d_scaffold_dense_mirror_live(state)) {
+            size_t idx = sim_runtime_3d_volume_index(&state->volume.desc,
+                                                     gx,
+                                                     gy,
+                                                     state->compatibility_slice_z);
+            state->volume.density[idx] += SCAFFOLD_BRUSH_DENSITY;
+            state->volume.velocity_x[idx] += vx * 0.25f;
+            state->volume.velocity_y[idx] += vy * 0.25f;
+        }
         break;
     }
 
-    state->debug_volume_stats_dirty = true;
-    state->fluid_slice_dirty = true;
+    backend_3d_scaffold_mark_fluid_dirty(state);
     return true;
 }
 
@@ -299,30 +578,7 @@ static void backend_3d_scaffold_step(SimRuntimeBackend *backend,
                                      struct SceneState *scene,
                                      const AppConfig *cfg,
                                      double dt) {
-    SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
-    SimRuntime3DForceAxis scene_up_axis = {0};
-    if (state && state->obstacle_volume_dirty) {
-        backend_3d_scaffold_build_obstacles(backend, scene);
-    }
-    if (!state || !cfg || dt <= 0.0) return;
-    if (state->scene_up_valid) {
-        scene_up_axis.valid = true;
-        scene_up_axis.x = state->scene_up_x;
-        scene_up_axis.y = state->scene_up_y;
-        scene_up_axis.z = state->scene_up_z;
-    }
-    if (!sim_runtime_3d_solver_core_sim_step_first_pass(&state->solver_loop,
-                                                        &state->volume,
-                                                        &state->solver_scratch,
-                                                        state->obstacle_occupancy,
-                                                        &scene_up_axis,
-                                                        cfg,
-                                                        dt,
-                                                        NULL)) {
-        return;
-    }
-    state->debug_volume_stats_dirty = true;
-    state->fluid_slice_dirty = true;
+    (void)backend_3d_scaffold_runtime_step(backend, scene, cfg, dt);
 }
 
 static void backend_3d_scaffold_inject_object_motion(SimRuntimeBackend *backend,
@@ -340,12 +596,31 @@ static void backend_3d_scaffold_seed_uniform_velocity_2d(SimRuntimeBackend *back
                                                          float velocity_y) {
     SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
     if (!state || state->volume.desc.cell_count == 0) return;
-    for (size_t i = 0; i < state->volume.desc.cell_count; ++i) {
-        state->volume.velocity_x[i] = velocity_x;
-        state->volume.velocity_y[i] = velocity_y;
+    for (int z = 0; z < state->volume.desc.grid_d; ++z) {
+        for (int y = 0; y < state->volume.desc.grid_h; ++y) {
+            for (int x = 0; x < state->volume.desc.grid_w; ++x) {
+                sim_runtime_3d_brick_store_set_cell(&state->brick_store,
+                                                    x,
+                                                    y,
+                                                    z,
+                                                    0.0f,
+                                                    velocity_x,
+                                                    velocity_y,
+                                                    0.0f,
+                                                    0.0f);
+            }
+        }
     }
-    state->debug_volume_stats_dirty = true;
-    state->fluid_slice_dirty = true;
+    if (backend_3d_scaffold_dense_mirror_live(state)) {
+        for (size_t i = 0; i < state->volume.desc.cell_count; ++i) {
+            state->volume.density[i] = 0.0f;
+            state->volume.velocity_x[i] = velocity_x;
+            state->volume.velocity_y[i] = velocity_y;
+            state->volume.velocity_z[i] = 0.0f;
+            state->volume.pressure[i] = 0.0f;
+        }
+    }
+    backend_3d_scaffold_mark_fluid_dirty(state);
 }
 
 static bool backend_3d_scaffold_export_snapshot(const SimRuntimeBackend *backend,
@@ -382,12 +657,23 @@ static bool backend_3d_scaffold_get_debug_volume_view_3d(const SimRuntimeBackend
                                                          SceneDebugVolumeView3D *out_view) {
     SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state((SimRuntimeBackend *)backend);
     const SimRuntime3DDomainDesc *desc = NULL;
+    const float *density = NULL;
+    const uint8_t *solid_mask = NULL;
     if (!state || !out_view) return false;
     desc = &state->volume.desc;
     if (state->obstacle_volume_dirty) {
         backend_3d_scaffold_build_obstacles((SimRuntimeBackend *)backend, NULL);
     }
     backend_3d_scaffold_update_debug_volume_stats(state);
+    if (backend_3d_scaffold_dense_mirror_live(state)) {
+        if (!backend_3d_scaffold_ensure_obstacle_dense_cache(state)) return false;
+        density = state->volume.density;
+        solid_mask = state->obstacle_occupancy;
+    } else {
+        if (!backend_3d_scaffold_ensure_export_cache(state)) return false;
+        density = state->export_volume_cache.density;
+        solid_mask = state->export_solid_mask_cache;
+    }
     *out_view = (SceneDebugVolumeView3D){
         .width = desc->grid_w,
         .height = desc->grid_h,
@@ -400,8 +686,8 @@ static bool backend_3d_scaffold_get_debug_volume_view_3d(const SimRuntimeBackend
         .world_max_y = desc->world_max_y,
         .world_max_z = desc->world_max_z,
         .voxel_size = desc->voxel_size,
-        .density = state->volume.density,
-        .solid_mask = state->obstacle_occupancy,
+        .density = density,
+        .solid_mask = solid_mask,
     };
     return true;
 }
@@ -415,6 +701,31 @@ static bool backend_3d_scaffold_get_volume_export_view_3d(const SimRuntimeBacken
     if (state->obstacle_volume_dirty) {
         backend_3d_scaffold_build_obstacles((SimRuntimeBackend *)backend, NULL);
     }
+    if (backend_3d_scaffold_dense_mirror_live(state)) {
+        if (!backend_3d_scaffold_ensure_obstacle_dense_cache(state)) return false;
+        *out_view = (SceneFluidVolumeExportView3D){
+            .width = desc->grid_w,
+            .height = desc->grid_h,
+            .depth = desc->grid_d,
+            .cell_count = desc->cell_count,
+            .origin_x = desc->world_min_x,
+            .origin_y = desc->world_min_y,
+            .origin_z = desc->world_min_z,
+            .voxel_size = desc->voxel_size,
+            .scene_up_valid = state->scene_up_valid,
+            .scene_up_x = state->scene_up_x,
+            .scene_up_y = state->scene_up_y,
+            .scene_up_z = state->scene_up_z,
+            .density = state->volume.density,
+            .velocity_x = state->volume.velocity_x,
+            .velocity_y = state->volume.velocity_y,
+            .velocity_z = state->volume.velocity_z,
+            .pressure = state->volume.pressure,
+            .solid_mask = state->obstacle_occupancy,
+        };
+        return true;
+    }
+    if (!backend_3d_scaffold_ensure_export_cache(state)) return false;
     *out_view = (SceneFluidVolumeExportView3D){
         .width = desc->grid_w,
         .height = desc->grid_h,
@@ -428,12 +739,12 @@ static bool backend_3d_scaffold_get_volume_export_view_3d(const SimRuntimeBacken
         .scene_up_x = state->scene_up_x,
         .scene_up_y = state->scene_up_y,
         .scene_up_z = state->scene_up_z,
-        .density = state->volume.density,
-        .velocity_x = state->volume.velocity_x,
-        .velocity_y = state->volume.velocity_y,
-        .velocity_z = state->volume.velocity_z,
-        .pressure = state->volume.pressure,
-        .solid_mask = state->obstacle_occupancy,
+        .density = state->export_volume_cache.density,
+        .velocity_x = state->export_volume_cache.velocity_x,
+        .velocity_y = state->export_volume_cache.velocity_y,
+        .velocity_z = state->export_volume_cache.velocity_z,
+        .pressure = state->export_volume_cache.pressure,
+        .solid_mask = state->export_solid_mask_cache,
     };
     return true;
 }
@@ -482,6 +793,37 @@ static bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
         .compatibility_slice_z = state->compatibility_slice_z,
         .secondary_debug_slice_stack_live = true,
         .secondary_debug_slice_stack_radius = 3,
+        .runtime_allocated_brick_count = state->brick_store.allocated_brick_count,
+        .runtime_active_brick_count = state->brick_store.allocated_brick_count,
+        .runtime_active_region_cell_count = state->runtime_last_active_region_cell_count,
+        .runtime_solver_region_cell_count = state->runtime_last_solver_region_cell_count,
+        .runtime_solver_cluster_count = state->runtime_last_solver_cluster_count,
+        .runtime_solver_max_cluster_cell_count = state->runtime_last_solver_max_cluster_cell_count,
+        .runtime_solver_solved_cluster_count = state->runtime_last_solver_solved_cluster_count,
+        .runtime_solver_skipped_cluster_count = state->runtime_last_solver_skipped_cluster_count,
+        .runtime_solver_skipped_solver_cell_count = state->runtime_last_solver_skipped_solver_cell_count,
+        .runtime_export_cache_materialization_count = state->runtime_export_cache_materialization_count,
+        .runtime_solver_region_cell_budget = state->runtime_solver_region_cell_budget,
+        .runtime_solver_region_cell_budget_overridden =
+            state->runtime_solver_region_cell_budget_overridden,
+        .runtime_solver_max_velocity_displacement_cells_limit =
+            state->runtime_solver_max_velocity_displacement_cells_limit,
+        .runtime_solver_max_velocity_displacement_cells_limit_overridden =
+            state->runtime_solver_max_velocity_displacement_cells_limit_overridden,
+        .runtime_solver_velocity_clamp_cell_count = state->runtime_solver_velocity_clamp_cell_count,
+        .runtime_dense_mirror_live = backend_3d_scaffold_dense_mirror_live(state),
+        .runtime_solver_region_guard_triggered = state->runtime_solver_region_guard_triggered,
+        .runtime_solver_cluster_limit_reached = state->runtime_solver_cluster_limit_reached,
+        .runtime_solver_max_velocity_magnitude_pre_clamp =
+            state->runtime_solver_max_velocity_magnitude_pre_clamp,
+        .runtime_solver_max_velocity_magnitude_post_clamp =
+            state->runtime_solver_max_velocity_magnitude_post_clamp,
+        .runtime_solver_max_velocity_displacement_cells_pre_clamp =
+            state->runtime_solver_max_velocity_displacement_cells_pre_clamp,
+        .runtime_solver_max_velocity_displacement_cells_post_clamp =
+            state->runtime_solver_max_velocity_displacement_cells_post_clamp,
+        .runtime_solver_max_abs_divergence_after_project =
+            state->runtime_solver_max_abs_divergence_after_project,
         .debug_volume_view_3d_available = true,
         .debug_volume_active_density_cells = state->debug_volume_active_density_cells,
         .debug_volume_solid_cells = state->debug_volume_solid_cells,
@@ -507,7 +849,6 @@ static bool backend_3d_scaffold_get_compatibility_slice_activity(const SimRuntim
                                                                  bool *out_has_obstacles) {
     SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state((SimRuntimeBackend *)backend);
     const SimRuntime3DDomainDesc *desc = NULL;
-    size_t slice_start = 0;
     bool has_fluid = false;
     bool has_obstacles = false;
     if (!state) return false;
@@ -516,13 +857,42 @@ static bool backend_3d_scaffold_get_compatibility_slice_activity(const SimRuntim
     if (state->obstacle_volume_dirty) {
         backend_3d_scaffold_build_obstacles((SimRuntimeBackend *)backend, NULL);
     }
-    slice_start = (size_t)slice_z * desc->slice_cell_count;
-    for (size_t i = 0; i < desc->slice_cell_count; ++i) {
-        if (!has_fluid && state->volume.density[slice_start + i] > 0.0001f) {
-            has_fluid = true;
+    if (backend_3d_scaffold_dense_mirror_live(state)) {
+        if (!backend_3d_scaffold_ensure_obstacle_dense_cache(state)) return false;
+        size_t slice_start = (size_t)slice_z * desc->slice_cell_count;
+        for (size_t i = 0; i < desc->slice_cell_count; ++i) {
+            if (!has_fluid && state->volume.density[slice_start + i] > 0.0001f) {
+                has_fluid = true;
+            }
+            if (!has_obstacles && state->obstacle_occupancy[slice_start + i]) {
+                has_obstacles = true;
+            }
+            if (has_fluid && has_obstacles) break;
         }
-        if (!has_obstacles && state->obstacle_occupancy[slice_start + i]) {
-            has_obstacles = true;
+        if (out_has_fluid) *out_has_fluid = has_fluid;
+        if (out_has_obstacles) *out_has_obstacles = has_obstacles;
+        return true;
+    }
+    for (int y = 0; y < desc->grid_h; ++y) {
+        for (int x = 0; x < desc->grid_w; ++x) {
+            float density = 0.0f;
+            sim_runtime_3d_brick_store_get_cell(&state->brick_store,
+                                                x,
+                                                y,
+                                                slice_z,
+                                                &density,
+                                                NULL,
+                                                NULL,
+                                                NULL,
+                                                NULL);
+            if (!has_fluid && density > 0.0001f) {
+                has_fluid = true;
+            }
+            if (!has_obstacles &&
+                backend_3d_scaffold_obstacle_cell_solid(state, x, y, slice_z)) {
+                has_obstacles = true;
+            }
+            if (has_fluid && has_obstacles) break;
         }
         if (has_fluid && has_obstacles) break;
     }
@@ -558,6 +928,11 @@ static const SimRuntimeBackendOps g_backend_3d_scaffold_ops = {
     .get_report = backend_3d_scaffold_get_report,
     .get_compatibility_slice_activity = backend_3d_scaffold_get_compatibility_slice_activity,
     .step_compatibility_slice = backend_3d_scaffold_step_compatibility_slice,
+    .get_domain_desc_3d = backend_3d_scaffold_get_domain_desc_3d,
+    .debug_zero_dense_mirror_3d = backend_3d_scaffold_debug_zero_dense_mirror_3d,
+    .debug_zero_obstacle_dense_cache_3d = backend_3d_scaffold_debug_zero_obstacle_dense_cache_3d,
+    .debug_write_volume_cell_3d = backend_3d_scaffold_debug_write_volume_cell_3d,
+    .debug_reset_volume_truth_3d = backend_3d_scaffold_debug_reset_volume_truth_3d,
 };
 
 SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
@@ -583,15 +958,19 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
     }
     backend->impl = state;
 
-    if (!sim_runtime_3d_volume_init(&state->volume, &desc)) {
-        backend_3d_scaffold_destroy(backend);
-        return NULL;
-    }
-    if (!sim_runtime_3d_solver_scratch_init(&state->solver_scratch, &desc)) {
+    state->volume.desc = desc;
+    state->solver_volume.desc = desc;
+    state->export_volume_cache.desc = desc;
+    if (!sim_runtime_3d_brick_store_init(&state->brick_store, &desc, SCAFFOLD_BRICK_SIZE)) {
         backend_3d_scaffold_destroy(backend);
         return NULL;
     }
     if (!core_sim_loop_init(&state->solver_loop, NULL)) {
+        backend_3d_scaffold_destroy(backend);
+        return NULL;
+    }
+    if (desc.cell_count <= SCAFFOLD_DENSE_MIRROR_MAX_CELLS &&
+        !sim_runtime_3d_volume_init(&state->volume, &desc)) {
         backend_3d_scaffold_destroy(backend);
         return NULL;
     }
@@ -611,11 +990,15 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
     state->fluid_slice_dirty = true;
     state->obstacle_volume_dirty = true;
     state->obstacle_slice_dirty = true;
+    state->export_volume_cache_dirty = true;
     state->slice_density = (float *)calloc(slice_cells, sizeof(float));
     state->slice_velocity_x = (float *)calloc(slice_cells, sizeof(float));
     state->slice_velocity_y = (float *)calloc(slice_cells, sizeof(float));
     state->slice_pressure = (float *)calloc(slice_cells, sizeof(float));
     state->obstacle_occupancy = (uint8_t *)calloc(desc.cell_count, sizeof(uint8_t));
+    state->obstacle_bricks = (void **)calloc(state->brick_store.brick_count, sizeof(void *));
+    state->obstacle_brick_flags =
+        (uint8_t *)calloc(state->brick_store.brick_count, sizeof(uint8_t));
     state->slice_solid_mask = (uint8_t *)calloc(slice_cells, sizeof(uint8_t));
     state->slice_obstacle_velocity_x = (float *)calloc(slice_cells, sizeof(float));
     state->slice_obstacle_velocity_y = (float *)calloc(slice_cells, sizeof(float));
@@ -625,6 +1008,8 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
         !state->slice_velocity_y ||
         !state->slice_pressure ||
         !state->obstacle_occupancy ||
+        !state->obstacle_bricks ||
+        !state->obstacle_brick_flags ||
         !state->slice_solid_mask ||
         !state->slice_obstacle_velocity_x ||
         !state->slice_obstacle_velocity_y ||
@@ -634,6 +1019,13 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
     }
 
     backend_3d_scaffold_reset(state);
+    state->runtime_solver_region_cell_budget = app_config_3d_solver_region_cell_budget(cfg);
+    state->runtime_solver_region_cell_budget_overridden =
+        app_config_3d_solver_region_cell_budget_overridden(cfg);
+    state->runtime_solver_max_velocity_displacement_cells_limit =
+        app_config_3d_max_velocity_displacement_cells(cfg);
+    state->runtime_solver_max_velocity_displacement_cells_limit_overridden =
+        app_config_3d_max_velocity_displacement_cells_overridden(cfg);
 
     backend->kind = SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD;
     backend->impl = state;

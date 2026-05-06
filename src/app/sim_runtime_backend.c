@@ -204,3 +204,47 @@ bool sim_runtime_backend_step_compatibility_slice(SimRuntimeBackend *backend, in
     return backend && backend->ops && backend->ops->step_compatibility_slice &&
            backend->ops->step_compatibility_slice(backend, delta_z);
 }
+
+bool sim_runtime_backend_get_domain_desc_3d(const SimRuntimeBackend *backend,
+                                            SimRuntime3DDomainDesc *out_desc) {
+    return backend && backend->ops && backend->ops->get_domain_desc_3d &&
+           backend->ops->get_domain_desc_3d(backend, out_desc);
+}
+
+bool sim_runtime_backend_debug_zero_dense_mirror_3d(SimRuntimeBackend *backend) {
+    return backend && backend->ops && backend->ops->debug_zero_dense_mirror_3d &&
+           backend->ops->debug_zero_dense_mirror_3d(backend);
+}
+
+bool sim_runtime_backend_debug_zero_obstacle_dense_cache_3d(SimRuntimeBackend *backend) {
+    return backend && backend->ops && backend->ops->debug_zero_obstacle_dense_cache_3d &&
+           backend->ops->debug_zero_obstacle_dense_cache_3d(backend);
+}
+
+bool sim_runtime_backend_debug_write_volume_cell_3d(SimRuntimeBackend *backend,
+                                                    int x,
+                                                    int y,
+                                                    int z,
+                                                    float density,
+                                                    float velocity_x,
+                                                    float velocity_y,
+                                                    float velocity_z,
+                                                    float pressure,
+                                                    uint8_t solid) {
+    return backend && backend->ops && backend->ops->debug_write_volume_cell_3d &&
+           backend->ops->debug_write_volume_cell_3d(backend,
+                                                    x,
+                                                    y,
+                                                    z,
+                                                    density,
+                                                    velocity_x,
+                                                    velocity_y,
+                                                    velocity_z,
+                                                    pressure,
+                                                    solid);
+}
+
+bool sim_runtime_backend_debug_reset_volume_truth_3d(SimRuntimeBackend *backend) {
+    return backend && backend->ops && backend->ops->debug_reset_volume_truth_3d &&
+           backend->ops->debug_reset_volume_truth_3d(backend);
+}

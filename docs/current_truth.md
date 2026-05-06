@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-04-29
+Last updated: 2026-05-06
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -21,6 +21,41 @@ Last updated: 2026-04-29
 
 ## Runtime and Editor Snapshot
 - Runtime/editor retained-scene lanes are active and structurally separated from legacy compatibility mapping.
+- Dense retained-runtime `3D` domains now enforce a resident-memory budget before backend allocation:
+  - oversized volumetric domains are downscaled by increasing voxel size rather than attempting full dense allocation at the requested resolution
+- The `3D` scaffold backend no longer requires full dense field residency as its always-live source of truth:
+  - persistent fluid state is stored in app-local sparse bricks
+  - solver steps materialize bounded dense work regions around active bricks instead of solving over the whole domain every frame
+  - obstacle occupancy is tracked at both cell and brick scope so enforcement and solver-region expansion can skip fully empty brick lanes
+  - solver-region scheduling is brick-aligned and pulls in nearby obstacle bricks instead of relying on whole-volume obstacle scans
+  - compatibility slices and export/debug volume views are derived readouts rather than the authoritative storage path
+  - a dense mirror is kept only for bounded test-scale domains so existing small-domain contract lanes remain inspectable without reintroducing high-end dense residency
+  - live `3D` stepping is sparse-authoritative even when the bounded dense mirror exists; the step path no longer resyncs sparse truth from dense arrays before solve
+  - backend reporting now exposes sparse-runtime region metrics, dense-mirror-live state, and an explicit solver-region cell budget/guard result
+  - oversized sparse solver regions now stop at an explicit guardrail instead of silently rematerializing arbitrarily large dense work buffers
+  - live `3D` stepping now schedules connected active-brick clusters instead of one global padded region:
+    - distant active plumes solve independently when their padded solver regions do not overlap
+    - overlapping padded regions are merged before solve so nearby activity still behaves as one safe cluster
+    - backend reporting now exposes solver-cluster count, max per-cluster solver cell count, and cluster-limit fallback state
+  - obstacle authority beneath the sparse runtime is now brick-local first:
+    - live obstacle writes, rebuilds, solver-region solid-mask materialization, and obstacle enforcement use per-brick occupancy masks
+    - the dense whole-domain obstacle mask is now a derived compatibility/export/readout cache instead of the live control plane
+    - debug/export/test surfaces can explicitly zero the dense obstacle cache and still recover truthful obstacle state from the brick-local masks
+  - support-surface cache paths are now materially sparser:
+    - full-volume export cache rebuilds now materialize only allocated fluid bricks and occupied obstacle bricks instead of rescanning the full domain cell-by-cell
+    - sparse debug-volume stats now derive from active fluid cells and occupied obstacle bricks without forcing an export-cache rebuild first
+    - retained runtime overlay peak-density readout now prefers backend-reported sparse stats and only falls back to a view scan when a report value is unavailable
+    - sparse reporting no longer treats export-cache materialization as an implicit side effect of ordinary debug/report queries
+  - the first runtime control-plane hardening slice is now live:
+    - sparse cluster scheduling now reports solved cluster count, skipped cluster count, and skipped solver-cell count for oversized-region guard cases
+    - the first-pass `3D` solver now applies a bounded pre-advection velocity safety clamp to prevent per-step displacement spikes from outrunning the sparse work region
+    - backend reporting now exposes pre-clamp and post-clamp peak velocity/displacement metrics plus a post-project maximum absolute divergence residual
+    - reporting and solver contract lanes now prove the new guard metrics route through the backend without depending on export or dense-cache side effects
+  - the guard-threshold seam is now explicit instead of hardcoded-only:
+    - `fluid.solver_region_cell_budget` can override the sparse solver-region cell budget
+    - `fluid.max_velocity_displacement_cells` can override the pre-advection velocity-clamp limit
+    - `3D` backend reporting now exposes both the effective values and whether each guard is running on defaults or config overrides
+  - legacy export/parity/emitter contract lanes now read backend-owned `3D` truth views instead of writing directly through scaffold dense-state pointers
 - Retained-scene save/reopen workflow exists with scene-library routing and catalog re-entry.
 - The `3D` menu catalog now resolves retained scenes from the configured `Input Root` live:
   - the configured input root is treated as the source of truth for retained-scene discovery
@@ -81,6 +116,9 @@ Last updated: 2026-04-29
 
 ## Current Boundary
 - `physics_sim` producer export lane is intentionally stable.
+- The current local `3D` fluid-runtime boundary remains inside runtime control-plane hardening:
+  - the first solver-safety/observability slice and its config seam are landed
+  - the next refinement step is to widen region/materialization and solver-health diagnostics, then decide whether any of the new control seams should graduate into authored menu/runtime UI before deeper solver-quality changes
 - Current local worktree drift is in retained-scene quality/usability, not in the producer export contract:
   - input-root scene-library refresh behavior
   - paired `scene_authoring.json` + `scene_runtime.json` discovery

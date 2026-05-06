@@ -1,11 +1,11 @@
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
-#include "app/sim_runtime_backend_3d_scaffold_internal.h"
 #include "core_io.h"
 #include "core_pack.h"
 #include "export/export_paths.h"
 #include "export/volume_frames.h"
 #include "export/volume_frames_vf3d.h"
+#include "sim_runtime_backend_3d_test_support.h"
 
 #include <limits.h>
 #include <stdbool.h>
@@ -62,7 +62,7 @@ static bool test_volume_frames_write_routes_authoritative_3d_runs_to_vf3d(void) 
     FluidScenePreset preset = {0};
     SceneState scene = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffold *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     char original_cwd[PATH_MAX];
     char temp_dir[] = "/tmp/physics_sim_vf3d_export_contract_XXXXXX";
     char output_root[PATH_MAX];
@@ -133,20 +133,17 @@ static bool test_volume_frames_write_routes_authoritative_3d_runs_to_vf3d(void) 
         ok = fail_with_message("backend create failed");
         goto cleanup;
     }
-    impl = (SimRuntimeBackend3DScaffold *)backend->impl;
-    if (!impl) {
-        ok = fail_with_message("backend impl missing");
-        goto cleanup;
-    }
 
     sim_runtime_backend_build_obstacles(backend, NULL);
-    idx = sim_runtime_3d_volume_index(&impl->volume.desc, 2, 3, 4);
-    impl->volume.density[idx] = 1.25f;
-    impl->volume.velocity_x[idx] = 2.0f;
-    impl->volume.velocity_y[idx] = -3.0f;
-    impl->volume.velocity_z[idx] = 4.5f;
-    impl->volume.pressure[idx] = 6.0f;
-    impl->obstacle_occupancy[idx] = 1u;
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) {
+        ok = fail_with_message("backend export view refresh failed");
+        goto cleanup;
+    }
+    idx = sim_runtime_3d_volume_index(&impl.volume.desc, 2, 3, 4);
+    if (!sim_runtime_backend_3d_test_write_cell(backend, 2, 3, 4, 1.25f, 2.0f, -3.0f, 4.5f, 6.0f, 1u)) {
+        ok = fail_with_message("backend seed write failed");
+        goto cleanup;
+    }
 
     scene.time = 2.5;
     scene.dt = 0.033;
@@ -240,16 +237,16 @@ static bool test_volume_frames_write_routes_authoritative_3d_runs_to_vf3d(void) 
         ok = fail_with_message("raw vf3d version mismatch");
         goto cleanup;
     }
-    if (header.grid_w != (uint32_t)impl->volume.desc.grid_w ||
-        header.grid_h != (uint32_t)impl->volume.desc.grid_h ||
-        header.grid_d != (uint32_t)impl->volume.desc.grid_d) {
+    if (header.grid_w != (uint32_t)impl.volume.desc.grid_w ||
+        header.grid_h != (uint32_t)impl.volume.desc.grid_h ||
+        header.grid_d != (uint32_t)impl.volume.desc.grid_d) {
         ok = fail_with_message("raw vf3d dimensions mismatch");
         goto cleanup;
     }
-    if (!nearly_equal(header.origin_x, impl->volume.desc.world_min_x) ||
-        !nearly_equal(header.origin_y, impl->volume.desc.world_min_y) ||
-        !nearly_equal(header.origin_z, impl->volume.desc.world_min_z) ||
-        !nearly_equal(header.voxel_size, impl->volume.desc.voxel_size)) {
+    if (!nearly_equal(header.origin_x, impl.volume.desc.world_min_x) ||
+        !nearly_equal(header.origin_y, impl.volume.desc.world_min_y) ||
+        !nearly_equal(header.origin_z, impl.volume.desc.world_min_z) ||
+        !nearly_equal(header.voxel_size, impl.volume.desc.voxel_size)) {
         ok = fail_with_message("raw vf3d spatial header mismatch");
         goto cleanup;
     }

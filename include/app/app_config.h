@@ -35,6 +35,8 @@ typedef struct AppConfig {
     int    physics_substeps;
     int    command_batch_limit; // commands processed per frame (0 = unlimited)
     int    fluid_solver_iterations;
+    int    fluid_3d_solver_region_cell_budget; // 0 = runtime default
+    float  fluid_3d_max_velocity_displacement_cells; // <=0 = runtime default
 
     float  density_diffusion;  // how strongly density diffuses each step
     float  velocity_damping;   // multiplicative damping on velocity per step
@@ -93,6 +95,9 @@ enum {
     PHYSICS_SIM_TEXT_ZOOM_PERCENT_MAX = 180
 };
 
+#define PHYSICS_SIM_3D_SOLVER_REGION_CELL_BUDGET_DEFAULT ((size_t)5 * 1024 * 1024)
+#define PHYSICS_SIM_3D_MAX_VELOCITY_DISPLACEMENT_CELLS_DEFAULT 1.5f
+
 AppConfig app_config_default(void);
 int app_config_text_zoom_step_clamp(int step);
 int app_config_text_zoom_percent_from_step(int step);
@@ -100,5 +105,27 @@ int app_config_text_zoom_percent(const AppConfig *cfg);
 int app_config_scale_text_point_size(const AppConfig *cfg,
                                      int base_point_size,
                                      int min_point_size);
+
+static inline size_t app_config_3d_solver_region_cell_budget(const AppConfig *cfg) {
+    if (cfg && cfg->fluid_3d_solver_region_cell_budget > 0) {
+        return (size_t)cfg->fluid_3d_solver_region_cell_budget;
+    }
+    return PHYSICS_SIM_3D_SOLVER_REGION_CELL_BUDGET_DEFAULT;
+}
+
+static inline bool app_config_3d_solver_region_cell_budget_overridden(const AppConfig *cfg) {
+    return cfg && cfg->fluid_3d_solver_region_cell_budget > 0;
+}
+
+static inline float app_config_3d_max_velocity_displacement_cells(const AppConfig *cfg) {
+    if (cfg && cfg->fluid_3d_max_velocity_displacement_cells > 0.0f) {
+        return cfg->fluid_3d_max_velocity_displacement_cells;
+    }
+    return PHYSICS_SIM_3D_MAX_VELOCITY_DISPLACEMENT_CELLS_DEFAULT;
+}
+
+static inline bool app_config_3d_max_velocity_displacement_cells_overridden(const AppConfig *cfg) {
+    return cfg && cfg->fluid_3d_max_velocity_displacement_cells > 0.0f;
+}
 
 #endif // APP_CONFIG_H

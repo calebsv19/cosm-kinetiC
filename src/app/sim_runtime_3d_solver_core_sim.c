@@ -6,6 +6,8 @@ typedef struct PhysicsSim3DSolverCoreSimContext {
     const uint8_t *solid_mask;
     const SimRuntime3DForceAxis *scene_up_axis;
     const AppConfig *cfg;
+    float max_velocity_displacement_cells_limit;
+    SimRuntime3DSolverStepMetrics *out_metrics;
     bool solver_step_ran;
 } PhysicsSim3DSolverCoreSimContext;
 
@@ -30,7 +32,9 @@ static bool run_solver_first_pass(void *user_context,
                                                ctx->solid_mask,
                                                ctx->scene_up_axis,
                                                ctx->cfg,
-                                               tick->dt_seconds)) {
+                                               tick->dt_seconds,
+                                               ctx->max_velocity_displacement_cells_limit,
+                                               ctx->out_metrics)) {
         if (outcome) {
             outcome->status = CORE_SIM_STATUS_PASS_FAILED;
             outcome->message = "3d solver first pass failed";
@@ -50,7 +54,9 @@ bool sim_runtime_3d_solver_core_sim_step_first_pass(
     const SimRuntime3DForceAxis *scene_up_axis,
     const AppConfig *cfg,
     double dt,
-    CoreSimFrameOutcome *outcome) {
+    float max_velocity_displacement_cells_limit,
+    CoreSimFrameOutcome *outcome,
+    SimRuntime3DSolverStepMetrics *out_metrics) {
     CoreSimStepPolicy policy;
     PhysicsSim3DSolverCoreSimContext ctx;
     CoreSimPassDescriptor passes[1];
@@ -90,6 +96,8 @@ bool sim_runtime_3d_solver_core_sim_step_first_pass(
     ctx.solid_mask = solid_mask;
     ctx.scene_up_axis = scene_up_axis;
     ctx.cfg = cfg;
+    ctx.max_velocity_displacement_cells_limit = max_velocity_displacement_cells_limit;
+    ctx.out_metrics = out_metrics;
     ctx.solver_step_ran = false;
 
     passes[0].pass_id = PHYSICS_SIM_3D_SOLVER_CORE_SIM_PASS_FIRST_PASS;

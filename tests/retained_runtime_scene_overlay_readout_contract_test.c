@@ -58,6 +58,20 @@ static bool test_voxel_center_uses_world_min_and_voxel_size(void) {
            nearly_equal(center.z, -2.375);
 }
 
+static bool test_peak_density_prefers_reported_value_then_falls_back(void) {
+    float density[3] = {0.25f, 1.5f, 0.75f};
+    SceneDebugVolumeView3D view = {
+        .cell_count = 3u,
+        .density = density,
+    };
+    return nearly_equal(
+               retained_runtime_overlay_readout_resolve_peak_density(&view, 3.5f),
+               3.5) &&
+           nearly_equal(
+               retained_runtime_overlay_readout_resolve_peak_density(&view, 0.0f),
+               1.5);
+}
+
 int main(void) {
     if (!test_stride_scales_with_cell_budget()) {
         fprintf(stderr,
@@ -72,6 +86,11 @@ int main(void) {
     if (!test_voxel_center_uses_world_min_and_voxel_size()) {
         fprintf(stderr,
                 "retained_runtime_scene_overlay_readout_contract_test: voxel center failed\n");
+        return 1;
+    }
+    if (!test_peak_density_prefers_reported_value_then_falls_back()) {
+        fprintf(stderr,
+                "retained_runtime_scene_overlay_readout_contract_test: peak density resolve failed\n");
         return 1;
     }
     fprintf(stdout, "retained_runtime_scene_overlay_readout_contract_test: success\n");

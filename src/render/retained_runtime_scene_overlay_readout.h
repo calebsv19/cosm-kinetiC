@@ -12,6 +12,9 @@ typedef struct SceneState SceneState;
 
 int retained_runtime_overlay_readout_stride_for_cell_count(size_t cell_count);
 float retained_runtime_overlay_readout_density_threshold(float max_density);
+float retained_runtime_overlay_readout_resolve_peak_density(
+    const SceneDebugVolumeView3D *view,
+    float reported_max_density);
 CoreObjectVec3 retained_runtime_overlay_readout_voxel_center(const SceneDebugVolumeView3D *view,
                                                              int x,
                                                              int y,

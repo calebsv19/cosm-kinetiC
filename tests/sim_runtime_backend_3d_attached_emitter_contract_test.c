@@ -1,16 +1,11 @@
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
 #include "app/sim_runtime_3d_domain.h"
+#include "sim_runtime_backend_3d_test_support.h"
 
 #include <stdbool.h>
 #include <math.h>
 #include <stdio.h>
-
-typedef struct SimRuntimeBackend3DScaffoldTestView {
-    SimRuntime3DVolume volume;
-    int compatibility_slice_z;
-    bool fluid_slice_dirty;
-} SimRuntimeBackend3DScaffoldTestView;
 
 SimRuntimeBackend *sim_runtime_backend_2d_create(const AppConfig *cfg,
                                                  const FluidScenePreset *preset,
@@ -127,7 +122,7 @@ static bool test_attached_object_box_emitter_writes_xyz_occupancy(void) {
     };
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffoldTestView *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     SceneState scene = {0};
     size_t z_hits = 0;
     size_t center_idx = 0;
@@ -175,8 +170,6 @@ static bool test_attached_object_box_emitter_writes_xyz_occupancy(void) {
 
     backend = sim_runtime_backend_create(&cfg, &preset, &route, &visual);
     if (!backend) return false;
-    impl = (SimRuntimeBackend3DScaffoldTestView *)backend->impl;
-    if (!impl) return false;
 
     scene.backend = backend;
     scene.preset = &preset;
@@ -184,27 +177,28 @@ static bool test_attached_object_box_emitter_writes_xyz_occupancy(void) {
     scene.emitters_enabled = true;
 
     sim_runtime_backend_apply_emitters(backend, &scene, 0.1);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
 
-    for (int z = 0; z < impl->volume.desc.grid_d; ++z) {
-        size_t idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                                 impl->volume.desc.grid_w / 2,
-                                                 impl->volume.desc.grid_h / 2,
+    for (int z = 0; z < impl.volume.desc.grid_d; ++z) {
+        size_t idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                                 impl.volume.desc.grid_w / 2,
+                                                 impl.volume.desc.grid_h / 2,
                                                  z);
-        if (impl->volume.density[idx] > 0.0f) ++z_hits;
+        if (impl.volume.density[idx] > 0.0f) ++z_hits;
     }
     if (z_hits < 2) return false;
 
-    center_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                             impl->volume.desc.grid_w / 2,
-                                             impl->volume.desc.grid_h / 2,
-                                             impl->volume.desc.grid_d / 2);
-    if (impl->volume.density[center_idx] <= 0.0f) return false;
+    center_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                             impl.volume.desc.grid_w / 2,
+                                             impl.volume.desc.grid_h / 2,
+                                             impl.volume.desc.grid_d / 2);
+    if (impl.volume.density[center_idx] <= 0.0f) return false;
 
-    outside_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                              impl->volume.desc.grid_w / 2,
-                                              impl->volume.desc.grid_h / 2,
-                                              impl->volume.desc.grid_d / 2 + 24);
-    if (outside_idx < impl->volume.desc.cell_count && impl->volume.density[outside_idx] > 0.0f) return false;
+    outside_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                              impl.volume.desc.grid_w / 2,
+                                              impl.volume.desc.grid_h / 2,
+                                              impl.volume.desc.grid_d / 2 + 24);
+    if (outside_idx < impl.volume.desc.cell_count && impl.volume.density[outside_idx] > 0.0f) return false;
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -220,7 +214,7 @@ static bool test_attached_import_emitter_rotates_direction_and_updates_compat_sl
     };
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffoldTestView *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     SceneState scene = {0};
     SceneFluidFieldView2D fluid = {0};
     SimRuntimeBackendReport report = {0};
@@ -268,8 +262,6 @@ static bool test_attached_import_emitter_rotates_direction_and_updates_compat_sl
 
     backend = sim_runtime_backend_create(&cfg, &preset, &route, &visual);
     if (!backend) return false;
-    impl = (SimRuntimeBackend3DScaffoldTestView *)backend->impl;
-    if (!impl) return false;
 
     scene.backend = backend;
     scene.preset = &preset;
@@ -279,24 +271,25 @@ static bool test_attached_import_emitter_rotates_direction_and_updates_compat_sl
     scene.import_shapes[0] = preset.import_shapes[0];
 
     sim_runtime_backend_apply_emitters(backend, &scene, 0.1);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
 
-    center_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                             impl->volume.desc.grid_w / 2,
-                                             impl->volume.desc.grid_h / 2,
-                                             impl->volume.desc.grid_d / 2);
-    if (impl->volume.velocity_y[center_idx] <= 0.0f) return false;
-    if (fabsf(impl->volume.velocity_x[center_idx]) > 0.0001f) return false;
+    center_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                             impl.volume.desc.grid_w / 2,
+                                             impl.volume.desc.grid_h / 2,
+                                             impl.volume.desc.grid_d / 2);
+    if (impl.volume.velocity_y[center_idx] <= 0.0f) return false;
+    if (fabsf(impl.volume.velocity_x[center_idx]) > 0.0001f) return false;
 
     if (!sim_runtime_backend_get_fluid_view_2d(backend, &fluid)) return false;
     slice_idx = (size_t)(fluid.height / 2) * (size_t)fluid.width + (size_t)(fluid.width / 2);
     if (fluid.density[slice_idx] <= 0.0f) return false;
     if (fluid.velocity_y[slice_idx] <= 0.0f) return false;
 
-    for (size_t i = 0; i < impl->volume.desc.cell_count; ++i) {
-        if (impl->volume.density[i] > 0.0f ||
-            impl->volume.velocity_x[i] != 0.0f ||
-            impl->volume.velocity_y[i] != 0.0f ||
-            impl->volume.velocity_z[i] != 0.0f) {
+    for (size_t i = 0; i < impl.volume.desc.cell_count; ++i) {
+        if (impl.volume.density[i] > 0.0f ||
+            impl.volume.velocity_x[i] != 0.0f ||
+            impl.volume.velocity_y[i] != 0.0f ||
+            impl.volume.velocity_z[i] != 0.0f) {
             ++written_cells;
         }
     }
@@ -328,8 +321,8 @@ static bool test_attached_import_world_footprint_stays_stable_across_quality_lev
     SceneState dense_scene = {0};
     SimRuntimeBackend *coarse_backend = NULL;
     SimRuntimeBackend *dense_backend = NULL;
-    SimRuntimeBackend3DScaffoldTestView *coarse_impl = NULL;
-    SimRuntimeBackend3DScaffoldTestView *dense_impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView coarse_impl = {0};
+    SimRuntimeBackend3DScaffoldTestView dense_impl = {0};
     double coarse_min_x = 0.0;
     double coarse_max_x = 0.0;
     double coarse_min_y = 0.0;
@@ -390,9 +383,6 @@ static bool test_attached_import_world_footprint_stays_stable_across_quality_lev
     coarse_backend = sim_runtime_backend_create(&coarse_cfg, &preset, &route, &visual);
     dense_backend = sim_runtime_backend_create(&dense_cfg, &preset, &route, &visual);
     if (!coarse_backend || !dense_backend) goto fail;
-    coarse_impl = (SimRuntimeBackend3DScaffoldTestView *)coarse_backend->impl;
-    dense_impl = (SimRuntimeBackend3DScaffoldTestView *)dense_backend->impl;
-    if (!coarse_impl || !dense_impl) goto fail;
 
     coarse_scene.backend = coarse_backend;
     coarse_scene.preset = &preset;
@@ -409,8 +399,12 @@ static bool test_attached_import_world_footprint_stays_stable_across_quality_lev
 
     sim_runtime_backend_apply_emitters(coarse_backend, &coarse_scene, 0.1);
     sim_runtime_backend_apply_emitters(dense_backend, &dense_scene, 0.1);
+    if (!sim_runtime_backend_3d_test_view_refresh(coarse_backend, &coarse_impl) ||
+        !sim_runtime_backend_3d_test_view_refresh(dense_backend, &dense_impl)) {
+        goto fail;
+    }
 
-    if (!collect_density_world_bounds(coarse_impl,
+    if (!collect_density_world_bounds(&coarse_impl,
                                       &coarse_min_x,
                                       &coarse_max_x,
                                       &coarse_min_y,
@@ -420,7 +414,7 @@ static bool test_attached_import_world_footprint_stays_stable_across_quality_lev
                                       &coarse_cells)) {
         goto fail;
     }
-    if (!collect_density_world_bounds(dense_impl,
+    if (!collect_density_world_bounds(&dense_impl,
                                       &dense_min_x,
                                       &dense_max_x,
                                       &dense_min_y,
@@ -432,7 +426,7 @@ static bool test_attached_import_world_footprint_stays_stable_across_quality_lev
     }
     if (dense_cells <= coarse_cells) goto fail;
 
-    tolerance = coarse_impl->volume.desc.voxel_size + dense_impl->volume.desc.voxel_size;
+    tolerance = coarse_impl.volume.desc.voxel_size + dense_impl.volume.desc.voxel_size;
     if (fabs(coarse_min_x - dense_min_x) > tolerance) goto fail;
     if (fabs(coarse_max_x - dense_max_x) > tolerance) goto fail;
     if (fabs(coarse_min_y - dense_min_y) > tolerance) goto fail;
@@ -460,7 +454,7 @@ static bool test_attached_tilted_object_box_uses_full_3d_orientation(void) {
     };
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffoldTestView *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     SceneState scene = {0};
     size_t along_normal_idx = 0;
     size_t along_legacy_z_idx = 0;
@@ -516,8 +510,6 @@ static bool test_attached_tilted_object_box_uses_full_3d_orientation(void) {
 
     backend = sim_runtime_backend_create(&cfg, &preset, &route, &visual);
     if (!backend) return false;
-    impl = (SimRuntimeBackend3DScaffoldTestView *)backend->impl;
-    if (!impl) return false;
 
     scene.backend = backend;
     scene.preset = &preset;
@@ -525,17 +517,18 @@ static bool test_attached_tilted_object_box_uses_full_3d_orientation(void) {
     scene.emitters_enabled = true;
 
     sim_runtime_backend_apply_emitters(backend, &scene, 0.1);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
 
-    along_normal_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                                   (impl->volume.desc.grid_w * 3) / 4,
-                                                   impl->volume.desc.grid_h / 2,
-                                                   impl->volume.desc.grid_d / 2);
-    along_legacy_z_idx = sim_runtime_3d_volume_index(&impl->volume.desc,
-                                                     impl->volume.desc.grid_w / 2,
-                                                     impl->volume.desc.grid_h / 2,
-                                                     (impl->volume.desc.grid_d * 3) / 4);
-    if (impl->volume.density[along_normal_idx] <= 0.0f) return false;
-    if (impl->volume.density[along_legacy_z_idx] > 0.0f) return false;
+    along_normal_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                                   (impl.volume.desc.grid_w * 3) / 4,
+                                                   impl.volume.desc.grid_h / 2,
+                                                   impl.volume.desc.grid_d / 2);
+    along_legacy_z_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                                     impl.volume.desc.grid_w / 2,
+                                                     impl.volume.desc.grid_h / 2,
+                                                     (impl.volume.desc.grid_d * 3) / 4);
+    if (impl.volume.density[along_normal_idx] <= 0.0f) return false;
+    if (impl.volume.density[along_legacy_z_idx] > 0.0f) return false;
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -551,7 +544,7 @@ static bool test_tiny3d_attached_import_advects_along_rotated_axis(void) {
     };
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimRuntimeBackend *backend = NULL;
-    SimRuntimeBackend3DScaffoldTestView *impl = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
     SceneState scene = {0};
     double center_before = 0.0;
     double center_after = 0.0;
@@ -590,9 +583,8 @@ static bool test_tiny3d_attached_import_advects_along_rotated_axis(void) {
 
     backend = sim_runtime_backend_create(&cfg, &preset, &route, &visual);
     if (!backend) return false;
-    impl = (SimRuntimeBackend3DScaffoldTestView *)backend->impl;
-    if (!impl) return false;
-    if (impl->volume.desc.grid_w != 64 || impl->volume.desc.grid_h != 32 || impl->volume.desc.grid_d != 32) {
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
+    if (impl.volume.desc.grid_w != 64 || impl.volume.desc.grid_h != 32 || impl.volume.desc.grid_d != 32) {
         return false;
     }
 
@@ -604,12 +596,14 @@ static bool test_tiny3d_attached_import_advects_along_rotated_axis(void) {
     scene.import_shapes[0] = preset.import_shapes[0];
 
     sim_runtime_backend_apply_emitters(backend, &scene, 0.1);
-    center_before = density_center_y(impl);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
+    center_before = density_center_y(&impl);
 
     for (int i = 0; i < 8; ++i) {
         sim_runtime_backend_step(backend, &scene, &cfg, 0.25);
     }
-    center_after = density_center_y(impl);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
+    center_after = density_center_y(&impl);
 
     sim_runtime_backend_destroy(backend);
     return center_after > center_before;

@@ -59,6 +59,8 @@ bool sim_runtime_3d_domain_desc_resolve(const AppConfig *cfg,
 bool sim_runtime_3d_domain_desc_from_legacy(const AppConfig *cfg,
                                             const FluidScenePreset *preset,
                                             SimRuntime3DDomainDesc *out_desc);
+size_t sim_runtime_3d_domain_estimated_resident_bytes(const SimRuntime3DDomainDesc *desc);
+size_t sim_runtime_3d_domain_resident_bytes_budget(void);
 
 bool sim_runtime_3d_volume_init(SimRuntime3DVolume *volume,
                                 const SimRuntime3DDomainDesc *desc);

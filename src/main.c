@@ -121,6 +121,7 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
 
     timer_hud_register_backend();
     ts_init();
+    timer_hud_apply_startup_env_overrides();
 
     if (cfg.input_root[0] == '\0') {
         snprintf(cfg.input_root,

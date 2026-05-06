@@ -95,12 +95,22 @@ static float max_density_for_view(const SceneDebugVolumeView3D *view) {
     return max_density;
 }
 
+float retained_runtime_overlay_readout_resolve_peak_density(
+    const SceneDebugVolumeView3D *view,
+    float reported_max_density) {
+    if (reported_max_density > 0.0f) {
+        return reported_max_density;
+    }
+    return max_density_for_view(view);
+}
+
 void retained_runtime_overlay_draw_volume_readout(SDL_Renderer *renderer,
                                                   const SceneEditorViewportState *viewport,
                                                   int window_w,
                                                   int window_h,
                                                   const SceneState *scene) {
     SceneDebugVolumeView3D view = {0};
+    SimRuntimeBackendReport report = {0};
     int stride = 1;
     float max_density = 0.0f;
     float density_threshold = 0.0f;
@@ -113,7 +123,9 @@ void retained_runtime_overlay_draw_volume_readout(SDL_Renderer *renderer,
     }
 
     stride = retained_runtime_overlay_readout_stride_for_cell_count(view.cell_count);
-    max_density = max_density_for_view(&view);
+    (void)scene_backend_report(scene, &report);
+    max_density = retained_runtime_overlay_readout_resolve_peak_density(
+        &view, report.debug_volume_max_density);
     density_threshold = retained_runtime_overlay_readout_density_threshold(max_density);
 
     for (int z = 0; z < view.depth; z += stride) {

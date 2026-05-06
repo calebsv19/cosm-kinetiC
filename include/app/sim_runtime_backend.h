@@ -115,6 +115,29 @@ typedef struct SimRuntimeBackendReport {
     int compatibility_slice_z;
     bool secondary_debug_slice_stack_live;
     int secondary_debug_slice_stack_radius;
+    size_t runtime_allocated_brick_count;
+    size_t runtime_active_brick_count;
+    size_t runtime_active_region_cell_count;
+    size_t runtime_solver_region_cell_count;
+    size_t runtime_solver_cluster_count;
+    size_t runtime_solver_max_cluster_cell_count;
+    size_t runtime_solver_solved_cluster_count;
+    size_t runtime_solver_skipped_cluster_count;
+    size_t runtime_solver_skipped_solver_cell_count;
+    size_t runtime_export_cache_materialization_count;
+    size_t runtime_solver_region_cell_budget;
+    bool runtime_solver_region_cell_budget_overridden;
+    float runtime_solver_max_velocity_displacement_cells_limit;
+    bool runtime_solver_max_velocity_displacement_cells_limit_overridden;
+    size_t runtime_solver_velocity_clamp_cell_count;
+    bool runtime_dense_mirror_live;
+    bool runtime_solver_region_guard_triggered;
+    bool runtime_solver_cluster_limit_reached;
+    float runtime_solver_max_velocity_magnitude_pre_clamp;
+    float runtime_solver_max_velocity_magnitude_post_clamp;
+    float runtime_solver_max_velocity_displacement_cells_pre_clamp;
+    float runtime_solver_max_velocity_displacement_cells_post_clamp;
+    float runtime_solver_max_abs_divergence_after_project;
     bool debug_volume_view_3d_available;
     size_t debug_volume_active_density_cells;
     size_t debug_volume_solid_cells;
@@ -171,6 +194,21 @@ typedef struct SimRuntimeBackendOps {
                                              bool *out_has_fluid,
                                              bool *out_has_obstacles);
     bool (*step_compatibility_slice)(SimRuntimeBackend *backend, int delta_z);
+    bool (*get_domain_desc_3d)(const SimRuntimeBackend *backend,
+                               SimRuntime3DDomainDesc *out_desc);
+    bool (*debug_zero_dense_mirror_3d)(SimRuntimeBackend *backend);
+    bool (*debug_zero_obstacle_dense_cache_3d)(SimRuntimeBackend *backend);
+    bool (*debug_write_volume_cell_3d)(SimRuntimeBackend *backend,
+                                       int x,
+                                       int y,
+                                       int z,
+                                       float density,
+                                       float velocity_x,
+                                       float velocity_y,
+                                       float velocity_z,
+                                       float pressure,
+                                       uint8_t solid);
+    bool (*debug_reset_volume_truth_3d)(SimRuntimeBackend *backend);
 } SimRuntimeBackendOps;
 
 struct SimRuntimeBackend {
@@ -245,5 +283,20 @@ bool sim_runtime_backend_get_compatibility_slice_activity(const SimRuntimeBacken
                                                           bool *out_has_fluid,
                                                           bool *out_has_obstacles);
 bool sim_runtime_backend_step_compatibility_slice(SimRuntimeBackend *backend, int delta_z);
+bool sim_runtime_backend_get_domain_desc_3d(const SimRuntimeBackend *backend,
+                                            SimRuntime3DDomainDesc *out_desc);
+bool sim_runtime_backend_debug_zero_dense_mirror_3d(SimRuntimeBackend *backend);
+bool sim_runtime_backend_debug_zero_obstacle_dense_cache_3d(SimRuntimeBackend *backend);
+bool sim_runtime_backend_debug_write_volume_cell_3d(SimRuntimeBackend *backend,
+                                                    int x,
+                                                    int y,
+                                                    int z,
+                                                    float density,
+                                                    float velocity_x,
+                                                    float velocity_y,
+                                                    float velocity_z,
+                                                    float pressure,
+                                                    uint8_t solid);
+bool sim_runtime_backend_debug_reset_volume_truth_3d(SimRuntimeBackend *backend);
 
 #endif // SIM_RUNTIME_BACKEND_H

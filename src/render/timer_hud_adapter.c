@@ -1,6 +1,8 @@
 #include "render/timer_hud_adapter.h"
 
-#include "app/data_paths.h"
+#include <stdlib.h>
+
+#include "timer_hud/settings_loader.h"
 #include "timer_hud/time_scope.h"
 #include "timer_hud/timer_hud_backend.h"
 #include "render/font_bridge.h"
@@ -14,8 +16,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <stdlib.h>
+#include <strings.h>
 #include <unistd.h>
 
 #ifndef PATH_MAX
@@ -27,11 +28,6 @@
 
 static SDL_Renderer* g_timer_hud_renderer = NULL;
 static TTF_Font* g_timer_hud_font = NULL;
-
-static int timer_hud_path_exists(const char* path) {
-    struct stat st = {0};
-    return path && path[0] && stat(path, &st) == 0;
-}
 
 static int timer_hud_resolve_abs_from_cwd(const char* relative_path,
                                           char* out,
@@ -52,48 +48,30 @@ static int timer_hud_resolve_abs_from_cwd(const char* relative_path,
     return written > 0 && (size_t)written < out_cap;
 }
 
-static void timer_hud_seed_runtime_settings(const char* default_settings_path,
-                                            const char* runtime_settings_path) {
-    FILE* in = NULL;
-    FILE* out = NULL;
-    char buffer[4096];
-    size_t n = 0;
-    int io_failed = 0;
-
-    if (!default_settings_path || !runtime_settings_path) return;
-    if (timer_hud_path_exists(runtime_settings_path)) return;
-    if (!timer_hud_path_exists(default_settings_path)) return;
-    if (!physics_sim_ensure_runtime_dirs()) return;
-
-    in = fopen(default_settings_path, "rb");
-    if (!in) return;
-
-    out = fopen(runtime_settings_path, "wb");
-    if (!out) {
-        fclose(in);
-        return;
+static bool timer_hud_parse_bool_token(const char* value, bool* out_enabled) {
+    if (!value || !out_enabled) {
+        return false;
     }
+    if (strcmp(value, "1") == 0 || strcasecmp(value, "true") == 0 ||
+        strcasecmp(value, "on") == 0 || strcasecmp(value, "yes") == 0) {
+        *out_enabled = true;
+        return true;
+    }
+    if (strcmp(value, "0") == 0 || strcasecmp(value, "false") == 0 ||
+        strcasecmp(value, "off") == 0 || strcasecmp(value, "no") == 0) {
+        *out_enabled = false;
+        return true;
+    }
+    return false;
+}
 
-    while ((n = fread(buffer, 1, sizeof(buffer), in)) > 0) {
-        if (fwrite(buffer, 1, n, out) != n) {
-            io_failed = 1;
-            break;
-        }
+static bool timer_hud_is_valid_visual_mode(const char* value) {
+    if (!value || !value[0]) {
+        return false;
     }
-    if (ferror(in)) {
-        io_failed = 1;
-    }
-    fclose(in);
-    if (fclose(out) != 0) {
-        io_failed = 1;
-    }
-
-    if (io_failed) {
-        fprintf(stderr,
-                "[TimerHUD] Failed to seed runtime settings from %s to %s\n",
-                default_settings_path,
-                runtime_settings_path);
-    }
+    return strcmp(value, "text_compact") == 0 ||
+           strcmp(value, "history_graph") == 0 ||
+           strcmp(value, "hybrid") == 0;
 }
 
 static bool ensure_font_loaded(void) {
@@ -219,7 +197,7 @@ void timer_hud_register_backend(void) {
         timer_hud_resolve_abs_from_cwd(TIMER_HUD_RUNTIME_SETTINGS_REL_PATH,
                                        runtime_settings_path,
                                        sizeof(runtime_settings_path))) {
-        timer_hud_seed_runtime_settings(default_settings_path, runtime_settings_path);
+        (void)default_settings_path;
         ts_set_settings_path(runtime_settings_path);
     }
 
@@ -227,6 +205,55 @@ void timer_hud_register_backend(void) {
     if (overridePath && overridePath[0]) {
         ts_set_settings_path(overridePath);
     }
+}
+
+void timer_hud_apply_startup_env_overrides(void) {
+    const char* hudEnv = getenv("PHYSICS_SIM_TIMER_HUD");
+    const char* overlayEnv = getenv("PHYSICS_SIM_TIMER_HUD_OVERLAY");
+    const char* visualModeEnv = getenv("PHYSICS_SIM_TIMER_HUD_VISUAL_MODE");
+    bool enabled = false;
+    bool setHybridByDefault = false;
+
+    if (hudEnv && hudEnv[0]) {
+        if (timer_hud_parse_bool_token(hudEnv, &enabled)) {
+            ts_settings.hud_enabled = enabled;
+            setHybridByDefault = enabled;
+        } else {
+            fprintf(stderr,
+                    "[TimerHUD] ignoring invalid PHYSICS_SIM_TIMER_HUD=%s\n",
+                    hudEnv);
+        }
+    }
+
+    if (overlayEnv && overlayEnv[0]) {
+        if (timer_hud_parse_bool_token(overlayEnv, &enabled)) {
+            ts_settings.hud_enabled = enabled;
+            setHybridByDefault = enabled;
+        } else {
+            fprintf(stderr,
+                    "[TimerHUD] ignoring invalid PHYSICS_SIM_TIMER_HUD_OVERLAY=%s\n",
+                    overlayEnv);
+        }
+    }
+
+    if (visualModeEnv && visualModeEnv[0]) {
+        if (timer_hud_is_valid_visual_mode(visualModeEnv)) {
+            ts_set_hud_visual_mode(visualModeEnv);
+        } else {
+            fprintf(stderr,
+                    "[TimerHUD] ignoring invalid PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=%s\n",
+                    visualModeEnv);
+        }
+    } else if (setHybridByDefault) {
+        ts_set_hud_visual_mode("hybrid");
+    }
+
+    fprintf(stderr,
+            "[TimerHUD] physics_sim startup hud_enabled=%d mode=%s log_enabled=%d log_file=%s\n",
+            ts_settings.hud_enabled ? 1 : 0,
+            ts_settings.hud_visual_mode,
+            ts_settings.log_enabled ? 1 : 0,
+            ts_settings.log_filepath);
 }
 
 void timer_hud_bind_renderer(SDL_Renderer* renderer) {

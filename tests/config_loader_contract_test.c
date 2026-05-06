@@ -20,6 +20,8 @@ static bool test_grid_depth_roundtrip_and_fallback(void) {
     saved.space_mode = SPACE_MODE_3D;
     saved.physics_substeps = 5;
     saved.fluid_solver_iterations = 27;
+    saved.fluid_3d_solver_region_cell_budget = 123456;
+    saved.fluid_3d_max_velocity_displacement_cells = 0.75f;
     if (!config_loader_save(&saved, path)) return false;
     if (!config_loader_load(&loaded, &opts)) return false;
     if (loaded.grid_w != 192) return false;
@@ -28,6 +30,11 @@ static bool test_grid_depth_roundtrip_and_fallback(void) {
     if (loaded.space_mode != SPACE_MODE_3D) return false;
     if (loaded.physics_substeps != 5) return false;
     if (loaded.fluid_solver_iterations != 27) return false;
+    if (loaded.fluid_3d_solver_region_cell_budget != 123456) return false;
+    if (loaded.fluid_3d_max_velocity_displacement_cells < 0.7499f ||
+        loaded.fluid_3d_max_velocity_displacement_cells > 0.7501f) {
+        return false;
+    }
 
     saved.grid_d = 0;
     saved.space_mode = SPACE_MODE_2D;
@@ -36,6 +43,11 @@ static bool test_grid_depth_roundtrip_and_fallback(void) {
     if (!config_loader_load(&loaded, &opts)) return false;
     if (loaded.grid_d != 0) return false;
     if (loaded.space_mode != SPACE_MODE_2D) return false;
+    if (loaded.fluid_3d_solver_region_cell_budget != 123456) return false;
+    if (loaded.fluid_3d_max_velocity_displacement_cells < 0.7499f ||
+        loaded.fluid_3d_max_velocity_displacement_cells > 0.7501f) {
+        return false;
+    }
 
     remove(path);
     return true;

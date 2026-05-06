@@ -24,6 +24,15 @@ typedef struct SimRuntime3DForceAxis {
     float z;
 } SimRuntime3DForceAxis;
 
+typedef struct SimRuntime3DSolverStepMetrics {
+    size_t velocity_clamp_cell_count;
+    float max_velocity_magnitude_pre_clamp;
+    float max_velocity_magnitude_post_clamp;
+    float max_velocity_displacement_cells_pre_clamp;
+    float max_velocity_displacement_cells_post_clamp;
+    float max_abs_divergence_after_project;
+} SimRuntime3DSolverStepMetrics;
+
 int sim_runtime_3d_solver_iterations_for_requested(int requested_iterations);
 int sim_runtime_3d_solver_iterations_for_config(const AppConfig *cfg);
 
@@ -55,6 +64,8 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                                            const uint8_t *solid_mask,
                                            const SimRuntime3DForceAxis *scene_up_axis,
                                            const AppConfig *cfg,
-                                           double dt);
+                                           double dt,
+                                           float max_velocity_displacement_cells_limit,
+                                           SimRuntime3DSolverStepMetrics *out_metrics);
 
 #endif

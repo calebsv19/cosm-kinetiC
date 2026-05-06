@@ -55,10 +55,8 @@ static bool cell_in_oriented_box(const SimRuntimeObstacleOrientedBox3D *box,
 }
 
 static void mark_volume_cell(SimRuntimeBackend3DScaffold *state, int x, int y, int z) {
-    size_t idx = 0;
-    if (!state || !state->obstacle_occupancy) return;
-    idx = sim_runtime_3d_volume_index(&state->volume.desc, x, y, z);
-    state->obstacle_occupancy[idx] = 1u;
+    if (!state) return;
+    backend_3d_scaffold_set_obstacle_cell(state, x, y, z, true);
 }
 
 static void rasterize_sphere(SimRuntimeBackend3DScaffold *state,
@@ -73,7 +71,7 @@ static void rasterize_sphere(SimRuntimeBackend3DScaffold *state,
     int max_y = 0;
     int min_z = 0;
     int max_z = 0;
-    if (!state || !state->obstacle_occupancy || radius_cells <= 0) return;
+    if (!state || radius_cells <= 0) return;
     desc = &state->volume.desc;
     min_x = clamp_int_value(center_x - radius_cells, 0, desc->grid_w - 1);
     max_x = clamp_int_value(center_x + radius_cells, 0, desc->grid_w - 1);
@@ -194,7 +192,7 @@ void backend_3d_scaffold_rasterize_retained_object_obstacles(
     SimRuntimeBackend3DScaffold *state,
     const struct SceneState *scene) {
     bool emitter_on_object[MAX_PRESET_OBJECTS] = {0};
-    if (!state || !scene || !scene->preset || !state->obstacle_occupancy) return;
+    if (!state || !scene || !scene->preset) return;
     collect_attached_source_flags(scene->preset, emitter_on_object, NULL);
 
     for (size_t i = 0; i < scene->preset->object_count && i < MAX_PRESET_OBJECTS; ++i) {
@@ -227,7 +225,7 @@ void backend_3d_scaffold_rasterize_retained_import_obstacles(
     SimRuntimeBackend3DScaffold *state,
     const struct SceneState *scene) {
     bool emitter_on_import[MAX_IMPORTED_SHAPES] = {0};
-    if (!state || !scene || !state->obstacle_occupancy) return;
+    if (!state || !scene) return;
     collect_attached_source_flags(scene->preset, NULL, emitter_on_import);
 
     for (size_t i = 0; i < scene->import_shape_count && i < MAX_IMPORTED_SHAPES; ++i) {

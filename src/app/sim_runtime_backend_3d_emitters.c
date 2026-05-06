@@ -278,31 +278,53 @@ static size_t backend_3d_scaffold_count_oriented_box_cells(const SimRuntimeEmitt
 
 static void backend_3d_scaffold_apply_cell(SimRuntimeBackend3DScaffold *state,
                                            const SimRuntimeEmitterResolved *emitter,
-                                           size_t idx,
+                                           int x,
+                                           int y,
+                                           int z,
                                            float per_cell) {
+    float density_delta = 0.0f;
+    float velocity_x_delta = 0.0f;
+    float velocity_y_delta = 0.0f;
+    float velocity_z_delta = 0.0f;
+    size_t idx = 0;
     if (!state || !emitter || per_cell <= 0.0f) return;
     switch (emitter->type) {
     case EMITTER_DENSITY_SOURCE:
-        state->volume.density[idx] += per_cell;
+        density_delta = per_cell;
         if (emitter->direction_has_magnitude) {
-            state->volume.velocity_x[idx] += emitter->dir_x * per_cell * 0.25f;
-            state->volume.velocity_y[idx] += emitter->dir_y * per_cell * 0.25f;
-            state->volume.velocity_z[idx] += emitter->dir_z * per_cell * 0.25f;
+            velocity_x_delta = emitter->dir_x * per_cell * 0.25f;
+            velocity_y_delta = emitter->dir_y * per_cell * 0.25f;
+            velocity_z_delta = emitter->dir_z * per_cell * 0.25f;
         }
         break;
     case EMITTER_VELOCITY_JET:
-        state->volume.velocity_x[idx] += emitter->dir_x * per_cell;
-        state->volume.velocity_y[idx] += emitter->dir_y * per_cell;
-        state->volume.velocity_z[idx] += emitter->dir_z * per_cell;
-        state->volume.density[idx] += per_cell * 0.3f;
+        velocity_x_delta = emitter->dir_x * per_cell;
+        velocity_y_delta = emitter->dir_y * per_cell;
+        velocity_z_delta = emitter->dir_z * per_cell;
+        density_delta = per_cell * 0.3f;
         break;
     case EMITTER_SINK:
-        state->volume.density[idx] -= per_cell * 0.5f;
-        state->volume.velocity_x[idx] -= emitter->dir_x * per_cell * 0.4f;
-        state->volume.velocity_y[idx] -= emitter->dir_y * per_cell * 0.4f;
-        state->volume.velocity_z[idx] -= emitter->dir_z * per_cell * 0.4f;
+        density_delta = -per_cell * 0.5f;
+        velocity_x_delta = -emitter->dir_x * per_cell * 0.4f;
+        velocity_y_delta = -emitter->dir_y * per_cell * 0.4f;
+        velocity_z_delta = -emitter->dir_z * per_cell * 0.4f;
         break;
     }
+    sim_runtime_3d_brick_store_add_cell(&state->brick_store,
+                                        x,
+                                        y,
+                                        z,
+                                        density_delta,
+                                        velocity_x_delta,
+                                        velocity_y_delta,
+                                        velocity_z_delta,
+                                        0.0f);
+    if (!backend_3d_scaffold_dense_mirror_live(state)) return;
+    idx = sim_runtime_3d_volume_index(&state->volume.desc, x, y, z);
+    state->volume.density[idx] += density_delta;
+    state->volume.velocity_x[idx] += velocity_x_delta;
+    state->volume.velocity_y[idx] += velocity_y_delta;
+    state->volume.velocity_z[idx] += velocity_z_delta;
 }
 
 static void backend_3d_scaffold_apply_sphere(SimRuntimeBackend3DScaffold *state,
@@ -330,10 +352,8 @@ static void backend_3d_scaffold_apply_sphere(SimRuntimeBackend3DScaffold *state,
     for (int z = placement->min_z; z <= placement->max_z; ++z) {
         for (int y = placement->min_y; y <= placement->max_y; ++y) {
             for (int x = placement->min_x; x <= placement->max_x; ++x) {
-                size_t idx = 0;
                 if (!backend_3d_scaffold_cell_in_sphere(placement, x, y, z)) continue;
-                idx = sim_runtime_3d_volume_index(&state->volume.desc, x, y, z);
-                backend_3d_scaffold_apply_cell(state, emitter, idx, per_cell);
+                backend_3d_scaffold_apply_cell(state, emitter, x, y, z, per_cell);
             }
         }
     }
@@ -364,10 +384,8 @@ static void backend_3d_scaffold_apply_oriented_box(SimRuntimeBackend3DScaffold *
     for (int z = box->min_z; z <= box->max_z; ++z) {
         for (int y = box->min_y; y <= box->max_y; ++y) {
             for (int x = box->min_x; x <= box->max_x; ++x) {
-                size_t idx = 0;
                 if (!backend_3d_scaffold_cell_in_oriented_box(box, x, y, z)) continue;
-                idx = sim_runtime_3d_volume_index(&state->volume.desc, x, y, z);
-                backend_3d_scaffold_apply_cell(state, emitter, idx, per_cell);
+                backend_3d_scaffold_apply_cell(state, emitter, x, y, z, per_cell);
             }
         }
     }
@@ -527,5 +545,6 @@ void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
     }
 
     state->debug_volume_stats_dirty = true;
+    state->export_volume_cache_dirty = true;
     state->fluid_slice_dirty = true;
 }

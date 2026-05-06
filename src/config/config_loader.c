@@ -191,6 +191,12 @@ static void apply_fluid_settings(const char *json, AppConfig *cfg) {
         json_block_number(&block, "iterations", &val)) {
         cfg->fluid_solver_iterations = (int)val;
     }
+    if (json_block_number(&block, "solver_region_cell_budget", &val)) {
+        cfg->fluid_3d_solver_region_cell_budget = (int)val;
+    }
+    if (json_block_number(&block, "max_velocity_displacement_cells", &val)) {
+        cfg->fluid_3d_max_velocity_displacement_cells = (float)val;
+    }
 }
 
 static void apply_input_settings(const char *json, AppConfig *cfg) {
@@ -491,7 +497,10 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "    \"viscosity\": %.6f,\n", cfg->velocity_damping);
     fprintf(f, "    \"density_decay\": %.6f,\n", cfg->density_decay);
     fprintf(f, "    \"buoyancy\": %.6f,\n", cfg->fluid_buoyancy_force);
-    fprintf(f, "    \"solver_iterations\": %d\n", cfg->fluid_solver_iterations);
+    fprintf(f, "    \"solver_iterations\": %d,\n", cfg->fluid_solver_iterations);
+    fprintf(f, "    \"solver_region_cell_budget\": %d,\n", cfg->fluid_3d_solver_region_cell_budget);
+    fprintf(f, "    \"max_velocity_displacement_cells\": %.6f\n",
+            cfg->fluid_3d_max_velocity_displacement_cells);
     fprintf(f, "  },\n");
     fprintf(f, "  \"render\": {\n");
     fprintf(f, "    \"blur_enabled\": %s,\n", cfg->enable_render_blur ? "true" : "false");
