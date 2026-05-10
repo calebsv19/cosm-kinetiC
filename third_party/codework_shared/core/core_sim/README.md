@@ -25,7 +25,7 @@ It does not own:
 Apps provide domain callbacks for simulation passes. `core_sim` decides when and in what order those callbacks run.
 
 ## Dependencies
-- C standard library only for v0.2.0
+- C standard library only for v0.3.0
 
 Future adapters may layer on:
 - `core_time`
