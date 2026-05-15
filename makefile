@@ -213,9 +213,11 @@ LIBS += $(JSON_LIBS)
 TIMER_HUD_DIR := $(SHARED_ROOT)/timer_hud
 TIMER_HUD_INCLUDE := -I$(TIMER_HUD_DIR)/include -I$(TIMER_HUD_DIR)/external
 
-CFLAGS += $(TIMER_HUD_INCLUDE) -I$(VK_RENDERER_DIR)/include $(VULKAN_CFLAGS) \
-	-DUSE_VULKAN=1 -DVK_RENDERER_SHADER_ROOT=\"$(abspath $(VK_RENDERER_DIR))\" \
-	-include $(VK_RENDERER_DIR)/include/vk_renderer_sdl.h
+VK_RENDERER_BASE_CFLAGS := -I$(VK_RENDERER_DIR)/include $(VULKAN_CFLAGS) \
+	-DUSE_VULKAN=1 -DVK_RENDERER_SHADER_ROOT=\"$(abspath $(VK_RENDERER_DIR))\"
+VK_RENDERER_SDL_COMPAT_CFLAGS := -include $(VK_RENDERER_DIR)/include/vk_renderer_sdl.h
+
+CFLAGS += $(TIMER_HUD_INCLUDE) $(VK_RENDERER_BASE_CFLAGS)
 LIBS += $(VULKAN_LIBS)
 CFLAGS += -I$(KIT_VIZ_DIR)/include
 CFLAGS += -I$(KIT_RENDER_DIR)/include -DKIT_RENDER_ENABLE_VK_BACKEND=0
@@ -226,6 +228,31 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/render/TimerHUD/*' \
 	! -path '$(SRC_DIR)/render/TimerHUD_legacy_backup/*')
 VK_RENDERER_SRCS := $(shell find $(VK_RENDERER_DIR)/src -name '*.c')
+VK_RENDERER_SDL_COMPAT_SRCS := \
+	$(SRC_DIR)/app/editor/editor_scroll.c \
+	$(SRC_DIR)/app/editor/scene_editor_canvas.c \
+	$(SRC_DIR)/app/editor/scene_editor_canvas_retained.c \
+	$(SRC_DIR)/app/editor/scene_editor_panel.c \
+	$(SRC_DIR)/app/editor/scene_editor_panel_summary.c \
+	$(SRC_DIR)/app/editor/scene_editor_precision.c \
+	$(SRC_DIR)/app/editor/scene_editor_precision_helpers.c \
+	$(SRC_DIR)/app/editor/scene_editor_widgets.c \
+	$(SRC_DIR)/app/menu/menu_render.c \
+	$(SRC_DIR)/app/menu/menu_settings_render.c \
+	$(SRC_DIR)/app/menu/workspace_authoring/physics_sim_workspace_authoring_overlay.c \
+	$(SRC_DIR)/app/scene_menu.c \
+	$(SRC_DIR)/app/structural/structural_controller_render.c \
+	$(SRC_DIR)/app/structural/structural_editor.c \
+	$(SRC_DIR)/app/structural/structural_preset_editor_render_helpers.c \
+	$(SRC_DIR)/app/structural/structural_render.c \
+	$(SRC_DIR)/render/debug_draw_objects.c \
+	$(SRC_DIR)/render/hud_overlay.c \
+	$(SRC_DIR)/render/particle_overlay.c \
+	$(SRC_DIR)/render/retained_runtime_scene_overlay.c \
+	$(SRC_DIR)/render/retained_runtime_scene_overlay_readout.c \
+	$(SRC_DIR)/render/timer_hud_adapter.c \
+	$(SRC_DIR)/render/velocity_overlay.c \
+	$(SRC_DIR)/ui/scrollbar.c
 KIT_WORKSPACE_AUTHORING_SRCS := \
 	$(KIT_WORKSPACE_AUTHORING_DIR)/src/kit_workspace_authoring.c \
 	$(KIT_WORKSPACE_AUTHORING_DIR)/src/ui/kit_workspace_authoring_ui_overlay.c \
@@ -235,6 +262,7 @@ TIMER_HUD_EXTERNAL_SRCS := $(TIMER_HUD_DIR)/external/cJSON.c
 
 # Map src/foo/bar.c -> build/foo/bar.o
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
+VK_RENDERER_SDL_COMPAT_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(VK_RENDERER_SDL_COMPAT_SRCS))
 OBJS += $(patsubst $(VK_RENDERER_DIR)/src/%.c,$(BUILD_DIR)/vk_renderer/%.o,$(VK_RENDERER_SRCS))
 OBJS += $(patsubst $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c,$(BUILD_DIR)/kit_workspace_authoring/%.o,$(KIT_WORKSPACE_AUTHORING_SRCS))
 TIMER_HUD_OBJS := $(patsubst $(TIMER_HUD_DIR)/src/%.c,$(BUILD_DIR)/timer_hud/%.o,$(TIMER_HUD_SRCS))
@@ -243,6 +271,9 @@ TIMER_HUD_EXTERNAL_OBJS := $(patsubst $(TIMER_HUD_DIR)/external/%.c,$(BUILD_DIR)
 OBJS := $(OBJS) $(TIMER_HUD_OBJS) $(TIMER_HUD_EXTERNAL_OBJS)
 OBJS := $(OBJS) $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_PACK_OBJS)
 DEPS := $(OBJS:.o=.d)
+
+# Only the draw-surface implementation files need the SDL compatibility remap.
+$(VK_RENDERER_SDL_COMPAT_OBJS): CFLAGS += $(VK_RENDERER_SDL_COMPAT_CFLAGS)
 
 # CLI tool sources (explicit to avoid multiple mains)
 SHAPE_MASK_TOOL_SRC   := $(SRC_DIR)/tools/cli/shape_import_tool.c
