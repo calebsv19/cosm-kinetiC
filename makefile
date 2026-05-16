@@ -1,228 +1,18 @@
-# =========================
-#  Compiler and standard
-# =========================
-CC        := cc
-CSTD      := -std=c11
-
-UNAME_S   := $(shell uname -s)
-PKG_CONFIG ?= pkg-config
-TARGET_CONTRACT_HELPER ?= ../bin/desktop_release_target_contract.sh
-HOST_ARCH := $(shell uname -m)
-TARGET_ARCH ?= $(HOST_ARCH)
-RELEASE_PLATFORM ?= $(UNAME_S)
-RELEASE_ARCH ?= $(TARGET_ARCH)
-TARGET_HOMEBREW_PREFIX :=
-TARGET_ALT_HOMEBREW_PREFIX :=
-TARGET_PKG_CONFIG_LIBDIR :=
-TARGET_DEP_SEARCH_ROOTS :=
-ARCH_FLAGS :=
-
-ifeq ($(UNAME_S),Darwin)
-HOST_ARCH := $(strip $(shell "$(TARGET_CONTRACT_HELPER)" get host_arch))
-TARGET_ARCH_INPUT := $(TARGET_ARCH)
-TARGET_ARCH := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH_INPUT)" "$(TARGET_CONTRACT_HELPER)" get target_arch))
-RELEASE_PLATFORM := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH)" "$(TARGET_CONTRACT_HELPER)" get release_platform))
-RELEASE_ARCH := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH)" "$(TARGET_CONTRACT_HELPER)" get release_arch))
-TARGET_HOMEBREW_PREFIX := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH)" "$(TARGET_CONTRACT_HELPER)" get homebrew_prefix))
-TARGET_ALT_HOMEBREW_PREFIX := $(strip $(shell TARGET_ARCH="$(TARGET_ARCH)" "$(TARGET_CONTRACT_HELPER)" get alt_homebrew_prefix))
-TARGET_PKG_CONFIG_LIBDIR := $(TARGET_HOMEBREW_PREFIX)/lib/pkgconfig:$(TARGET_HOMEBREW_PREFIX)/share/pkgconfig
-TARGET_DEP_SEARCH_ROOTS := $(TARGET_HOMEBREW_PREFIX):$(TARGET_ALT_HOMEBREW_PREFIX)
-ARCH_FLAGS := -arch $(TARGET_ARCH)
-endif
-
-# =========================
-#  Project structure
-# =========================
-SRC_DIR   := src
-INC_DIR   := include
-BUILD_DIR := build
-TARGET    := physics_sim
-SHARED_ROOT ?= third_party/codework_shared
-VK_RENDERER_DIR := $(SHARED_ROOT)/vk_renderer
-KIT_VIZ_DIR := $(SHARED_ROOT)/kit/kit_viz
-KIT_RENDER_DIR := $(SHARED_ROOT)/kit/kit_render
-KIT_PANE_DIR := $(SHARED_ROOT)/kit/kit_pane
-KIT_WORKSPACE_AUTHORING_DIR := $(SHARED_ROOT)/kit/kit_workspace_authoring
-SHARED_ASSETS_DIR := $(SHARED_ROOT)/assets
-CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
-SHIM_MODE ?= off
-SYS_SHIMS_DIR := $(SHARED_ROOT)/sys_shims
-SYS_SHIMS_OVERLAY_DIR := $(SYS_SHIMS_DIR)/overlay/include
-SYS_SHIMS_INCLUDE_DIR := $(SYS_SHIMS_DIR)/include
-DIST_DIR := dist
-PACKAGE_APP_NAME := kinetiC.app
-PACKAGE_APP_DIR := $(DIST_DIR)/$(PACKAGE_APP_NAME)
-PACKAGE_CONTENTS_DIR := $(PACKAGE_APP_DIR)/Contents
-PACKAGE_MACOS_DIR := $(PACKAGE_CONTENTS_DIR)/MacOS
-PACKAGE_RESOURCES_DIR := $(PACKAGE_CONTENTS_DIR)/Resources
-PACKAGE_FRAMEWORKS_DIR := $(PACKAGE_CONTENTS_DIR)/Frameworks
-PACKAGE_APP_ICON_NAME := AppIcon
-PACKAGE_APP_ICON_FILE := $(PACKAGE_APP_ICON_NAME).icns
-PACKAGE_LOCAL_ICON_DIR := tools/packaging/macos/local_app_icon
-PACKAGE_APP_ICON_SRC ?= $(PACKAGE_LOCAL_ICON_DIR)/$(PACKAGE_APP_ICON_FILE)
-PACKAGE_APP_ICONSET_SRC ?= $(PACKAGE_LOCAL_ICON_DIR)/$(PACKAGE_APP_ICON_NAME).iconset
-PACKAGE_BUNDLED_ICON_PATH := $(PACKAGE_RESOURCES_DIR)/$(PACKAGE_APP_ICON_FILE)
-PACKAGE_INFO_PLIST_SRC := tools/packaging/macos/Info.plist
-PACKAGE_LAUNCHER_SRC := tools/packaging/macos/physics-sim-launcher
-PACKAGE_DYLIB_BUNDLER := tools/packaging/macos/bundle-dylibs.sh
-DESKTOP_APP_DIR ?= $(HOME)/Desktop/$(PACKAGE_APP_NAME)
-PACKAGE_ADHOC_SIGN_IDENTITY ?= -
-
-# RL0 release contract.
-RELEASE_VERSION_FILE ?= VERSION
-RELEASE_VERSION ?= $(strip $(shell cat "$(RELEASE_VERSION_FILE)" 2>/dev/null))
-ifeq ($(RELEASE_VERSION),)
-RELEASE_VERSION := 0.1.0
-endif
-RELEASE_CHANNEL ?= stable
-RELEASE_PRODUCT_NAME := kinetiC
-RELEASE_PROGRAM_KEY := physics_sim
-RELEASE_BUNDLE_ID := com.cosm.kinetic
-RELEASE_ARTIFACT_BASENAME := $(RELEASE_PRODUCT_NAME)-$(RELEASE_VERSION)-$(RELEASE_PLATFORM)-$(RELEASE_ARCH)-$(RELEASE_CHANNEL)
-RELEASE_DIR := build/release
-RELEASE_APP_ZIP := $(RELEASE_DIR)/$(RELEASE_ARTIFACT_BASENAME).zip
-RELEASE_MANIFEST := $(RELEASE_DIR)/$(RELEASE_ARTIFACT_BASENAME).manifest.txt
-RELEASE_CODESIGN_IDENTITY ?= $(if $(strip $(APPLE_SIGN_IDENTITY)),$(APPLE_SIGN_IDENTITY),$(PACKAGE_ADHOC_SIGN_IDENTITY))
-APPLE_SIGN_IDENTITY ?=
-APPLE_NOTARY_PROFILE ?=
-APPLE_TEAM_ID ?=
-STAPLE_MAX_ATTEMPTS ?= 6
-STAPLE_RETRY_DELAY_SEC ?= 15
+include make/config.mk
+include make/target.mk
+include make/package-paths.mk
+include make/shared-roots.mk
+include make/flags.mk
 
 # =========================
 #  Diagnostics
 # =========================
-$(info USING MAKEFILE AT: $(abspath $(lastword $(MAKEFILE_LIST))))
-
-# =========================
-#  SDL2 via sdl2-config (if available)
-# =========================
-SDL_CFLAGS :=
-SDL_LIBS   :=
-VULKAN_CFLAGS :=
-VULKAN_LIBS :=
-JSON_CFLAGS :=
-JSON_LIBS :=
-
-ifneq ($(UNAME_S),Darwin)
-SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
-SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
-JSON_CFLAGS := $(shell pkg-config --cflags json-c 2>/dev/null)
-JSON_LIBS := $(shell pkg-config --libs json-c 2>/dev/null)
-endif
-
-# =========================
-#  Base flags
-# =========================
-WARN      := -Wall -Wextra -Wpedantic
-DEBUG     := -g
-
-CFLAGS    := $(CSTD) $(WARN) $(DEBUG) $(ARCH_FLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools
-CFLAGS    += -DPHYSICS_SIM_REPO_ROOT=\"$(abspath .)\"
-LDFLAGS   := $(ARCH_FLAGS)
-LIBS      :=
-
-ifeq ($(SHIM_MODE),shadow)
-	CFLAGS += -I$(SYS_SHIMS_OVERLAY_DIR) -I$(SYS_SHIMS_INCLUDE_DIR) -DSYS_SHIM_MODE_SHADOW=1
-endif
-
-# =========================
-#  OS-specific flags
-# =========================
-ifeq ($(UNAME_S),Linux)
-    # Needed for clock_gettime + friends
-    CFLAGS += -D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE
-
-    ifneq ($(SDL_CFLAGS),)
-        # Prefer sdl2-config if present
-        CFLAGS += $(SDL_CFLAGS)
-        LIBS   += $(SDL_LIBS)
-    else
-        # Fallback: system headers
-        CFLAGS += -I/usr/include/SDL2
-        LIBS   += -lSDL2 -lSDL2_ttf
-    endif
-
-    # Linux needs librt for clock_gettime
-    LIBS += -lrt
-
-    VULKAN_CFLAGS := $(shell pkg-config --cflags vulkan 2>/dev/null)
-    VULKAN_LIBS := $(shell pkg-config --libs vulkan 2>/dev/null)
-    ifeq ($(strip $(VULKAN_CFLAGS)$(VULKAN_LIBS)),)
-        VULKAN_CFLAGS := -I/usr/include
-        VULKAN_LIBS := -lvulkan
-    endif
-endif
-
-ifeq ($(UNAME_S),Darwin)
-    # macOS: clock_gettime is in libSystem, no -lrt needed
-    # We *do not* use SDL_CFLAGS here, because it adds -I/opt/homebrew/include/SDL2,
-    # which conflicts with our #include <SDL2/SDL.h> pattern.
-    SDL_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags sdl2 2>/dev/null)
-    SDL_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs sdl2 2>/dev/null)
-    JSON_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags json-c 2>/dev/null)
-    JSON_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs json-c 2>/dev/null)
-    CFLAGS  += -D_POSIX_C_SOURCE=200809L -D_THREAD_SAFE
-    ifneq ($(strip $(SDL_CFLAGS)),)
-        CFLAGS += $(SDL_CFLAGS)
-    else
-        CFLAGS += -I$(TARGET_HOMEBREW_PREFIX)/include
-    endif
-    ifneq ($(strip $(JSON_CFLAGS)),)
-        CFLAGS += $(JSON_CFLAGS)
-    else
-        CFLAGS += -I$(TARGET_HOMEBREW_PREFIX)/include
-    endif
-    ifneq ($(strip $(SDL_LIBS)),)
-        LIBS += $(SDL_LIBS) -lSDL2_ttf
-    else
-        LDFLAGS += -L$(TARGET_HOMEBREW_PREFIX)/lib
-        LIBS += -lSDL2 -lSDL2_ttf
-    endif
-    ifeq ($(strip $(JSON_LIBS)),)
-        JSON_LIBS := -L$(TARGET_HOMEBREW_PREFIX)/lib -ljson-c
-    endif
-
-    VULKAN_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags vulkan 2>/dev/null)
-    VULKAN_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs vulkan 2>/dev/null)
-    ifeq ($(strip $(VULKAN_CFLAGS)$(VULKAN_LIBS)),)
-        VULKAN_CFLAGS := -I$(TARGET_HOMEBREW_PREFIX)/include
-        VULKAN_LIBS := -L$(TARGET_HOMEBREW_PREFIX)/lib -lvulkan
-    endif
-    VULKAN_LIBS += -framework Metal -framework QuartzCore -framework Cocoa -framework IOKit -framework CoreVideo
-    CFLAGS += -DVK_USE_PLATFORM_METAL_EXT
-endif
-
-ifeq ($(strip $(JSON_LIBS)),)
-JSON_LIBS := -ljson-c
-endif
-ifeq ($(UNAME_S),Darwin)
-ifeq ($(strip $(JSON_CFLAGS)),)
-JSON_CFLAGS := -I$(TARGET_HOMEBREW_PREFIX)/include
-endif
-endif
-
-# Always link libm
-LIBS += -lm
-LIBS += $(JSON_LIBS)
+$(info USING MAKEFILE AT: $(abspath $(firstword $(MAKEFILE_LIST))))
 
 # =========================
 #  Source / object discovery
 # =========================
 # Find all .c files under src/ excluding CLI tools
-TIMER_HUD_DIR := $(SHARED_ROOT)/timer_hud
-TIMER_HUD_INCLUDE := -I$(TIMER_HUD_DIR)/include -I$(TIMER_HUD_DIR)/external
-
-VK_RENDERER_BASE_CFLAGS := -I$(VK_RENDERER_DIR)/include $(VULKAN_CFLAGS) \
-	-DUSE_VULKAN=1 -DVK_RENDERER_SHADER_ROOT=\"$(abspath $(VK_RENDERER_DIR))\"
-VK_RENDERER_SDL_COMPAT_CFLAGS := -include $(VK_RENDERER_DIR)/include/vk_renderer_sdl.h
-
-CFLAGS += $(TIMER_HUD_INCLUDE) $(VK_RENDERER_BASE_CFLAGS)
-LIBS += $(VULKAN_LIBS)
-CFLAGS += -I$(KIT_VIZ_DIR)/include
-CFLAGS += -I$(KIT_RENDER_DIR)/include -DKIT_RENDER_ENABLE_VK_BACKEND=0
-CFLAGS += -I$(CORE_SCENE_COMPILE_DIR)/include
-
 SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/tools/cli/*' \
 	! -path '$(SRC_DIR)/render/TimerHUD/*' \
@@ -329,21 +119,6 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_IO_DIR)/src/core_io.c \
 	$(CORE_BASE_DIR)/src/core_base.c
-
-CORE_BASE_DIR := $(SHARED_ROOT)/core/core_base
-CORE_IO_DIR := $(SHARED_ROOT)/core/core_io
-CORE_DATA_DIR := $(SHARED_ROOT)/core/core_data
-CORE_PACK_DIR := $(SHARED_ROOT)/core/core_pack
-CORE_SCENE_DIR := $(SHARED_ROOT)/core/core_scene
-CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
-CORE_OBJECT_DIR := $(SHARED_ROOT)/core/core_object
-CORE_UNITS_DIR := $(SHARED_ROOT)/core/core_units
-CORE_PANE_DIR := $(SHARED_ROOT)/core/core_pane
-CORE_SIM_DIR := $(SHARED_ROOT)/core/core_sim
-CORE_TRACE_DIR := $(SHARED_ROOT)/core/core_trace
-CORE_THEME_DIR := $(SHARED_ROOT)/core/core_theme
-CORE_FONT_DIR := $(SHARED_ROOT)/core/core_font
-CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_SIM_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_WORKSPACE_AUTHORING_DIR)/include
 
 CORE_BASE_SRCS := $(CORE_BASE_DIR)/src/core_base.c
 CORE_IO_SRCS := $(CORE_IO_DIR)/src/core_io.c
