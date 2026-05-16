@@ -6,6 +6,7 @@
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
 #include "app/sim_runtime_obstacle.h"
+#include "app/atmospheric/atmospheric_field.h"
 
 #include <math.h>
 #include <stdlib.h>
@@ -193,7 +194,53 @@ static bool backend_3d_scaffold_debug_reset_volume_truth_3d(SimRuntimeBackend *b
     state->obstacle_volume_dirty = false;
     state->obstacle_dense_cache_dirty = true;
     state->obstacle_slice_dirty = true;
+    state->atmospheric_seeded = false;
+    state->atmospheric_seed = 0u;
+    state->atmospheric_seeded_cell_count = 0u;
+    state->atmospheric_seed_max_density = 0.0f;
+    state->atmospheric_seed_max_velocity_magnitude = 0.0f;
+    state->atmospheric_warm_start_loaded = false;
+    state->atmospheric_warm_start_source_kind = 0;
+    state->atmospheric_warm_start_w = 0;
+    state->atmospheric_warm_start_h = 0;
+    state->atmospheric_warm_start_d = 0;
+    state->atmospheric_warm_start_cell_count = 0u;
+    state->atmospheric_warm_start_active_density_cells = 0u;
+    state->atmospheric_warm_start_solid_cells = 0u;
+    state->atmospheric_warm_start_max_density = 0.0f;
+    state->atmospheric_warm_start_max_velocity_magnitude = 0.0f;
     backend_3d_scaffold_mark_fluid_dirty(state);
+    return true;
+}
+
+static bool backend_3d_scaffold_debug_note_atmospheric_warm_start_3d(
+    SimRuntimeBackend *backend,
+    int source_kind,
+    int width,
+    int height,
+    int depth,
+    size_t cell_count,
+    size_t active_density_cells,
+    size_t solid_cells,
+    float max_density,
+    float max_velocity_magnitude) {
+    SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
+    if (!state) return false;
+    state->atmospheric_seeded = false;
+    state->atmospheric_seed = 0u;
+    state->atmospheric_seeded_cell_count = 0u;
+    state->atmospheric_seed_max_density = 0.0f;
+    state->atmospheric_seed_max_velocity_magnitude = 0.0f;
+    state->atmospheric_warm_start_loaded = true;
+    state->atmospheric_warm_start_source_kind = source_kind;
+    state->atmospheric_warm_start_w = width;
+    state->atmospheric_warm_start_h = height;
+    state->atmospheric_warm_start_d = depth;
+    state->atmospheric_warm_start_cell_count = cell_count;
+    state->atmospheric_warm_start_active_density_cells = active_density_cells;
+    state->atmospheric_warm_start_solid_cells = solid_cells;
+    state->atmospheric_warm_start_max_density = max_density;
+    state->atmospheric_warm_start_max_velocity_magnitude = max_velocity_magnitude;
     return true;
 }
 
@@ -248,8 +295,91 @@ static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
     state->debug_volume_scene_up_velocity_valid = false;
     state->debug_volume_scene_up_velocity_avg = 0.0f;
     state->debug_volume_scene_up_velocity_peak = 0.0f;
+    state->atmospheric_seeded = false;
+    state->atmospheric_seed = 0u;
+    state->atmospheric_seeded_cell_count = 0u;
+    state->atmospheric_seed_max_density = 0.0f;
+    state->atmospheric_seed_max_velocity_magnitude = 0.0f;
+    state->atmospheric_warm_start_loaded = false;
+    state->atmospheric_warm_start_source_kind = 0;
+    state->atmospheric_warm_start_w = 0;
+    state->atmospheric_warm_start_h = 0;
+    state->atmospheric_warm_start_d = 0;
+    state->atmospheric_warm_start_cell_count = 0u;
+    state->atmospheric_warm_start_active_density_cells = 0u;
+    state->atmospheric_warm_start_solid_cells = 0u;
+    state->atmospheric_warm_start_max_density = 0.0f;
+    state->atmospheric_warm_start_max_velocity_magnitude = 0.0f;
     backend_3d_scaffold_runtime_reset_metrics(state);
     backend_3d_scaffold_mark_fluid_dirty(state);
+}
+
+static size_t backend_3d_scaffold_seed_atmosphere(SimRuntimeBackend3DScaffold *state,
+                                                  const FluidScenePreset *preset) {
+    if (!state || !atmospheric_preset_enabled(preset)) return 0;
+    const SimRuntime3DDomainDesc *desc = &state->volume.desc;
+    const float density_threshold = 0.0001f;
+    float inv_w = (desc->grid_w > 1) ? 1.0f / (float)(desc->grid_w - 1) : 0.0f;
+    float inv_h = (desc->grid_h > 1) ? 1.0f / (float)(desc->grid_h - 1) : 0.0f;
+    float inv_d = (desc->grid_d > 1) ? 1.0f / (float)(desc->grid_d - 1) : 0.0f;
+    size_t seeded = 0;
+    float max_density = 0.0f;
+    float max_velocity = 0.0f;
+
+    for (int z = 0; z < desc->grid_d; ++z) {
+        for (int y = 0; y < desc->grid_h; ++y) {
+            for (int x = 0; x < desc->grid_w; ++x) {
+                AtmosphericFieldSample sample =
+                    atmospheric_field_sample_3d(&preset->atmosphere,
+                                                (float)x * inv_w,
+                                                (float)y * inv_h,
+                                                (float)z * inv_d);
+                size_t idx = 0;
+                if (sample.density <= density_threshold) {
+                    continue;
+                }
+                if (!sim_runtime_3d_brick_store_set_cell(&state->brick_store,
+                                                         x,
+                                                         y,
+                                                         z,
+                                                         sample.density,
+                                                         sample.velocity_x,
+                                                         sample.velocity_y,
+                                                         sample.velocity_z,
+                                                         0.0f)) {
+                    continue;
+                }
+                if (backend_3d_scaffold_dense_mirror_live(state)) {
+                    idx = sim_runtime_3d_volume_index(desc, x, y, z);
+                    state->volume.density[idx] = sample.density;
+                    state->volume.velocity_x[idx] = sample.velocity_x;
+                    state->volume.velocity_y[idx] = sample.velocity_y;
+                    state->volume.velocity_z[idx] = sample.velocity_z;
+                    state->volume.pressure[idx] = 0.0f;
+                }
+                if (sample.density > max_density) {
+                    max_density = sample.density;
+                }
+                {
+                    float speed = sqrtf(sample.velocity_x * sample.velocity_x +
+                                        sample.velocity_y * sample.velocity_y +
+                                        sample.velocity_z * sample.velocity_z);
+                    if (speed > max_velocity) max_velocity = speed;
+                }
+                seeded++;
+            }
+        }
+    }
+
+    state->atmospheric_seeded = seeded > 0;
+    state->atmospheric_seed = preset->atmosphere.seed;
+    state->atmospheric_seeded_cell_count = seeded;
+    state->atmospheric_seed_max_density = max_density;
+    state->atmospheric_seed_max_velocity_magnitude = max_velocity;
+    if (seeded > 0) {
+        backend_3d_scaffold_mark_fluid_dirty(state);
+    }
+    return seeded;
 }
 
 static void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DScaffold *state) {
@@ -793,6 +923,24 @@ static bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
         .compatibility_slice_z = state->compatibility_slice_z,
         .secondary_debug_slice_stack_live = true,
         .secondary_debug_slice_stack_radius = 3,
+        .atmospheric_seeded = state->atmospheric_seeded,
+        .atmospheric_seed = state->atmospheric_seed,
+        .atmospheric_seeded_cell_count = state->atmospheric_seeded_cell_count,
+        .atmospheric_seed_max_density = state->atmospheric_seed_max_density,
+        .atmospheric_seed_max_velocity_magnitude =
+            state->atmospheric_seed_max_velocity_magnitude,
+        .atmospheric_warm_start_loaded = state->atmospheric_warm_start_loaded,
+        .atmospheric_warm_start_source_kind = state->atmospheric_warm_start_source_kind,
+        .atmospheric_warm_start_w = state->atmospheric_warm_start_w,
+        .atmospheric_warm_start_h = state->atmospheric_warm_start_h,
+        .atmospheric_warm_start_d = state->atmospheric_warm_start_d,
+        .atmospheric_warm_start_cell_count = state->atmospheric_warm_start_cell_count,
+        .atmospheric_warm_start_active_density_cells =
+            state->atmospheric_warm_start_active_density_cells,
+        .atmospheric_warm_start_solid_cells = state->atmospheric_warm_start_solid_cells,
+        .atmospheric_warm_start_max_density = state->atmospheric_warm_start_max_density,
+        .atmospheric_warm_start_max_velocity_magnitude =
+            state->atmospheric_warm_start_max_velocity_magnitude,
         .runtime_allocated_brick_count = state->brick_store.allocated_brick_count,
         .runtime_active_brick_count = state->brick_store.allocated_brick_count,
         .runtime_active_region_cell_count = state->runtime_last_active_region_cell_count,
@@ -933,6 +1081,8 @@ static const SimRuntimeBackendOps g_backend_3d_scaffold_ops = {
     .debug_zero_obstacle_dense_cache_3d = backend_3d_scaffold_debug_zero_obstacle_dense_cache_3d,
     .debug_write_volume_cell_3d = backend_3d_scaffold_debug_write_volume_cell_3d,
     .debug_reset_volume_truth_3d = backend_3d_scaffold_debug_reset_volume_truth_3d,
+    .debug_note_atmospheric_warm_start_3d =
+        backend_3d_scaffold_debug_note_atmospheric_warm_start_3d,
 };
 
 SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
@@ -1019,6 +1169,7 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
     }
 
     backend_3d_scaffold_reset(state);
+    (void)backend_3d_scaffold_seed_atmosphere(state, preset);
     state->runtime_solver_region_cell_budget = app_config_3d_solver_region_cell_budget(cfg);
     state->runtime_solver_region_cell_budget_overridden =
         app_config_3d_solver_region_cell_budget_overridden(cfg);

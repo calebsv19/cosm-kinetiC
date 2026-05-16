@@ -16,6 +16,7 @@
 #include "app/scene_loop_policy.h"
 #include "app/scene_controller_util.h"
 #include "app/scene_core_sim_runtime_step.h"
+#include "app/atmospheric/atmospheric_warm_start.h"
 #include "app/sim_mode.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
@@ -599,6 +600,33 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .backend_compatibility_slice_has_obstacles = compatibility_slice_has_obstacles,
         .backend_secondary_debug_slice_stack_live = backend_report.secondary_debug_slice_stack_live,
         .backend_secondary_debug_slice_stack_radius = backend_report.secondary_debug_slice_stack_radius,
+        .backend_atmospheric_seeded = backend_report.atmospheric_seeded,
+        .backend_atmospheric_seed = backend_report.atmospheric_seed,
+        .backend_atmospheric_seeded_cell_count = backend_report.atmospheric_seeded_cell_count,
+        .backend_atmospheric_seed_max_density = backend_report.atmospheric_seed_max_density,
+        .backend_atmospheric_seed_max_velocity_magnitude =
+            backend_report.atmospheric_seed_max_velocity_magnitude,
+        .atmospheric_warm_start_status = scene->atmospheric_warm_start.status,
+        .atmospheric_warm_start_source_kind =
+            (int)scene->atmospheric_warm_start.metadata.source_kind,
+        .atmospheric_warm_start_path =
+            scene->atmospheric_warm_start.path[0]
+                ? scene->atmospheric_warm_start.path
+                : NULL,
+        .atmospheric_warm_start_error =
+            scene->atmospheric_warm_start.rejection_reason[0]
+                ? scene->atmospheric_warm_start.rejection_reason
+                : NULL,
+        .atmospheric_warm_start_w = scene->atmospheric_warm_start.metadata.width,
+        .atmospheric_warm_start_h = scene->atmospheric_warm_start.metadata.height,
+        .atmospheric_warm_start_d = scene->atmospheric_warm_start.metadata.depth,
+        .atmospheric_warm_start_cell_count = scene->atmospheric_warm_start.stats.cell_count,
+        .atmospheric_warm_start_active_density_cells =
+            scene->atmospheric_warm_start.stats.active_density_cells,
+        .atmospheric_warm_start_solid_cells = scene->atmospheric_warm_start.stats.solid_cells,
+        .atmospheric_warm_start_max_density = scene->atmospheric_warm_start.stats.max_density,
+        .atmospheric_warm_start_max_velocity_magnitude =
+            scene->atmospheric_warm_start.stats.max_velocity_magnitude,
         .backend_debug_volume_view_3d_available = backend_report.debug_volume_view_3d_available,
         .backend_debug_volume_active_density_cells = backend_report.debug_volume_active_density_cells,
         .backend_debug_volume_solid_cells = backend_report.debug_volume_solid_cells,
@@ -755,6 +783,32 @@ int scene_controller_run(const AppConfig *initial_cfg,
         (void)scene_load_runtime_visual_bootstrap(&scene,
                                                   runtime_launch->retained_runtime_scene_path);
         (void)retained_runtime_scene_overlay_frame_view(&scene, cfg.window_w, cfg.window_h);
+    }
+    if (cfg.sim_mode == SIM_MODE_ATMOSPHERIC &&
+        mode_route.requested_space_mode == SPACE_MODE_3D &&
+        cfg.atmospheric_warm_start_path[0]) {
+        AtmosphericWarmStartStats3D warm_stats = {0};
+        char warm_error[160];
+        warm_error[0] = '\0';
+        if (atmospheric_warm_start_apply_scene_3d(&scene,
+                                                  cfg.atmospheric_warm_start_path,
+                                                  &warm_stats,
+                                                  warm_error,
+                                                  sizeof(warm_error))) {
+            fprintf(stderr,
+                    "[scene] Atmospheric warm-start applied: cells=%zu active=%zu solids=%zu max_density=%.3f max_speed=%.3f path=%s\n",
+                    warm_stats.cell_count,
+                    warm_stats.active_density_cells,
+                    warm_stats.solid_cells,
+                    warm_stats.max_density,
+                    warm_stats.max_velocity_magnitude,
+                    cfg.atmospheric_warm_start_path);
+        } else {
+            fprintf(stderr,
+                    "[scene] Atmospheric warm-start skipped: %s path=%s\n",
+                    warm_error[0] ? warm_error : "unknown error",
+                    cfg.atmospheric_warm_start_path);
+        }
     }
     if (!sim_runtime_backend_valid(scene.backend)) {
         fprintf(stderr, "[scene] Fluid grid failed to initialize.\n");

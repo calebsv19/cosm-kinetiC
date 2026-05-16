@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "physics/math/math2d.h"
 #include <stddef.h>
+#include <stdint.h>
 
 typedef enum FluidEmitterType {
     EMITTER_DENSITY_SOURCE = 0,
@@ -105,13 +106,53 @@ typedef struct ImportedShape {
 typedef enum FluidSceneDomainType {
     SCENE_DOMAIN_BOX = 0,
     SCENE_DOMAIN_WIND_TUNNEL,
-    SCENE_DOMAIN_STRUCTURAL
+    SCENE_DOMAIN_STRUCTURAL,
+    SCENE_DOMAIN_ATMOSPHERIC
 } FluidSceneDomainType;
 
 typedef enum FluidSceneDimensionMode {
     SCENE_DIMENSION_MODE_2D = 0,
     SCENE_DIMENSION_MODE_3D
 } FluidSceneDimensionMode;
+
+typedef enum AtmosphericRegionShape {
+    ATMOSPHERIC_REGION_RECT = 0,
+    ATMOSPHERIC_REGION_ELLIPSE
+} AtmosphericRegionShape;
+
+typedef struct AtmosphericDensityRegion {
+    bool enabled;
+    AtmosphericRegionShape shape;
+    float center_x;
+    float center_y;
+    float center_z;
+    float size_x;
+    float size_y;
+    float size_z;
+    float density;
+    float falloff;
+} AtmosphericDensityRegion;
+
+#define MAX_ATMOSPHERIC_DENSITY_REGIONS 8
+
+typedef struct AtmosphericPresetSettings {
+    bool enabled;
+    uint32_t seed;
+    float base_density;
+    float density_scale;
+    float density_threshold;
+    float base_wind_x;
+    float base_wind_y;
+    float base_wind_z;
+    float turbulence_strength;
+    float noise_scale;
+    float detail_scale;
+    float band_min_y;
+    float band_max_y;
+    float band_edge_falloff;
+    size_t region_count;
+    AtmosphericDensityRegion regions[MAX_ATMOSPHERIC_DENSITY_REGIONS];
+} AtmosphericPresetSettings;
 
 typedef struct FluidScenePreset {
     const char *name;
@@ -128,6 +169,7 @@ typedef struct FluidScenePreset {
     float domain_width;
     float domain_height;
     char  structural_scene_path[256];
+    AtmosphericPresetSettings atmosphere;
 } FluidScenePreset;
 
 const FluidScenePreset *scene_presets_get_all(size_t *count);

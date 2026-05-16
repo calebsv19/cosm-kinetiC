@@ -6,6 +6,7 @@
 
 #include "render/font_bridge.h"
 #include "render/text_draw.h"
+#include "app/atmospheric/atmospheric_warm_start.h"
 
 static SDL_Renderer *g_hud_renderer = NULL;
 static TTF_Font     *g_hud_font     = NULL;
@@ -22,6 +23,18 @@ static TTF_Font *load_hud_font(void) {
     }
     fprintf(stderr, "[hud] Failed to load HUD font: %s\n", TTF_GetError());
     return NULL;
+}
+
+static const char *hud_warm_start_source_label(int source_kind) {
+    switch ((AtmosphericWarmStartSourceKind)source_kind) {
+        case ATMOSPHERIC_WARM_START_SOURCE_VF3D_RAW:
+            return "VF3D";
+        case ATMOSPHERIC_WARM_START_SOURCE_VF3H_PACK:
+            return "VF3H pack";
+        case ATMOSPHERIC_WARM_START_SOURCE_NONE:
+        default:
+            return "unknown";
+    }
 }
 
 bool hud_overlay_init(SDL_Renderer *renderer) {
@@ -93,6 +106,8 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         mode_name = "Wind";
     } else if (hud->sim_mode == SIM_MODE_STRUCTURAL) {
         mode_name = "Structural";
+    } else if (hud->sim_mode == SIM_MODE_ATMOSPHERIC) {
+        mode_name = "Atmospheric";
     }
 
     char status_line[96];
@@ -338,6 +353,41 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         volume_truth_line[0] = '\0';
     }
 
+    char atmosphere_line[224];
+    if (hud->sim_mode == SIM_MODE_ATMOSPHERIC &&
+        hud->atmospheric_warm_start_status == ATMOSPHERIC_WARM_START_RUNTIME_APPLIED) {
+        snprintf(atmosphere_line,
+                 sizeof(atmosphere_line),
+                 "Warm start: %s %dx%dx%d cells=%zu act=%zu solid=%zu rho_max=%.2f |v|_max=%.2f",
+                 hud_warm_start_source_label(hud->atmospheric_warm_start_source_kind),
+                 hud->atmospheric_warm_start_w,
+                 hud->atmospheric_warm_start_h,
+                 hud->atmospheric_warm_start_d,
+                 hud->atmospheric_warm_start_cell_count,
+                 hud->atmospheric_warm_start_active_density_cells,
+                 hud->atmospheric_warm_start_solid_cells,
+                 hud->atmospheric_warm_start_max_density,
+                 hud->atmospheric_warm_start_max_velocity_magnitude);
+    } else if (hud->sim_mode == SIM_MODE_ATMOSPHERIC &&
+               hud->atmospheric_warm_start_status == ATMOSPHERIC_WARM_START_RUNTIME_REJECTED) {
+        snprintf(atmosphere_line,
+                 sizeof(atmosphere_line),
+                 "Warm start rejected: %s",
+                 hud->atmospheric_warm_start_error
+                     ? hud->atmospheric_warm_start_error
+                     : "unknown reason");
+    } else if (hud->sim_mode == SIM_MODE_ATMOSPHERIC && hud->backend_atmospheric_seeded) {
+        snprintf(atmosphere_line,
+                 sizeof(atmosphere_line),
+                 "Atmosphere procedural seed: %u cells=%zu rho_max=%.2f |v|_max=%.2f",
+                 hud->backend_atmospheric_seed,
+                 hud->backend_atmospheric_seeded_cell_count,
+                 hud->backend_atmospheric_seed_max_density,
+                 hud->backend_atmospheric_seed_max_velocity_magnitude);
+    } else {
+        atmosphere_line[0] = '\0';
+    }
+
     char emitter_step_line[176];
     if (hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD) {
         snprintf(emitter_step_line,
@@ -492,6 +542,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     if (compatibility_activity_line[0]) lines[line_count++] = compatibility_activity_line;
     if (scene_axis_line[0]) lines[line_count++] = scene_axis_line;
     if (volume_truth_line[0]) lines[line_count++] = volume_truth_line;
+    if (atmosphere_line[0]) lines[line_count++] = atmosphere_line;
     if (debug_cue_line[0]) lines[line_count++] = debug_cue_line;
     lines[line_count++] = preset_line;
     if (wind_line[0]) lines[line_count++] = wind_line;

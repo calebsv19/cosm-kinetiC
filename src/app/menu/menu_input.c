@@ -111,6 +111,40 @@ static bool menu_apply_input_root(SceneMenuInteraction *ctx, const char *path) {
     return true;
 }
 
+static bool menu_pick_warm_start_file_macos(char *out_path, size_t out_cap) {
+#if defined(__APPLE__)
+    FILE *pipe = NULL;
+    char line[512];
+    if (!out_path || out_cap == 0u) return false;
+    pipe = popen("/usr/bin/osascript -e 'POSIX path of (choose file with prompt \"Choose Atmospheric Warm Start\")'",
+                 "r");
+    if (!pipe) return false;
+    if (!fgets(line, sizeof(line), pipe)) {
+        (void)pclose(pipe);
+        return false;
+    }
+    (void)pclose(pipe);
+    line[strcspn(line, "\r\n")] = '\0';
+    if (line[0] == '\0') return false;
+    snprintf(out_path, out_cap, "%s", line);
+    return true;
+#else
+    (void)out_path;
+    (void)out_cap;
+    return false;
+#endif
+}
+
+static bool menu_apply_warm_start_path(SceneMenuInteraction *ctx, const char *path) {
+    if (!ctx || !ctx->cfg || !path) return false;
+    snprintf(ctx->cfg->atmospheric_warm_start_path,
+             sizeof(ctx->cfg->atmospheric_warm_start_path),
+             "%s",
+             path);
+    menu_persist_runtime_config(ctx->cfg);
+    return true;
+}
+
 void menu_pointer_up(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
@@ -173,6 +207,35 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         menu_ensure_slot_for_mode(ctx);
         menu_update_scrollbar(ctx);
         menu_set_status(ctx, "Input root updated.", false);
+    }
+
+    if (menu_warm_start_controls_visible(ctx) &&
+        menu_point_in_rect(x, y, &ctx->warm_start_file_button.rect)) {
+        char selected[512];
+        if (menu_pick_warm_start_file_macos(selected, sizeof(selected))) {
+            if (menu_apply_warm_start_path(ctx, selected)) {
+                menu_set_status(ctx, "Warm start selected.", false);
+            }
+        } else {
+            menu_set_status(ctx, "Warm start file dialog canceled/unavailable.", false);
+        }
+        return;
+    }
+
+    if (menu_warm_start_controls_visible(ctx) &&
+        menu_point_in_rect(x, y, &ctx->warm_start_edit_button.rect)) {
+        menu_begin_warm_start_edit(ctx);
+        return;
+    }
+
+    if (menu_warm_start_controls_visible(ctx) &&
+        menu_point_in_rect(x, y, &ctx->warm_start_rect)) {
+        menu_begin_warm_start_edit(ctx);
+        return;
+    } else if (ctx->editing_warm_start) {
+        menu_finish_warm_start_edit(ctx, true);
+        menu_persist_runtime_config(ctx->cfg);
+        menu_set_status(ctx, "Warm start updated.", false);
     }
 
     if (menu_point_in_rect(x, y, &ctx->output_root_folder_button.rect)) {
@@ -249,6 +312,10 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         }
         if (ctx->editing_output_root) {
             menu_finish_output_root_edit(ctx, true);
+            menu_persist_runtime_config(ctx->cfg);
+        }
+        if (ctx->editing_warm_start) {
+            menu_finish_warm_start_edit(ctx, true);
             menu_persist_runtime_config(ctx->cfg);
         }
         if (ctx->editing_inflow) {
@@ -645,6 +712,19 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         return;
     }
 
+    if (ctx->editing_warm_start) {
+        if (key == SDLK_RETURN || key == SDLK_KP_ENTER) {
+            menu_finish_warm_start_edit(ctx, true);
+            menu_persist_runtime_config(ctx->cfg);
+            menu_set_status(ctx, "Warm start updated.", false);
+        } else if (key == SDLK_ESCAPE) {
+            menu_finish_warm_start_edit(ctx, false);
+        } else {
+            text_input_handle_key(&ctx->warm_start_input, key);
+        }
+        return;
+    }
+
     if (ctrl_or_cmd && key == SDLK_i && !shift) {
         char selected[512];
         if (menu_pick_input_root_macos(selected, sizeof(selected))) {
@@ -706,6 +786,10 @@ void menu_text_input(void *user, const char *text) {
     }
     if (ctx->editing_output_root) {
         text_input_handle_text(&ctx->output_root_input, text);
+        return;
+    }
+    if (ctx->editing_warm_start) {
+        text_input_handle_text(&ctx->warm_start_input, text);
         return;
     }
 }

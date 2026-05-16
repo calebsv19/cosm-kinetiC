@@ -9,6 +9,7 @@
  */
 const SimModeHooks g_sim_mode_box = {0};
 const SimModeHooks g_sim_mode_wind = {0};
+const SimModeHooks g_sim_mode_atmospheric = {0};
 
 static bool test_route_2d_canonical_backend(void) {
     SimModeRoute route = sim_mode_resolve_route(SIM_MODE_BOX, SPACE_MODE_2D);
@@ -50,6 +51,21 @@ static bool test_invalid_space_mode_clamps_to_2d(void) {
     return true;
 }
 
+static bool test_atmospheric_route_uses_atmospheric_hooks_in_2d_and_3d(void) {
+    SimModeRoute route2d = sim_mode_resolve_route(SIM_MODE_ATMOSPHERIC, SPACE_MODE_2D);
+    SimModeRoute route3d = sim_mode_resolve_route(SIM_MODE_ATMOSPHERIC, SPACE_MODE_3D);
+    if (route2d.simulation_mode != SIM_MODE_ATMOSPHERIC) return false;
+    if (route2d.backend_lane != SIM_BACKEND_CANONICAL_2D) return false;
+    if (!route2d.backend_uses_canonical_2d_solver) return false;
+    if (route2d.hooks != &g_sim_mode_atmospheric) return false;
+    if (route3d.simulation_mode != SIM_MODE_ATMOSPHERIC) return false;
+    if (route3d.backend_lane != SIM_BACKEND_CONTROLLED_3D) return false;
+    if (route3d.backend_uses_canonical_2d_solver) return false;
+    if (!route3d.fallback_to_2d_projection) return false;
+    if (route3d.hooks != &g_sim_mode_atmospheric) return false;
+    return true;
+}
+
 static bool test_step_policy_activation_rules(void) {
     SimModeRoute route2d = sim_mode_resolve_route(SIM_MODE_BOX, SPACE_MODE_2D);
     SimModeRoute route3d = sim_mode_resolve_route(SIM_MODE_BOX, SPACE_MODE_3D);
@@ -77,6 +93,10 @@ int main(void) {
     }
     if (!test_invalid_space_mode_clamps_to_2d()) {
         fprintf(stderr, "sim_mode_route_contract_test: invalid-space clamp contract failed\n");
+        return 1;
+    }
+    if (!test_atmospheric_route_uses_atmospheric_hooks_in_2d_and_3d()) {
+        fprintf(stderr, "sim_mode_route_contract_test: atmospheric route contract failed\n");
         return 1;
     }
     if (!test_step_policy_activation_rules()) {

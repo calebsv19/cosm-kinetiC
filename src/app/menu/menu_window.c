@@ -182,10 +182,10 @@ bool menu_reload_fonts(SceneMenuInteraction *ctx) {
 
 void menu_destroy_window(SceneMenuInteraction *ctx) {
     if (!ctx) return;
-    menu_close_fonts(ctx);
 
     if (ctx->renderer) {
         vk_renderer_wait_idle((VkRenderer *)ctx->renderer);
+        menu_close_fonts(ctx);
         if (ctx->use_shared_device) {
             vk_renderer_shutdown_surface((VkRenderer *)ctx->renderer);
             vk_shared_device_release();
@@ -193,6 +193,8 @@ void menu_destroy_window(SceneMenuInteraction *ctx) {
             vk_renderer_shutdown((VkRenderer *)ctx->renderer);
         }
         ctx->renderer = NULL;
+    } else {
+        menu_close_fonts(ctx);
     }
     if (ctx->window) {
         SDL_DestroyWindow(ctx->window);

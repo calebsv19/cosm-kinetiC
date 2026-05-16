@@ -5,8 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/atmospheric/atmospheric_field.h"
+
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-static const int PRESET_FILE_VERSION = 12;
+static const int PRESET_FILE_VERSION = 13;
 static const char *STRUCTURAL_SCENE_DEFAULT = "config/structural_scene.txt";
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
@@ -14,6 +16,7 @@ static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     case SCENE_DOMAIN_BOX:
     case SCENE_DOMAIN_WIND_TUNNEL:
     case SCENE_DOMAIN_STRUCTURAL:
+    case SCENE_DOMAIN_ATMOSPHERIC:
         return domain;
     default:
         return SCENE_DOMAIN_BOX;
@@ -183,6 +186,10 @@ static void boundary_flows_assign(BoundaryFlow dst[BOUNDARY_EDGE_COUNT],
     }
 }
 
+static void sanitize_atmosphere(AtmosphericPresetSettings *settings) {
+    atmospheric_preset_sanitize(settings);
+}
+
 static float sanitize_dimension_value(float value) {
     if (!isfinite(value) || value <= 0.0f) {
         return 1.0f;
@@ -206,6 +213,7 @@ static void preset_slot_reset(CustomPresetSlot *slot, int index) {
     slot->preset.domain_width = 1.0f;
     slot->preset.domain_height = 1.0f;
     slot->preset.structural_scene_path[0] = '\0';
+    slot->preset.atmosphere.enabled = false;
 }
 
 static bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
@@ -305,6 +313,7 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
         for (size_t s = 0; s < slot->preset.import_shape_count; ++s) {
             sanitize_import_shape(&slot->preset.import_shapes[s]);
         }
+        sanitize_atmosphere(&slot->preset.atmosphere);
         boundary_flows_assign(slot->preset.boundary_flows,
                               preset_copy->boundary_flows);
     } else {
@@ -316,6 +325,7 @@ CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
         slot->preset.domain_width = 1.0f;
         slot->preset.domain_height = 1.0f;
         slot->preset.structural_scene_path[0] = '\0';
+        slot->preset.atmosphere.enabled = false;
     }
     slot->preset.name = slot->name;
     slot->occupied = true;
@@ -428,6 +438,75 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 break;
             }
         }
+        AtmosphericPresetSettings atmosphere = {0};
+        if (file_version >= 13) {
+            char atmos_marker[8] = {0};
+            int enabled = 0;
+            unsigned int seed = 0u;
+            int region_count = 0;
+            if (fscanf(f,
+                       "%7s %d %u %f %f %f %f %f %f %f %f %f %f %f %f %d\n",
+                       atmos_marker,
+                       &enabled,
+                       &seed,
+                       &atmosphere.base_density,
+                       &atmosphere.density_scale,
+                       &atmosphere.density_threshold,
+                       &atmosphere.base_wind_x,
+                       &atmosphere.base_wind_y,
+                       &atmosphere.base_wind_z,
+                       &atmosphere.turbulence_strength,
+                       &atmosphere.noise_scale,
+                       &atmosphere.detail_scale,
+                       &atmosphere.band_min_y,
+                       &atmosphere.band_max_y,
+                       &atmosphere.band_edge_falloff,
+                       &region_count) != 16 ||
+                strcmp(atmos_marker, "ATMOS") != 0) {
+                break;
+            }
+            atmosphere.enabled = enabled != 0;
+            atmosphere.seed = (uint32_t)seed;
+            int stored_region_count = region_count;
+            if (stored_region_count < 0) stored_region_count = 0;
+            if (region_count < 0) region_count = 0;
+            if (region_count > (int)MAX_ATMOSPHERIC_DENSITY_REGIONS) {
+                region_count = (int)MAX_ATMOSPHERIC_DENSITY_REGIONS;
+            }
+            atmosphere.region_count = (size_t)region_count;
+            for (int r = 0; r < stored_region_count; ++r) {
+                char region_marker[8] = {0};
+                int region_enabled = 0;
+                int shape = 0;
+                AtmosphericDensityRegion skipped_region = {0};
+                AtmosphericDensityRegion *region =
+                    (r < (int)MAX_ATMOSPHERIC_DENSITY_REGIONS)
+                        ? &atmosphere.regions[r]
+                        : &skipped_region;
+                if (fscanf(f,
+                           "%7s %d %d %f %f %f %f %f %f %f %f\n",
+                           region_marker,
+                           &region_enabled,
+                           &shape,
+                           &region->center_x,
+                           &region->center_y,
+                           &region->center_z,
+                           &region->size_x,
+                           &region->size_y,
+                           &region->size_z,
+                           &region->density,
+                           &region->falloff) != 11 ||
+                    strcmp(region_marker, "AREG") != 0) {
+                    atmosphere.region_count = (size_t)((r < region_count) ? r : region_count);
+                    break;
+                }
+                if (r < (int)MAX_ATMOSPHERIC_DENSITY_REGIONS) {
+                    region->enabled = region_enabled != 0;
+                    region->shape = (AtmosphericRegionShape)shape;
+                }
+            }
+            sanitize_atmosphere(&atmosphere);
+        }
         int emitter_count = 0;
         if (fscanf(f, "%d\n", &emitter_count) != 1) {
             break;
@@ -454,6 +533,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         } else {
             slot.preset.structural_scene_path[0] = '\0';
         }
+        slot.preset.atmosphere = atmosphere;
         if (domain == SCENE_DOMAIN_STRUCTURAL) {
             int wants_default = (slot.preset.structural_scene_path[0] == '\0') ||
                                 strcmp(slot.preset.structural_scene_path, STRUCTURAL_SCENE_DEFAULT) == 0;
@@ -772,6 +852,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         lib->slots[i].preset.name = lib->slots[i].name;
         lib->slots[i].preset.domain = domain;
         lib->slots[i].preset.dimension_mode = dimension_mode;
+        lib->slots[i].preset.atmosphere = slot.preset.atmosphere;
         lib->slot_count++;
     }
 
@@ -801,6 +882,40 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         const char *name = (slot->name[0] != '\0') ? slot->name : DEFAULT_SLOT_LABEL;
         fprintf(f, "%s\n", name);
         fprintf(f, "%s\n", slot->preset.structural_scene_path);
+        AtmosphericPresetSettings atmosphere = slot->preset.atmosphere;
+        sanitize_atmosphere(&atmosphere);
+        fprintf(f,
+                "ATMOS %d %u %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %zu\n",
+                atmosphere.enabled ? 1 : 0,
+                (unsigned int)atmosphere.seed,
+                atmosphere.base_density,
+                atmosphere.density_scale,
+                atmosphere.density_threshold,
+                atmosphere.base_wind_x,
+                atmosphere.base_wind_y,
+                atmosphere.base_wind_z,
+                atmosphere.turbulence_strength,
+                atmosphere.noise_scale,
+                atmosphere.detail_scale,
+                atmosphere.band_min_y,
+                atmosphere.band_max_y,
+                atmosphere.band_edge_falloff,
+                atmosphere.region_count);
+        for (size_t r = 0; r < atmosphere.region_count; ++r) {
+            const AtmosphericDensityRegion *region = &atmosphere.regions[r];
+            fprintf(f,
+                    "AREG %d %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+                    region->enabled ? 1 : 0,
+                    (int)region->shape,
+                    region->center_x,
+                    region->center_y,
+                    region->center_z,
+                    region->size_x,
+                    region->size_y,
+                    region->size_z,
+                    region->density,
+                    region->falloff);
+        }
         fprintf(f, "%zu\n", slot->preset.emitter_count);
         for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
             const FluidEmitter *em = &slot->preset.emitters[e];

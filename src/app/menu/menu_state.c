@@ -148,6 +148,8 @@ SimulationMode menu_normalize_sim_mode(SimulationMode mode) {
 
 static FluidSceneDomainType domain_for_mode(SimulationMode mode) {
     switch (mode) {
+    case SIM_MODE_ATMOSPHERIC:
+        return SCENE_DOMAIN_ATMOSPHERIC;
     case SIM_MODE_WIND_TUNNEL:
         return SCENE_DOMAIN_WIND_TUNNEL;
     case SIM_MODE_STRUCTURAL:
@@ -162,9 +164,26 @@ static FluidSceneDomainType current_domain(const SceneMenuInteraction *ctx) {
     return domain_for_mode(menu_normalize_sim_mode(ctx->active_mode));
 }
 
+static void menu_reload_settings_from_active_preset(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return;
+    menu_settings_shell_reload_from_runtime(&ctx->settings_shell,
+                                            ctx->cfg,
+                                            ctx->selection,
+                                            ctx->active_preset,
+                                            ctx->active_mode,
+                                            ctx->cfg->space_mode);
+    ctx->quality_index = ctx->settings_shell.draft.quality_index;
+}
+
 bool menu_showing_retained_catalog(const SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return false;
     return menu_normalize_space_mode(ctx->cfg->space_mode) == SPACE_MODE_3D;
+}
+
+bool menu_warm_start_controls_visible(const SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg) return false;
+    return ctx->active_mode == SIM_MODE_ATMOSPHERIC &&
+           menu_normalize_space_mode(ctx->cfg->space_mode) == SPACE_MODE_3D;
 }
 
 void menu_refresh_scene_library(SceneMenuInteraction *ctx) {
@@ -201,6 +220,8 @@ void menu_refresh_scene_library(SceneMenuInteraction *ctx) {
 
 const char *menu_mode_label(SimulationMode mode) {
     switch (mode) {
+    case SIM_MODE_ATMOSPHERIC:
+        return "Atmospheric";
     case SIM_MODE_WIND_TUNNEL:
         return "Wind Tunnel";
     case SIM_MODE_STRUCTURAL:
@@ -441,6 +462,7 @@ void menu_select_custom(SceneMenuInteraction *ctx, int slot_index) {
     ctx->selection->last_mode_slot[ctx->active_mode] = slot_index;
     ctx->active_preset = &slot->preset;
     menu_refresh_scene_library(ctx);
+    menu_reload_settings_from_active_preset(ctx);
 }
 
 bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_index) {
@@ -503,6 +525,7 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
              "%s",
              entry->source_path);
     menu_refresh_scene_library(ctx);
+    menu_reload_settings_from_active_preset(ctx);
     return true;
 }
 
@@ -941,4 +964,33 @@ void menu_finish_output_root_edit(SceneMenuInteraction *ctx, bool apply) {
     }
     text_input_end(&ctx->output_root_input);
     ctx->editing_output_root = false;
+}
+
+void menu_begin_warm_start_edit(SceneMenuInteraction *ctx) {
+    if (!ctx || !ctx->cfg || !menu_warm_start_controls_visible(ctx)) return;
+    text_input_begin(&ctx->warm_start_input,
+                     ctx->cfg->atmospheric_warm_start_path,
+                     sizeof(ctx->cfg->atmospheric_warm_start_path) - 1);
+    ctx->editing_warm_start = true;
+}
+
+void menu_finish_warm_start_edit(SceneMenuInteraction *ctx, bool apply) {
+    if (!ctx || !ctx->editing_warm_start) return;
+    if (apply && ctx->cfg) {
+        const char *value = text_input_value(&ctx->warm_start_input);
+        if (value) {
+            size_t start = strspn(value, " \t\r\n");
+            const char *trimmed = value + start;
+            if (trimmed[0] == '\0') {
+                ctx->cfg->atmospheric_warm_start_path[0] = '\0';
+            } else {
+                snprintf(ctx->cfg->atmospheric_warm_start_path,
+                         sizeof(ctx->cfg->atmospheric_warm_start_path),
+                         "%s",
+                         trimmed);
+            }
+        }
+    }
+    text_input_end(&ctx->warm_start_input);
+    ctx->editing_warm_start = false;
 }

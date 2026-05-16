@@ -291,6 +291,7 @@ PHYSICS_TRACE_TOOL_BIN := physics_trace_tool
 RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN := runtime_scene_emitter_diag_tool
 RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/tools/cli/runtime_scene_emitter_diag_tool.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
@@ -437,9 +438,11 @@ SHAPE_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SHARED_S
 STABLE_TEST_TARGETS := \
 	test-volume-frames-3d-export-contract \
 	test-volume-frames-3d-tiny-parity-contract \
+	test-atmospheric-warm-start-contract \
 	test-manifest-to-trace-export \
 	test-vf2d-pack-dataset-parity \
 	test-trio-scene-contract-diff \
+	test-atmospheric-field-contract \
 	test-kitviz-field-adapter \
 	test-sim-mode-route-contract \
 	test-sim-runtime-emitter-contract \
@@ -478,7 +481,7 @@ STABLE_TEST_TARGETS := \
 LEGACY_TEST_TARGETS := \
 	test-shared-theme-font-adapter
 
-.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool runtime_scene_emitter_diag_tool manifest_to_trace test-stable test-legacy test-kitviz-field-adapter test-sim-mode-route-contract test-sim-runtime-emitter-contract test-sim-runtime-obstacle-contract test-sim-runtime-backend-3d-emitter-contract test-sim-runtime-backend-3d-attached-emitter-contract test-sim-runtime-backend-3d-obstacle-contract test-sim-runtime-backend-3d-retained-obstacle-contract test-sim-runtime-3d-anchor-contract test-sim-runtime-3d-footprint-contract test-sim-runtime-3d-space-contract test-sim-runtime-3d-domain-contract test-sim-runtime-3d-solver-contract test-scene-core-sim-runtime-step-contract test-menu-settings-shell-contract test-quality-profiles-contract test-config-loader-contract test-sim-runtime-backend-reporting-contract test-sim-runtime-backend-dispatch-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-physics-sim-workspace-authoring-host test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-retained-runtime-scene-overlay-geom-contract test-retained-runtime-scene-overlay-readout-contract test-retained-runtime-scene-overlay-space-contract test-scene-runtime-launch-projection-contract test-runtime-scene-3d-truth-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff test-volume-frames-3d-export-contract test-volume-frames-3d-tiny-parity-contract shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
+.PHONY: all run run-ide-theme run-daw-theme run-headless-smoke visual-harness package-desktop package-desktop-smoke package-desktop-self-test package-desktop-copy-desktop package-desktop-sync package-desktop-open package-desktop-remove package-desktop-refresh release-contract release-clean release-build release-bundle-audit release-sign release-verify release-verify-signed release-notarize release-staple release-verify-notarized release-artifact release-distribute release-desktop-refresh clean video vf2d_pack_tool vf2d_to_pack vf2d_dataset_tool physics_trace_tool runtime_scene_emitter_diag_tool manifest_to_trace test-stable test-legacy test-atmospheric-field-contract test-atmospheric-warm-start-contract test-kitviz-field-adapter test-sim-mode-route-contract test-sim-runtime-emitter-contract test-sim-runtime-obstacle-contract test-sim-runtime-backend-3d-emitter-contract test-sim-runtime-backend-3d-attached-emitter-contract test-sim-runtime-backend-3d-obstacle-contract test-sim-runtime-backend-3d-retained-obstacle-contract test-sim-runtime-3d-anchor-contract test-sim-runtime-3d-footprint-contract test-sim-runtime-3d-space-contract test-sim-runtime-3d-domain-contract test-sim-runtime-3d-solver-contract test-scene-core-sim-runtime-step-contract test-menu-settings-shell-contract test-quality-profiles-contract test-config-loader-contract test-sim-runtime-backend-reporting-contract test-sim-runtime-backend-dispatch-contract test-preset-io-dimensional-contract test-scene-objects-runtime-contract test-scene-editor-retained-document-contract test-scene-editor-scene-library-contract test-physics-sim-workspace-authoring-host test-scene-editor-pane-host-contract test-scene-editor-viewport-contract test-retained-runtime-scene-overlay-geom-contract test-retained-runtime-scene-overlay-readout-contract test-retained-runtime-scene-overlay-space-contract test-scene-runtime-launch-projection-contract test-runtime-scene-3d-truth-contract test-runtime-scene-solver-projection-contract test-runtime-scene-bridge-contract test-structural-runtime-split-contract test-vf2d-dataset-export test-manifest-to-trace-export test-vf2d-pack-dataset-parity test-trio-scene-contract-diff test-volume-frames-3d-export-contract test-volume-frames-3d-tiny-parity-contract shim-parse-smoke shim-parse-parity shim-compile-subset shim-gate test-shared-theme-font-adapter
 
 all: $(TARGET)
 
@@ -518,10 +521,67 @@ test-kitviz-field-adapter: $(KIT_VIZ_FIELD_TEST_SRCS)
 		-o $(BUILD_DIR)/kit_viz_field_adapter_test $(KIT_VIZ_FIELD_TEST_SRCS) -lm
 	$(BUILD_DIR)/kit_viz_field_adapter_test
 
+test-atmospheric-field-contract: $(ATMOSPHERIC_FIELD_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/atmospheric_field_contract_test $(ATMOSPHERIC_FIELD_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/atmospheric_field_contract_test
+
+test-atmospheric-warm-start-contract: $(ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_DATA_DIR)/include \
+		-I$(CORE_PACK_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/atmospheric_warm_start_contract_test $(ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
+	$(BUILD_DIR)/atmospheric_warm_start_contract_test
+
 PRESET_IO_DIMENSIONAL_TEST_SRCS := \
 	tests/preset_io_dimensional_contract_test.c \
 	$(SRC_DIR)/app/preset_io.c \
-	$(SRC_DIR)/app/scene_presets.c
+	$(SRC_DIR)/app/scene_presets.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c
+
+ATMOSPHERIC_FIELD_CONTRACT_TEST_SRCS := \
+	tests/atmospheric_field_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c
+
+ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS := \
+	tests/atmospheric_warm_start_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_warm_start.c \
+	$(SRC_DIR)/export/volume_frames.c \
+	$(SRC_DIR)/export/volume_frames_vf3d.c \
+	$(SRC_DIR)/export/export_paths.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
+	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c \
+	$(CORE_DATA_DIR)/src/core_data.c \
+	$(CORE_PACK_DIR)/src/core_pack.c \
+	$(CORE_PACK_DIR)/src/core_pack_vf2d.c \
+	$(CORE_PACK_DIR)/src/core_pack_vf3d.c \
+	$(CORE_IO_DIR)/src/core_io.c \
+	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
+	$(CORE_SCENE_DIR)/src/core_scene.c \
+	$(TIMER_HUD_DIR)/external/cJSON.c
 
 SIM_MODE_ROUTE_CONTRACT_TEST_SRCS := \
 	tests/sim_mode_route_contract_test.c \
@@ -538,6 +598,7 @@ SIM_RUNTIME_OBSTACLE_CONTRACT_TEST_SRCS := \
 
 SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_emitter_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
@@ -560,6 +621,7 @@ SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS := \
 
 SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_attached_emitter_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
@@ -582,6 +644,7 @@ SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
 
 SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_obstacle_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
@@ -604,6 +667,7 @@ SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
 
 SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_retained_obstacle_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
@@ -630,6 +694,7 @@ SIM_RUNTIME_BACKEND_DISPATCH_TEST_SRCS := \
 
 SIM_RUNTIME_BACKEND_REPORTING_TEST_SRCS := \
 	tests/sim_runtime_backend_reporting_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
@@ -696,7 +761,9 @@ MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/menu/menu_settings_provider_3d.c \
 	$(SRC_DIR)/app/menu/menu_settings_provider_wind.c \
 	$(SRC_DIR)/app/menu/menu_settings_provider_structural.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_atmospheric.c \
 	$(SRC_DIR)/app/menu/menu_settings_draft.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/quality_profiles.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
@@ -756,6 +823,7 @@ RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS := \
 
 RUNTIME_SCENE_3D_TRUTH_TEST_SRCS := \
 	tests/runtime_scene_3d_truth_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
@@ -1078,7 +1146,7 @@ test-retained-runtime-scene-overlay-geom-contract: $(RETAINED_RUNTIME_SCENE_OVER
 
 test-retained-runtime-scene-overlay-readout-contract: $(RETAINED_RUNTIME_SCENE_OVERLAY_READOUT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) \
+	$(CC) $(CFLAGS) $(VK_RENDERER_SDL_COMPAT_CFLAGS) \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/retained_runtime_scene_overlay_readout_contract_test $(RETAINED_RUNTIME_SCENE_OVERLAY_READOUT_TEST_SRCS) -lm
 	$(BUILD_DIR)/retained_runtime_scene_overlay_readout_contract_test
@@ -1591,6 +1659,7 @@ test-trio-scene-contract-diff:
 
 VOLUME_FRAMES_3D_EXPORT_TEST_SRCS := \
 	tests/volume_frames_3d_export_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/export/volume_frames.c \
 	$(SRC_DIR)/export/volume_frames_vf3d.c \
 	$(SRC_DIR)/export/export_paths.c \
@@ -1634,6 +1703,7 @@ test-volume-frames-3d-export-contract: $(VOLUME_FRAMES_3D_EXPORT_TEST_SRCS)
 
 VOLUME_FRAMES_3D_TINY_PARITY_TEST_SRCS := \
 	tests/volume_frames_3d_tiny_parity_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/export/volume_frames.c \
 	$(SRC_DIR)/export/volume_frames_vf3d.c \
 	$(SRC_DIR)/export/export_paths.c \

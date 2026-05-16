@@ -28,6 +28,11 @@ typedef struct SimRuntimeBackend2D {
     SceneEmitterMask2D emitter_masks[MAX_FLUID_EMITTERS];
     bool emitter_masks_dirty;
     int wind_ramp_steps;
+    bool atmospheric_seeded;
+    uint32_t atmospheric_seed;
+    size_t atmospheric_seeded_cell_count;
+    float atmospheric_seed_max_density;
+    float atmospheric_seed_max_velocity_magnitude;
 } SimRuntimeBackend2D;
 
 static inline SimRuntimeBackend2D *backend_2d_state(SimRuntimeBackend *backend) {

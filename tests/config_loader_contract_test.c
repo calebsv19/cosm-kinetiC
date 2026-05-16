@@ -22,6 +22,10 @@ static bool test_grid_depth_roundtrip_and_fallback(void) {
     saved.fluid_solver_iterations = 27;
     saved.fluid_3d_solver_region_cell_budget = 123456;
     saved.fluid_3d_max_velocity_displacement_cells = 0.75f;
+    snprintf(saved.atmospheric_warm_start_path,
+             sizeof(saved.atmospheric_warm_start_path),
+             "%s",
+             "/private/tmp/physics_sim_warm_start/frame_000007.pack");
     if (!config_loader_save(&saved, path)) return false;
     if (!config_loader_load(&loaded, &opts)) return false;
     if (loaded.grid_w != 192) return false;
@@ -33,6 +37,10 @@ static bool test_grid_depth_roundtrip_and_fallback(void) {
     if (loaded.fluid_3d_solver_region_cell_budget != 123456) return false;
     if (loaded.fluid_3d_max_velocity_displacement_cells < 0.7499f ||
         loaded.fluid_3d_max_velocity_displacement_cells > 0.7501f) {
+        return false;
+    }
+    if (strcmp(loaded.atmospheric_warm_start_path,
+               "/private/tmp/physics_sim_warm_start/frame_000007.pack") != 0) {
         return false;
     }
 

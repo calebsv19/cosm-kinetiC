@@ -1,5 +1,6 @@
 #include "app/sim_runtime_backend.h"
 #include "app/scene_state.h"
+#include "app/atmospheric/atmospheric_field.h"
 #include "sim_runtime_backend_3d_test_support.h"
 
 #include <math.h>
@@ -123,6 +124,57 @@ static bool test_3d_backend_reports_xyz_domain_and_compatibility_slice(void) {
     if (fluid.width != report.domain_w) return false;
     if (fluid.height != report.domain_h) return false;
     if (fluid.cell_count != (size_t)report.domain_w * (size_t)report.domain_h) return false;
+
+    sim_runtime_backend_destroy(backend);
+    return true;
+}
+
+static bool test_3d_backend_seeds_atmospheric_preset_sparse_truth(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimModeRoute route = {
+        .backend_lane = SIM_BACKEND_CONTROLLED_3D,
+        .requested_space_mode = SPACE_MODE_3D,
+        .projection_space_mode = SPACE_MODE_2D,
+    };
+    SimRuntimeBackend *backend = NULL;
+    SimRuntimeBackendReport report = {0};
+    SceneDebugVolumeView3D volume = {0};
+    bool has_fluid = false;
+
+    cfg.grid_w = 48;
+    cfg.grid_h = 48;
+    cfg.grid_d = 24;
+    cfg.window_w = 640;
+    cfg.window_h = 480;
+    cfg.space_mode = SPACE_MODE_3D;
+
+    preset.domain = SCENE_DOMAIN_ATMOSPHERIC;
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.domain_width = 1.0f;
+    preset.domain_height = 1.0f;
+    preset.atmosphere = atmospheric_preset_default_settings();
+    preset.atmosphere.base_density = 0.1f;
+
+    backend = sim_runtime_backend_create(&cfg, &preset, &route, NULL);
+    if (!backend) return false;
+    if (!sim_runtime_backend_get_report(backend, &report)) return false;
+    if (!report.atmospheric_seeded) return false;
+    if (report.atmospheric_seed != preset.atmosphere.seed) return false;
+    if (report.atmospheric_seeded_cell_count == 0u) return false;
+    if (report.atmospheric_seed_max_density <= 0.0f) return false;
+    if (report.atmospheric_seed_max_velocity_magnitude <= 0.0f) return false;
+    if (report.debug_volume_active_density_cells == 0u) return false;
+    if (report.runtime_allocated_brick_count == 0u) return false;
+    if (!sim_runtime_backend_get_debug_volume_view_3d(backend, &volume)) return false;
+    if (!volume.density || volume.cell_count == 0u) return false;
+    if (!sim_runtime_backend_get_compatibility_slice_activity(backend,
+                                                              report.compatibility_slice_z,
+                                                              &has_fluid,
+                                                              NULL)) {
+        return false;
+    }
+    if (!has_fluid) return false;
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -843,6 +895,11 @@ int main(void) {
     if (!test_3d_backend_reports_xyz_domain_and_compatibility_slice()) {
         fprintf(stderr,
                 "sim_runtime_backend_reporting_contract_test: 3D report/compatibility failed\n");
+        return 1;
+    }
+    if (!test_3d_backend_seeds_atmospheric_preset_sparse_truth()) {
+        fprintf(stderr,
+                "sim_runtime_backend_reporting_contract_test: atmospheric seed failed\n");
         return 1;
     }
     if (!test_3d_backend_reports_explicit_depth_contract()) {

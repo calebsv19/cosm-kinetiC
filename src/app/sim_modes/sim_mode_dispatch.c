@@ -2,6 +2,7 @@
 
 extern const SimModeHooks g_sim_mode_box;
 extern const SimModeHooks g_sim_mode_wind;
+extern const SimModeHooks g_sim_mode_atmospheric;
 
 static SpaceMode normalize_space_mode(SpaceMode mode) {
     if (mode < SPACE_MODE_2D || mode >= SPACE_MODE_COUNT) {
@@ -12,6 +13,8 @@ static SpaceMode normalize_space_mode(SpaceMode mode) {
 
 static const SimModeHooks *sim_mode_hooks_for_simulation_mode(SimulationMode mode) {
     switch (mode) {
+    case SIM_MODE_ATMOSPHERIC:
+        return &g_sim_mode_atmospheric;
     case SIM_MODE_WIND_TUNNEL:
         return &g_sim_mode_wind;
     case SIM_MODE_STRUCTURAL:

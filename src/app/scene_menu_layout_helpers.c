@@ -89,8 +89,11 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     int io_panel_y = 0;
     int row_y = 0;
     int row_gap = 6;
+    int io_row_count = 4;
+    bool show_warm_start = false;
     if (!ctx) return;
     retained_catalog = menu_showing_retained_catalog(ctx);
+    show_warm_start = menu_warm_start_controls_visible(ctx);
 
     title_h = scene_menu_font_height(ctx->renderer, ctx->font_title, 32);
     body_h = scene_menu_font_height(ctx->renderer, ctx->font, 22);
@@ -204,7 +207,8 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     ctx->inflow_rect = (SDL_Rect){0, 0, 0, 0};
     ctx->viscosity_rect = (SDL_Rect){0, 0, 0, 0};
 
-    io_rows_h = compact_h * 4 + row_gap * 3;
+    io_row_count = show_warm_start ? 5 : 4;
+    io_rows_h = compact_h * io_row_count + row_gap * (io_row_count - 1);
     io_panel_h = small_h + 8 + io_rows_h + config_pad * 2;
     io_panel_y = ctx->start_button.rect.y - io_panel_h - 10;
     if (io_panel_y < ctx->config_panel_rect.y + ctx->config_panel_rect.h + 10) {
@@ -226,6 +230,19 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
         compact_h
     };
     row_y += compact_h + row_gap;
+    if (show_warm_start) {
+        ctx->warm_start_rect = (SDL_Rect){
+            ctx->output_root_rect.x,
+            row_y,
+            ctx->output_root_rect.w,
+            compact_h
+        };
+        row_y += compact_h + row_gap;
+    } else {
+        ctx->warm_start_rect = (SDL_Rect){0, 0, 0, 0};
+        ctx->warm_start_edit_button.rect = (SDL_Rect){0, 0, 0, 0};
+        ctx->warm_start_file_button.rect = (SDL_Rect){0, 0, 0, 0};
+    }
     ctx->headless_frames_rect = (SDL_Rect){
         ctx->output_root_rect.x,
         row_y,
@@ -270,4 +287,18 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
         output_button_w,
         ctx->input_root_rect.h
     };
+    if (show_warm_start) {
+        ctx->warm_start_file_button.rect = (SDL_Rect){
+            ctx->warm_start_rect.x + ctx->warm_start_rect.w - output_button_w,
+            ctx->warm_start_rect.y,
+            output_button_w,
+            ctx->warm_start_rect.h
+        };
+        ctx->warm_start_edit_button.rect = (SDL_Rect){
+            ctx->warm_start_file_button.rect.x - output_button_w - 8,
+            ctx->warm_start_rect.y,
+            output_button_w,
+            ctx->warm_start_rect.h
+        };
+    }
 }

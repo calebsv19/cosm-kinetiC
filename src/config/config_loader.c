@@ -123,6 +123,52 @@ static bool json_block_number(const JsonBlock *block, const char *key, double *o
     return true;
 }
 
+static bool json_block_string(const JsonBlock *block,
+                              const char *key,
+                              char *out_value,
+                              size_t out_capacity) {
+    char *copy = NULL;
+    char pattern[64];
+    char *key_pos = NULL;
+    char *colon = NULL;
+    char *end = NULL;
+    size_t len = 0u;
+    if (!block || !key || !out_value || out_capacity == 0u) return false;
+    copy = copy_block_text(block);
+    if (!copy) return false;
+    snprintf(pattern, sizeof(pattern), "\"%s\"", key);
+    key_pos = strstr(copy, pattern);
+    if (!key_pos) {
+        free(copy);
+        return false;
+    }
+    colon = strchr(key_pos + strlen(pattern), ':');
+    if (!colon) {
+        free(copy);
+        return false;
+    }
+    colon++;
+    while (*colon && isspace((unsigned char)*colon)) colon++;
+    if (*colon != '"') {
+        free(copy);
+        return false;
+    }
+    colon++;
+    end = strchr(colon, '"');
+    if (!end) {
+        free(copy);
+        return false;
+    }
+    len = (size_t)(end - colon);
+    if (len >= out_capacity) {
+        len = out_capacity - 1u;
+    }
+    memcpy(out_value, colon, len);
+    out_value[len] = '\0';
+    free(copy);
+    return true;
+}
+
 static void apply_window_settings(const char *json, AppConfig *cfg) {
     JsonBlock block;
     if (!json_find_object(json, "window", &block)) return;
@@ -353,33 +399,14 @@ static void apply_export_settings(const char *json, AppConfig *cfg) {
 static void apply_paths_settings(const char *json, AppConfig *cfg) {
     JsonBlock block;
     if (!json_find_object(json, "paths", &block)) return;
-    char *copy = copy_block_text(&block);
-    if (!copy) return;
-    {
-        char pattern[64];
-        snprintf(pattern, sizeof(pattern), "\"input_root\"");
-        char *key_pos = strstr(copy, pattern);
-        if (key_pos) {
-            char *colon = strchr(key_pos + strlen(pattern), ':');
-            if (colon) {
-                colon++;
-                while (*colon && isspace((unsigned char)*colon)) colon++;
-                if (*colon == '"') {
-                    colon++;
-                    char *end = strchr(colon, '"');
-                    if (end) {
-                        size_t len = (size_t)(end - colon);
-                        if (len >= sizeof(cfg->input_root)) {
-                            len = sizeof(cfg->input_root) - 1;
-                        }
-                        memcpy(cfg->input_root, colon, len);
-                        cfg->input_root[len] = '\0';
-                    }
-                }
-            }
-        }
-    }
-    free(copy);
+    (void)json_block_string(&block,
+                            "input_root",
+                            cfg->input_root,
+                            sizeof(cfg->input_root));
+    (void)json_block_string(&block,
+                            "atmospheric_warm_start_path",
+                            cfg->atmospheric_warm_start_path,
+                            sizeof(cfg->atmospheric_warm_start_path));
 }
 
 static void apply_simulation_settings(const char *json, AppConfig *cfg) {
@@ -510,7 +537,9 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "    \"text_zoom_step\": %d\n", app_config_text_zoom_step_clamp(cfg->text_zoom_step));
     fprintf(f, "  },\n");
     fprintf(f, "  \"paths\": {\n");
-    fprintf(f, "    \"input_root\": \"%s\"\n", cfg->input_root);
+    fprintf(f, "    \"input_root\": \"%s\",\n", cfg->input_root);
+    fprintf(f, "    \"atmospheric_warm_start_path\": \"%s\"\n",
+            cfg->atmospheric_warm_start_path);
     fprintf(f, "  },\n");
     fprintf(f, "  \"collider\": {\n");
     fprintf(f, "    \"max_loops\": %d,\n", cfg->collider_max_loops);

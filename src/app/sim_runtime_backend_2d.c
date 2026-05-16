@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/atmospheric/atmospheric_field.h"
 #include "app/scene_state.h"
 #include "app/shape_lookup.h"
 #include "geo/shape_asset.h"
@@ -43,6 +44,29 @@ static void backend_2d_clear(SimRuntimeBackend *backend) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
     if (!state || !state->fluid) return;
     fluid2d_clear(state->fluid);
+}
+
+static void backend_2d_capture_atmospheric_seed_stats(SimRuntimeBackend2D *state,
+                                                      const FluidScenePreset *preset,
+                                                      size_t seeded_count) {
+    float max_density = 0.0f;
+    float max_velocity = 0.0f;
+    size_t cell_count = 0;
+    if (!state || !state->fluid || !preset) return;
+    cell_count = (size_t)state->fluid->w * (size_t)state->fluid->h;
+    for (size_t i = 0; i < cell_count; ++i) {
+        float density = state->fluid->density ? state->fluid->density[i] : 0.0f;
+        float vx = state->fluid->velX ? state->fluid->velX[i] : 0.0f;
+        float vy = state->fluid->velY ? state->fluid->velY[i] : 0.0f;
+        float speed = sqrtf(vx * vx + vy * vy);
+        if (density > max_density) max_density = density;
+        if (speed > max_velocity) max_velocity = speed;
+    }
+    state->atmospheric_seeded = seeded_count > 0;
+    state->atmospheric_seed = preset->atmosphere.seed;
+    state->atmospheric_seeded_cell_count = seeded_count;
+    state->atmospheric_seed_max_density = max_density;
+    state->atmospheric_seed_max_velocity_magnitude = max_velocity;
 }
 
 static void backend_2d_window_to_grid(const AppConfig *cfg,
@@ -739,6 +763,12 @@ static bool backend_2d_get_report(const SimRuntimeBackend *backend,
         .secondary_debug_slice_stack_live = false,
         .secondary_debug_slice_stack_radius = 0,
         .debug_volume_view_3d_available = false,
+        .atmospheric_seeded = state->atmospheric_seeded,
+        .atmospheric_seed = state->atmospheric_seed,
+        .atmospheric_seeded_cell_count = state->atmospheric_seeded_cell_count,
+        .atmospheric_seed_max_density = state->atmospheric_seed_max_density,
+        .atmospheric_seed_max_velocity_magnitude =
+            state->atmospheric_seed_max_velocity_magnitude,
         .debug_volume_active_density_cells = 0,
         .debug_volume_solid_cells = 0,
         .debug_volume_max_density = 0.0f,
@@ -813,7 +843,6 @@ SimRuntimeBackend *sim_runtime_backend_2d_create(const AppConfig *cfg,
     SimRuntimeBackend2D *state = NULL;
     size_t mask_count = 0;
 
-    (void)preset;
     (void)mode_route;
     (void)runtime_visual;
 
@@ -846,6 +875,16 @@ SimRuntimeBackend *sim_runtime_backend_2d_create(const AppConfig *cfg,
     state->emitter_masks_dirty = true;
     state->wind_ramp_steps = 0;
     backend_2d_free_emitter_masks(state);
+
+    if (atmospheric_preset_enabled(preset)) {
+        size_t seeded = atmospheric_field_seed_2d(&preset->atmosphere,
+                                                  state->fluid->w,
+                                                  state->fluid->h,
+                                                  state->fluid->density,
+                                                  state->fluid->velX,
+                                                  state->fluid->velY);
+        backend_2d_capture_atmospheric_seed_stats(state, preset, seeded);
+    }
 
     backend->kind = SIM_RUNTIME_BACKEND_KIND_FLUID_2D;
     backend->impl = state;

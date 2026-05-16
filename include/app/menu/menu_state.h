@@ -21,6 +21,7 @@ int menu_slot_index_from_visible_row(const SceneMenuInteraction *ctx, int row_in
 int menu_visible_row_from_slot(const SceneMenuInteraction *ctx, int slot_index);
 bool menu_slot_matches_current_mode(const SceneMenuInteraction *ctx, int slot_index);
 bool menu_showing_retained_catalog(const SceneMenuInteraction *ctx);
+bool menu_warm_start_controls_visible(const SceneMenuInteraction *ctx);
 int menu_visible_entry_count(const SceneMenuInteraction *ctx);
 float menu_preset_total_height(const SceneMenuInteraction *ctx);
 
@@ -59,6 +60,8 @@ void menu_begin_input_root_edit(SceneMenuInteraction *ctx);
 void menu_finish_input_root_edit(SceneMenuInteraction *ctx, bool apply);
 void menu_begin_output_root_edit(SceneMenuInteraction *ctx);
 void menu_finish_output_root_edit(SceneMenuInteraction *ctx, bool apply);
+void menu_begin_warm_start_edit(SceneMenuInteraction *ctx);
+void menu_finish_warm_start_edit(SceneMenuInteraction *ctx, bool apply);
 
 void menu_assign_structural_preset_path(CustomPresetSlot *slot, int index);
 

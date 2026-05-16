@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #include "app/app_config.h"
+#include "app/atmospheric/atmospheric_warm_start.h"
 #include "app/editor/scene_editor_viewport.h"
 #include "app/scene_presets.h"
 #include "app/sim_mode.h"
@@ -49,6 +50,7 @@ typedef struct SceneState {
     PhysicsSimRuntimeVisualBootstrap runtime_visual;
     SceneEditorViewportState runtime_viewport;
     bool runtime_slice_overlay_enabled;
+    AtmosphericWarmStartRuntimeReport3D atmospheric_warm_start;
 } SceneState;
 
 SceneState scene_create(const AppConfig *cfg,

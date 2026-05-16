@@ -27,27 +27,31 @@ bool menu_settings_has_pending_changes(const SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return false;
     return menu_settings_shell_is_dirty(&ctx->settings_shell,
                                         ctx->cfg,
-                                        ctx->selection);
+                                        ctx->selection,
+                                        ctx->active_preset);
 }
 
 bool menu_settings_saved_differs_from_current(const SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return false;
     return menu_settings_shell_saved_differs_from_runtime(&ctx->settings_shell,
                                                           ctx->cfg,
-                                                          ctx->selection);
+                                                          ctx->selection,
+                                                          ctx->active_preset);
 }
 
 void menu_settings_commit(SceneMenuInteraction *ctx, bool persist) {
     if (!ctx || !ctx->cfg) return;
     menu_settings_shell_apply_to_runtime(&ctx->settings_shell,
                                          ctx->cfg,
-                                         ctx->selection);
+                                         ctx->selection,
+                                         ctx->active_preset);
     sync_quality_index(ctx);
     if (persist) {
         persist_runtime_config(ctx->cfg);
         menu_settings_shell_capture_saved_from_runtime(&ctx->settings_shell,
                                                        ctx->cfg,
                                                        ctx->selection,
+                                                       ctx->active_preset,
                                                        ctx->active_mode,
                                                        ctx->cfg->space_mode);
     }
@@ -62,6 +66,7 @@ void menu_settings_save_current(SceneMenuInteraction *ctx) {
     menu_settings_shell_capture_saved_from_runtime(&ctx->settings_shell,
                                                    ctx->cfg,
                                                    ctx->selection,
+                                                   ctx->active_preset,
                                                    ctx->active_mode,
                                                    ctx->cfg->space_mode);
     sync_quality_index(ctx);
@@ -71,7 +76,8 @@ void menu_settings_restore_saved(SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return;
     menu_settings_shell_apply_saved_to_runtime(&ctx->settings_shell,
                                                ctx->cfg,
-                                               ctx->selection);
+                                               ctx->selection,
+                                               ctx->active_preset);
     menu_settings_shell_restore_saved_to_draft(&ctx->settings_shell,
                                                ctx->active_mode,
                                                ctx->cfg->space_mode);
@@ -83,6 +89,7 @@ void menu_settings_reset_to_runtime(SceneMenuInteraction *ctx) {
     menu_settings_shell_reload_from_runtime(&ctx->settings_shell,
                                             ctx->cfg,
                                             ctx->selection,
+                                            ctx->active_preset,
                                             ctx->active_mode,
                                             ctx->cfg->space_mode);
     sync_quality_index(ctx);

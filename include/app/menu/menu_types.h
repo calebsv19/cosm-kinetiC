@@ -79,6 +79,8 @@ typedef struct SceneMenuInteraction {
     MenuButton input_root_folder_button;
     MenuButton output_root_edit_button;
     MenuButton output_root_folder_button;
+    MenuButton warm_start_edit_button;
+    MenuButton warm_start_file_button;
     SDL_Rect config_panel_rect;
     SDL_Rect volume_toggle_rect;
     SDL_Rect render_toggle_rect;
@@ -119,6 +121,9 @@ typedef struct SceneMenuInteraction {
     TextInputField output_root_input;
     bool editing_output_root;
     SDL_Rect output_root_rect;
+    TextInputField warm_start_input;
+    bool editing_warm_start;
+    SDL_Rect warm_start_rect;
     Uint32 last_headless_click_ticks;
     Uint32 last_viscosity_click_ticks;
     Uint32 last_inflow_click_ticks;

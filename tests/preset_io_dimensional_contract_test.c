@@ -213,6 +213,78 @@ done:
     return ok;
 }
 
+static bool test_v13_atmospheric_roundtrip(void) {
+    char path_template[] = "/tmp/physics_sim_preset_v13_atmos_XXXXXX";
+    int fd = mkstemp(path_template);
+    if (fd < 0) {
+        fprintf(stderr, "mkstemp failed for atmospheric roundtrip test\n");
+        return false;
+    }
+    close(fd);
+
+    bool ok = false;
+    CustomPresetLibrary lib;
+    CustomPresetLibrary reloaded;
+    preset_library_init(&lib);
+    preset_library_init(&reloaded);
+
+    FluidScenePreset preset = {0};
+    preset.domain = SCENE_DOMAIN_ATMOSPHERIC;
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.domain_width = 2.0f;
+    preset.domain_height = 1.0f;
+    preset.atmosphere.enabled = true;
+    preset.atmosphere.seed = 4242u;
+    preset.atmosphere.base_density = 0.15f;
+    preset.atmosphere.density_scale = 5.5f;
+    preset.atmosphere.density_threshold = 0.42f;
+    preset.atmosphere.base_wind_x = 3.0f;
+    preset.atmosphere.base_wind_y = -0.25f;
+    preset.atmosphere.base_wind_z = 1.5f;
+    preset.atmosphere.turbulence_strength = 2.25f;
+    preset.atmosphere.noise_scale = 4.0f;
+    preset.atmosphere.detail_scale = 12.0f;
+    preset.atmosphere.band_min_y = 0.2f;
+    preset.atmosphere.band_max_y = 0.7f;
+    preset.atmosphere.band_edge_falloff = 0.12f;
+    preset.atmosphere.region_count = 1;
+    preset.atmosphere.regions[0] = (AtmosphericDensityRegion){
+        .enabled = true,
+        .shape = ATMOSPHERIC_REGION_ELLIPSE,
+        .center_x = 0.45f,
+        .center_y = 0.55f,
+        .center_z = 0.35f,
+        .size_x = 0.2f,
+        .size_y = 0.1f,
+        .size_z = 0.3f,
+        .density = 1.75f,
+        .falloff = 0.4f,
+    };
+
+    if (!preset_library_add_slot(&lib, "Atmos Slot", &preset)) goto done;
+    if (!preset_library_save(path_template, &lib)) goto done;
+    if (!preset_library_load(path_template, &reloaded)) goto done;
+    const CustomPresetSlot *loaded = preset_library_get_slot_const(&reloaded, 0);
+    if (!loaded) goto done;
+    if (loaded->preset.domain != SCENE_DOMAIN_ATMOSPHERIC) goto done;
+    if (loaded->preset.dimension_mode != SCENE_DIMENSION_MODE_3D) goto done;
+    if (!loaded->preset.atmosphere.enabled) goto done;
+    if (loaded->preset.atmosphere.seed != 4242u) goto done;
+    if (!approx_equal(loaded->preset.atmosphere.base_density, 0.15f, 1e-4f)) goto done;
+    if (!approx_equal(loaded->preset.atmosphere.density_scale, 5.5f, 1e-4f)) goto done;
+    if (!approx_equal(loaded->preset.atmosphere.base_wind_z, 1.5f, 1e-4f)) goto done;
+    if (loaded->preset.atmosphere.region_count != 1) goto done;
+    if (loaded->preset.atmosphere.regions[0].shape != ATMOSPHERIC_REGION_ELLIPSE) goto done;
+    if (!approx_equal(loaded->preset.atmosphere.regions[0].density, 1.75f, 1e-4f)) goto done;
+    ok = true;
+
+done:
+    preset_library_shutdown(&lib);
+    preset_library_shutdown(&reloaded);
+    unlink(path_template);
+    return ok;
+}
+
 int main(void) {
     if (!test_legacy_omitted_z_fallback()) {
         fprintf(stderr, "preset_io_dimensional_contract_test: legacy fallback failed\n");
@@ -224,6 +296,10 @@ int main(void) {
     }
     if (!test_3d_slot_sanitize_defaults_invalid_direction_up()) {
         fprintf(stderr, "preset_io_dimensional_contract_test: 3d default direction failed\n");
+        return 1;
+    }
+    if (!test_v13_atmospheric_roundtrip()) {
+        fprintf(stderr, "preset_io_dimensional_contract_test: v13 atmospheric roundtrip failed\n");
         return 1;
     }
     fprintf(stdout, "preset_io_dimensional_contract_test: success\n");

@@ -1,4 +1,5 @@
 #include "render/retained_runtime_scene_overlay_readout.h"
+#include "vk_renderer.h"
 
 #include <stdbool.h>
 #include <stdio.h>

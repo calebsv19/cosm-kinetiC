@@ -11,7 +11,9 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
-                         MENU_SETTINGS_PROVIDER_BIT_WIND,
+                         MENU_SETTINGS_PROVIDER_BIT_WIND |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_GRID_Y] = {
@@ -24,7 +26,8 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
-                         MENU_SETTINGS_PROVIDER_BIT_WIND,
+                         MENU_SETTINGS_PROVIDER_BIT_WIND |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_GRID_Z] = {
@@ -34,7 +37,8 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .min_value = 0.0,
         .max_value = 256.0,
         .step = 16.0,
-        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_3D,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_3D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_3D_APPLIED_AXIS] = {
@@ -68,7 +72,9 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
-                         MENU_SETTINGS_PROVIDER_BIT_WIND,
+                         MENU_SETTINGS_PROVIDER_BIT_WIND |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_PHYSICS_SUBSTEPS] = {
@@ -81,7 +87,9 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
-                         MENU_SETTINGS_PROVIDER_BIT_WIND,
+                         MENU_SETTINGS_PROVIDER_BIT_WIND |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_SOLVER_ITERATIONS] = {
@@ -94,7 +102,9 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
-                         MENU_SETTINGS_PROVIDER_BIT_WIND,
+                         MENU_SETTINGS_PROVIDER_BIT_WIND |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_DENSITY_DIFFUSION] = {
@@ -175,7 +185,9 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
-                         MENU_SETTINGS_PROVIDER_BIT_WIND,
+                         MENU_SETTINGS_PROVIDER_BIT_WIND |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_SAVE_RENDER_FRAMES] = {
@@ -185,7 +197,9 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
-                         MENU_SETTINGS_PROVIDER_BIT_WIND,
+                         MENU_SETTINGS_PROVIDER_BIT_WIND |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_HEADLESS_FRAME_COUNT] = {
@@ -199,7 +213,9 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
                          MENU_SETTINGS_PROVIDER_BIT_WIND |
-                         MENU_SETTINGS_PROVIDER_BIT_STRUCTURAL,
+                         MENU_SETTINGS_PROVIDER_BIT_STRUCTURAL |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
     },
     [MENU_SETTINGS_FIELD_TUNNEL_INFLOW_SPEED] = {
@@ -251,8 +267,119 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_COMMON |
                          MENU_SETTINGS_PROVIDER_BIT_2D |
                          MENU_SETTINGS_PROVIDER_BIT_3D |
-                         MENU_SETTINGS_PROVIDER_BIT_WIND,
+                         MENU_SETTINGS_PROVIDER_BIT_WIND |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .advanced = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_SEED] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_SEED,
+        .label = "Atmo Seed",
+        .kind = MENU_SETTINGS_FIELD_KIND_INT,
+        .min_value = 1.0,
+        .max_value = 1000000000.0,
+        .step = 1.0,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_SCALE] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_SCALE,
+        .label = "Atmo Density",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = 0.0,
+        .max_value = 50.0,
+        .step = 0.25,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_THRESHOLD] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_THRESHOLD,
+        .label = "Atmo Cutoff",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = 0.0,
+        .max_value = 1.0,
+        .step = 0.02,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_X] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_X,
+        .label = "Wind X",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = -200.0,
+        .max_value = 200.0,
+        .step = 1.0,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Y] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Y,
+        .label = "Wind Y",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = -200.0,
+        .max_value = 200.0,
+        .step = 1.0,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Z] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Z,
+        .label = "Wind Z",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = -200.0,
+        .max_value = 200.0,
+        .step = 1.0,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_TURBULENCE] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_TURBULENCE,
+        .label = "Turbulence",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = 0.0,
+        .max_value = 100.0,
+        .step = 0.5,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_NOISE_SCALE] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_NOISE_SCALE,
+        .label = "Noise Scale",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = 0.01,
+        .max_value = 128.0,
+        .step = 0.25,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MIN] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MIN,
+        .label = "Band Min",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = 0.0,
+        .max_value = 1.0,
+        .step = 0.02,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MAX] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MAX,
+        .label = "Band Max",
+        .kind = MENU_SETTINGS_FIELD_KIND_FLOAT,
+        .min_value = 0.0,
+        .max_value = 1.0,
+        .step = 0.02,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
+                         MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
+        .first_rollout = true
     }
 };
 
@@ -261,6 +388,8 @@ size_t menu_settings_provider_2d_fields(const MenuSettingsFieldId **out_fields);
 size_t menu_settings_provider_3d_fields(const MenuSettingsFieldId **out_fields);
 size_t menu_settings_provider_wind_fields(const MenuSettingsFieldId **out_fields);
 size_t menu_settings_provider_structural_fields(const MenuSettingsFieldId **out_fields);
+size_t menu_settings_provider_atmospheric_2d_fields(const MenuSettingsFieldId **out_fields);
+size_t menu_settings_provider_atmospheric_3d_fields(const MenuSettingsFieldId **out_fields);
 
 const MenuSettingsFieldDef *menu_settings_schema_field(MenuSettingsFieldId id) {
     if (id < 0 || id >= MENU_SETTINGS_FIELD_COUNT) return NULL;
@@ -270,6 +399,10 @@ const MenuSettingsFieldDef *menu_settings_schema_field(MenuSettingsFieldId id) {
 size_t menu_settings_schema_provider_fields(MenuSettingsProviderId provider,
                                             const MenuSettingsFieldId **out_fields) {
     switch (provider) {
+    case MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D:
+        return menu_settings_provider_atmospheric_3d_fields(out_fields);
+    case MENU_SETTINGS_PROVIDER_ATMOSPHERIC_2D:
+        return menu_settings_provider_atmospheric_2d_fields(out_fields);
     case MENU_SETTINGS_PROVIDER_STRUCTURAL:
         return menu_settings_provider_structural_fields(out_fields);
     case MENU_SETTINGS_PROVIDER_WIND:
@@ -292,6 +425,10 @@ MenuSettingsProviderId menu_settings_schema_provider_for_modes(SimulationMode si
         return MENU_SETTINGS_PROVIDER_STRUCTURAL;
     case SIM_MODE_WIND_TUNNEL:
         return MENU_SETTINGS_PROVIDER_WIND;
+    case SIM_MODE_ATMOSPHERIC:
+        return (space_mode == SPACE_MODE_3D)
+                   ? MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D
+                   : MENU_SETTINGS_PROVIDER_ATMOSPHERIC_2D;
     case SIM_MODE_BOX:
     default:
         return (space_mode == SPACE_MODE_3D)

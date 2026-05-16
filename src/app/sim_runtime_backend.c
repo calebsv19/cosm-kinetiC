@@ -248,3 +248,27 @@ bool sim_runtime_backend_debug_reset_volume_truth_3d(SimRuntimeBackend *backend)
     return backend && backend->ops && backend->ops->debug_reset_volume_truth_3d &&
            backend->ops->debug_reset_volume_truth_3d(backend);
 }
+
+bool sim_runtime_backend_debug_note_atmospheric_warm_start_3d(
+    SimRuntimeBackend *backend,
+    int source_kind,
+    int width,
+    int height,
+    int depth,
+    size_t cell_count,
+    size_t active_density_cells,
+    size_t solid_cells,
+    float max_density,
+    float max_velocity_magnitude) {
+    return backend && backend->ops && backend->ops->debug_note_atmospheric_warm_start_3d &&
+           backend->ops->debug_note_atmospheric_warm_start_3d(backend,
+                                                              source_kind,
+                                                              width,
+                                                              height,
+                                                              depth,
+                                                              cell_count,
+                                                              active_density_cells,
+                                                              solid_cells,
+                                                              max_density,
+                                                              max_velocity_magnitude);
+}

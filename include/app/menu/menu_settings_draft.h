@@ -7,16 +7,19 @@
 void menu_settings_shell_init(MenuSettingsShellState *state,
                               const AppConfig *cfg,
                               const SceneMenuSelection *selection,
+                              const FluidScenePreset *preset,
                               SimulationMode sim_mode,
                               SpaceMode space_mode);
 void menu_settings_shell_reload_from_runtime(MenuSettingsShellState *state,
                                              const AppConfig *cfg,
                                              const SceneMenuSelection *selection,
+                                             const FluidScenePreset *preset,
                                              SimulationMode sim_mode,
                                              SpaceMode space_mode);
 void menu_settings_shell_capture_saved_from_runtime(MenuSettingsShellState *state,
                                                     const AppConfig *cfg,
                                                     const SceneMenuSelection *selection,
+                                                    const FluidScenePreset *preset,
                                                     SimulationMode sim_mode,
                                                     SpaceMode space_mode);
 void menu_settings_shell_sync_provider(MenuSettingsShellState *state,
@@ -30,19 +33,23 @@ void menu_settings_shell_load_defaults(MenuSettingsShellState *state,
                                        SpaceMode space_mode);
 void menu_settings_shell_apply_to_runtime(const MenuSettingsShellState *state,
                                           AppConfig *cfg,
-                                          SceneMenuSelection *selection);
+                                          SceneMenuSelection *selection,
+                                          FluidScenePreset *preset);
 bool menu_settings_shell_is_dirty(const MenuSettingsShellState *state,
                                   const AppConfig *cfg,
-                                  const SceneMenuSelection *selection);
+                                  const SceneMenuSelection *selection,
+                                  const FluidScenePreset *preset);
 bool menu_settings_shell_saved_differs_from_runtime(const MenuSettingsShellState *state,
                                                     const AppConfig *cfg,
-                                                    const SceneMenuSelection *selection);
+                                                    const SceneMenuSelection *selection,
+                                                    const FluidScenePreset *preset);
 void menu_settings_shell_restore_saved_to_draft(MenuSettingsShellState *state,
                                                 SimulationMode sim_mode,
                                                 SpaceMode space_mode);
 void menu_settings_shell_apply_saved_to_runtime(const MenuSettingsShellState *state,
                                                 AppConfig *cfg,
-                                                SceneMenuSelection *selection);
+                                                SceneMenuSelection *selection,
+                                                FluidScenePreset *preset);
 void menu_settings_shell_set_custom_quality(MenuSettingsShellState *state);
 void menu_settings_shell_apply_quality(MenuSettingsShellState *state, int index);
 void menu_settings_shell_nudge_field(MenuSettingsShellState *state,

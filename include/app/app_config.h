@@ -7,10 +7,11 @@
 typedef enum SimulationMode {
     SIM_MODE_BOX = 0,
     SIM_MODE_WIND_TUNNEL,
-    SIM_MODE_STRUCTURAL
+    SIM_MODE_STRUCTURAL,
+    SIM_MODE_ATMOSPHERIC
 } SimulationMode;
 
-#define SIMULATION_MODE_COUNT 3
+#define SIMULATION_MODE_COUNT 4
 
 typedef enum SpaceMode {
     SPACE_MODE_2D = 0,
@@ -65,6 +66,7 @@ typedef struct AppConfig {
     bool   headless_skip_present;
     char   input_root[256];
     char   headless_output_dir[256];
+    char   atmospheric_warm_start_path[512];
 
     SimulationMode sim_mode;
     SpaceMode space_mode;

@@ -15,6 +15,11 @@ static const MenuSettingsDraft *draft_or_null(const MenuSettingsShellState *stat
     return state ? &state->draft : NULL;
 }
 
+static bool provider_is_3d_like(MenuSettingsProviderId provider) {
+    return provider == MENU_SETTINGS_PROVIDER_3D ||
+           provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D;
+}
+
 static int font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
     int h = fallback;
     if (!font) return fallback;
@@ -140,7 +145,7 @@ static bool field_is_interactive(const MenuSettingsFieldDef *def) {
 static const char *field_label_for_context(const SceneMenuInteraction *ctx,
                                            const MenuSettingsFieldDef *def) {
     if (!def) return "";
-    if (ctx && ctx->settings_shell.provider != MENU_SETTINGS_PROVIDER_3D &&
+    if (ctx && !provider_is_3d_like(ctx->settings_shell.provider) &&
         def->id == MENU_SETTINGS_FIELD_GRID_X) {
         return "Grid";
     }
@@ -161,7 +166,7 @@ static void render_field_value_label(const SceneMenuInteraction *ctx,
     out[0] = '\0';
     switch (field) {
     case MENU_SETTINGS_FIELD_GRID_X:
-        if (ctx && ctx->settings_shell.provider == MENU_SETTINGS_PROVIDER_3D) {
+        if (ctx && provider_is_3d_like(ctx->settings_shell.provider)) {
             snprintf(out, out_size, "%d", draft ? draft->grid_x : 0);
         } else {
             snprintf(out, out_size, "%dx%d", draft ? draft->grid_x : 0, draft ? draft->grid_y : 0);
@@ -219,6 +224,36 @@ static void render_field_value_label(const SceneMenuInteraction *ctx,
     case MENU_SETTINGS_FIELD_VELOCITY_DAMPING:
         snprintf(out, out_size, "%.6g", draft ? draft->velocity_damping : 0.0f);
         break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_SEED:
+        snprintf(out, out_size, "%u", draft ? draft->atmosphere.seed : 0u);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_SCALE:
+        snprintf(out, out_size, "%.2f", draft ? draft->atmosphere.density_scale : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_THRESHOLD:
+        snprintf(out, out_size, "%.2f", draft ? draft->atmosphere.density_threshold : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_X:
+        snprintf(out, out_size, "%.1f", draft ? draft->atmosphere.base_wind_x : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Y:
+        snprintf(out, out_size, "%.1f", draft ? draft->atmosphere.base_wind_y : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Z:
+        snprintf(out, out_size, "%.1f", draft ? draft->atmosphere.base_wind_z : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_TURBULENCE:
+        snprintf(out, out_size, "%.1f", draft ? draft->atmosphere.turbulence_strength : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_NOISE_SCALE:
+        snprintf(out, out_size, "%.2f", draft ? draft->atmosphere.noise_scale : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MIN:
+        snprintf(out, out_size, "%.2f", draft ? draft->atmosphere.band_min_y : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MAX:
+        snprintf(out, out_size, "%.2f", draft ? draft->atmosphere.band_max_y : 0.0f);
+        break;
     default:
         snprintf(out, out_size, "--");
         break;
@@ -227,7 +262,7 @@ static void render_field_value_label(const SceneMenuInteraction *ctx,
 
 const char *menu_settings_render_quality_name(const MenuSettingsShellState *state) {
     const MenuSettingsDraft *draft = draft_or_null(state);
-    SpaceMode mode = (state && state->provider == MENU_SETTINGS_PROVIDER_3D)
+    SpaceMode mode = (state && provider_is_3d_like(state->provider))
                          ? SPACE_MODE_3D
                          : SPACE_MODE_2D;
     return quality_profile_name_for_space_mode(mode, draft ? draft->quality_index : -1);

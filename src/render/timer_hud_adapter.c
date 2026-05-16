@@ -263,3 +263,8 @@ void timer_hud_bind_renderer(SDL_Renderer* renderer) {
     physics_sim_font_bridge_close(&g_timer_hud_font);
     g_timer_hud_renderer = renderer;
 }
+
+void timer_hud_unbind_renderer(void) {
+    physics_sim_font_bridge_close(&g_timer_hud_font);
+    g_timer_hud_renderer = NULL;
+}

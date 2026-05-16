@@ -48,6 +48,7 @@ static bool menu_text_entry_active(const SceneMenuInteraction *ctx) {
     if (ctx->editing_viscosity) return true;
     if (ctx->editing_input_root) return true;
     if (ctx->editing_output_root) return true;
+    if (ctx->editing_warm_start) return true;
     return false;
 }
 
@@ -290,6 +291,8 @@ restart_menu:
         .input_root_folder_button = {.rect = {0, 0, 0, 0}, .label = "Folder"},
         .output_root_edit_button = {.rect = {0, 0, 0, 0}, .label = "Edit"},
         .output_root_folder_button = {.rect = {0, 0, 0, 0}, .label = "Folder"},
+        .warm_start_edit_button = {.rect = {0, 0, 0, 0}, .label = "Edit"},
+        .warm_start_file_button = {.rect = {0, 0, 0, 0}, .label = "File"},
         .running = &run,
         .start_requested = &start_requested,
         .context_mgr = NULL,
@@ -310,6 +313,7 @@ restart_menu:
         .editing_viscosity = false,
         .editing_input_root = false,
         .editing_output_root = false,
+        .editing_warm_start = false,
         .last_headless_click_ticks = 0,
         .last_inflow_click_ticks = 0,
         .last_viscosity_click_ticks = 0,
@@ -319,6 +323,7 @@ restart_menu:
         .blur_toggle_rect = {0, 0, 0, 0},
         .input_root_rect = {0, 0, 0, 0},
         .output_root_rect = {0, 0, 0, 0},
+        .warm_start_rect = {0, 0, 0, 0},
         .active_mode = selection_mode
     };
     if (!menu_create_window(&ctx)) {
@@ -334,6 +339,7 @@ restart_menu:
     menu_settings_shell_init(&ctx.settings_shell,
                              ctx.cfg,
                              &current_selection,
+                             ctx.active_preset,
                              ctx.active_mode,
                              ctx.cfg ? ctx.cfg->space_mode : SPACE_MODE_2D);
     physics_sim_workspace_authoring_host_reset(&ctx.workspace_authoring);
@@ -409,6 +415,9 @@ restart_menu:
         }
         if (ctx.editing_output_root) {
             text_input_update(&ctx.output_root_input, dt);
+        }
+        if (ctx.editing_warm_start) {
+            text_input_update(&ctx.warm_start_input, dt);
         }
 
         int win_w = 0;
@@ -701,6 +710,55 @@ restart_menu:
                 }
             }
 
+            if (menu_warm_start_controls_visible(&ctx)) {
+                SDL_SetRenderDrawColor(ctx.renderer, menu_color_panel().r, menu_color_panel().g, menu_color_panel().b, 255);
+                SDL_RenderFillRect(ctx.renderer, &ctx.warm_start_rect);
+                SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 160);
+                SDL_RenderDrawRect(ctx.renderer, &ctx.warm_start_rect);
+                menu_draw_button(ctx.renderer,
+                                 &ctx.warm_start_edit_button.rect,
+                                 ctx.warm_start_edit_button.label,
+                                 ctx.font_small ? ctx.font_small : ctx.font,
+                                 false);
+                menu_draw_button(ctx.renderer,
+                                 &ctx.warm_start_file_button.rect,
+                                 ctx.warm_start_file_button.label,
+                                 ctx.font_small ? ctx.font_small : ctx.font,
+                                 false);
+                {
+                    SDL_Rect path_rect = ctx.warm_start_rect;
+                    int button_gap = 8;
+                    path_rect.w = ctx.warm_start_edit_button.rect.x - ctx.warm_start_rect.x - button_gap;
+                    if (path_rect.w < 64) path_rect.w = 64;
+                    if (ctx.editing_warm_start) {
+                        menu_draw_text_input(ctx.renderer,
+                                             ctx.font_small ? ctx.font_small : ctx.font,
+                                             &path_rect,
+                                             &ctx.warm_start_input);
+                    } else {
+                        char warm_label[640];
+                        char warm_fit[640];
+                        const char *warm_path =
+                            (ctx.cfg && ctx.cfg->atmospheric_warm_start_path[0])
+                                ? ctx.cfg->atmospheric_warm_start_path
+                                : "Procedural";
+                        snprintf(warm_label, sizeof(warm_label), "Warm Start: %s", warm_path);
+                        scene_menu_fit_text_to_width(ctx.renderer,
+                                                     ctx.font_small ? ctx.font_small : ctx.font,
+                                                     warm_label,
+                                                     path_rect.w - 16,
+                                                     warm_fit,
+                                                     sizeof(warm_fit));
+                        menu_draw_text(ctx.renderer,
+                                       ctx.font_small ? ctx.font_small : ctx.font,
+                                       warm_fit,
+                                       path_rect.x + 8,
+                                       path_rect.y + (path_rect.h - small_h) / 2,
+                                       menu_color_text());
+                    }
+                }
+            }
+
             SDL_SetRenderDrawColor(ctx.renderer, menu_color_panel().r, menu_color_panel().g, menu_color_panel().b, 255);
             SDL_RenderFillRect(ctx.renderer, &ctx.output_root_rect);
             SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 160);
@@ -836,6 +894,9 @@ restart_menu:
     }
     if (ctx.editing_output_root) {
         menu_finish_output_root_edit(&ctx, false);
+    }
+    if (ctx.editing_warm_start) {
+        menu_finish_warm_start_edit(&ctx, false);
     }
     menu_workspace_authoring_cancel_active_preview(&ctx);
 

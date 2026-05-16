@@ -201,7 +201,11 @@ bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH) {
 }
 
 void renderer_sdl_shutdown(void) {
+    if (g_renderer) {
+        vk_renderer_wait_idle((VkRenderer *)g_renderer);
+    }
     hud_overlay_shutdown();
+    timer_hud_unbind_renderer();
     field_overlay_shutdown();
     particle_overlay_shutdown();
 
@@ -221,7 +225,6 @@ void renderer_sdl_shutdown(void) {
     g_frame_active = false;
     g_device_lost = false;
     if (g_renderer) {
-        vk_renderer_wait_idle((VkRenderer *)g_renderer);
         if (g_use_shared_device) {
             vk_renderer_shutdown_surface((VkRenderer *)g_renderer);
             vk_shared_device_release();

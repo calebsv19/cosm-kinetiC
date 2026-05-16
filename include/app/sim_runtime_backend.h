@@ -139,6 +139,21 @@ typedef struct SimRuntimeBackendReport {
     float runtime_solver_max_velocity_displacement_cells_post_clamp;
     float runtime_solver_max_abs_divergence_after_project;
     bool debug_volume_view_3d_available;
+    bool atmospheric_seeded;
+    uint32_t atmospheric_seed;
+    size_t atmospheric_seeded_cell_count;
+    float atmospheric_seed_max_density;
+    float atmospheric_seed_max_velocity_magnitude;
+    bool atmospheric_warm_start_loaded;
+    int atmospheric_warm_start_source_kind;
+    int atmospheric_warm_start_w;
+    int atmospheric_warm_start_h;
+    int atmospheric_warm_start_d;
+    size_t atmospheric_warm_start_cell_count;
+    size_t atmospheric_warm_start_active_density_cells;
+    size_t atmospheric_warm_start_solid_cells;
+    float atmospheric_warm_start_max_density;
+    float atmospheric_warm_start_max_velocity_magnitude;
     size_t debug_volume_active_density_cells;
     size_t debug_volume_solid_cells;
     float debug_volume_max_density;
@@ -209,6 +224,16 @@ typedef struct SimRuntimeBackendOps {
                                        float pressure,
                                        uint8_t solid);
     bool (*debug_reset_volume_truth_3d)(SimRuntimeBackend *backend);
+    bool (*debug_note_atmospheric_warm_start_3d)(SimRuntimeBackend *backend,
+                                                 int source_kind,
+                                                 int width,
+                                                 int height,
+                                                 int depth,
+                                                 size_t cell_count,
+                                                 size_t active_density_cells,
+                                                 size_t solid_cells,
+                                                 float max_density,
+                                                 float max_velocity_magnitude);
 } SimRuntimeBackendOps;
 
 struct SimRuntimeBackend {
@@ -298,5 +323,16 @@ bool sim_runtime_backend_debug_write_volume_cell_3d(SimRuntimeBackend *backend,
                                                     float pressure,
                                                     uint8_t solid);
 bool sim_runtime_backend_debug_reset_volume_truth_3d(SimRuntimeBackend *backend);
+bool sim_runtime_backend_debug_note_atmospheric_warm_start_3d(
+    SimRuntimeBackend *backend,
+    int source_kind,
+    int width,
+    int height,
+    int depth,
+    size_t cell_count,
+    size_t active_density_cells,
+    size_t solid_cells,
+    float max_density,
+    float max_velocity_magnitude);
 
 #endif // SIM_RUNTIME_BACKEND_H

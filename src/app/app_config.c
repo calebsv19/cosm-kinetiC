@@ -62,6 +62,7 @@ AppConfig app_config_default(void) {
              sizeof(cfg.headless_output_dir),
              "%s",
              physics_sim_default_snapshot_dir());
+    cfg.atmospheric_warm_start_path[0] = '\0';
 
     cfg.sim_mode = SIM_MODE_BOX;
     cfg.space_mode = SPACE_MODE_2D;

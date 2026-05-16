@@ -1,5 +1,6 @@
 #include "app/menu/menu_settings_draft.h"
 
+#include "app/atmospheric/atmospheric_field.h"
 #include "app/menu/menu_mode_utils.h"
 #include "app/quality_profiles.h"
 #include "app/menu/menu_settings_schema.h"
@@ -20,7 +21,7 @@ static float clamp_float_value(float value, float min_value, float max_value) {
 
 static void mark_field_dirty(MenuSettingsShellState *state, MenuSettingsFieldId field) {
     if (!state || field < 0 || field >= MENU_SETTINGS_FIELD_COUNT) return;
-    state->draft.dirty_bits |= 1u << field;
+    state->draft.dirty_bits |= 1ull << field;
 }
 
 static int schema_clamped_int(MenuSettingsFieldId field, int value) {
@@ -65,14 +66,65 @@ static void selection_set_quality_index_for_space(SceneMenuSelection *selection,
 }
 
 static QualityProfileCatalogId catalog_for_provider(MenuSettingsProviderId provider) {
-    return provider == MENU_SETTINGS_PROVIDER_3D
+    return (provider == MENU_SETTINGS_PROVIDER_3D ||
+            provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D)
                ? QUALITY_PROFILE_CATALOG_3D
                : QUALITY_PROFILE_CATALOG_2D;
+}
+
+static bool provider_is_3d_like(MenuSettingsProviderId provider) {
+    return provider == MENU_SETTINGS_PROVIDER_3D ||
+           provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D;
+}
+
+static bool provider_is_atmospheric(MenuSettingsProviderId provider) {
+    return provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_2D ||
+           provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D;
+}
+
+static void load_atmospheric_draft_values(MenuSettingsDraft *draft,
+                                          const FluidScenePreset *preset) {
+    if (!draft) return;
+    if (preset && preset->domain == SCENE_DOMAIN_ATMOSPHERIC) {
+        draft->atmosphere = preset->atmosphere;
+    } else {
+        draft->atmosphere = atmospheric_preset_default_settings();
+    }
+    atmospheric_preset_sanitize(&draft->atmosphere);
+    draft->atmosphere.enabled = true;
+}
+
+static bool atmosphere_matches_preset(const MenuSettingsDraft *draft,
+                                      const FluidScenePreset *preset) {
+    AtmosphericPresetSettings expected = {0};
+    AtmosphericPresetSettings current = {0};
+    if (!draft) return true;
+    expected = draft->atmosphere;
+    atmospheric_preset_sanitize(&expected);
+    expected.enabled = true;
+    if (preset && preset->domain == SCENE_DOMAIN_ATMOSPHERIC) {
+        current = preset->atmosphere;
+    } else {
+        current = atmospheric_preset_default_settings();
+    }
+    atmospheric_preset_sanitize(&current);
+    current.enabled = true;
+    return expected.seed == current.seed &&
+           expected.density_scale == current.density_scale &&
+           expected.density_threshold == current.density_threshold &&
+           expected.base_wind_x == current.base_wind_x &&
+           expected.base_wind_y == current.base_wind_y &&
+           expected.base_wind_z == current.base_wind_z &&
+           expected.turbulence_strength == current.turbulence_strength &&
+           expected.noise_scale == current.noise_scale &&
+           expected.band_min_y == current.band_min_y &&
+           expected.band_max_y == current.band_max_y;
 }
 
 static void load_draft_values(MenuSettingsDraft *draft,
                               const AppConfig *cfg,
                               const SceneMenuSelection *selection,
+                              const FluidScenePreset *preset,
                               SpaceMode space_mode) {
     if (!draft || !cfg) return;
     draft->grid_x = cfg->grid_w;
@@ -97,13 +149,16 @@ static void load_draft_values(MenuSettingsDraft *draft,
     draft->save_volume_frames = cfg->save_volume_frames;
     draft->save_render_frames = cfg->save_render_frames;
     draft->enable_render_blur = cfg->enable_render_blur;
+    load_atmospheric_draft_values(draft, preset);
     draft->dirty_bits = 0u;
 }
 
-static bool draft_matches_runtime(const MenuSettingsDraft *draft,
+static bool draft_matches_runtime(const MenuSettingsShellState *state,
                                   const AppConfig *cfg,
                                   const SceneMenuSelection *selection,
+                                  const FluidScenePreset *preset,
                                   SpaceMode space_mode) {
+    const MenuSettingsDraft *draft = state ? &state->draft : NULL;
     int selection_quality = -1;
     if (!draft || !cfg) return true;
     selection_quality = selection_quality_index_for_space(selection,
@@ -128,19 +183,22 @@ static bool draft_matches_runtime(const MenuSettingsDraft *draft,
              draft->velocity_damping != cfg->velocity_damping ||
              draft->save_volume_frames != cfg->save_volume_frames ||
              draft->save_render_frames != cfg->save_render_frames ||
-             draft->enable_render_blur != cfg->enable_render_blur);
+             draft->enable_render_blur != cfg->enable_render_blur ||
+             (provider_is_atmospheric(state->provider) &&
+              !atmosphere_matches_preset(draft, preset)));
 }
 
 static void load_draft_from_sources(MenuSettingsShellState *state,
                                     const AppConfig *cfg,
                                     const SceneMenuSelection *selection,
+                                    const FluidScenePreset *preset,
                                     SimulationMode sim_mode,
                                     SpaceMode space_mode,
                                     bool update_saved_snapshot) {
     if (!state || !cfg) return;
-    load_draft_values(&state->draft, cfg, selection, space_mode);
+    load_draft_values(&state->draft, cfg, selection, preset, space_mode);
     if (update_saved_snapshot) {
-        load_draft_values(&state->saved_draft, cfg, selection, space_mode);
+        load_draft_values(&state->saved_draft, cfg, selection, preset, space_mode);
         state->saved_snapshot_initialized = true;
     }
     sync_provider(state, sim_mode, space_mode);
@@ -153,30 +211,33 @@ const MenuSettingsDraft *menu_settings_shell_draft(const MenuSettingsShellState 
 void menu_settings_shell_init(MenuSettingsShellState *state,
                               const AppConfig *cfg,
                               const SceneMenuSelection *selection,
+                              const FluidScenePreset *preset,
                               SimulationMode sim_mode,
                               SpaceMode space_mode) {
     if (!state || !cfg) return;
-    load_draft_from_sources(state, cfg, selection, sim_mode, space_mode, true);
+    load_draft_from_sources(state, cfg, selection, preset, sim_mode, space_mode, true);
     state->initialized = true;
 }
 
 void menu_settings_shell_reload_from_runtime(MenuSettingsShellState *state,
                                              const AppConfig *cfg,
                                              const SceneMenuSelection *selection,
+                                             const FluidScenePreset *preset,
                                              SimulationMode sim_mode,
                                              SpaceMode space_mode) {
     if (!state || !cfg) return;
-    load_draft_from_sources(state, cfg, selection, sim_mode, space_mode, false);
+    load_draft_from_sources(state, cfg, selection, preset, sim_mode, space_mode, false);
     state->initialized = true;
 }
 
 void menu_settings_shell_capture_saved_from_runtime(MenuSettingsShellState *state,
                                                     const AppConfig *cfg,
                                                     const SceneMenuSelection *selection,
+                                                    const FluidScenePreset *preset,
                                                     SimulationMode sim_mode,
                                                     SpaceMode space_mode) {
     if (!state || !cfg) return;
-    load_draft_values(&state->saved_draft, cfg, selection, space_mode);
+    load_draft_values(&state->saved_draft, cfg, selection, preset, space_mode);
     state->saved_snapshot_initialized = true;
     sync_provider(state, sim_mode, space_mode);
 }
@@ -207,13 +268,21 @@ void menu_settings_shell_load_defaults(MenuSettingsShellState *state,
     selection.quality_index_3d = cfg.quality_index;
     selection.headless_frame_count = cfg.headless_frame_count;
     selection.tunnel_inflow_speed = cfg.tunnel_inflow_speed;
-    load_draft_from_sources(state, &cfg, &selection, sim_mode, space_mode, false);
+    {
+        FluidScenePreset preset = {0};
+        preset.domain = sim_mode == SIM_MODE_ATMOSPHERIC
+                            ? SCENE_DOMAIN_ATMOSPHERIC
+                            : SCENE_DOMAIN_BOX;
+        preset.atmosphere = atmospheric_preset_default_settings();
+        load_draft_from_sources(state, &cfg, &selection, &preset, sim_mode, space_mode, false);
+    }
     state->initialized = true;
 }
 
 void menu_settings_shell_apply_to_runtime(const MenuSettingsShellState *state,
                                           AppConfig *cfg,
-                                          SceneMenuSelection *selection) {
+                                          SceneMenuSelection *selection,
+                                          FluidScenePreset *preset) {
     if (!state || !cfg) return;
     cfg->grid_w = state->draft.grid_x;
     cfg->grid_h = state->draft.grid_y;
@@ -241,25 +310,41 @@ void menu_settings_shell_apply_to_runtime(const MenuSettingsShellState *state,
         selection->headless_frame_count = state->draft.headless_frame_count;
         selection->tunnel_inflow_speed = state->draft.tunnel_inflow_speed;
     }
+    if (provider_is_atmospheric(state->provider) && preset) {
+        preset->domain = SCENE_DOMAIN_ATMOSPHERIC;
+        preset->dimension_mode = menu_normalize_space_mode(cfg->space_mode) == SPACE_MODE_3D
+                                     ? SCENE_DIMENSION_MODE_3D
+                                     : SCENE_DIMENSION_MODE_2D;
+        preset->atmosphere = state->draft.atmosphere;
+        preset->atmosphere.enabled = true;
+        atmospheric_preset_sanitize(&preset->atmosphere);
+    }
 }
 
 bool menu_settings_shell_is_dirty(const MenuSettingsShellState *state,
                                   const AppConfig *cfg,
-                                  const SceneMenuSelection *selection) {
+                                  const SceneMenuSelection *selection,
+                                  const FluidScenePreset *preset) {
     if (!state || !cfg) return false;
-    return !draft_matches_runtime(&state->draft,
+    return !draft_matches_runtime(state,
                                   cfg,
                                   selection,
+                                  preset,
                                   cfg->space_mode);
 }
 
 bool menu_settings_shell_saved_differs_from_runtime(const MenuSettingsShellState *state,
                                                     const AppConfig *cfg,
-                                                    const SceneMenuSelection *selection) {
+                                                    const SceneMenuSelection *selection,
+                                                    const FluidScenePreset *preset) {
+    MenuSettingsShellState saved_state = {0};
     if (!state || !cfg || !state->saved_snapshot_initialized) return false;
-    return !draft_matches_runtime(&state->saved_draft,
+    saved_state = *state;
+    saved_state.draft = state->saved_draft;
+    return !draft_matches_runtime(&saved_state,
                                   cfg,
                                   selection,
+                                  preset,
                                   cfg->space_mode);
 }
 
@@ -274,11 +359,13 @@ void menu_settings_shell_restore_saved_to_draft(MenuSettingsShellState *state,
 
 void menu_settings_shell_apply_saved_to_runtime(const MenuSettingsShellState *state,
                                                 AppConfig *cfg,
-                                                SceneMenuSelection *selection) {
+                                                SceneMenuSelection *selection,
+                                                FluidScenePreset *preset) {
     MenuSettingsShellState temp = {0};
     if (!state || !cfg || !state->saved_snapshot_initialized) return;
     temp.draft = state->saved_draft;
-    menu_settings_shell_apply_to_runtime(&temp, cfg, selection);
+    temp.provider = state->provider;
+    menu_settings_shell_apply_to_runtime(&temp, cfg, selection, preset);
 }
 
 void menu_settings_shell_set_custom_quality(MenuSettingsShellState *state) {
@@ -326,18 +413,18 @@ void menu_settings_shell_nudge_field(MenuSettingsShellState *state,
         state->draft.grid_x = schema_clamped_int(field,
                                                  state->draft.grid_x +
                                                      (int)(def->step * direction));
-        if (state->provider == MENU_SETTINGS_PROVIDER_3D) {
+        if (provider_is_3d_like(state->provider)) {
             state->draft.grid_x =
                 sim_runtime_3d_applied_major_axis_cells_for_requested(state->draft.grid_x);
         }
-        if (state->provider != MENU_SETTINGS_PROVIDER_3D) {
+        if (!provider_is_3d_like(state->provider)) {
             state->draft.grid_y = schema_clamped_int(MENU_SETTINGS_FIELD_GRID_Y,
                                                      state->draft.grid_y +
                                                          (int)(def->step * direction));
         }
         menu_settings_shell_set_custom_quality(state);
         mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_X);
-        if (state->provider != MENU_SETTINGS_PROVIDER_3D) {
+        if (!provider_is_3d_like(state->provider)) {
             mark_field_dirty(state, MENU_SETTINGS_FIELD_GRID_Y);
         }
         return;
@@ -345,7 +432,7 @@ void menu_settings_shell_nudge_field(MenuSettingsShellState *state,
         state->draft.grid_y = schema_clamped_int(field,
                                                  state->draft.grid_y +
                                                      (int)(def->step * direction));
-        if (state->provider == MENU_SETTINGS_PROVIDER_3D) {
+        if (provider_is_3d_like(state->provider)) {
             state->draft.grid_y =
                 sim_runtime_3d_applied_major_axis_cells_for_requested(state->draft.grid_y);
         }
@@ -356,7 +443,7 @@ void menu_settings_shell_nudge_field(MenuSettingsShellState *state,
         state->draft.grid_z = schema_clamped_int(field,
                                                  state->draft.grid_z +
                                                      (int)(def->step * direction));
-        if (state->provider == MENU_SETTINGS_PROVIDER_3D && state->draft.grid_z > 0) {
+        if (provider_is_3d_like(state->provider) && state->draft.grid_z > 0) {
             state->draft.grid_z =
                 sim_runtime_3d_applied_depth_cells_for_requested(state->draft.grid_z);
         }
@@ -376,7 +463,7 @@ void menu_settings_shell_nudge_field(MenuSettingsShellState *state,
             schema_clamped_int(field,
                                state->draft.fluid_solver_iterations +
                                    (int)(def->step * direction));
-        if (state->provider == MENU_SETTINGS_PROVIDER_3D) {
+        if (provider_is_3d_like(state->provider)) {
             state->draft.fluid_solver_iterations =
                 sim_runtime_3d_solver_iterations_for_requested(
                     state->draft.fluid_solver_iterations);
@@ -459,6 +546,84 @@ void menu_settings_shell_nudge_field(MenuSettingsShellState *state,
             schema_clamped_float(field,
                                  state->draft.velocity_damping +
                                      (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_SEED:
+        state->draft.atmosphere.seed =
+            (uint32_t)schema_clamped_int(field,
+                                         (int)state->draft.atmosphere.seed +
+                                             (int)(def->step * direction));
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_SCALE:
+        state->draft.atmosphere.density_scale =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.density_scale +
+                                     (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_THRESHOLD:
+        state->draft.atmosphere.density_threshold =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.density_threshold +
+                                     (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_X:
+        state->draft.atmosphere.base_wind_x =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.base_wind_x +
+                                     (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Y:
+        state->draft.atmosphere.base_wind_y =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.base_wind_y +
+                                     (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Z:
+        state->draft.atmosphere.base_wind_z =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.base_wind_z +
+                                     (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_TURBULENCE:
+        state->draft.atmosphere.turbulence_strength =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.turbulence_strength +
+                                     (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_NOISE_SCALE:
+        state->draft.atmosphere.noise_scale =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.noise_scale +
+                                     (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MIN:
+        state->draft.atmosphere.band_min_y =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.band_min_y +
+                                     (float)def->step * (float)direction);
+        if (state->draft.atmosphere.band_min_y > state->draft.atmosphere.band_max_y) {
+            state->draft.atmosphere.band_max_y = state->draft.atmosphere.band_min_y;
+            mark_field_dirty(state, MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MAX);
+        }
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MAX:
+        state->draft.atmosphere.band_max_y =
+            schema_clamped_float(field,
+                                 state->draft.atmosphere.band_max_y +
+                                     (float)def->step * (float)direction);
+        if (state->draft.atmosphere.band_max_y < state->draft.atmosphere.band_min_y) {
+            state->draft.atmosphere.band_min_y = state->draft.atmosphere.band_max_y;
+            mark_field_dirty(state, MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MIN);
+        }
         mark_field_dirty(state, field);
         return;
     default:
