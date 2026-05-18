@@ -85,6 +85,7 @@ typedef struct SceneMenuInteraction {
     SDL_Rect volume_toggle_rect;
     SDL_Rect render_toggle_rect;
     SDL_Rect blur_toggle_rect;
+    SDL_Rect atmospheric_initial_state_toggle_rect;
     bool *running;
     bool *start_requested;
     InputContextManager *context_mgr;

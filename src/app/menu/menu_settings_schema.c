@@ -380,6 +380,13 @@ static const MenuSettingsFieldDef MENU_SETTINGS_FIELDS[MENU_SETTINGS_FIELD_COUNT
         .provider_bits = MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_2D |
                          MENU_SETTINGS_PROVIDER_BIT_ATMOSPHERIC_3D,
         .first_rollout = true
+    },
+    [MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE] = {
+        .id = MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE,
+        .label = "Atmo Init",
+        .kind = MENU_SETTINGS_FIELD_KIND_BOOL,
+        .provider_bits = MENU_SETTINGS_PROVIDER_BIT_3D,
+        .first_rollout = true
     }
 };
 

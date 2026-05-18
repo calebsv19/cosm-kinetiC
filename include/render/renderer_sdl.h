@@ -58,6 +58,7 @@ typedef struct RendererHudInfo {
     bool        backend_compatibility_slice_has_obstacles;
     bool        backend_secondary_debug_slice_stack_live;
     int         backend_secondary_debug_slice_stack_radius;
+    SimRuntimeInitialStateSource backend_initial_state_source;
     bool        backend_atmospheric_seeded;
     uint32_t    backend_atmospheric_seed;
     size_t      backend_atmospheric_seeded_cell_count;

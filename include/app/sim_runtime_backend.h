@@ -19,6 +19,13 @@ typedef enum SimRuntimeBackendKind {
     SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD = 2
 } SimRuntimeBackendKind;
 
+typedef enum SimRuntimeInitialStateSource {
+    SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK = 0,
+    SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_STANDALONE = 1,
+    SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_OPTIONAL_LAYER = 2,
+    SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_WARM_START = 3
+} SimRuntimeInitialStateSource;
+
 typedef struct SceneFluidFieldView2D {
     int width;
     int height;
@@ -139,6 +146,7 @@ typedef struct SimRuntimeBackendReport {
     float runtime_solver_max_velocity_displacement_cells_post_clamp;
     float runtime_solver_max_abs_divergence_after_project;
     bool debug_volume_view_3d_available;
+    SimRuntimeInitialStateSource initial_state_source;
     bool atmospheric_seeded;
     uint32_t atmospheric_seed;
     size_t atmospheric_seeded_cell_count;
@@ -303,6 +311,7 @@ bool sim_runtime_backend_get_volume_export_view_3d(const SimRuntimeBackend *back
                                                    SceneFluidVolumeExportView3D *out_view);
 bool sim_runtime_backend_get_report(const SimRuntimeBackend *backend,
                                     SimRuntimeBackendReport *out_report);
+const char *sim_runtime_initial_state_source_label(SimRuntimeInitialStateSource source);
 bool sim_runtime_backend_get_compatibility_slice_activity(const SimRuntimeBackend *backend,
                                                           int slice_z,
                                                           bool *out_has_fluid,

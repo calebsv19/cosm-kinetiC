@@ -59,6 +59,7 @@ typedef enum MenuSettingsFieldId {
     MENU_SETTINGS_FIELD_ATMOSPHERIC_NOISE_SCALE,
     MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MIN,
     MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MAX,
+    MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE,
     MENU_SETTINGS_FIELD_COUNT
 } MenuSettingsFieldId;
 
@@ -106,6 +107,7 @@ typedef struct MenuSettingsDraft {
     bool save_volume_frames;
     bool save_render_frames;
     bool enable_render_blur;
+    bool atmospheric_initial_state_enabled;
     AtmosphericPresetSettings atmosphere;
     uint64_t dirty_bits;
 } MenuSettingsDraft;

@@ -23,6 +23,7 @@ CORE_SCENE_DIR := $(SHARED_ROOT)/core/core_scene
 CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
 CORE_OBJECT_DIR := $(SHARED_ROOT)/core/core_object
 CORE_UNITS_DIR := $(SHARED_ROOT)/core/core_units
+CORE_VIEWPORT2D_DIR := $(SHARED_ROOT)/core/core_viewport2d
 CORE_PANE_DIR := $(SHARED_ROOT)/core/core_pane
 CORE_SIM_DIR := $(SHARED_ROOT)/core/core_sim
 CORE_TRACE_DIR := $(SHARED_ROOT)/core/core_trace

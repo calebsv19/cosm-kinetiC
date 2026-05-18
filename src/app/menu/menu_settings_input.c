@@ -163,6 +163,15 @@ bool menu_settings_handle_primary_click(SceneMenuInteraction *ctx, int x, int y)
         return true;
     }
 
+    if (ctx->atmospheric_initial_state_toggle_rect.w > 0 &&
+        ctx->atmospheric_initial_state_toggle_rect.h > 0 &&
+        menu_point_in_rect(x, y, &ctx->atmospheric_initial_state_toggle_rect)) {
+        menu_settings_shell_toggle_field(&ctx->settings_shell,
+                                         MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE);
+        sync_quality_index(ctx);
+        return true;
+    }
+
     if (menu_point_in_rect(x, y, &ctx->settings_apply_button.rect)) {
         if (menu_settings_has_pending_changes(ctx)) {
             menu_settings_commit(ctx, false);

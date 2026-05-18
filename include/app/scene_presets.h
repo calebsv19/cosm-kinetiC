@@ -169,6 +169,7 @@ typedef struct FluidScenePreset {
     float domain_width;
     float domain_height;
     char  structural_scene_path[256];
+    bool atmospheric_initial_state_enabled;
     AtmosphericPresetSettings atmosphere;
 } FluidScenePreset;
 

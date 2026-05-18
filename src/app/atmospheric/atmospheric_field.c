@@ -197,7 +197,20 @@ void atmospheric_preset_sanitize(AtmosphericPresetSettings *settings) {
 }
 
 bool atmospheric_preset_enabled(const FluidScenePreset *preset) {
-    return preset && preset->domain == SCENE_DOMAIN_ATMOSPHERIC && preset->atmosphere.enabled;
+    return atmospheric_initial_state_source(preset) != ATMOSPHERIC_INITIAL_STATE_NONE;
+}
+
+AtmosphericInitialStateSource atmospheric_initial_state_source(const FluidScenePreset *preset) {
+    if (!preset || !preset->atmosphere.enabled) {
+        return ATMOSPHERIC_INITIAL_STATE_NONE;
+    }
+    if (preset->domain == SCENE_DOMAIN_ATMOSPHERIC) {
+        return ATMOSPHERIC_INITIAL_STATE_STANDALONE_MODE;
+    }
+    if (preset->atmospheric_initial_state_enabled) {
+        return ATMOSPHERIC_INITIAL_STATE_OPTIONAL_LAYER;
+    }
+    return ATMOSPHERIC_INITIAL_STATE_NONE;
 }
 
 static AtmosphericFieldSample sample_field(const AtmosphericPresetSettings *settings,

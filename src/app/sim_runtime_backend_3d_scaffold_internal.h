@@ -61,6 +61,7 @@ typedef struct SimRuntimeBackend3DScaffold {
     bool debug_volume_scene_up_velocity_valid;
     float debug_volume_scene_up_velocity_avg;
     float debug_volume_scene_up_velocity_peak;
+    SimRuntimeInitialStateSource initial_state_source;
     bool atmospheric_seeded;
     uint32_t atmospheric_seed;
     size_t atmospheric_seeded_cell_count;

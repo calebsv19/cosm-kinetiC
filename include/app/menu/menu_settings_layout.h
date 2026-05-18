@@ -19,7 +19,8 @@ int menu_settings_layout_panel_height(const SceneMenuInteraction *ctx);
 void menu_settings_layout_toggle_rects(const SceneMenuInteraction *ctx,
                                        SDL_Rect *volume_rect,
                                        SDL_Rect *render_rect,
-                                       SDL_Rect *blur_rect);
+                                       SDL_Rect *blur_rect,
+                                       SDL_Rect *atmospheric_initial_state_rect);
 void menu_settings_layout_action_rects(const SceneMenuInteraction *ctx,
                                        SDL_Rect *apply_rect,
                                        SDL_Rect *save_rect,

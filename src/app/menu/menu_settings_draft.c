@@ -82,10 +82,18 @@ static bool provider_is_atmospheric(MenuSettingsProviderId provider) {
            provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D;
 }
 
+static bool provider_supports_atmospheric_initial_state(MenuSettingsProviderId provider) {
+    return provider == MENU_SETTINGS_PROVIDER_3D;
+}
+
 static void load_atmospheric_draft_values(MenuSettingsDraft *draft,
                                           const FluidScenePreset *preset) {
     if (!draft) return;
-    if (preset && preset->domain == SCENE_DOMAIN_ATMOSPHERIC) {
+    draft->atmospheric_initial_state_enabled =
+        preset && preset->atmospheric_initial_state_enabled;
+    if (preset &&
+        (preset->domain == SCENE_DOMAIN_ATMOSPHERIC ||
+         preset->atmospheric_initial_state_enabled)) {
         draft->atmosphere = preset->atmosphere;
     } else {
         draft->atmosphere = atmospheric_preset_default_settings();
@@ -119,6 +127,13 @@ static bool atmosphere_matches_preset(const MenuSettingsDraft *draft,
            expected.noise_scale == current.noise_scale &&
            expected.band_min_y == current.band_min_y &&
            expected.band_max_y == current.band_max_y;
+}
+
+static bool atmospheric_initial_state_matches_preset(const MenuSettingsDraft *draft,
+                                                     const FluidScenePreset *preset) {
+    bool current_enabled = preset && preset->atmospheric_initial_state_enabled;
+    if (!draft) return true;
+    return draft->atmospheric_initial_state_enabled == current_enabled;
 }
 
 static void load_draft_values(MenuSettingsDraft *draft,
@@ -184,6 +199,8 @@ static bool draft_matches_runtime(const MenuSettingsShellState *state,
              draft->save_volume_frames != cfg->save_volume_frames ||
              draft->save_render_frames != cfg->save_render_frames ||
              draft->enable_render_blur != cfg->enable_render_blur ||
+             (provider_supports_atmospheric_initial_state(state->provider) &&
+              !atmospheric_initial_state_matches_preset(draft, preset)) ||
              (provider_is_atmospheric(state->provider) &&
               !atmosphere_matches_preset(draft, preset)));
 }
@@ -315,9 +332,18 @@ void menu_settings_shell_apply_to_runtime(const MenuSettingsShellState *state,
         preset->dimension_mode = menu_normalize_space_mode(cfg->space_mode) == SPACE_MODE_3D
                                      ? SCENE_DIMENSION_MODE_3D
                                      : SCENE_DIMENSION_MODE_2D;
+        preset->atmospheric_initial_state_enabled = false;
         preset->atmosphere = state->draft.atmosphere;
         preset->atmosphere.enabled = true;
         atmospheric_preset_sanitize(&preset->atmosphere);
+    } else if (provider_supports_atmospheric_initial_state(state->provider) && preset) {
+        preset->atmospheric_initial_state_enabled =
+            state->draft.atmospheric_initial_state_enabled;
+        if (preset->atmospheric_initial_state_enabled) {
+            preset->atmosphere = state->draft.atmosphere;
+            preset->atmosphere.enabled = true;
+            atmospheric_preset_sanitize(&preset->atmosphere);
+        }
     }
 }
 
@@ -643,6 +669,12 @@ void menu_settings_shell_toggle_field(MenuSettingsShellState *state,
         break;
     case MENU_SETTINGS_FIELD_ENABLE_RENDER_BLUR:
         state->draft.enable_render_blur = !state->draft.enable_render_blur;
+        break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE:
+        state->draft.atmospheric_initial_state_enabled =
+            !state->draft.atmospheric_initial_state_enabled;
+        state->draft.atmosphere.enabled = true;
+        atmospheric_preset_sanitize(&state->draft.atmosphere);
         break;
     default:
         return;

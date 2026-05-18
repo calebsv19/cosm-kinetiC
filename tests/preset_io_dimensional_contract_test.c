@@ -1,4 +1,5 @@
 #include "app/preset_io.h"
+#include "app/atmospheric/atmospheric_field.h"
 #include "app/scene_presets.h"
 
 #include <math.h>
@@ -285,6 +286,113 @@ done:
     return ok;
 }
 
+static bool test_v13_optional_layer_defaults_off(void) {
+    static const char *legacy_v13 =
+        "13 0 1\n"
+        "1 0\n"
+        "1.000000 1.000000\n"
+        "1\n"
+        "Legacy Atmos Layer\n"
+        "\n"
+        "ATMOS 1 7777 0.100000 6.000000 0.500000 2.000000 0.000000 1.000000 1.500000 3.000000 9.000000 0.200000 0.800000 0.100000 0\n"
+        "0\n";
+
+    char path_template[] = "/tmp/physics_sim_preset_v13_atmos_layer_XXXXXX";
+    int fd = mkstemp(path_template);
+    if (fd < 0) {
+        fprintf(stderr, "mkstemp failed for v13 optional layer fallback test\n");
+        return false;
+    }
+    close(fd);
+
+    bool ok = false;
+    CustomPresetLibrary lib;
+    preset_library_init(&lib);
+
+    if (!write_text_file(path_template, legacy_v13)) goto done;
+    if (!preset_library_load(path_template, &lib)) goto done;
+    if (preset_library_count(&lib) != 1) goto done;
+
+    const CustomPresetSlot *loaded = preset_library_get_slot_const(&lib, 0);
+    if (!loaded) goto done;
+    if (loaded->preset.domain != SCENE_DOMAIN_BOX) goto done;
+    if (loaded->preset.dimension_mode != SCENE_DIMENSION_MODE_3D) goto done;
+    if (!loaded->preset.atmosphere.enabled) goto done;
+    if (loaded->preset.atmospheric_initial_state_enabled) goto done;
+    if (atmospheric_initial_state_source(&loaded->preset) !=
+        ATMOSPHERIC_INITIAL_STATE_NONE) {
+        goto done;
+    }
+    ok = true;
+
+done:
+    preset_library_shutdown(&lib);
+    unlink(path_template);
+    return ok;
+}
+
+static bool test_v14_optional_layer_roundtrip(void) {
+    char path_template[] = "/tmp/physics_sim_preset_v14_atmos_layer_XXXXXX";
+    int fd = mkstemp(path_template);
+    if (fd < 0) {
+        fprintf(stderr, "mkstemp failed for v14 optional layer roundtrip test\n");
+        return false;
+    }
+    close(fd);
+
+    bool ok = false;
+    CustomPresetLibrary lib;
+    CustomPresetLibrary reloaded;
+    preset_library_init(&lib);
+    preset_library_init(&reloaded);
+
+    FluidScenePreset preset = {0};
+    preset.domain = SCENE_DOMAIN_BOX;
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.domain_width = 1.5f;
+    preset.domain_height = 1.0f;
+    preset.atmospheric_initial_state_enabled = true;
+    preset.atmosphere.enabled = true;
+    preset.atmosphere.seed = 9001u;
+    preset.atmosphere.base_density = 0.05f;
+    preset.atmosphere.density_scale = 7.25f;
+    preset.atmosphere.density_threshold = 0.48f;
+    preset.atmosphere.base_wind_x = 4.0f;
+    preset.atmosphere.base_wind_y = 0.1f;
+    preset.atmosphere.base_wind_z = 1.25f;
+    preset.atmosphere.turbulence_strength = 2.75f;
+    preset.atmosphere.noise_scale = 3.5f;
+    preset.atmosphere.detail_scale = 11.0f;
+    preset.atmosphere.band_min_y = 0.25f;
+    preset.atmosphere.band_max_y = 0.75f;
+    preset.atmosphere.band_edge_falloff = 0.08f;
+
+    if (!preset_library_add_slot(&lib, "3D Optional Atmos Layer", &preset)) goto done;
+    if (!preset_library_save(path_template, &lib)) goto done;
+    if (!preset_library_load(path_template, &reloaded)) goto done;
+
+    const CustomPresetSlot *loaded = preset_library_get_slot_const(&reloaded, 0);
+    if (!loaded) goto done;
+    if (loaded->preset.domain != SCENE_DOMAIN_BOX) goto done;
+    if (loaded->preset.dimension_mode != SCENE_DIMENSION_MODE_3D) goto done;
+    if (!loaded->preset.atmospheric_initial_state_enabled) goto done;
+    if (!loaded->preset.atmosphere.enabled) goto done;
+    if (loaded->preset.atmosphere.seed != 9001u) goto done;
+    if (!approx_equal(loaded->preset.atmosphere.density_scale, 7.25f, 1e-4f)) goto done;
+    if (!approx_equal(loaded->preset.atmosphere.base_wind_z, 1.25f, 1e-4f)) goto done;
+    if (atmospheric_initial_state_source(&loaded->preset) !=
+        ATMOSPHERIC_INITIAL_STATE_OPTIONAL_LAYER) {
+        goto done;
+    }
+    ok = true;
+
+done:
+    preset_library_shutdown(&lib);
+    preset_library_shutdown(&reloaded);
+    unlink(path_template);
+    return ok;
+}
+
 int main(void) {
     if (!test_legacy_omitted_z_fallback()) {
         fprintf(stderr, "preset_io_dimensional_contract_test: legacy fallback failed\n");
@@ -300,6 +408,14 @@ int main(void) {
     }
     if (!test_v13_atmospheric_roundtrip()) {
         fprintf(stderr, "preset_io_dimensional_contract_test: v13 atmospheric roundtrip failed\n");
+        return 1;
+    }
+    if (!test_v13_optional_layer_defaults_off()) {
+        fprintf(stderr, "preset_io_dimensional_contract_test: v13 optional layer fallback failed\n");
+        return 1;
+    }
+    if (!test_v14_optional_layer_roundtrip()) {
+        fprintf(stderr, "preset_io_dimensional_contract_test: v14 optional layer roundtrip failed\n");
         return 1;
     }
     fprintf(stdout, "preset_io_dimensional_contract_test: success\n");

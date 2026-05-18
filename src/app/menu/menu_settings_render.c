@@ -254,6 +254,10 @@ static void render_field_value_label(const SceneMenuInteraction *ctx,
     case MENU_SETTINGS_FIELD_ATMOSPHERIC_BAND_MAX:
         snprintf(out, out_size, "%.2f", draft ? draft->atmosphere.band_max_y : 0.0f);
         break;
+    case MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE:
+        snprintf(out, out_size, "%s",
+                 draft && draft->atmospheric_initial_state_enabled ? "On" : "Off");
+        break;
     default:
         snprintf(out, out_size, "--");
         break;
@@ -375,6 +379,14 @@ void menu_settings_draw_simulation_panel(SceneMenuInteraction *ctx) {
                         field_is_interactive(def));
     }
 
+    if (ctx->atmospheric_initial_state_toggle_rect.w > 0 &&
+        ctx->atmospheric_initial_state_toggle_rect.h > 0) {
+        menu_draw_toggle(ctx->renderer,
+                         ctx->font_small ? ctx->font_small : ctx->font,
+                         &ctx->atmospheric_initial_state_toggle_rect,
+                         "Atmo Init",
+                         ctx->settings_shell.draft.atmospheric_initial_state_enabled);
+    }
     menu_draw_toggle(ctx->renderer,
                      ctx->font_small ? ctx->font_small : ctx->font,
                      &ctx->volume_toggle_rect,

@@ -445,7 +445,9 @@ SCENE_EDITOR_PANE_HOST_TEST_SRCS := \
 
 SCENE_EDITOR_VIEWPORT_TEST_SRCS := \
 	tests/scene_editor_viewport_contract_test.c \
-	$(SRC_DIR)/app/editor/scene_editor_viewport.c
+	$(SRC_DIR)/app/editor/scene_editor_viewport.c \
+	$(CORE_VIEWPORT2D_DIR)/src/core_viewport2d.c \
+	$(CORE_BASE_DIR)/src/core_base.c
 
 RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_SRCS := \
 	tests/retained_runtime_scene_overlay_geom_contract_test.c \
@@ -454,7 +456,9 @@ RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_SRCS := \
 RETAINED_RUNTIME_SCENE_OVERLAY_READOUT_TEST_SRCS := \
 	tests/retained_runtime_scene_overlay_readout_contract_test.c \
 	$(SRC_DIR)/render/retained_runtime_scene_overlay_readout.c \
-	$(SRC_DIR)/app/editor/scene_editor_viewport.c
+	$(SRC_DIR)/app/editor/scene_editor_viewport.c \
+	$(CORE_VIEWPORT2D_DIR)/src/core_viewport2d.c \
+	$(CORE_BASE_DIR)/src/core_base.c
 
 RETAINED_RUNTIME_SCENE_OVERLAY_SPACE_TEST_SRCS := \
 	tests/retained_runtime_scene_overlay_space_contract_test.c \
@@ -643,7 +647,7 @@ test-scene-editor-pane-host-contract: $(SCENE_EDITOR_PANE_HOST_TEST_SRCS)
 test-scene-editor-viewport-contract: $(SCENE_EDITOR_VIEWPORT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_VIEWPORT2D_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_viewport_contract_test $(SCENE_EDITOR_VIEWPORT_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_viewport_contract_test
 
@@ -657,7 +661,7 @@ test-retained-runtime-scene-overlay-geom-contract: $(RETAINED_RUNTIME_SCENE_OVER
 test-retained-runtime-scene-overlay-readout-contract: $(RETAINED_RUNTIME_SCENE_OVERLAY_READOUT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(VK_RENDERER_SDL_COMPAT_CFLAGS) \
-		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_VIEWPORT2D_DIR)/include \
 		-o $(BUILD_DIR)/retained_runtime_scene_overlay_readout_contract_test $(RETAINED_RUNTIME_SCENE_OVERLAY_READOUT_TEST_SRCS) -lm
 	$(BUILD_DIR)/retained_runtime_scene_overlay_readout_contract_test
 

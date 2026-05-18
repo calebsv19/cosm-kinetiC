@@ -75,6 +75,10 @@ static int primary_row_count(const SceneMenuInteraction *ctx) {
     return (int)((field_count + 1u) / 2u);
 }
 
+static bool atmospheric_initial_state_toggle_visible(const SceneMenuInteraction *ctx) {
+    return ctx && ctx->settings_shell.provider == MENU_SETTINGS_PROVIDER_3D;
+}
+
 size_t menu_settings_layout_build_field_layouts(const SceneMenuInteraction *ctx,
                                                 MenuSettingsFieldLayout *out_layouts,
                                                 size_t max_layouts) {
@@ -120,7 +124,8 @@ size_t menu_settings_layout_build_field_layouts(const SceneMenuInteraction *ctx,
 void menu_settings_layout_toggle_rects(const SceneMenuInteraction *ctx,
                                        SDL_Rect *volume_rect,
                                        SDL_Rect *render_rect,
-                                       SDL_Rect *blur_rect) {
+                                       SDL_Rect *blur_rect,
+                                       SDL_Rect *atmospheric_initial_state_rect) {
     SDL_Rect panel = {0, 0, 0, 0};
     int rows = 0;
     int cell_w = 0;
@@ -133,6 +138,20 @@ void menu_settings_layout_toggle_rects(const SceneMenuInteraction *ctx,
     y = panel.y + MENU_SETTINGS_PANEL_TOP_OFFSET +
         rows * (MENU_SETTINGS_PANEL_CELL_H + MENU_SETTINGS_PANEL_ROW_GAP) +
         MENU_SETTINGS_PANEL_SECTION_GAP;
+    if (atmospheric_initial_state_rect) {
+        *atmospheric_initial_state_rect = (SDL_Rect){0, 0, 0, 0};
+    }
+    if (atmospheric_initial_state_toggle_visible(ctx)) {
+        if (atmospheric_initial_state_rect) {
+            *atmospheric_initial_state_rect = (SDL_Rect){
+                panel.x + MENU_SETTINGS_PANEL_PAD,
+                y,
+                panel.w - MENU_SETTINGS_PANEL_PAD * 2,
+                MENU_SETTINGS_PANEL_TOGGLE_H
+            };
+        }
+        y += MENU_SETTINGS_PANEL_TOGGLE_H + MENU_SETTINGS_PANEL_ROW_GAP;
+    }
     if (volume_rect) {
         *volume_rect = (SDL_Rect){
             panel.x + MENU_SETTINGS_PANEL_PAD,
@@ -174,7 +193,7 @@ void menu_settings_layout_action_rects(const SceneMenuInteraction *ctx,
     int y = 0;
     if (!ctx) return;
     panel = ctx->config_panel_rect;
-    menu_settings_layout_toggle_rects(ctx, &volume_rect, &render_rect, &blur_rect);
+    menu_settings_layout_toggle_rects(ctx, &volume_rect, &render_rect, &blur_rect, NULL);
     y = blur_rect.y + blur_rect.h + MENU_SETTINGS_PANEL_SECTION_GAP;
     button_w = (panel.w - MENU_SETTINGS_PANEL_PAD * 2 - 16) / 3;
     if (button_w < 72) button_w = 72;
@@ -235,13 +254,18 @@ int menu_settings_layout_panel_height(const SceneMenuInteraction *ctx) {
     int rows = primary_row_count(ctx);
     int primary_h = 0;
     int total_h = 0;
+    int optional_toggle_h = 0;
     if (rows > 0) {
         primary_h = rows * MENU_SETTINGS_PANEL_CELL_H +
                     (rows - 1) * MENU_SETTINGS_PANEL_ROW_GAP;
     }
+    if (atmospheric_initial_state_toggle_visible(ctx)) {
+        optional_toggle_h = MENU_SETTINGS_PANEL_TOGGLE_H + MENU_SETTINGS_PANEL_ROW_GAP;
+    }
     total_h = MENU_SETTINGS_PANEL_TOP_OFFSET +
               primary_h +
               MENU_SETTINGS_PANEL_SECTION_GAP +
+              optional_toggle_h +
               MENU_SETTINGS_PANEL_TOGGLE_H +
               MENU_SETTINGS_PANEL_ROW_GAP +
               MENU_SETTINGS_PANEL_TOGGLE_H +

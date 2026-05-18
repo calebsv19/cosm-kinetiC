@@ -63,7 +63,14 @@ bool scene_editor_viewport_update_navigation(SceneEditorViewportState *state,
                                              int canvas_w,
                                              int canvas_h);
 void scene_editor_viewport_end_navigation(SceneEditorViewportState *state);
-bool scene_editor_viewport_apply_wheel(SceneEditorViewportState *state, int wheel_y);
+bool scene_editor_viewport_apply_wheel(SceneEditorViewportState *state,
+                                       int wheel_y,
+                                       int screen_x,
+                                       int screen_y,
+                                       int canvas_x,
+                                       int canvas_y,
+                                       int canvas_w,
+                                       int canvas_h);
 
 void scene_editor_viewport_world_to_screen(const SceneEditorViewportState *state,
                                            int canvas_x,

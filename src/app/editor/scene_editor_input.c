@@ -705,7 +705,15 @@ void editor_on_wheel(void *user, const InputWheelState *wheel) {
     SceneEditorState *state = (SceneEditorState *)user;
     if (!state || !wheel) return;
     if (scene_editor_input_point_in_editor_active_viewport(state, state->pointer_x, state->pointer_y)) {
-        if (scene_editor_viewport_apply_wheel(&state->viewport, wheel->y)) {
+        SDL_Rect viewport_rect = editor_active_viewport_rect(state);
+        if (scene_editor_viewport_apply_wheel(&state->viewport,
+                                              wheel->y,
+                                              state->pointer_x,
+                                              state->pointer_y,
+                                              viewport_rect.x,
+                                              viewport_rect.y,
+                                              viewport_rect.w,
+                                              viewport_rect.h)) {
             scene_editor_canvas_set_viewport_state(&state->viewport);
         }
         return;

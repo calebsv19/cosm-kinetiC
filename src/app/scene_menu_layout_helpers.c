@@ -189,7 +189,8 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     menu_settings_layout_toggle_rects(ctx,
                                       &ctx->volume_toggle_rect,
                                       &ctx->render_toggle_rect,
-                                      &ctx->blur_toggle_rect);
+                                      &ctx->blur_toggle_rect,
+                                      &ctx->atmospheric_initial_state_toggle_rect);
     menu_settings_layout_action_rects(ctx,
                                       &ctx->settings_apply_button.rect,
                                       &ctx->settings_save_button.rect,

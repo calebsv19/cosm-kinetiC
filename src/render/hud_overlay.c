@@ -376,14 +376,28 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
                  hud->atmospheric_warm_start_error
                      ? hud->atmospheric_warm_start_error
                      : "unknown reason");
-    } else if (hud->sim_mode == SIM_MODE_ATMOSPHERIC && hud->backend_atmospheric_seeded) {
+    } else if ((hud->backend_initial_state_source ==
+                    SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_STANDALONE ||
+                hud->backend_initial_state_source ==
+                    SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_OPTIONAL_LAYER) &&
+               hud->backend_atmospheric_seeded) {
         snprintf(atmosphere_line,
                  sizeof(atmosphere_line),
-                 "Atmosphere procedural seed: %u cells=%zu rho_max=%.2f |v|_max=%.2f",
+                 "Initial state: %s seed=%u cells=%zu rho_max=%.2f |v|_max=%.2f",
+                 sim_runtime_initial_state_source_label(hud->backend_initial_state_source),
                  hud->backend_atmospheric_seed,
                  hud->backend_atmospheric_seeded_cell_count,
                  hud->backend_atmospheric_seed_max_density,
                  hud->backend_atmospheric_seed_max_velocity_magnitude);
+    } else if (hud->backend_initial_state_source ==
+                   SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_STANDALONE ||
+               hud->backend_initial_state_source ==
+                   SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_OPTIONAL_LAYER) {
+        snprintf(atmosphere_line,
+                 sizeof(atmosphere_line),
+                 "Initial state: %s seed=%u no active cells",
+                 sim_runtime_initial_state_source_label(hud->backend_initial_state_source),
+                 hud->backend_atmospheric_seed);
     } else {
         atmosphere_line[0] = '\0';
     }

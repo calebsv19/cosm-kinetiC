@@ -8,7 +8,7 @@
 #include "app/atmospheric/atmospheric_field.h"
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-static const int PRESET_FILE_VERSION = 13;
+static const int PRESET_FILE_VERSION = 14;
 static const char *STRUCTURAL_SCENE_DEFAULT = "config/structural_scene.txt";
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
@@ -439,33 +439,69 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
             }
         }
         AtmosphericPresetSettings atmosphere = {0};
+        bool atmospheric_initial_state_enabled = false;
         if (file_version >= 13) {
+            char atmos_line[512] = {0};
+            if (!read_line(f, atmos_line, sizeof(atmos_line))) {
+                break;
+            }
             char atmos_marker[8] = {0};
             int enabled = 0;
+            int initial_state_enabled = 0;
             unsigned int seed = 0u;
             int region_count = 0;
-            if (fscanf(f,
-                       "%7s %d %u %f %f %f %f %f %f %f %f %f %f %f %f %d\n",
-                       atmos_marker,
-                       &enabled,
-                       &seed,
-                       &atmosphere.base_density,
-                       &atmosphere.density_scale,
-                       &atmosphere.density_threshold,
-                       &atmosphere.base_wind_x,
-                       &atmosphere.base_wind_y,
-                       &atmosphere.base_wind_z,
-                       &atmosphere.turbulence_strength,
-                       &atmosphere.noise_scale,
-                       &atmosphere.detail_scale,
-                       &atmosphere.band_min_y,
-                       &atmosphere.band_max_y,
-                       &atmosphere.band_edge_falloff,
-                       &region_count) != 16 ||
-                strcmp(atmos_marker, "ATMOS") != 0) {
+            int parsed = 0;
+            if (file_version >= 14) {
+                parsed = sscanf(atmos_line,
+                                "%7s %d %d %u %f %f %f %f %f %f %f %f %f %f %f %f %d",
+                                atmos_marker,
+                                &enabled,
+                                &initial_state_enabled,
+                                &seed,
+                                &atmosphere.base_density,
+                                &atmosphere.density_scale,
+                                &atmosphere.density_threshold,
+                                &atmosphere.base_wind_x,
+                                &atmosphere.base_wind_y,
+                                &atmosphere.base_wind_z,
+                                &atmosphere.turbulence_strength,
+                                &atmosphere.noise_scale,
+                                &atmosphere.detail_scale,
+                                &atmosphere.band_min_y,
+                                &atmosphere.band_max_y,
+                                &atmosphere.band_edge_falloff,
+                                &region_count);
+                if (parsed != 17) {
+                    break;
+                }
+            } else {
+                parsed = sscanf(atmos_line,
+                                "%7s %d %u %f %f %f %f %f %f %f %f %f %f %f %f %d",
+                                atmos_marker,
+                                &enabled,
+                                &seed,
+                                &atmosphere.base_density,
+                                &atmosphere.density_scale,
+                                &atmosphere.density_threshold,
+                                &atmosphere.base_wind_x,
+                                &atmosphere.base_wind_y,
+                                &atmosphere.base_wind_z,
+                                &atmosphere.turbulence_strength,
+                                &atmosphere.noise_scale,
+                                &atmosphere.detail_scale,
+                                &atmosphere.band_min_y,
+                                &atmosphere.band_max_y,
+                                &atmosphere.band_edge_falloff,
+                                &region_count);
+                if (parsed != 16) {
+                    break;
+                }
+            }
+            if (strcmp(atmos_marker, "ATMOS") != 0) {
                 break;
             }
             atmosphere.enabled = enabled != 0;
+            atmospheric_initial_state_enabled = initial_state_enabled != 0;
             atmosphere.seed = (uint32_t)seed;
             int stored_region_count = region_count;
             if (stored_region_count < 0) stored_region_count = 0;
@@ -534,6 +570,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
             slot.preset.structural_scene_path[0] = '\0';
         }
         slot.preset.atmosphere = atmosphere;
+        slot.preset.atmospheric_initial_state_enabled = atmospheric_initial_state_enabled;
         if (domain == SCENE_DOMAIN_STRUCTURAL) {
             int wants_default = (slot.preset.structural_scene_path[0] == '\0') ||
                                 strcmp(slot.preset.structural_scene_path, STRUCTURAL_SCENE_DEFAULT) == 0;
@@ -853,6 +890,8 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         lib->slots[i].preset.domain = domain;
         lib->slots[i].preset.dimension_mode = dimension_mode;
         lib->slots[i].preset.atmosphere = slot.preset.atmosphere;
+        lib->slots[i].preset.atmospheric_initial_state_enabled =
+            slot.preset.atmospheric_initial_state_enabled;
         lib->slot_count++;
     }
 
@@ -885,8 +924,9 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         AtmosphericPresetSettings atmosphere = slot->preset.atmosphere;
         sanitize_atmosphere(&atmosphere);
         fprintf(f,
-                "ATMOS %d %u %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %zu\n",
+                "ATMOS %d %d %u %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %zu\n",
                 atmosphere.enabled ? 1 : 0,
+                slot->preset.atmospheric_initial_state_enabled ? 1 : 0,
                 (unsigned int)atmosphere.seed,
                 atmosphere.base_density,
                 atmosphere.density_scale,

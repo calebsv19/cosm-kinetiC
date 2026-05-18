@@ -18,10 +18,32 @@ static void test_viewport_2d_pan_and_zoom_are_bounded(void) {
     SceneEditorViewportState viewport = {0};
     float world_x = 0.0f;
     float world_y = 0.0f;
+    float anchor_world_x = 0.0f;
+    float anchor_world_y = 0.0f;
 
     scene_editor_viewport_init(&viewport, SPACE_MODE_2D, SPACE_MODE_2D);
-    assert(scene_editor_viewport_apply_wheel(&viewport, 2));
+    scene_editor_viewport_screen_to_world(&viewport,
+                                          0,
+                                          0,
+                                          640,
+                                          480,
+                                          448,
+                                          304,
+                                          &anchor_world_x,
+                                          &anchor_world_y);
+    assert(scene_editor_viewport_apply_wheel(&viewport, 2, 448, 304, 0, 0, 640, 480));
     assert(scene_editor_viewport_active_zoom(&viewport) > 1.0f);
+    scene_editor_viewport_screen_to_world(&viewport,
+                                          0,
+                                          0,
+                                          640,
+                                          480,
+                                          448,
+                                          304,
+                                          &world_x,
+                                          &world_y);
+    assert(fabsf(world_x - anchor_world_x) < 0.0001f);
+    assert(fabsf(world_y - anchor_world_y) < 0.0001f);
     assert(scene_editor_viewport_begin_navigation(&viewport,
                                                   SCENE_EDITOR_VIEWPORT_NAV_PAN,
                                                   200,
@@ -57,7 +79,7 @@ static void test_viewport_3d_orbit_and_distance_update(void) {
     assert(viewport.orbit_yaw_deg > -35.0f);
     assert(viewport.orbit_pitch_deg > 24.0f);
 
-    assert(scene_editor_viewport_apply_wheel(&viewport, 1));
+    assert(scene_editor_viewport_apply_wheel(&viewport, 1, 0, 0, 0, 0, 0, 0));
     assert(viewport.orbit_distance < 3.5f);
     assert(scene_editor_viewport_active_zoom(&viewport) > 1.0f);
 
@@ -135,7 +157,7 @@ static void test_viewport_3d_wheel_uses_scene_relative_zoom_limit(void) {
                                          viewport.center_z,
                                          &near_screen_x,
                                          &screen_y);
-    assert(scene_editor_viewport_apply_wheel(&viewport, -4));
+    assert(scene_editor_viewport_apply_wheel(&viewport, -4, 0, 0, 0, 0, 0, 0));
     assert(viewport.orbit_distance > 120.0f);
     assert(scene_editor_viewport_active_zoom(&viewport) < 0.03f);
     scene_editor_viewport_project_point3(&viewport,

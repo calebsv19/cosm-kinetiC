@@ -116,7 +116,7 @@ static void scene_controller_runtime_wheel(void *user,
                                            const InputWheelState *wheel) {
     SceneState *scene = (SceneState *)user;
     if (!scene || !wheel || !scene_controller_retained_runtime_view_active(scene)) return;
-    (void)scene_editor_viewport_apply_wheel(&scene->runtime_viewport, wheel->y);
+    (void)scene_editor_viewport_apply_wheel(&scene->runtime_viewport, wheel->y, 0, 0, 0, 0, 0, 0);
 }
 
 static void scene_controller_runtime_key_down(void *user,
@@ -600,6 +600,7 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .backend_compatibility_slice_has_obstacles = compatibility_slice_has_obstacles,
         .backend_secondary_debug_slice_stack_live = backend_report.secondary_debug_slice_stack_live,
         .backend_secondary_debug_slice_stack_radius = backend_report.secondary_debug_slice_stack_radius,
+        .backend_initial_state_source = backend_report.initial_state_source,
         .backend_atmospheric_seeded = backend_report.atmospheric_seeded,
         .backend_atmospheric_seed = backend_report.atmospheric_seed,
         .backend_atmospheric_seeded_cell_count = backend_report.atmospheric_seeded_cell_count,

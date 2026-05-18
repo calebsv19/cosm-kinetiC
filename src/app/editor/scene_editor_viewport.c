@@ -1,8 +1,12 @@
 #include "app/editor/scene_editor_viewport.h"
 
+#include "core_viewport2d.h"
+
 #include <math.h>
 #include <string.h>
 
+#define VIEWPORT_2D_MIN_ZOOM 0.5f
+#define VIEWPORT_2D_MAX_ZOOM 8.0f
 #define VIEWPORT_3D_BASE_DISTANCE 3.5f
 #define VIEWPORT_3D_MIN_DISTANCE 0.75f
 #define VIEWPORT_3D_MAX_DISTANCE 96.0f
@@ -20,6 +24,112 @@ static float viewport_wrap_degrees(float value) {
     while (value > 180.0f) value -= 360.0f;
     while (value < -180.0f) value += 360.0f;
     return value;
+}
+
+static float scene_editor_viewport_canvas_min_dim(int canvas_w, int canvas_h) {
+    float min_dim = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
+    if (min_dim <= 0.0f || !isfinite(min_dim)) {
+        min_dim = 1.0f;
+    }
+    return min_dim;
+}
+
+static float scene_editor_viewport_2d_min_core_zoom(float min_dim) {
+    float core_zoom = min_dim * VIEWPORT_2D_MIN_ZOOM;
+    if (core_zoom <= 0.0f || !isfinite(core_zoom)) {
+        core_zoom = 0.0001f;
+    }
+    return core_zoom;
+}
+
+static float scene_editor_viewport_2d_max_core_zoom(float min_dim) {
+    float min_core_zoom = scene_editor_viewport_2d_min_core_zoom(min_dim);
+    float max_core_zoom = min_dim * VIEWPORT_2D_MAX_ZOOM;
+    if (!isfinite(max_core_zoom) || max_core_zoom < min_core_zoom) {
+        max_core_zoom = min_core_zoom;
+    }
+    return max_core_zoom;
+}
+
+static bool scene_editor_viewport_2d_core_from_state(const SceneEditorViewportState *state,
+                                                     int canvas_w,
+                                                     int canvas_h,
+                                                     CoreViewport2D *out_core) {
+    CoreResult result = {0};
+    float min_dim = 0.0f;
+    float zoom = 1.0f;
+    float center_x = 0.5f;
+    float center_y = 0.5f;
+    if (!state || !out_core || canvas_w <= 0 || canvas_h <= 0) return false;
+
+    result = core_viewport2d_init(out_core);
+    if (result.code != CORE_OK) return false;
+
+    min_dim = scene_editor_viewport_canvas_min_dim(canvas_w, canvas_h);
+    out_core->min_zoom = scene_editor_viewport_2d_min_core_zoom(min_dim);
+    out_core->max_zoom = scene_editor_viewport_2d_max_core_zoom(min_dim);
+    zoom = viewport_clampf(state->orthographic_zoom, VIEWPORT_2D_MIN_ZOOM, VIEWPORT_2D_MAX_ZOOM);
+    out_core->zoom = core_viewport2d_clamp_zoom(out_core, zoom * min_dim);
+    center_x = isfinite(state->center_x) ? state->center_x : 0.5f;
+    center_y = isfinite(state->center_y) ? state->center_y : 0.5f;
+    out_core->pan_x = ((float)canvas_w * 0.5f) - center_x * out_core->zoom;
+    out_core->pan_y = ((float)canvas_h * 0.5f) - center_y * out_core->zoom;
+    return core_viewport2d_validate(out_core).code == CORE_OK;
+}
+
+static bool scene_editor_viewport_2d_state_from_core(SceneEditorViewportState *state,
+                                                     int canvas_w,
+                                                     int canvas_h,
+                                                     const CoreViewport2D *core) {
+    float min_dim = 0.0f;
+    if (!state || !core || canvas_w <= 0 || canvas_h <= 0) return false;
+    if (!isfinite(core->zoom) || core->zoom <= 0.0f) return false;
+
+    min_dim = scene_editor_viewport_canvas_min_dim(canvas_w, canvas_h);
+    state->center_x = (((float)canvas_w * 0.5f) - core->pan_x) / core->zoom;
+    state->center_y = (((float)canvas_h * 0.5f) - core->pan_y) / core->zoom;
+    state->orthographic_zoom = viewport_clampf(core->zoom / min_dim, VIEWPORT_2D_MIN_ZOOM, VIEWPORT_2D_MAX_ZOOM);
+    return true;
+}
+
+static bool scene_editor_viewport_2d_reset_to_fit(SceneEditorViewportState *state,
+                                                  int surface_w,
+                                                  int surface_h,
+                                                  float min_x,
+                                                  float min_y,
+                                                  float max_x,
+                                                  float max_y,
+                                                  float fit) {
+    CoreViewport2D core = {0};
+    CoreResult result = {0};
+    float min_dim = 0.0f;
+    float content_width = fmaxf(fabsf(max_x - min_x), 0.001f);
+    float content_height = fmaxf(fabsf(max_y - min_y), 0.001f);
+    float fit_w = (float)surface_w;
+    float fit_h = (float)surface_h;
+    float pad_x = 0.0f;
+    float pad_y = 0.0f;
+    if (!state || surface_w <= 0 || surface_h <= 0) return false;
+
+    if (fit > 0.0f && fit < 1.0f) {
+        fit_w *= fit;
+        fit_h *= fit;
+        pad_x = ((float)surface_w - fit_w) * 0.5f;
+        pad_y = ((float)surface_h - fit_h) * 0.5f;
+    }
+
+    result = core_viewport2d_init(&core);
+    if (result.code != CORE_OK) return false;
+
+    min_dim = scene_editor_viewport_canvas_min_dim(surface_w, surface_h);
+    core.min_zoom = scene_editor_viewport_2d_min_core_zoom(min_dim);
+    core.max_zoom = scene_editor_viewport_2d_max_core_zoom(min_dim);
+    result = core_viewport2d_reset_to_fit(&core, fit_w, fit_h, content_width, content_height);
+    if (result.code != CORE_OK) return false;
+
+    core.pan_x += pad_x - min_x * core.zoom;
+    core.pan_y += pad_y - min_y * core.zoom;
+    return scene_editor_viewport_2d_state_from_core(state, surface_w, surface_h, &core);
 }
 
 static float scene_editor_viewport_orbit_distance_limit(const SceneEditorViewportState *state) {
@@ -87,7 +197,7 @@ float scene_editor_viewport_active_zoom(const SceneEditorViewportState *state) {
         zoom = VIEWPORT_3D_BASE_DISTANCE / distance;
         return viewport_clampf(zoom, scene_editor_viewport_min_zoom(state), VIEWPORT_3D_MAX_ZOOM);
     }
-    return viewport_clampf(state->orthographic_zoom, 0.5f, 8.0f);
+    return viewport_clampf(state->orthographic_zoom, VIEWPORT_2D_MIN_ZOOM, VIEWPORT_2D_MAX_ZOOM);
 }
 
 static void scene_editor_viewport_clamp_center(SceneEditorViewportState *state) {
@@ -204,8 +314,7 @@ void scene_editor_viewport_frame_bounds(SceneEditorViewportState *state,
 
     if (surface_w <= 0) surface_w = 1;
     if (surface_h <= 0) surface_h = 1;
-    min_dim = (float)((surface_w < surface_h) ? surface_w : surface_h);
-    if (min_dim <= 0.0f) min_dim = 1.0f;
+    min_dim = scene_editor_viewport_canvas_min_dim(surface_w, surface_h);
 
     scene_editor_viewport_store_scene_bounds(state,
                                              min_x,
@@ -253,9 +362,12 @@ void scene_editor_viewport_frame_bounds(SceneEditorViewportState *state,
                                                 VIEWPORT_3D_MIN_DISTANCE,
                                                 scene_editor_viewport_orbit_distance_limit(state));
     } else {
-        float zoom_x = ((float)surface_w * fit) / (fmaxf(span_x, 0.001f) * min_dim);
-        float zoom_y = ((float)surface_h * fit) / (fmaxf(span_y, 0.001f) * min_dim);
-        state->orthographic_zoom = viewport_clampf(fminf(zoom_x, zoom_y), 0.5f, 8.0f);
+        if (!scene_editor_viewport_2d_reset_to_fit(state, surface_w, surface_h, min_x, min_y, max_x, max_y, fit)) {
+            float zoom_x = ((float)surface_w * fit) / (fmaxf(span_x, 0.001f) * min_dim);
+            float zoom_y = ((float)surface_h * fit) / (fmaxf(span_y, 0.001f) * min_dim);
+            state->orthographic_zoom =
+                viewport_clampf(fminf(zoom_x, zoom_y), VIEWPORT_2D_MIN_ZOOM, VIEWPORT_2D_MAX_ZOOM);
+        }
         scene_editor_viewport_clamp_center(state);
     }
 }
@@ -315,12 +427,18 @@ bool scene_editor_viewport_update_navigation(SceneEditorViewportState *state,
         return true;
     }
 
-    min_dim = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
-    if (min_dim <= 0.0f) min_dim = 1.0f;
-    zoom = scene_editor_viewport_active_zoom(state);
-    if (zoom <= 0.0f) zoom = 1.0f;
-    state->center_x -= dx / (min_dim * zoom);
-    state->center_y -= dy / (min_dim * zoom);
+    if (state->requested_mode != SPACE_MODE_3D) {
+        CoreViewport2D core = {0};
+        if (!scene_editor_viewport_2d_core_from_state(state, canvas_w, canvas_h, &core)) return false;
+        if (core_viewport2d_pan_by(&core, dx, dy).code != CORE_OK) return false;
+        if (!scene_editor_viewport_2d_state_from_core(state, canvas_w, canvas_h, &core)) return false;
+    } else {
+        min_dim = scene_editor_viewport_canvas_min_dim(canvas_w, canvas_h);
+        zoom = scene_editor_viewport_active_zoom(state);
+        if (zoom <= 0.0f) zoom = 1.0f;
+        state->center_x -= dx / (min_dim * zoom);
+        state->center_y -= dy / (min_dim * zoom);
+    }
     scene_editor_viewport_clamp_center(state);
     return true;
 }
@@ -331,7 +449,14 @@ void scene_editor_viewport_end_navigation(SceneEditorViewportState *state) {
     state->navigation_mode = SCENE_EDITOR_VIEWPORT_NAV_NONE;
 }
 
-bool scene_editor_viewport_apply_wheel(SceneEditorViewportState *state, int wheel_y) {
+bool scene_editor_viewport_apply_wheel(SceneEditorViewportState *state,
+                                       int wheel_y,
+                                       int screen_x,
+                                       int screen_y,
+                                       int canvas_x,
+                                       int canvas_y,
+                                       int canvas_w,
+                                       int canvas_h) {
     if (!state || wheel_y == 0) return false;
     if (state->requested_mode == SPACE_MODE_3D) {
         float next_distance = state->orbit_distance * powf(0.9f, (float)wheel_y);
@@ -341,10 +466,20 @@ bool scene_editor_viewport_apply_wheel(SceneEditorViewportState *state, int whee
         if (fabsf(next_distance - state->orbit_distance) <= 0.0001f) return false;
         state->orbit_distance = next_distance;
     } else {
-        float next_zoom = state->orthographic_zoom * powf(1.1f, (float)wheel_y);
-        next_zoom = viewport_clampf(next_zoom, 0.5f, 8.0f);
-        if (fabsf(next_zoom - state->orthographic_zoom) <= 0.0001f) return false;
-        state->orthographic_zoom = next_zoom;
+        CoreViewport2D core = {0};
+        float zoom_factor = 0.0f;
+        float local_x = 0.0f;
+        float local_y = 0.0f;
+        if (canvas_w <= 0 || canvas_h <= 0) return false;
+        if (!scene_editor_viewport_2d_core_from_state(state, canvas_w, canvas_h, &core)) return false;
+        zoom_factor = powf(1.1f, (float)wheel_y);
+        if (!isfinite(zoom_factor) || zoom_factor <= 0.0f) return false;
+        local_x = (float)(screen_x - canvas_x);
+        local_y = (float)(screen_y - canvas_y);
+        if (core_viewport2d_zoom_at_screen_anchor(&core, local_x, local_y, zoom_factor).code != CORE_OK) {
+            return false;
+        }
+        if (!scene_editor_viewport_2d_state_from_core(state, canvas_w, canvas_h, &core)) return false;
     }
     scene_editor_viewport_clamp_center(state);
     return true;
@@ -374,8 +509,19 @@ void scene_editor_viewport_world_to_screen(const SceneEditorViewportState *state
         scene_editor_viewport_init(&fallback, SPACE_MODE_2D, SPACE_MODE_2D);
         state = &fallback;
     }
+    if (state->requested_mode != SPACE_MODE_3D) {
+        CoreViewport2D core = {0};
+        float local_x = 0.0f;
+        float local_y = 0.0f;
+        if (scene_editor_viewport_2d_core_from_state(state, canvas_w, canvas_h, &core) &&
+            core_viewport2d_content_to_screen(&core, world_x, world_y, &local_x, &local_y).code == CORE_OK) {
+            *screen_x = canvas_x + (int)lroundf(local_x);
+            *screen_y = canvas_y + (int)lroundf(local_y);
+            return;
+        }
+    }
     zoom = scene_editor_viewport_active_zoom(state);
-    min_dim = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
+    min_dim = scene_editor_viewport_canvas_min_dim(canvas_w, canvas_h);
     center_px_x = (float)canvas_x + (float)canvas_w * 0.5f;
     center_px_y = (float)canvas_y + (float)canvas_h * 0.5f;
     *screen_x = (int)lroundf(center_px_x + (world_x - state->center_x) * min_dim * zoom);
@@ -401,10 +547,18 @@ void scene_editor_viewport_screen_to_world(const SceneEditorViewportState *state
         scene_editor_viewport_init(&fallback, SPACE_MODE_2D, SPACE_MODE_2D);
         state = &fallback;
     }
+    if (state->requested_mode != SPACE_MODE_3D) {
+        CoreViewport2D core = {0};
+        float local_x = (float)(screen_x - canvas_x);
+        float local_y = (float)(screen_y - canvas_y);
+        if (scene_editor_viewport_2d_core_from_state(state, canvas_w, canvas_h, &core) &&
+            core_viewport2d_screen_to_content(&core, local_x, local_y, world_x, world_y).code == CORE_OK) {
+            return;
+        }
+    }
     zoom = scene_editor_viewport_active_zoom(state);
     if (zoom <= 0.0f) zoom = 1.0f;
-    min_dim = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
-    if (min_dim <= 0.0f) min_dim = 1.0f;
+    min_dim = scene_editor_viewport_canvas_min_dim(canvas_w, canvas_h);
     center_px_x = (float)canvas_x + (float)canvas_w * 0.5f;
     center_px_y = (float)canvas_y + (float)canvas_h * 0.5f;
     *world_x = state->center_x + ((float)screen_x - center_px_x) / (min_dim * zoom);
@@ -456,7 +610,7 @@ void scene_editor_viewport_project_point3(const SceneEditorViewportState *state,
         view_y = dy;
     }
 
-    min_dim = (float)((canvas_w < canvas_h) ? canvas_w : canvas_h);
+    min_dim = scene_editor_viewport_canvas_min_dim(canvas_w, canvas_h);
     zoom = scene_editor_viewport_active_zoom(state);
     center_px_x = (float)canvas_x + (float)canvas_w * 0.5f;
     center_px_y = (float)canvas_y + (float)canvas_h * 0.5f;

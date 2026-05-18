@@ -191,6 +191,21 @@ bool sim_runtime_backend_get_report(const SimRuntimeBackend *backend,
            backend->ops->get_report(backend, out_report);
 }
 
+const char *sim_runtime_initial_state_source_label(SimRuntimeInitialStateSource source) {
+    switch (source) {
+    case SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK:
+        return "blank";
+    case SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_STANDALONE:
+        return "atmospheric";
+    case SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_OPTIONAL_LAYER:
+        return "atmospheric layer";
+    case SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_WARM_START:
+        return "warm start";
+    default:
+        return "unknown";
+    }
+}
+
 bool sim_runtime_backend_get_compatibility_slice_activity(const SimRuntimeBackend *backend,
                                                           int slice_z,
                                                           bool *out_has_fluid,

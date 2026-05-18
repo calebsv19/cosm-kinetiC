@@ -66,6 +66,7 @@ static bool test_provider_field_sets(void) {
     if (!(field_list_contains(fields, count, MENU_SETTINGS_FIELD_GRID_X) &&
           field_list_contains(fields, count, MENU_SETTINGS_FIELD_GRID_Y) &&
           field_list_contains(fields, count, MENU_SETTINGS_FIELD_GRID_Z) &&
+          field_list_contains(fields, count, MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE) &&
           !field_list_contains(fields, count, MENU_SETTINGS_FIELD_3D_APPLIED_AXIS) &&
           !field_list_contains(fields, count, MENU_SETTINGS_FIELD_3D_APPLIED_DEPTH) &&
           !field_list_contains(fields, count, MENU_SETTINGS_FIELD_3D_DEPTH_POLICY))) {
@@ -255,6 +256,52 @@ static bool test_atmospheric_draft_roundtrip(void) {
     return !menu_settings_shell_is_dirty(&state, &cfg, &selection, &preset);
 }
 
+static bool test_3d_atmospheric_initial_state_toggle_roundtrip(void) {
+    AppConfig cfg = app_config_default();
+    SceneMenuSelection selection = {0};
+    FluidScenePreset preset = {0};
+    MenuSettingsShellState state = {0};
+    const MenuSettingsDraft *draft = NULL;
+
+    cfg.space_mode = SPACE_MODE_3D;
+    cfg.grid_w = 96;
+    cfg.grid_h = 128;
+    cfg.grid_d = 32;
+    preset.domain = SCENE_DOMAIN_BOX;
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.atmospheric_initial_state_enabled = false;
+    preset.atmosphere = atmospheric_preset_default_settings();
+
+    menu_settings_shell_init(&state,
+                             &cfg,
+                             &selection,
+                             &preset,
+                             SIM_MODE_BOX,
+                             SPACE_MODE_3D);
+    if (state.provider != MENU_SETTINGS_PROVIDER_3D) {
+        return false;
+    }
+    draft = menu_settings_shell_draft(&state);
+    if (!draft || draft->atmospheric_initial_state_enabled) {
+        return false;
+    }
+
+    menu_settings_shell_toggle_field(&state, MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE);
+    if (!menu_settings_shell_is_dirty(&state, &cfg, &selection, &preset)) {
+        return false;
+    }
+    menu_settings_shell_apply_to_runtime(&state, &cfg, &selection, &preset);
+    if (preset.domain != SCENE_DOMAIN_BOX ||
+        preset.dimension_mode != SCENE_DIMENSION_MODE_3D ||
+        !preset.atmospheric_initial_state_enabled ||
+        !preset.atmosphere.enabled ||
+        atmospheric_initial_state_source(&preset) !=
+            ATMOSPHERIC_INITIAL_STATE_OPTIONAL_LAYER) {
+        return false;
+    }
+    return !menu_settings_shell_is_dirty(&state, &cfg, &selection, &preset);
+}
+
 int main(void) {
     if (!test_provider_selection()) {
         fprintf(stderr, "menu_settings_shell_contract_test: provider selection failed\n");
@@ -278,6 +325,10 @@ int main(void) {
     }
     if (!test_atmospheric_draft_roundtrip()) {
         fprintf(stderr, "menu_settings_shell_contract_test: atmospheric draft roundtrip failed\n");
+        return 1;
+    }
+    if (!test_3d_atmospheric_initial_state_toggle_roundtrip()) {
+        fprintf(stderr, "menu_settings_shell_contract_test: atmospheric init toggle failed\n");
         return 1;
     }
     fprintf(stdout, "menu_settings_shell_contract_test: success\n");

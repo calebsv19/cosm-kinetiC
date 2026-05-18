@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-05-06
+Last updated: 2026-05-17
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -18,6 +18,12 @@ Last updated: 2026-05-06
 - First-pass parity fixture is locked and deterministic (tiny-domain proof lane).
 - Downstream consumer work remains separate:
   - `ray_tracing` ingest/render handoff is the next cross-program boundary.
+- Atmospheric preset initialization is now available as an app-local current-state lane:
+  - standalone Atmospheric `2D` and `3D` modes seed deterministic density and velocity fields from the atmospheric sampler instead of starting blank
+  - normal `3D` fluid/box presets can opt into the same procedural initializer through the compact `Atmo Init` settings control while keeping their normal mode identity
+  - custom preset persistence uses v14 for the optional `3D` atmospheric initial-state bit alongside embedded `ATMOS` settings; older v13 files load with that optional layer off
+  - exported Atmospheric `3D` `.vf3d` / `VF3H` `.pack` frames can be selected as session-local warm starts for Atmospheric `3D`; warm-start file paths are runtime config, not portable preset-owned data
+  - runtime reports and the HUD distinguish blank starts, standalone atmospheric procedural starts, optional atmospheric procedural starts, and loaded warm-start starts
 
 ## Runtime and Editor Snapshot
 - Runtime/editor retained-scene lanes are active and structurally separated from legacy compatibility mapping.
@@ -67,6 +73,10 @@ Last updated: 2026-05-06
   - configured input root
 - Menu behavior now treats `Input Root` edits as live catalog changes rather than next-launch-only configuration drift.
 - Stale retained-scene selection is cleared when the input root changes or the previous runtime path is no longer present in the refreshed catalog.
+- The retained-scene `2D` editor viewport now partially adopts shared `core_viewport2d` math:
+  - fit-to-bounds reset, cursor-anchor wheel zoom, drag-pan, and world/screen transforms route through the shared viewport contract
+  - canvas rectangle choice, scene-world meaning, and broader editor gesture policy remain app-local
+  - retained-scene `3D` orbit/distance/projection behavior still uses the app-local camera path
 - The retained-scene `3D` editor viewport now derives orbit-distance and minimum-zoom limits from scene bounds, so large scenes can zoom farther out than the old fixed-distance ceiling allowed.
 - Focused contract coverage exists for this lane:
   - `tests/scene_editor_scene_library_contract_test.c`
@@ -85,7 +95,7 @@ Last updated: 2026-05-06
   - `make -C physics_sim clean && make -C physics_sim`
 - Stable validation:
   - `make -C physics_sim test-stable`
-  - includes 3D export contract/parity and retained-scene bridge coverage
+  - includes 3D export contract/parity, retained-scene bridge coverage, and the shared-viewport-backed scene-editor viewport contract
 - Smoke and harness:
   - `make -C physics_sim run-headless-smoke`
   - `make -C physics_sim visual-harness`
@@ -122,7 +132,9 @@ Last updated: 2026-05-06
 - Current local worktree drift is in retained-scene quality/usability, not in the producer export contract:
   - input-root scene-library refresh behavior
   - paired `scene_authoring.json` + `scene_runtime.json` discovery
+  - shared `core_viewport2d` adoption in retained-scene `2D` editor mode
   - large-scene `3D` viewport zoom/orbit range
+- Current atmospheric initializer follow-up is user runtime validation, then a Phase 5 planning boundary for volumetric rendering/cross-app handoff.
 - The next major cross-program boundary is still downstream in `ray_tracing`:
   - ingest `vf3d` / `VF3H`
   - consume truthful scene metadata

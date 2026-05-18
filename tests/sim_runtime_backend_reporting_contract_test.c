@@ -6,6 +6,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 static bool nearly_equal(float a, float b) {
     float diff = a - b;
@@ -120,6 +121,7 @@ static bool test_3d_backend_reports_xyz_domain_and_compatibility_slice(void) {
     if (!report.debug_volume_scene_up_velocity_valid) return false;
     if (!nearly_equal(report.debug_volume_scene_up_velocity_avg, 0.0f)) return false;
     if (!nearly_equal(report.debug_volume_scene_up_velocity_peak, 0.0f)) return false;
+    if (report.initial_state_source != SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK) return false;
     if (!sim_runtime_backend_get_fluid_view_2d(backend, &fluid)) return false;
     if (fluid.width != report.domain_w) return false;
     if (fluid.height != report.domain_h) return false;
@@ -160,6 +162,10 @@ static bool test_3d_backend_seeds_atmospheric_preset_sparse_truth(void) {
     if (!backend) return false;
     if (!sim_runtime_backend_get_report(backend, &report)) return false;
     if (!report.atmospheric_seeded) return false;
+    if (report.initial_state_source !=
+        SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_STANDALONE) {
+        return false;
+    }
     if (report.atmospheric_seed != preset.atmosphere.seed) return false;
     if (report.atmospheric_seeded_cell_count == 0u) return false;
     if (report.atmospheric_seed_max_density <= 0.0f) return false;
@@ -175,6 +181,169 @@ static bool test_3d_backend_seeds_atmospheric_preset_sparse_truth(void) {
         return false;
     }
     if (!has_fluid) return false;
+
+    sim_runtime_backend_destroy(backend);
+    return true;
+}
+
+static bool test_3d_fluid_mode_can_opt_into_atmospheric_initial_state(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimModeRoute route = {
+        .simulation_mode = SIM_MODE_BOX,
+        .backend_lane = SIM_BACKEND_CONTROLLED_3D,
+        .requested_space_mode = SPACE_MODE_3D,
+        .projection_space_mode = SPACE_MODE_2D,
+    };
+    SimRuntimeBackend *backend = NULL;
+    SimRuntimeBackendReport report = {0};
+
+    cfg.grid_w = 32;
+    cfg.grid_h = 32;
+    cfg.grid_d = 16;
+    cfg.window_w = 640;
+    cfg.window_h = 480;
+    cfg.space_mode = SPACE_MODE_3D;
+    cfg.sim_mode = SIM_MODE_BOX;
+
+    preset.domain = SCENE_DOMAIN_BOX;
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.domain_width = 1.0f;
+    preset.domain_height = 1.0f;
+    preset.atmospheric_initial_state_enabled = true;
+    preset.atmosphere = atmospheric_preset_default_settings();
+    preset.atmosphere.base_density = 0.1f;
+
+    if (atmospheric_initial_state_source(&preset) !=
+        ATMOSPHERIC_INITIAL_STATE_OPTIONAL_LAYER) {
+        return false;
+    }
+
+    backend = sim_runtime_backend_create(&cfg, &preset, &route, NULL);
+    if (!backend) return false;
+    if (!sim_runtime_backend_get_report(backend, &report)) return false;
+    if (!report.atmospheric_seeded) return false;
+    if (report.initial_state_source !=
+        SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_OPTIONAL_LAYER) {
+        return false;
+    }
+    if (report.atmospheric_seed != preset.atmosphere.seed) return false;
+    if (report.atmospheric_seeded_cell_count == 0u) return false;
+    if (report.atmospheric_seed_max_density <= 0.0f) return false;
+    if (report.atmospheric_seed_max_velocity_magnitude <= 0.0f) return false;
+    if (report.atmospheric_warm_start_loaded) return false;
+
+    sim_runtime_backend_destroy(backend);
+    return true;
+}
+
+static bool test_3d_fluid_mode_without_opt_in_stays_blank_initially(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimModeRoute route = {
+        .simulation_mode = SIM_MODE_BOX,
+        .backend_lane = SIM_BACKEND_CONTROLLED_3D,
+        .requested_space_mode = SPACE_MODE_3D,
+        .projection_space_mode = SPACE_MODE_2D,
+    };
+    SimRuntimeBackend *backend = NULL;
+    SimRuntimeBackendReport report = {0};
+
+    cfg.grid_w = 32;
+    cfg.grid_h = 32;
+    cfg.grid_d = 16;
+    cfg.window_w = 640;
+    cfg.window_h = 480;
+    cfg.space_mode = SPACE_MODE_3D;
+    cfg.sim_mode = SIM_MODE_BOX;
+
+    preset.domain = SCENE_DOMAIN_BOX;
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.domain_width = 1.0f;
+    preset.domain_height = 1.0f;
+    preset.atmospheric_initial_state_enabled = false;
+    preset.atmosphere = atmospheric_preset_default_settings();
+    preset.atmosphere.base_density = 0.1f;
+
+    if (atmospheric_initial_state_source(&preset) != ATMOSPHERIC_INITIAL_STATE_NONE) {
+        return false;
+    }
+
+    backend = sim_runtime_backend_create(&cfg, &preset, &route, NULL);
+    if (!backend) return false;
+    if (!sim_runtime_backend_get_report(backend, &report)) return false;
+    if (report.atmospheric_seeded) return false;
+    if (report.initial_state_source != SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK) return false;
+    if (report.atmospheric_seeded_cell_count != 0u) return false;
+    if (report.debug_volume_active_density_cells != 0u) return false;
+
+    sim_runtime_backend_destroy(backend);
+    return true;
+}
+
+static bool test_3d_backend_warm_start_source_overrides_procedural_report(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimModeRoute route = {
+        .simulation_mode = SIM_MODE_ATMOSPHERIC,
+        .backend_lane = SIM_BACKEND_CONTROLLED_3D,
+        .requested_space_mode = SPACE_MODE_3D,
+        .projection_space_mode = SPACE_MODE_2D,
+    };
+    SimRuntimeBackend *backend = NULL;
+    SimRuntimeBackendReport report = {0};
+
+    cfg.grid_w = 16;
+    cfg.grid_h = 16;
+    cfg.grid_d = 8;
+    cfg.window_w = 640;
+    cfg.window_h = 480;
+    cfg.space_mode = SPACE_MODE_3D;
+    cfg.sim_mode = SIM_MODE_ATMOSPHERIC;
+
+    preset.domain = SCENE_DOMAIN_ATMOSPHERIC;
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.domain_width = 1.0f;
+    preset.domain_height = 1.0f;
+    preset.atmosphere = atmospheric_preset_default_settings();
+    preset.atmosphere.base_density = 0.1f;
+
+    backend = sim_runtime_backend_create(&cfg, &preset, &route, NULL);
+    if (!backend) return false;
+    if (!sim_runtime_backend_get_report(backend, &report)) return false;
+    if (report.initial_state_source !=
+        SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_STANDALONE) {
+        return false;
+    }
+
+    if (!sim_runtime_backend_debug_note_atmospheric_warm_start_3d(
+            backend,
+            ATMOSPHERIC_WARM_START_SOURCE_VF3D_RAW,
+            16,
+            16,
+            8,
+            (size_t)16 * (size_t)16 * (size_t)8,
+            12u,
+            4u,
+            2.0f,
+            3.0f)) {
+        return false;
+    }
+    if (!sim_runtime_backend_get_report(backend, &report)) return false;
+    if (report.initial_state_source != SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_WARM_START) {
+        return false;
+    }
+    if (report.atmospheric_seeded) return false;
+    if (!report.atmospheric_warm_start_loaded) return false;
+    if (report.atmospheric_warm_start_source_kind != ATMOSPHERIC_WARM_START_SOURCE_VF3D_RAW) {
+        return false;
+    }
+    if (report.atmospheric_warm_start_active_density_cells != 12u) return false;
+    if (!nearly_equal(report.atmospheric_warm_start_max_density, 2.0f)) return false;
+    if (strcmp(sim_runtime_initial_state_source_label(report.initial_state_source),
+               "warm start") != 0) {
+        return false;
+    }
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -900,6 +1069,21 @@ int main(void) {
     if (!test_3d_backend_seeds_atmospheric_preset_sparse_truth()) {
         fprintf(stderr,
                 "sim_runtime_backend_reporting_contract_test: atmospheric seed failed\n");
+        return 1;
+    }
+    if (!test_3d_fluid_mode_can_opt_into_atmospheric_initial_state()) {
+        fprintf(stderr,
+                "sim_runtime_backend_reporting_contract_test: atmospheric opt-in seed failed\n");
+        return 1;
+    }
+    if (!test_3d_fluid_mode_without_opt_in_stays_blank_initially()) {
+        fprintf(stderr,
+                "sim_runtime_backend_reporting_contract_test: atmospheric opt-out seed failed\n");
+        return 1;
+    }
+    if (!test_3d_backend_warm_start_source_overrides_procedural_report()) {
+        fprintf(stderr,
+                "sim_runtime_backend_reporting_contract_test: initial-state source report failed\n");
         return 1;
     }
     if (!test_3d_backend_reports_explicit_depth_contract()) {

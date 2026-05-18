@@ -13,9 +13,16 @@ typedef struct AtmosphericFieldSample {
     float velocity_z;
 } AtmosphericFieldSample;
 
+typedef enum AtmosphericInitialStateSource {
+    ATMOSPHERIC_INITIAL_STATE_NONE = 0,
+    ATMOSPHERIC_INITIAL_STATE_STANDALONE_MODE,
+    ATMOSPHERIC_INITIAL_STATE_OPTIONAL_LAYER
+} AtmosphericInitialStateSource;
+
 AtmosphericPresetSettings atmospheric_preset_default_settings(void);
 void atmospheric_preset_sanitize(AtmosphericPresetSettings *settings);
 bool atmospheric_preset_enabled(const FluidScenePreset *preset);
+AtmosphericInitialStateSource atmospheric_initial_state_source(const FluidScenePreset *preset);
 
 AtmosphericFieldSample atmospheric_field_sample_2d(const AtmosphericPresetSettings *settings,
                                                    float x,

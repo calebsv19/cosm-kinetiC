@@ -194,6 +194,7 @@ static bool backend_3d_scaffold_debug_reset_volume_truth_3d(SimRuntimeBackend *b
     state->obstacle_volume_dirty = false;
     state->obstacle_dense_cache_dirty = true;
     state->obstacle_slice_dirty = true;
+    state->initial_state_source = SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK;
     state->atmospheric_seeded = false;
     state->atmospheric_seed = 0u;
     state->atmospheric_seeded_cell_count = 0u;
@@ -226,6 +227,7 @@ static bool backend_3d_scaffold_debug_note_atmospheric_warm_start_3d(
     float max_velocity_magnitude) {
     SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
     if (!state) return false;
+    state->initial_state_source = SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_WARM_START;
     state->atmospheric_seeded = false;
     state->atmospheric_seed = 0u;
     state->atmospheric_seeded_cell_count = 0u;
@@ -295,6 +297,7 @@ static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
     state->debug_volume_scene_up_velocity_valid = false;
     state->debug_volume_scene_up_velocity_avg = 0.0f;
     state->debug_volume_scene_up_velocity_peak = 0.0f;
+    state->initial_state_source = SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK;
     state->atmospheric_seeded = false;
     state->atmospheric_seed = 0u;
     state->atmospheric_seeded_cell_count = 0u;
@@ -316,7 +319,8 @@ static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
 
 static size_t backend_3d_scaffold_seed_atmosphere(SimRuntimeBackend3DScaffold *state,
                                                   const FluidScenePreset *preset) {
-    if (!state || !atmospheric_preset_enabled(preset)) return 0;
+    AtmosphericInitialStateSource source = atmospheric_initial_state_source(preset);
+    if (!state || source == ATMOSPHERIC_INITIAL_STATE_NONE) return 0;
     const SimRuntime3DDomainDesc *desc = &state->volume.desc;
     const float density_threshold = 0.0001f;
     float inv_w = (desc->grid_w > 1) ? 1.0f / (float)(desc->grid_w - 1) : 0.0f;
@@ -325,6 +329,11 @@ static size_t backend_3d_scaffold_seed_atmosphere(SimRuntimeBackend3DScaffold *s
     size_t seeded = 0;
     float max_density = 0.0f;
     float max_velocity = 0.0f;
+
+    state->initial_state_source =
+        (source == ATMOSPHERIC_INITIAL_STATE_STANDALONE_MODE)
+            ? SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_STANDALONE
+            : SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_OPTIONAL_LAYER;
 
     for (int z = 0; z < desc->grid_d; ++z) {
         for (int y = 0; y < desc->grid_h; ++y) {
@@ -923,6 +932,7 @@ static bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
         .compatibility_slice_z = state->compatibility_slice_z,
         .secondary_debug_slice_stack_live = true,
         .secondary_debug_slice_stack_radius = 3,
+        .initial_state_source = state->initial_state_source,
         .atmospheric_seeded = state->atmospheric_seeded,
         .atmospheric_seed = state->atmospheric_seed,
         .atmospheric_seeded_cell_count = state->atmospheric_seeded_cell_count,
