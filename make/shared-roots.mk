@@ -6,6 +6,7 @@ VK_RENDERER_DIR := $(SHARED_ROOT)/vk_renderer
 KIT_VIZ_DIR := $(SHARED_ROOT)/kit/kit_viz
 KIT_RENDER_DIR := $(SHARED_ROOT)/kit/kit_render
 KIT_PANE_DIR := $(SHARED_ROOT)/kit/kit_pane
+KIT_UI_DIR := $(SHARED_ROOT)/kit/kit_ui
 KIT_WORKSPACE_AUTHORING_DIR := $(SHARED_ROOT)/kit/kit_workspace_authoring
 SHARED_ASSETS_DIR := $(SHARED_ROOT)/assets
 SHIM_MODE ?= off

@@ -1,5 +1,6 @@
 #include "app/editor/scene_editor_widgets.h"
 #include "app/menu/menu_render.h"
+#include "app/ui/physics_sim_ui_button.h"
 
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
@@ -11,17 +12,6 @@ static SDL_Color COLOR_PANEL     = {32, 36, 40, 255};
 static SDL_Color COLOR_TEXT      = {245, 247, 250, 255};
 static SDL_Color COLOR_TEXT_DIM  = {190, 198, 209, 255};
 static SDL_Color COLOR_BUTTON_BG = {45, 50, 58, 255};
-
-static SDL_Color lighten_color(SDL_Color color, float factor) {
-    if (factor < 0.0f) factor = 0.0f;
-    if (factor > 1.0f) factor = 1.0f;
-    return (SDL_Color){
-        (Uint8)(color.r + (Uint8)((255 - color.r) * factor)),
-        (Uint8)(color.g + (Uint8)((255 - color.g) * factor)),
-        (Uint8)(color.b + (Uint8)((255 - color.b) * factor)),
-        color.a
-    };
-}
 
 static bool rect_is_hovered(const SDL_Rect *rect) {
     int mouse_x = 0;
@@ -78,50 +68,71 @@ static void fit_text_to_width(SDL_Renderer *renderer,
     snprintf(out, out_size, "...");
 }
 
+static PhysicsSimUIButtonPalette scene_editor_button_palette(void) {
+    PhysicsSimUIButtonPalette palette;
+    palette.idle_fill = COLOR_BUTTON_BG;
+    palette.selected_fill = menu_color_button_bg_active();
+    palette.hover_fill = menu_color_accent();
+    palette.positive_fill = (SDL_Color){36, 172, 86, 255};
+    palette.outline_idle = (SDL_Color){0, 0, 0, 200};
+    palette.outline_highlight = menu_color_accent();
+    palette.text_primary = COLOR_TEXT;
+    palette.text_muted = COLOR_TEXT_DIM;
+    return palette;
+}
+
 void scene_editor_draw_button(SDL_Renderer *renderer,
                               const EditorButton *button,
                               TTF_Font *font) {
-    char label_fit[128];
-    const char *label = NULL;
-    int label_w = 0;
-    int label_h = 0;
-    int label_x = 0;
+    PhysicsSimUIButtonParams params;
+    PhysicsSimUIButtonResolvedStyle style;
     bool hovered = false;
+    char label_fit[256];
+    const char *draw_label = NULL;
+    int text_w = 0;
+    int text_h = 0;
+    int text_x = 0;
+    int text_y = 0;
     if (!renderer || !button || !font) return;
     refresh_widget_theme();
     hovered = button->enabled && rect_is_hovered(&button->rect);
-    SDL_Color fill = button->enabled ? COLOR_BUTTON_BG : (SDL_Color){25, 28, 32, 255};
-    if (hovered) {
-        fill = lighten_color(fill, 0.18f);
+    memset(&params, 0, sizeof(params));
+    params.rect = &button->rect;
+    params.label = button->label;
+    params.font = font;
+    params.palette = scene_editor_button_palette();
+    params.variant = PHYSICS_SIM_UI_BUTTON_VARIANT_DEFAULT;
+    params.enabled = button->enabled;
+    params.hovered = hovered;
+    params.use_explicit_hover = true;
+    params.selected = false;
+    params.pressed = false;
+    params.min_left_pad = 8;
+    params.min_top_pad = 4;
+    if (!physics_sim_ui_button_resolve_style(&params, &style)) {
+        return;
     }
-    SDL_SetRenderDrawColor(renderer, fill.r, fill.g, fill.b, fill.a);
+
+    SDL_SetRenderDrawColor(renderer, style.fill.r, style.fill.g, style.fill.b, 255);
     SDL_RenderFillRect(renderer, &button->rect);
-    SDL_Color border = hovered ? menu_color_accent() : (SDL_Color){0, 0, 0, 200};
-    SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, border.a);
+    SDL_SetRenderDrawColor(renderer, style.outline.r, style.outline.g, style.outline.b, style.outline.a);
     SDL_RenderDrawRect(renderer, &button->rect);
-    SDL_Color text = button->enabled ? COLOR_TEXT : COLOR_TEXT_DIM;
-    fit_text_to_width(renderer, font, button->label, button->rect.w - 16, label_fit, sizeof(label_fit));
-    label = label_fit[0] ? label_fit : button->label;
-    if (TTF_SizeUTF8(font, label, &label_w, &label_h) != 0) {
-        label_w = 0;
-        label_h = 0;
-    } else {
-        label_w = physics_sim_text_logical_pixels(renderer, label_w);
-        label_h = physics_sim_text_logical_pixels(renderer, label_h);
+
+    draw_label = button->label;
+    fit_text_to_width(renderer, font, button->label, button->rect.w - 12, label_fit, sizeof(label_fit));
+    if (label_fit[0]) {
+        draw_label = label_fit;
     }
-    label_x = button->rect.x + 12;
-    if (label_w > 0 && label_w <= button->rect.w - 16) {
-        label_x = button->rect.x + (button->rect.w - label_w) / 2;
-        if (label_x < button->rect.x + 8) label_x = button->rect.x + 8;
+    if (TTF_SizeUTF8(font, draw_label, &text_w, &text_h) == 0) {
+        text_w = physics_sim_text_logical_pixels(renderer, text_w);
+        text_h = physics_sim_text_logical_pixels(renderer, text_h);
     }
-    SDL_Rect dst = {
-        .x = label_x,
-        .y = button->rect.y + (button->rect.h / 2) -
-             label_h / 2,
-        .w = label_w,
-        .h = label_h
-    };
-    (void)physics_sim_text_draw_utf8(renderer, font, label, text, &dst);
+    text_x = button->rect.x + 8;
+    if (text_w > 0 && text_w <= button->rect.w - 12) {
+        text_x = button->rect.x + (button->rect.w - text_w) / 2;
+    }
+    text_y = button->rect.y + (button->rect.h - text_h) / 2;
+    menu_draw_text(renderer, font, draw_label, text_x, text_y, style.text);
 }
 
 void scene_editor_draw_numeric_field(SDL_Renderer *renderer,

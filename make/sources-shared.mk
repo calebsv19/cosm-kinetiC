@@ -22,3 +22,6 @@ KIT_RENDER_SRCS := \
 	$(KIT_RENDER_DIR)/src/kit_render_backend_null.c \
 	$(KIT_RENDER_DIR)/src/kit_render_backend_vk.c
 KIT_PANE_SRCS := $(KIT_PANE_DIR)/src/kit_pane.c
+KIT_UI_SRCS := \
+	$(KIT_UI_DIR)/src/kit_ui.c \
+	$(KIT_UI_DIR)/src/kit_ui_button.c

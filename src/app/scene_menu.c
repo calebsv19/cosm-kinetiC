@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -30,6 +31,35 @@
 enum {
     MENU_IDLE_RENDER_HEARTBEAT_MS = 250u
 };
+
+static const char *scene_menu_first_frame_bmp_path(void) {
+    const char *path = getenv("PHYSICS_SIM_MENU_FIRST_FRAME_BMP");
+    if (!path || !path[0]) return NULL;
+    return path;
+}
+
+static void scene_menu_maybe_request_first_frame_capture(SceneMenuInteraction *ctx,
+                                                         bool *capture_requested) {
+    const char *capture_path = NULL;
+    VkResult capture_result = VK_SUCCESS;
+    if (!ctx || !ctx->renderer || !capture_requested || *capture_requested) {
+        return;
+    }
+    capture_path = scene_menu_first_frame_bmp_path();
+    if (!capture_path) return;
+
+    capture_result = vk_renderer_request_capture((VkRenderer *)ctx->renderer, capture_path);
+    if (capture_result != VK_SUCCESS) {
+        fprintf(stderr,
+                "[menu] Failed to request first-frame capture to %s: %d\n",
+                capture_path,
+                (int)capture_result);
+        *capture_requested = true;
+        return;
+    }
+    fprintf(stderr, "[menu] First-frame capture armed: %s\n", capture_path);
+    *capture_requested = true;
+}
 
 static void menu_persist_runtime_config(const AppConfig *cfg) {
     const char *runtime_config_path = physics_sim_runtime_config_path();
@@ -383,6 +413,7 @@ restart_menu:
     bool frame_dirty = true;
     Uint64 last_present_ticks = SDL_GetTicks64();
     bool device_lost = false;
+    bool first_frame_capture_requested = false;
     while (run) {
         uint64_t frame_begin_counter = SDL_GetPerformanceCounter();
         SceneLoopWaitPolicyInput wait_policy = {
@@ -552,6 +583,7 @@ restart_menu:
         }
         resize_pending = false;
         vk_renderer_set_logical_size((VkRenderer *)ctx.renderer, (float)win_w, (float)win_h);
+        scene_menu_maybe_request_first_frame_capture(&ctx, &first_frame_capture_requested);
 
         SDL_Color bg_color = menu_color_bg();
         SDL_SetRenderDrawColor(ctx.renderer, bg_color.r, bg_color.g, bg_color.b, bg_color.a);

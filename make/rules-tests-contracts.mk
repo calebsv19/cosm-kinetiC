@@ -807,6 +807,18 @@ SHARED_THEME_FONT_ADAPTER_TEST_SRCS := \
 	$(CORE_FONT_DIR)/src/core_font.c \
 	$(CORE_BASE_DIR)/src/core_base.c
 
+PHYSICS_SIM_UI_BUTTON_CONTRACT_TEST_SRCS := \
+	tests/physics_sim_ui_button_contract_test.c \
+	src/app/ui/physics_sim_ui_button.c \
+	src/app/menu/shared_theme_font_adapter.c \
+	$(KIT_UI_DIR)/src/kit_ui_button.c \
+	$(KIT_RENDER_DIR)/src/kit_render.c \
+	$(KIT_RENDER_DIR)/src/kit_render_backend_null.c \
+	$(KIT_RENDER_DIR)/src/kit_render_backend_vk.c \
+	$(CORE_THEME_DIR)/src/core_theme.c \
+	$(CORE_FONT_DIR)/src/core_font.c \
+	$(CORE_BASE_DIR)/src/core_base.c
+
 test-shared-theme-font-adapter: $(SHARED_THEME_FONT_ADAPTER_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
@@ -814,3 +826,12 @@ test-shared-theme-font-adapter: $(SHARED_THEME_FONT_ADAPTER_TEST_SRCS)
 		-I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/shared_theme_font_adapter_test $(SHARED_THEME_FONT_ADAPTER_TEST_SRCS) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
 	$(BUILD_DIR)/shared_theme_font_adapter_test
+
+test-physics-sim-ui-button-contract: $(PHYSICS_SIM_UI_BUTTON_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(KIT_UI_DIR)/include -I$(KIT_RENDER_DIR)/include \
+		-I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_BASE_DIR)/include \
+		-o $(BUILD_DIR)/physics_sim_ui_button_contract_test $(PHYSICS_SIM_UI_BUTTON_CONTRACT_TEST_SRCS) $(LIBS)
+	$(BUILD_DIR)/physics_sim_ui_button_contract_test

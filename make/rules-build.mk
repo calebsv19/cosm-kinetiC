@@ -89,3 +89,7 @@ $(BUILD_DIR)/kit_render/%.o: $(KIT_RENDER_DIR)/src/%.c
 $(BUILD_DIR)/kit_pane/%.o: $(KIT_PANE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD_DIR)/kit_ui/%.o: $(KIT_UI_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@

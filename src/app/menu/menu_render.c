@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "app/menu/menu_state.h"
+#include "app/ui/physics_sim_ui_button.h"
 #include "render/text_draw.h"
 
 static SDL_Color COLOR_BG       = {18, 18, 22, 255};
@@ -67,6 +68,16 @@ static SDL_Color border_for_background(SDL_Color background) {
     return (SDL_Color){0, 0, 0, 180};
 }
 
+static SDL_Color ensure_button_separation(SDL_Color fill, SDL_Color panel) {
+    if (color_contrast_gap(fill, panel) >= 20) {
+        return fill;
+    }
+    if (color_luma(panel) >= 120) {
+        return mix_color(fill, (SDL_Color){18, 22, 28, fill.a}, 1, 2);
+    }
+    return mix_color(fill, (SDL_Color){78, 86, 98, fill.a}, 1, 2);
+}
+
 static SDL_Color lighten_color(SDL_Color color, float factor) {
     if (factor < 0.0f) factor = 0.0f;
     if (factor > 1.0f) factor = 1.0f;
@@ -87,6 +98,19 @@ static bool menu_rect_is_hovered(const SDL_Rect *rect) {
            mouse_x < (rect->x + rect->w) &&
            mouse_y >= rect->y &&
            mouse_y < (rect->y + rect->h);
+}
+
+static PhysicsSimUIButtonPalette menu_button_palette(void) {
+    PhysicsSimUIButtonPalette palette;
+    palette.idle_fill = ensure_button_separation(COLOR_BUTTON_BG, COLOR_PANEL);
+    palette.selected_fill = ensure_fill_contrast(COLOR_BUTTON_BG_ACTIVE, COLOR_TEXT, COLOR_PANEL);
+    palette.hover_fill = COLOR_ACCENT;
+    palette.positive_fill = (SDL_Color){36, 172, 86, 255};
+    palette.outline_idle = border_for_background(palette.idle_fill);
+    palette.outline_highlight = COLOR_ACCENT;
+    palette.text_primary = COLOR_TEXT;
+    palette.text_muted = COLOR_TEXT_DIM;
+    return palette;
 }
 
 void menu_set_theme_palette(const MenuThemePalette *palette) {
@@ -191,28 +215,35 @@ void menu_draw_button(SDL_Renderer *renderer,
                       const char *label,
                       TTF_Font *font,
                       bool selected) {
+    PhysicsSimUIButtonParams params;
+    PhysicsSimUIButtonResolvedStyle style;
     int text_w = 0;
     int text_h = 0;
     int inset_x = 12;
     char label_fit[256];
     const char *draw_label = label;
+    bool hovered = false;
     if (!renderer || !rect || !label || !font) return;
-    bool hovered = menu_rect_is_hovered(rect);
-    SDL_Color color = selected ? COLOR_BUTTON_BG_ACTIVE : COLOR_BUTTON_BG;
-    if (hovered) {
-        color = selected ? lighten_color(color, 0.10f)
-                         : lighten_color(color, 0.18f);
+    hovered = menu_rect_is_hovered(rect);
+    memset(&params, 0, sizeof(params));
+    params.rect = rect;
+    params.label = label;
+    params.font = font;
+    params.palette = menu_button_palette();
+    params.variant = PHYSICS_SIM_UI_BUTTON_VARIANT_DEFAULT;
+    params.enabled = true;
+    params.hovered = hovered;
+    params.use_explicit_hover = true;
+    params.selected = selected;
+    params.pressed = false;
+    params.min_left_pad = 8;
+    params.min_top_pad = 4;
+    if (!physics_sim_ui_button_resolve_style(&params, &style)) {
+        return;
     }
-    SDL_Color border = border_for_background(color);
-    SDL_Color text = choose_readable_text(color, COLOR_TEXT);
-    if (selected) {
-        color = ensure_fill_contrast(color, text, COLOR_PANEL);
-        border = border_for_background(color);
-        text = choose_readable_text(color, COLOR_TEXT);
-    }
-    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, 255);
+    SDL_SetRenderDrawColor(renderer, style.fill.r, style.fill.g, style.fill.b, 255);
     SDL_RenderFillRect(renderer, rect);
-    SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, border.a);
+    SDL_SetRenderDrawColor(renderer, style.outline.r, style.outline.g, style.outline.b, style.outline.a);
     SDL_RenderDrawRect(renderer, rect);
     if (font && label) {
         int max_label_w = rect->w - 16;
@@ -235,7 +266,7 @@ void menu_draw_button(SDL_Renderer *renderer,
                        draw_label,
                        rect->x + inset_x,
                        rect->y + (rect->h - text_h) / 2,
-                       text);
+                       style.text);
     }
 }
 
