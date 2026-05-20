@@ -70,6 +70,10 @@ static bool test_legacy_omitted_z_fallback(void) {
 
     if (!approx_equal(em->position_z, 0.0f, 1e-6f)) goto done;
     if (!approx_equal(em->dir_z, 0.0f, 1e-6f)) goto done;
+    if (em->source_mode_3d != EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT) goto done;
+    if (em->surface_3d != EMITTER_3D_SURFACE_AUTO) goto done;
+    if (em->obstacle_mode_3d != EMITTER_3D_OBSTACLE_MODE_AUTO) goto done;
+    if (!approx_equal(em->thermal_buoyancy_3d, 0.0f, 1e-6f)) goto done;
     if (!approx_equal(obj->position_z, 0.0f, 1e-6f)) goto done;
     if (!approx_equal(obj->size_z, obj->size_x, 1e-6f)) goto done;
     if (!approx_equal(imp->position_z, 0.0f, 1e-6f)) goto done;
@@ -82,8 +86,8 @@ done:
     return ok;
 }
 
-static bool test_v12_additive_roundtrip(void) {
-    char path_template[] = "/tmp/physics_sim_preset_v12_XXXXXX";
+static bool test_v15_additive_roundtrip(void) {
+    char path_template[] = "/tmp/physics_sim_preset_v15_XXXXXX";
     int fd = mkstemp(path_template);
     if (fd < 0) {
         fprintf(stderr, "mkstemp failed for roundtrip test\n");
@@ -114,7 +118,11 @@ static bool test_v12_additive_roundtrip(void) {
         .dir_y = -0.8f,
         .dir_z = 0.5f,
         .attached_object = -1,
-        .attached_import = -1
+        .attached_import = -1,
+        .source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_PATCH,
+        .surface_3d = EMITTER_3D_SURFACE_TOP,
+        .obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED,
+        .thermal_buoyancy_3d = 6.5f
     };
 
     slot->preset.object_count = 1;
@@ -166,6 +174,10 @@ static bool test_v12_additive_roundtrip(void) {
     if (!approx_equal(em->dir_x, 0.3f / dir_len, 1e-4f)) goto done;
     if (!approx_equal(em->dir_y, -0.8f / dir_len, 1e-4f)) goto done;
     if (!approx_equal(em->dir_z, 0.5f / dir_len, 1e-4f)) goto done;
+    if (em->source_mode_3d != EMITTER_3D_SOURCE_MODE_SURFACE_PATCH) goto done;
+    if (em->surface_3d != EMITTER_3D_SURFACE_TOP) goto done;
+    if (em->obstacle_mode_3d != EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED) goto done;
+    if (!approx_equal(em->thermal_buoyancy_3d, 6.5f, 1e-4f)) goto done;
     if (!approx_equal(obj->position_z, 0.4f, 1e-4f)) goto done;
     if (!approx_equal(obj->size_z, 0.3f, 1e-4f)) goto done;
     if (!approx_equal(imp->position_z, 0.41f, 1e-4f)) goto done;
@@ -398,8 +410,8 @@ int main(void) {
         fprintf(stderr, "preset_io_dimensional_contract_test: legacy fallback failed\n");
         return 1;
     }
-    if (!test_v12_additive_roundtrip()) {
-        fprintf(stderr, "preset_io_dimensional_contract_test: v12 roundtrip failed\n");
+    if (!test_v15_additive_roundtrip()) {
+        fprintf(stderr, "preset_io_dimensional_contract_test: v15 roundtrip failed\n");
         return 1;
     }
     if (!test_3d_slot_sanitize_defaults_invalid_direction_up()) {

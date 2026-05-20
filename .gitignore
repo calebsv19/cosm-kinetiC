@@ -10,6 +10,8 @@ data/snapshots/
 vk_frame.ppm
 *.dSYM/
 /physics_sim
+/physics_sim_headless
+/physics_sim_job_runner
 /physics_trace_tool
 /vf2d_dataset_tool
 /vf2d_pack_tool

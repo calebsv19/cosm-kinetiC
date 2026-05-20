@@ -9,13 +9,33 @@
 #include <stddef.h>
 #include <stdint.h>
 
+typedef struct HeadlessProgressInfo {
+    uint64_t frames_completed;
+    uint64_t frames_requested;
+    uint64_t frame_index;
+    uint32_t sim_steps_completed_in_frame;
+    uint32_t sim_steps_total_in_frame;
+    const char *stage;
+    bool final_update;
+} HeadlessProgressInfo;
+
+typedef void (*HeadlessProgressCallback)(void *user_data,
+                                         const HeadlessProgressInfo *progress);
+typedef bool (*HeadlessCancelRequestedFn)(void *user_data);
+
 typedef struct HeadlessOptions {
     bool enabled;
     int  frame_limit;
+    int  sim_steps_per_frame;
     bool skip_present;
     bool ignore_input;
     bool preserve_input;
     bool preserve_sdl_state;
+    uint32_t progress_interval_frames;
+    HeadlessProgressCallback progress_callback;
+    void *progress_user_data;
+    HeadlessCancelRequestedFn cancel_requested;
+    void *cancel_user_data;
 } HeadlessOptions;
 
 typedef struct SceneRuntimeLaunch {

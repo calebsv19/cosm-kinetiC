@@ -444,6 +444,7 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
     CommandBus *bus,
     StrokeSampler *sampler,
     CommandDispatchContext *dispatch_ctx,
+    const HeadlessOptions *headless,
     const SimModeHooks *mode_hooks,
     const char *snapshot_dir,
     int *snapshot_index) {
@@ -483,10 +484,52 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
     }
 
     if (!scene->paused) {
-        scene->dt = dt;
+        double sim_dt = dt;
+        int sim_steps_per_frame = 1;
+        HeadlessProgressInfo step_progress = {0};
+        if (headless_mode && headless) {
+            sim_steps_per_frame = headless->sim_steps_per_frame > 0 ? headless->sim_steps_per_frame : 1;
+            if (cfg->physics_fixed_dt > 0.0) {
+                sim_dt = cfg->physics_fixed_dt;
+            }
+            frame.dt = sim_dt * (double)sim_steps_per_frame;
+            if (headless->progress_callback) {
+                step_progress.frames_completed = frame_index;
+                step_progress.frames_requested = headless->frame_limit > 0
+                                                    ? (uint64_t)headless->frame_limit
+                                                    : 0u;
+                step_progress.frame_index = frame_index;
+                step_progress.sim_steps_total_in_frame = (uint32_t)sim_steps_per_frame;
+                step_progress.stage = "simulating_frame";
+                step_progress.final_update = false;
+            }
+        }
+        scene->dt = frame.dt;
         ts_start_timer("physics");
         {
-            (void)physics_sim_scene_core_sim_step(scene, cfg, mode_hooks, dt, NULL);
+            for (int step_index = 0; step_index < sim_steps_per_frame; ++step_index) {
+                if (headless_mode && headless && headless->cancel_requested &&
+                    headless->cancel_requested(headless->cancel_user_data)) {
+                    aborted = true;
+                    frame.aborted = true;
+                    frame.running = false;
+                    running = false;
+                    break;
+                }
+                (void)physics_sim_scene_core_sim_step(scene, cfg, mode_hooks, sim_dt, NULL);
+                if (headless_mode && headless && headless->progress_callback) {
+                    step_progress.sim_steps_completed_in_frame = (uint32_t)(step_index + 1);
+                    headless->progress_callback(headless->progress_user_data, &step_progress);
+                }
+                if (headless_mode && headless && headless->cancel_requested &&
+                    headless->cancel_requested(headless->cancel_user_data)) {
+                    aborted = true;
+                    frame.aborted = true;
+                    frame.running = false;
+                    running = false;
+                    break;
+                }
+            }
         }
         ts_stop_timer("physics");
         frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_SIM_STEP;
@@ -686,7 +729,8 @@ static void scene_controller_render_submit_phase(const SceneState *scene,
         volume_frames_write(scene, derive_frame->frame_index);
     }
 
-    if (renderer_sdl_render_scene(scene)) {
+    if ((derive_frame->should_save_render_frames || derive_frame->should_present) &&
+        renderer_sdl_render_scene(scene)) {
         if (derive_frame->should_save_render_frames) {
             uint8_t *pixels = NULL;
             int pitch = 0;
@@ -722,16 +766,22 @@ int scene_controller_run(const AppConfig *initial_cfg,
         return 1;
     }
 
+    AppConfig cfg = *initial_cfg;
+    bool headless_mode = headless && headless->enabled;
+    bool renderer_required = !headless_mode ||
+                             !headless ||
+                             !headless->skip_present ||
+                             cfg.save_render_frames;
+    Uint32 sdl_init_flags = SDL_INIT_TIMER | (renderer_required ? SDL_INIT_VIDEO : 0u);
     bool sdl_initialized = false;
-    if (SDL_WasInit(SDL_INIT_VIDEO) == 0) {
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+    if ((SDL_WasInit(sdl_init_flags) & sdl_init_flags) != sdl_init_flags) {
+        if (SDL_Init(sdl_init_flags) != 0) {
             fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
             return 1;
         }
         sdl_initialized = true;
     }
 
-    AppConfig cfg = *initial_cfg;
     const FluidScenePreset *preset_fallback = preset ? preset : scene_presets_get_default();
     FluidScenePreset runtime_preset = preset_fallback ? *preset_fallback : (FluidScenePreset){0};
     SimModeRoute mode_route = {0};
@@ -769,11 +819,13 @@ int scene_controller_run(const AppConfig *initial_cfg,
                 "[scene] Space mode 3D requested; using controlled 3D lane with scaffold backend and compatibility XY projection.\n");
     }
 
-    if (!renderer_sdl_init(cfg.window_w, cfg.window_h, cfg.grid_w, cfg.grid_h)) {
-        if (sdl_initialized) {
-            SDL_Quit();
+    if (renderer_required) {
+        if (!renderer_sdl_init(cfg.window_w, cfg.window_h, cfg.grid_w, cfg.grid_h)) {
+            if (sdl_initialized) {
+                SDL_Quit();
+            }
+            return 1;
         }
-        return 1;
     }
 
     SceneState scene = scene_create(&cfg, &runtime_preset, shape_library, &mode_route);
@@ -848,14 +900,36 @@ int scene_controller_run(const AppConfig *initial_cfg,
     uint64_t frame_index = 0;
     (void)snapshot_dir;
 
-    bool headless_mode = headless && headless->enabled;
     int interactive_frame_limit = (!headless_mode && cfg.headless_frame_count > 0)
                                       ? cfg.headless_frame_count
                                       : 0;
     uint64_t perf_freq = SDL_GetPerformanceFrequency();
     SceneControllerRs1DiagTotals rs1_diag_totals = {0};
     SceneControllerIr1DiagTotals ir1_diag_totals = {0};
+    uint32_t progress_interval = (headless_mode && headless)
+                                     ? headless->progress_interval_frames
+                                     : 0u;
+    uint64_t headless_frame_limit = (headless_mode && headless && headless->frame_limit > 0)
+                                        ? (uint64_t)headless->frame_limit
+                                        : 0u;
+    if (headless_mode && headless && headless->progress_callback) {
+        HeadlessProgressInfo initial_progress = {
+            .frames_completed = 0u,
+            .frames_requested = headless_frame_limit,
+            .frame_index = 0u,
+            .sim_steps_completed_in_frame = 0u,
+            .sim_steps_total_in_frame = 0u,
+            .stage = "pending",
+            .final_update = false
+        };
+        headless->progress_callback(headless->progress_user_data, &initial_progress);
+    }
     while (running) {
+        if (headless_mode && headless && headless->cancel_requested &&
+            headless->cancel_requested(headless->cancel_user_data)) {
+            aborted = true;
+            break;
+        }
         uint64_t loop_wall_begin = SDL_GetPerformanceCounter();
         ts_frame_start();
         ts_start_timer("frame");
@@ -898,6 +972,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                           &bus,
                                           &sampler,
                                           &dispatch_ctx,
+                                          headless,
                                           mode_hooks,
                                           snapshot_dir,
                                           &snapshot_index);
@@ -978,6 +1053,24 @@ int scene_controller_run(const AppConfig *initial_cfg,
         }
 
         frame_index++;
+        if (headless_mode && headless && headless->progress_callback) {
+            bool final_progress =
+                headless_frame_limit > 0u && frame_index >= headless_frame_limit;
+            bool interval_progress =
+                progress_interval > 0u && (frame_index % (uint64_t)progress_interval) == 0u;
+            if (final_progress || interval_progress) {
+                HeadlessProgressInfo frame_progress = {
+                    .frames_completed = frame_index,
+                    .frames_requested = headless_frame_limit,
+                    .frame_index = frame_index > 0u ? (frame_index - 1u) : 0u,
+                    .sim_steps_completed_in_frame = 0u,
+                    .sim_steps_total_in_frame = 0u,
+                    .stage = final_progress ? "finishing" : "running",
+                    .final_update = final_progress
+                };
+                headless->progress_callback(headless->progress_user_data, &frame_progress);
+            }
+        }
         if (headless_mode && headless->frame_limit > 0 &&
             frame_index >= (uint64_t)headless->frame_limit) {
             running = false;
@@ -993,6 +1086,20 @@ int scene_controller_run(const AppConfig *initial_cfg,
     scene_destroy(&scene);
     stroke_sampler_shutdown(&sampler);
     command_bus_shutdown(&bus);
-    renderer_sdl_shutdown();
+    if (renderer_required) {
+        renderer_sdl_shutdown();
+    }
+    if (headless_mode && headless && headless->progress_callback && aborted) {
+        HeadlessProgressInfo canceled_progress = {
+            .frames_completed = frame_index,
+            .frames_requested = headless_frame_limit,
+            .frame_index = frame_index,
+            .sim_steps_completed_in_frame = 0u,
+            .sim_steps_total_in_frame = 0u,
+            .stage = "canceled",
+            .final_update = true
+        };
+        headless->progress_callback(headless->progress_user_data, &canceled_progress);
+    }
     return aborted ? 2 : 0;
 }

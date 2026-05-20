@@ -171,19 +171,33 @@ static void editor_layout_controls(SceneEditorState *state) {
     state->radius_field.label = "Radius";
     state->radius_field.target = FIELD_RADIUS;
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
-        state->radius_field.rect = (SDL_Rect){0};
-        state->strength_field.rect = (SDL_Rect){right_x, inspector_top + 8, right_field_w, field_h};
+        state->radius_field.rect = (SDL_Rect){right_x, inspector_top + 8, right_field_w, field_h};
+        state->strength_field.rect = (SDL_Rect){right_x,
+                                                state->radius_field.rect.y + state->radius_field.rect.h + 12,
+                                                right_field_w,
+                                                field_h};
         state->strength_field.label = "Emitter Strength";
+        state->thermal_buoyancy_field.rect = (SDL_Rect){right_x,
+                                                        state->strength_field.rect.y +
+                                                            state->strength_field.rect.h + 12,
+                                                        right_field_w,
+                                                        field_h};
+        state->thermal_buoyancy_field.label = "Thermal Lift";
     } else {
         state->strength_field.rect = (SDL_Rect){right_x,
                                                 state->radius_field.rect.y + state->radius_field.rect.h + 14,
                                                 right_field_w,
                                                 field_h};
         state->strength_field.label = "Strength";
+        state->thermal_buoyancy_field.rect = (SDL_Rect){0};
+        state->thermal_buoyancy_field.label = "Thermal Lift";
     }
     state->strength_field.target = FIELD_STRENGTH;
+    state->thermal_buoyancy_field.target = FIELD_THERMAL_BUOYANCY_3D;
 
-    overlay_top = state->strength_field.rect.y + state->strength_field.rect.h + 18;
+    overlay_top = physics_sim_editor_session_has_retained_scene(&state->session)
+                      ? (state->thermal_buoyancy_field.rect.y + state->thermal_buoyancy_field.rect.h + 18)
+                      : (state->strength_field.rect.y + state->strength_field.rect.h + 18);
     overlay_row_button_w = (right_field_w - overlay_gap * 2) / 3;
     if (overlay_row_button_w < 52) overlay_row_button_w = 52;
     velocity_button_w = (right_field_w - overlay_gap * 5) / 6;
@@ -204,6 +218,23 @@ static void editor_layout_controls(SceneEditorState *state) {
                                                    overlay_button_h};
     state->btn_overlay_vel_reset.label = "Reset Vel";
     state->btn_overlay_vel_reset.enabled = false;
+
+    overlay_top += overlay_button_h + overlay_gap;
+    state->btn_overlay_mode_3d.rect = (SDL_Rect){right_x, overlay_top, overlay_row_button_w, overlay_button_h};
+    state->btn_overlay_mode_3d.label = "Mode";
+    state->btn_overlay_mode_3d.enabled = false;
+    state->btn_overlay_surface_3d.rect = (SDL_Rect){right_x + overlay_row_button_w + overlay_gap,
+                                                    overlay_top,
+                                                    overlay_row_button_w,
+                                                    overlay_button_h};
+    state->btn_overlay_surface_3d.label = "Surface";
+    state->btn_overlay_surface_3d.enabled = false;
+    state->btn_overlay_obstacle_3d.rect = (SDL_Rect){right_x + (overlay_row_button_w + overlay_gap) * 2,
+                                                     overlay_top,
+                                                     overlay_row_button_w,
+                                                     overlay_button_h};
+    state->btn_overlay_obstacle_3d.label = "Obstacle";
+    state->btn_overlay_obstacle_3d.enabled = false;
 
     overlay_top += overlay_button_h + overlay_gap;
     state->btn_overlay_vel_x_pos.rect = (SDL_Rect){right_x, overlay_top, velocity_button_w, velocity_button_h};
@@ -644,6 +675,9 @@ bool scene_editor_run(SDL_Window *window,
         state.btn_menu.enabled = true;
         state.btn_overlay_dynamic.enabled = retained_scene_active && overlay_object_active;
         state.btn_overlay_static.enabled = retained_scene_active && overlay_object_active;
+        state.btn_overlay_mode_3d.enabled = retained_scene_active && selected_retained_emitter != NULL;
+        state.btn_overlay_surface_3d.enabled = retained_scene_active && selected_retained_emitter != NULL;
+        state.btn_overlay_obstacle_3d.enabled = retained_scene_active && selected_retained_emitter != NULL;
         state.btn_overlay_vel_x_neg.enabled = retained_scene_active && overlay_object_active;
         state.btn_overlay_vel_x_pos.enabled = retained_scene_active && overlay_object_active;
         state.btn_overlay_vel_y_neg.enabled = retained_scene_active && overlay_object_active;
@@ -651,6 +685,21 @@ bool scene_editor_run(SDL_Window *window,
         state.btn_overlay_vel_z_neg.enabled = retained_scene_active && overlay_object_active;
         state.btn_overlay_vel_z_pos.enabled = retained_scene_active && overlay_object_active;
         state.btn_overlay_vel_reset.enabled = retained_scene_active && overlay_object_active;
+        if (retained_scene_active && selected_retained_emitter) {
+            state.btn_overlay_mode_3d.label =
+                physics_sim_editor_session_emitter_source_mode_3d_label(
+                    selected_retained_emitter->source_mode_3d);
+            state.btn_overlay_surface_3d.label =
+                physics_sim_editor_session_emitter_surface_3d_label(
+                    selected_retained_emitter->surface_3d);
+            state.btn_overlay_obstacle_3d.label =
+                physics_sim_editor_session_emitter_obstacle_mode_3d_label(
+                    selected_retained_emitter->obstacle_mode_3d);
+        } else {
+            state.btn_overlay_mode_3d.label = "Mode";
+            state.btn_overlay_surface_3d.label = "Surface";
+            state.btn_overlay_obstacle_3d.label = "Obstacle";
+        }
         if (retained_scene_active) {
             state.showing_import_picker = false;
             state.hover_import_row = -1;

@@ -174,7 +174,11 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
     }
 
     {
-        NumericField *fields[] = {&state->radius_field, &state->strength_field};
+        NumericField *fields[] = {
+            &state->radius_field,
+            &state->strength_field,
+            &state->thermal_buoyancy_field
+        };
         bool retained_scene_active = physics_sim_editor_session_has_retained_scene(&state->session);
         bool retained_emitter_active =
             physics_sim_editor_session_selected_object_emitter(&state->session) != NULL;
@@ -185,7 +189,6 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
             bool enabled = false;
             if (retained_scene_active) {
                 enabled = retained_emitter_active &&
-                          field->target == FIELD_STRENGTH &&
                           field->rect.w > 0 &&
                           field->rect.h > 0;
             } else {

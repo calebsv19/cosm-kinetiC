@@ -160,7 +160,22 @@ bool test_scene_editor_session_overlay_mutation_updates_selected_object(void) {
     if (!physics_sim_editor_session_set_selected_emitter_type(&session, EMITTER_VELOCITY_JET, true)) {
         return false;
     }
+    if (!physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(&session)) {
+        return false;
+    }
+    if (!physics_sim_editor_session_cycle_selected_emitter_surface_3d(&session)) {
+        return false;
+    }
+    if (!physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(&session)) {
+        return false;
+    }
+    if (!physics_sim_editor_session_set_selected_emitter_radius(&session, 0.44f)) {
+        return false;
+    }
     if (!physics_sim_editor_session_set_selected_emitter_strength(&session, 96.5f)) {
+        return false;
+    }
+    if (!physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(&session, 4.5f)) {
         return false;
     }
 
@@ -174,7 +189,12 @@ bool test_scene_editor_session_overlay_mutation_updates_selected_object(void) {
         if (fabs(selected_overlay->initial_velocity.z - 1.25) > 1e-9) return false;
         if (!selected_emitter) return false;
         if (selected_emitter->type != EMITTER_VELOCITY_JET) return false;
+        if (selected_emitter->source_mode_3d != EMITTER_3D_SOURCE_MODE_SURFACE_SHELL) return false;
+        if (selected_emitter->surface_3d != EMITTER_3D_SURFACE_BOTTOM) return false;
+        if (selected_emitter->obstacle_mode_3d != EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED) return false;
+        if (fabs(selected_emitter->radius - 0.44) > 1e-6) return false;
         if (fabs(selected_emitter->strength - 96.5) > 1e-9) return false;
+        if (fabs(selected_emitter->thermal_buoyancy_3d - 4.5) > 1e-6) return false;
         if (strcmp(physics_sim_editor_session_emitter_type_label(selected_emitter->type), "Jet") != 0) return false;
     }
 
@@ -226,6 +246,9 @@ bool test_scene_editor_session_retained_emitter_defaults_to_object_normal(void) 
     if (fabs(selected_emitter->direction.x - 0.0) > 1e-9) return false;
     if (fabs(selected_emitter->direction.y - 0.0) > 1e-9) return false;
     if (fabs(selected_emitter->direction.z - 1.0) > 1e-9) return false;
+    if (selected_emitter->source_mode_3d != EMITTER_3D_SOURCE_MODE_SURFACE_PATCH) return false;
+    if (selected_emitter->surface_3d != EMITTER_3D_SURFACE_TOP) return false;
+    if (selected_emitter->obstacle_mode_3d != EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED) return false;
     return true;
 }
 
@@ -276,7 +299,27 @@ bool test_scene_editor_session_overlay_json_build_and_merge(void) {
         free(runtime_json);
         return false;
     }
+    if (!physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(&session)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_cycle_selected_emitter_surface_3d(&session)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(&session)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_set_selected_emitter_radius(&session, 0.41f)) {
+        free(runtime_json);
+        return false;
+    }
     if (!physics_sim_editor_session_set_selected_emitter_strength(&session, 96.5f)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(&session, 3.5f)) {
         free(runtime_json);
         return false;
     }
@@ -325,6 +368,13 @@ bool test_scene_editor_session_overlay_json_build_and_merge(void) {
          strstr(overlay_json, "\"emitter\"") != NULL &&
          strstr(overlay_json, "\"type\"") != NULL &&
          strstr(overlay_json, "Jet") != NULL &&
+         strstr(overlay_json, "\"mode_3d\"") != NULL &&
+         strstr(overlay_json, "SurfaceShell") != NULL &&
+         strstr(overlay_json, "\"surface_3d\"") != NULL &&
+         strstr(overlay_json, "Bottom") != NULL &&
+         strstr(overlay_json, "\"obstacle_mode_3d\"") != NULL &&
+         strstr(overlay_json, "ClearAttached") != NULL &&
+         strstr(overlay_json, "\"thermal_buoyancy_3d\"") != NULL &&
          strstr(overlay_json, "96.5") != NULL &&
          strstr(overlay_json, "\"logical_clock\"") != NULL &&
          strstr(merged_json, "\"physics_sim\"") != NULL &&
@@ -628,7 +678,27 @@ bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void) {
         free(runtime_json);
         return false;
     }
+    if (!physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(&saved_session)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_cycle_selected_emitter_surface_3d(&saved_session)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(&saved_session)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_set_selected_emitter_radius(&saved_session, 0.41f)) {
+        free(runtime_json);
+        return false;
+    }
     if (!physics_sim_editor_session_set_selected_emitter_strength(&saved_session, 96.5f)) {
+        free(runtime_json);
+        return false;
+    }
+    if (!physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(&saved_session, 3.5f)) {
         free(runtime_json);
         return false;
     }
@@ -657,6 +727,8 @@ bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void) {
     if (strstr(merged_json, "\"emitter\"") == NULL ||
         strstr(merged_json, "\"type\"") == NULL ||
         strstr(merged_json, "Jet") == NULL ||
+        strstr(merged_json, "\"mode_3d\"") == NULL ||
+        strstr(merged_json, "SurfaceShell") == NULL ||
         strstr(merged_json, "\"strength\"") == NULL ||
         strstr(merged_json, "\"scene_domain\"") == NULL) {
         free(runtime_json);
@@ -699,6 +771,8 @@ bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void) {
     if (strstr(reopened_json, "\"emitter\"") == NULL ||
         strstr(reopened_json, "\"type\"") == NULL ||
         strstr(reopened_json, "Jet") == NULL ||
+        strstr(reopened_json, "\"mode_3d\"") == NULL ||
+        strstr(reopened_json, "SurfaceShell") == NULL ||
         strstr(reopened_json, "\"strength\"") == NULL ||
         strstr(reopened_json, "\"scene_domain\"") == NULL) {
         remove(saved_path);
@@ -742,7 +816,12 @@ bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void) {
              fabs(selected_overlay->initial_velocity.y - (-1.25)) <= 1e-9 &&
              fabs(selected_overlay->initial_velocity.z - 2.00) <= 1e-9 &&
              selected_emitter->type == EMITTER_VELOCITY_JET &&
+             selected_emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_SURFACE_SHELL &&
+             selected_emitter->surface_3d == EMITTER_3D_SURFACE_BOTTOM &&
+             selected_emitter->obstacle_mode_3d == EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED &&
+             fabs(selected_emitter->radius - 0.41) <= 1e-6 &&
              fabs(selected_emitter->strength - 96.5) <= 1e-9 &&
+             fabs(selected_emitter->thermal_buoyancy_3d - 3.5) <= 1e-6 &&
              !scene_domain->seeded_from_retained_bounds &&
              fabs(width - 14.0) <= 1e-9 &&
              fabs(height - 9.0) <= 1e-9 &&

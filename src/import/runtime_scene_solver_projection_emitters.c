@@ -59,6 +59,28 @@ static void resolve_retained_object_emitter_direction(const CoreSceneObjectContr
     dst->dir_z = (float)direction.z;
 }
 
+static void apply_overlay_emitter_3d_contract(const SolverProjectionPhysicsOverlay *overlay,
+                                              FluidEmitter *dst) {
+    if (!dst) return;
+    dst->source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+    dst->surface_3d = EMITTER_3D_SURFACE_AUTO;
+    dst->obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
+    dst->thermal_buoyancy_3d = 0.0f;
+    if (!overlay) return;
+    if (overlay->has_emitter_source_mode_3d) {
+        dst->source_mode_3d = overlay->emitter_source_mode_3d;
+    }
+    if (overlay->has_emitter_surface_3d) {
+        dst->surface_3d = overlay->emitter_surface_3d;
+    }
+    if (overlay->has_emitter_obstacle_mode_3d) {
+        dst->obstacle_mode_3d = overlay->emitter_obstacle_mode_3d;
+    }
+    if (overlay->has_emitter_thermal_buoyancy_3d) {
+        dst->thermal_buoyancy_3d = (float)overlay->emitter_thermal_buoyancy_3d;
+    }
+}
+
 static void resolve_free_emitter_direction(const SolverProjectionPhysicsOverlay *overlay,
                                            FluidSceneDimensionMode dimension_mode,
                                            FluidEmitter *dst) {
@@ -120,6 +142,7 @@ void runtime_scene_solver_projection_apply_emitters_from_lights(json_object *run
         dst->type = EMITTER_DENSITY_SOURCE;
         dst->radius = 0.08f;
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)strength, 0.0f, 5000.0f);
+        apply_overlay_emitter_3d_contract(NULL, dst);
         {
             CoreObjectVec3 direction = default_emitter_direction_for_mode(dimension_mode);
             dst->dir_x = (float)direction.x;
@@ -175,6 +198,7 @@ int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)overlay.emitter_strength,
                                                                    0.0f,
                                                                    5000.0f);
+        apply_overlay_emitter_3d_contract(&overlay, dst);
         resolve_retained_object_emitter_direction(object, &overlay, dst);
         dst->attached_object = i;
         dst->attached_import = -1;
@@ -235,6 +259,7 @@ int runtime_scene_solver_projection_apply_emitters_from_runtime_root_objects(
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)overlay.emitter_strength,
                                                                    0.0f,
                                                                    5000.0f);
+        apply_overlay_emitter_3d_contract(&overlay, dst);
         resolve_free_emitter_direction(&overlay, dimension_mode, dst);
         dst->attached_object = (int)i;
         dst->attached_import = -1;

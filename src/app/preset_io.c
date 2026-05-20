@@ -8,7 +8,7 @@
 #include "app/atmospheric/atmospheric_field.h"
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-static const int PRESET_FILE_VERSION = 14;
+static const int PRESET_FILE_VERSION = 15;
 static const char *STRUCTURAL_SCENE_DEFAULT = "config/structural_scene.txt";
 
 static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
@@ -31,6 +31,49 @@ static FluidSceneDimensionMode sanitize_dimension_mode(FluidSceneDimensionMode m
     default:
         return SCENE_DIMENSION_MODE_2D;
     }
+}
+
+static FluidEmitter3DSourceMode sanitize_emitter_source_mode_3d(FluidEmitter3DSourceMode mode) {
+    switch (mode) {
+    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
+    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
+    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
+    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
+    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
+        return mode;
+    default:
+        break;
+    }
+    return EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+}
+
+static FluidEmitter3DSurface sanitize_emitter_surface_3d(FluidEmitter3DSurface surface) {
+    switch (surface) {
+    case EMITTER_3D_SURFACE_AUTO:
+    case EMITTER_3D_SURFACE_TOP:
+    case EMITTER_3D_SURFACE_BOTTOM:
+    case EMITTER_3D_SURFACE_LEFT:
+    case EMITTER_3D_SURFACE_RIGHT:
+    case EMITTER_3D_SURFACE_FRONT:
+    case EMITTER_3D_SURFACE_BACK:
+    case EMITTER_3D_SURFACE_ALL_FACES:
+        return surface;
+    default:
+        break;
+    }
+    return EMITTER_3D_SURFACE_AUTO;
+}
+
+static FluidEmitter3DObstacleMode sanitize_emitter_obstacle_mode_3d(FluidEmitter3DObstacleMode mode) {
+    switch (mode) {
+    case EMITTER_3D_OBSTACLE_MODE_AUTO:
+    case EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED:
+    case EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED:
+        return mode;
+    default:
+        break;
+    }
+    return EMITTER_3D_OBSTACLE_MODE_AUTO;
 }
 
 static float clampf(float v, float min_v, float max_v) {
@@ -72,6 +115,11 @@ static void sanitize_emitter(FluidEmitter *em, FluidSceneDimensionMode dimension
     }
     if (em->attached_object < 0 || em->attached_object >= MAX_PRESET_OBJECTS) em->attached_object = -1;
     if (em->attached_import < 0 || em->attached_import >= MAX_IMPORTED_SHAPES) em->attached_import = -1;
+    em->source_mode_3d = sanitize_emitter_source_mode_3d(em->source_mode_3d);
+    em->surface_3d = sanitize_emitter_surface_3d(em->surface_3d);
+    em->obstacle_mode_3d = sanitize_emitter_obstacle_mode_3d(em->obstacle_mode_3d);
+    if (!isfinite(em->thermal_buoyancy_3d)) em->thermal_buoyancy_3d = 0.0f;
+    em->thermal_buoyancy_3d = clampf(em->thermal_buoyancy_3d, 0.0f, 1000.0f);
 
     float dx = em->dir_x;
     float dy = em->dir_y;
@@ -596,7 +644,34 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
             int type = 0;
             int attached_obj = -1;
             int attached_imp = -1;
-            if (file_version >= 12) {
+            if (file_version >= 15) {
+                int source_mode_3d = 0;
+                int surface_3d = 0;
+                int obstacle_mode_3d = 0;
+                if (fscanf(f, "%d %f %f %f %f %f %f %f %f %d %d %d %d %d %f\n",
+                           &type,
+                           &emitter.position_x,
+                           &emitter.position_y,
+                           &emitter.position_z,
+                           &emitter.radius,
+                           &emitter.strength,
+                           &emitter.dir_x,
+                           &emitter.dir_y,
+                           &emitter.dir_z,
+                           &attached_obj,
+                           &attached_imp,
+                           &source_mode_3d,
+                           &surface_3d,
+                           &obstacle_mode_3d,
+                           &emitter.thermal_buoyancy_3d) != 15) {
+                    break;
+                }
+                emitter.attached_object = attached_obj;
+                emitter.attached_import = attached_imp;
+                emitter.source_mode_3d = (FluidEmitter3DSourceMode)source_mode_3d;
+                emitter.surface_3d = (FluidEmitter3DSurface)surface_3d;
+                emitter.obstacle_mode_3d = (FluidEmitter3DObstacleMode)obstacle_mode_3d;
+            } else if (file_version >= 12) {
                 if (fscanf(f, "%d %f %f %f %f %f %f %f %f %d %d\n",
                            &type,
                            &emitter.position_x,
@@ -613,6 +688,10 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 }
                 emitter.attached_object = attached_obj;
                 emitter.attached_import = attached_imp;
+                emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+                emitter.surface_3d = EMITTER_3D_SURFACE_AUTO;
+                emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
+                emitter.thermal_buoyancy_3d = 0.0f;
             } else if (file_version >= 6) {
                 if (fscanf(f, "%d %f %f %f %f %f %f %d %d\n",
                            &type,
@@ -630,6 +709,10 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 emitter.attached_import = attached_imp;
                 emitter.position_z = 0.0f;
                 emitter.dir_z = 0.0f;
+                emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+                emitter.surface_3d = EMITTER_3D_SURFACE_AUTO;
+                emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
+                emitter.thermal_buoyancy_3d = 0.0f;
             } else if (file_version >= 5) {
                 if (fscanf(f, "%d %f %f %f %f %f %f %d\n",
                            &type,
@@ -646,6 +729,10 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 emitter.attached_import = -1;
                 emitter.position_z = 0.0f;
                 emitter.dir_z = 0.0f;
+                emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+                emitter.surface_3d = EMITTER_3D_SURFACE_AUTO;
+                emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
+                emitter.thermal_buoyancy_3d = 0.0f;
             } else {
                 if (fscanf(f, "%d %f %f %f %f %f %f\n",
                            &type,
@@ -661,6 +748,10 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 emitter.attached_import = -1;
                 emitter.position_z = 0.0f;
                 emitter.dir_z = 0.0f;
+                emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+                emitter.surface_3d = EMITTER_3D_SURFACE_AUTO;
+                emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
+                emitter.thermal_buoyancy_3d = 0.0f;
             }
             emitter.type = (FluidEmitterType)type;
             sanitize_emitter(&emitter, dimension_mode);
@@ -958,19 +1049,24 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         }
         fprintf(f, "%zu\n", slot->preset.emitter_count);
         for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
-            const FluidEmitter *em = &slot->preset.emitters[e];
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %d %d\n",
-                    em->type,
-                    em->position_x,
-                    em->position_y,
-                    em->position_z,
-                    em->radius,
-                    em->strength,
-                    em->dir_x,
-                    em->dir_y,
-                    em->dir_z,
-                    em->attached_object,
-                    em->attached_import);
+            FluidEmitter emitter = slot->preset.emitters[e];
+            sanitize_emitter(&emitter, sanitize_dimension_mode(slot->preset.dimension_mode));
+            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %d %d %d %d %d %.6f\n",
+                    emitter.type,
+                    emitter.position_x,
+                    emitter.position_y,
+                    emitter.position_z,
+                    emitter.radius,
+                    emitter.strength,
+                    emitter.dir_x,
+                    emitter.dir_y,
+                    emitter.dir_z,
+                    emitter.attached_object,
+                    emitter.attached_import,
+                    (int)emitter.source_mode_3d,
+                    (int)emitter.surface_3d,
+                    (int)emitter.obstacle_mode_3d,
+                    emitter.thermal_buoyancy_3d);
         }
         fprintf(f, "FLOW %d\n", BOUNDARY_EDGE_COUNT);
         for (int edge = 0; edge < BOUNDARY_EDGE_COUNT; ++edge) {

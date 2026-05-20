@@ -48,6 +48,10 @@ typedef struct PhysicsSimEmitterOverlay {
     float radius;
     float strength;
     CoreObjectVec3 direction;
+    FluidEmitter3DSourceMode source_mode_3d;
+    FluidEmitter3DSurface surface_3d;
+    FluidEmitter3DObstacleMode obstacle_mode_3d;
+    float thermal_buoyancy_3d;
 } PhysicsSimEmitterOverlay;
 
 typedef struct PhysicsSimDomainOverlay {
@@ -123,8 +127,15 @@ bool physics_sim_editor_session_set_selected_motion_mode(PhysicsSimEditorSession
 bool physics_sim_editor_session_set_selected_emitter_type(PhysicsSimEditorSession *session,
                                                           FluidEmitterType type,
                                                           bool toggle_clear);
+bool physics_sim_editor_session_set_selected_emitter_radius(PhysicsSimEditorSession *session,
+                                                            float radius);
 bool physics_sim_editor_session_set_selected_emitter_strength(PhysicsSimEditorSession *session,
                                                               float strength);
+bool physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(PhysicsSimEditorSession *session,
+                                                                          float thermal_buoyancy);
+bool physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(PhysicsSimEditorSession *session);
+bool physics_sim_editor_session_cycle_selected_emitter_surface_3d(PhysicsSimEditorSession *session);
+bool physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(PhysicsSimEditorSession *session);
 bool physics_sim_editor_session_set_scene_domain_size(PhysicsSimEditorSession *session,
                                                       double width,
                                                       double height,
@@ -146,6 +157,9 @@ bool physics_sim_editor_session_mark_overlay_applied(PhysicsSimEditorSession *se
 const char *physics_sim_editor_session_object_kind_label(CoreSceneObjectKind kind);
 const char *physics_sim_editor_session_motion_mode_label(PhysicsSimOverlayMotionMode mode);
 const char *physics_sim_editor_session_emitter_type_label(FluidEmitterType type);
+const char *physics_sim_editor_session_emitter_source_mode_3d_label(FluidEmitter3DSourceMode mode);
+const char *physics_sim_editor_session_emitter_surface_3d_label(FluidEmitter3DSurface surface);
+const char *physics_sim_editor_session_emitter_obstacle_mode_3d_label(FluidEmitter3DObstacleMode mode);
 const char *physics_sim_editor_session_legacy_selection_summary(const PhysicsSimEditorSession *session,
                                                                 char *buffer,
                                                                 size_t buffer_size);

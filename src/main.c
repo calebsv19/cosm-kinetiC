@@ -201,6 +201,7 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
         HeadlessOptions headless_opts = {
             .enabled = true,
             .frame_limit = cfg.headless_frame_count,
+            .sim_steps_per_frame = 1,
             .skip_present = cfg.headless_skip_present,
             .ignore_input = false,
             .preserve_sdl_state = false

@@ -23,6 +23,12 @@ vf2d_dataset_tool: $(VF2D_DATASET_TOOL_SRCS)
 physics_trace_tool: $(PHYSICS_TRACE_TOOL_SRCS)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) $(PHYSICS_TRACE_TOOL_INCS) -o $(PHYSICS_TRACE_TOOL_BIN) $(PHYSICS_TRACE_TOOL_SRCS)
 
+physics_sim_headless: $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_APP_OBJS_NO_MAIN)
+	$(CC) $(LDFLAGS) -o $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_APP_OBJS_NO_MAIN) $(LIBS)
+
+physics-sim-job-runner: $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_APP_OBJS_NO_MAIN)
+	$(CC) $(LDFLAGS) -o $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_APP_OBJS_NO_MAIN) $(LIBS)
+
 runtime_scene_emitter_diag_tool: $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS)
 	$(CC) $(CFLAGS) \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
@@ -40,6 +46,15 @@ test-vf2d-pack-dataset-parity: vf2d_pack_tool vf2d_dataset_tool
 
 test-trio-scene-contract-diff:
 	tests/integration/run_trio_scene_contract_diff.sh
+
+test-physics-sim-headless-cli: physics_sim_headless
+	tests/integration/run_physics_sim_headless_cli.sh
+
+test-physics-sim-job-runner-smoke: physics-sim-job-runner physics_sim_headless
+	tests/integration/run_physics_sim_job_runner_smoke.sh
+
+test-physics-sim-job-runner-policy: physics-sim-job-runner physics_sim_headless
+	tests/integration/run_physics_sim_job_runner_policy.sh
 
 vf2d_to_pack: vf2d_pack_tool
 	@if [ -z "$(VF2D)" ] || [ -z "$(PACK)" ]; then \

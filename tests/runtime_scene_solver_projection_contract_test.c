@@ -255,6 +255,10 @@ static bool test_solver_projection_retained_emitter_overlay_projects_to_solver_e
                   "\"type\":\"Jet\","
                   "\"radius\":0.25,"
                   "\"strength\":18.0,"
+                  "\"mode_3d\":\"SurfacePatch\","
+                  "\"surface_3d\":\"Top\","
+                  "\"obstacle_mode_3d\":\"RetainAttached\","
+                  "\"thermal_buoyancy_3d\":5.5,"
                   "\"direction\":{\"x\":1.0,\"y\":0.0,\"z\":-0.5}"
                 "}"
               "}"
@@ -306,6 +310,10 @@ static bool test_solver_projection_retained_emitter_overlay_projects_to_solver_e
     if (fabsf(preset.emitters[0].dir_z - (-0.5f)) > 1e-6f) return false;
     if (preset.emitters[0].attached_object != 0) return false;
     if (preset.emitters[0].attached_import != -1) return false;
+    if (preset.emitters[0].source_mode_3d != EMITTER_3D_SOURCE_MODE_SURFACE_PATCH) return false;
+    if (preset.emitters[0].surface_3d != EMITTER_3D_SURFACE_TOP) return false;
+    if (preset.emitters[0].obstacle_mode_3d != EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED) return false;
+    if (fabsf(preset.emitters[0].thermal_buoyancy_3d - 5.5f) > 1e-6f) return false;
     return true;
 }
 

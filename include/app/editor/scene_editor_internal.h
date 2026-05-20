@@ -119,6 +119,9 @@ typedef struct SceneEditorState {
     EditorButton btn_boundary;
     EditorButton btn_overlay_dynamic;
     EditorButton btn_overlay_static;
+    EditorButton btn_overlay_mode_3d;
+    EditorButton btn_overlay_surface_3d;
+    EditorButton btn_overlay_obstacle_3d;
     EditorButton btn_overlay_vel_x_neg;
     EditorButton btn_overlay_vel_x_pos;
     EditorButton btn_overlay_vel_y_neg;
@@ -129,6 +132,7 @@ typedef struct SceneEditorState {
 
     NumericField radius_field;
     NumericField strength_field;
+    NumericField thermal_buoyancy_field;
     NumericField *active_field;
 
     EditorListView list_view;

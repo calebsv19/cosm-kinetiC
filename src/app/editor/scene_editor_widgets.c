@@ -154,9 +154,12 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
     if (field->editing) {
         snprintf(display, sizeof(display), "%s", field->buffer);
     } else if (selected_overlay_emitter) {
-        float value = (field->target == FIELD_RADIUS)
-                          ? selected_overlay_emitter->radius
-                          : selected_overlay_emitter->strength;
+        float value = selected_overlay_emitter->strength;
+        if (field->target == FIELD_RADIUS) {
+            value = selected_overlay_emitter->radius;
+        } else if (field->target == FIELD_THERMAL_BUOYANCY_3D) {
+            value = selected_overlay_emitter->thermal_buoyancy_3d;
+        }
         snprintf(display, sizeof(display), "%.3f", value);
     } else if (selected_emitter) {
         float value = (field->target == FIELD_RADIUS) ? selected_emitter->radius : selected_emitter->strength;

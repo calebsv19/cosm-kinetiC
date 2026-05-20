@@ -25,6 +25,37 @@ static FluidEmitterType solver_projection_parse_emitter_type(const char *type_st
     return EMITTER_DENSITY_SOURCE;
 }
 
+static FluidEmitter3DSourceMode solver_projection_parse_emitter_source_mode_3d(const char *mode_str) {
+    if (!mode_str) return EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+    if (strcmp(mode_str, "VolumeFill") == 0) return EMITTER_3D_SOURCE_MODE_VOLUME_FILL;
+    if (strcmp(mode_str, "SurfacePatch") == 0) return EMITTER_3D_SOURCE_MODE_SURFACE_PATCH;
+    if (strcmp(mode_str, "SurfaceShell") == 0) return EMITTER_3D_SOURCE_MODE_SURFACE_SHELL;
+    if (strcmp(mode_str, "HeatedObstacle") == 0) return EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE;
+    if (strcmp(mode_str, "LegacyCompat") == 0) return EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+    return EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+}
+
+static FluidEmitter3DSurface solver_projection_parse_emitter_surface_3d(const char *surface_str) {
+    if (!surface_str) return EMITTER_3D_SURFACE_AUTO;
+    if (strcmp(surface_str, "Top") == 0) return EMITTER_3D_SURFACE_TOP;
+    if (strcmp(surface_str, "Bottom") == 0) return EMITTER_3D_SURFACE_BOTTOM;
+    if (strcmp(surface_str, "Left") == 0) return EMITTER_3D_SURFACE_LEFT;
+    if (strcmp(surface_str, "Right") == 0) return EMITTER_3D_SURFACE_RIGHT;
+    if (strcmp(surface_str, "Front") == 0) return EMITTER_3D_SURFACE_FRONT;
+    if (strcmp(surface_str, "Back") == 0) return EMITTER_3D_SURFACE_BACK;
+    if (strcmp(surface_str, "AllFaces") == 0) return EMITTER_3D_SURFACE_ALL_FACES;
+    if (strcmp(surface_str, "Auto") == 0) return EMITTER_3D_SURFACE_AUTO;
+    return EMITTER_3D_SURFACE_AUTO;
+}
+
+static FluidEmitter3DObstacleMode solver_projection_parse_emitter_obstacle_mode_3d(const char *mode_str) {
+    if (!mode_str) return EMITTER_3D_OBSTACLE_MODE_AUTO;
+    if (strcmp(mode_str, "ClearAttached") == 0) return EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED;
+    if (strcmp(mode_str, "RetainAttached") == 0) return EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED;
+    if (strcmp(mode_str, "Auto") == 0) return EMITTER_3D_OBSTACLE_MODE_AUTO;
+    return EMITTER_3D_OBSTACLE_MODE_AUTO;
+}
+
 float runtime_scene_solver_projection_clampf_dim(float v, float min_v, float max_v) {
     if (v < min_v) return min_v;
     if (v > max_v) return max_v;
@@ -274,6 +305,10 @@ bool runtime_scene_solver_projection_overlay_for_object(json_object *runtime_roo
             json_object *radius = NULL;
             json_object *strength = NULL;
             json_object *direction = NULL;
+            json_object *mode_3d = NULL;
+            json_object *surface_3d = NULL;
+            json_object *obstacle_mode_3d = NULL;
+            json_object *thermal_buoyancy_3d = NULL;
             bool emitter_active = false;
             if (runtime_scene_solver_projection_parse_bool(emitter, "active", &emitter_active) &&
                 emitter_active) {
@@ -313,6 +348,32 @@ bool runtime_scene_solver_projection_overlay_for_object(json_object *runtime_roo
                         out_overlay->emitter_dir_z = json_object_get_double(vz);
                         out_overlay->has_emitter_direction = true;
                     }
+                }
+                if (json_object_object_get_ex(emitter, "mode_3d", &mode_3d) &&
+                    json_object_is_type(mode_3d, json_type_string)) {
+                    out_overlay->emitter_source_mode_3d =
+                        solver_projection_parse_emitter_source_mode_3d(json_object_get_string(mode_3d));
+                    out_overlay->has_emitter_source_mode_3d = true;
+                }
+                if (json_object_object_get_ex(emitter, "surface_3d", &surface_3d) &&
+                    json_object_is_type(surface_3d, json_type_string)) {
+                    out_overlay->emitter_surface_3d =
+                        solver_projection_parse_emitter_surface_3d(json_object_get_string(surface_3d));
+                    out_overlay->has_emitter_surface_3d = true;
+                }
+                if (json_object_object_get_ex(emitter, "obstacle_mode_3d", &obstacle_mode_3d) &&
+                    json_object_is_type(obstacle_mode_3d, json_type_string)) {
+                    out_overlay->emitter_obstacle_mode_3d =
+                        solver_projection_parse_emitter_obstacle_mode_3d(
+                            json_object_get_string(obstacle_mode_3d));
+                    out_overlay->has_emitter_obstacle_mode_3d = true;
+                }
+                if (json_object_object_get_ex(emitter, "thermal_buoyancy_3d", &thermal_buoyancy_3d) &&
+                    (json_object_is_type(thermal_buoyancy_3d, json_type_double) ||
+                     json_object_is_type(thermal_buoyancy_3d, json_type_int))) {
+                    out_overlay->emitter_thermal_buoyancy_3d =
+                        json_object_get_double(thermal_buoyancy_3d);
+                    out_overlay->has_emitter_thermal_buoyancy_3d = true;
                 }
             }
         }

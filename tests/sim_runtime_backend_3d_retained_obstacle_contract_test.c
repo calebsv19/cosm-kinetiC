@@ -144,6 +144,131 @@ static bool test_attached_object_is_skipped_from_obstacle_occupancy(void) {
     return true;
 }
 
+static bool test_surface_patch_attached_object_can_retain_obstacle_occupancy(void) {
+    AppConfig cfg = {0};
+    PhysicsSimRuntimeVisualBootstrap visual = {0};
+    SimRuntimeBackend *backend = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
+    FluidScenePreset preset = {0};
+    SceneState scene = {0};
+    size_t center_idx = 0;
+
+    cfg.quality_index = 1;
+    cfg.grid_w = 128;
+    cfg.grid_h = 128;
+    visual.scene_domain.enabled = true;
+    visual.scene_domain_authored = true;
+    visual.scene_domain.min.x = 0.0;
+    visual.scene_domain.min.y = 0.0;
+    visual.scene_domain.min.z = 0.0;
+    visual.scene_domain.max.x = 1.0;
+    visual.scene_domain.max.y = 1.0;
+    visual.scene_domain.max.z = 1.0;
+
+    preset.object_count = 1;
+    preset.objects[0] = (PresetObject){
+        .type = PRESET_OBJECT_BOX,
+        .position_x = 0.5f,
+        .position_y = 0.5f,
+        .position_z = 0.5f,
+        .size_x = 0.10f,
+        .size_y = 0.08f,
+        .size_z = 0.12f,
+        .is_static = true,
+    };
+    preset.emitter_count = 1;
+    preset.emitters[0] = (FluidEmitter){
+        .type = EMITTER_DENSITY_SOURCE,
+        .attached_object = 0,
+        .attached_import = -1,
+        .source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_PATCH,
+        .surface_3d = EMITTER_3D_SURFACE_TOP,
+        .obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED,
+    };
+
+    backend = create_backend(&cfg, &visual);
+    if (!backend) return false;
+
+    scene.backend = backend;
+    scene.preset = &preset;
+    scene.config = &cfg;
+
+    sim_runtime_backend_build_static_obstacles(backend, &scene);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
+
+    center_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                             impl.volume.desc.grid_w / 2,
+                                             impl.volume.desc.grid_h / 2,
+                                             impl.volume.desc.grid_d / 2);
+    if (!impl.obstacle_occupancy[center_idx]) return false;
+
+    sim_runtime_backend_destroy(backend);
+    return true;
+}
+
+static bool test_attached_object_mode_can_retain_obstacle_occupancy(FluidEmitter3DSourceMode mode,
+                                                                    FluidEmitter3DSurface surface) {
+    AppConfig cfg = {0};
+    PhysicsSimRuntimeVisualBootstrap visual = {0};
+    SimRuntimeBackend *backend = NULL;
+    SimRuntimeBackend3DScaffoldTestView impl = {0};
+    FluidScenePreset preset = {0};
+    SceneState scene = {0};
+    size_t center_idx = 0;
+
+    cfg.quality_index = 1;
+    cfg.grid_w = 128;
+    cfg.grid_h = 128;
+    visual.scene_domain.enabled = true;
+    visual.scene_domain_authored = true;
+    visual.scene_domain.min.x = 0.0;
+    visual.scene_domain.min.y = 0.0;
+    visual.scene_domain.min.z = 0.0;
+    visual.scene_domain.max.x = 1.0;
+    visual.scene_domain.max.y = 1.0;
+    visual.scene_domain.max.z = 1.0;
+
+    preset.object_count = 1;
+    preset.objects[0] = (PresetObject){
+        .type = PRESET_OBJECT_BOX,
+        .position_x = 0.5f,
+        .position_y = 0.5f,
+        .position_z = 0.5f,
+        .size_x = 0.10f,
+        .size_y = 0.08f,
+        .size_z = 0.12f,
+        .is_static = true,
+    };
+    preset.emitter_count = 1;
+    preset.emitters[0] = (FluidEmitter){
+        .type = EMITTER_DENSITY_SOURCE,
+        .attached_object = 0,
+        .attached_import = -1,
+        .source_mode_3d = mode,
+        .surface_3d = surface,
+        .obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED,
+    };
+
+    backend = create_backend(&cfg, &visual);
+    if (!backend) return false;
+
+    scene.backend = backend;
+    scene.preset = &preset;
+    scene.config = &cfg;
+
+    sim_runtime_backend_build_static_obstacles(backend, &scene);
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &impl)) return false;
+
+    center_idx = sim_runtime_3d_volume_index(&impl.volume.desc,
+                                             impl.volume.desc.grid_w / 2,
+                                             impl.volume.desc.grid_h / 2,
+                                             impl.volume.desc.grid_d / 2);
+    if (!impl.obstacle_occupancy[center_idx]) return false;
+
+    sim_runtime_backend_destroy(backend);
+    return true;
+}
+
 static bool test_import_occupancy_tracks_live_transform_updates(void) {
     AppConfig cfg = {0};
     PhysicsSimRuntimeVisualBootstrap visual = {0};
@@ -347,6 +472,23 @@ int main(void) {
     if (!test_attached_object_is_skipped_from_obstacle_occupancy()) {
         fprintf(stderr,
                 "sim_runtime_backend_3d_retained_obstacle_contract_test: attached object skip failed\n");
+        return 1;
+    }
+    if (!test_surface_patch_attached_object_can_retain_obstacle_occupancy()) {
+        fprintf(stderr,
+                "sim_runtime_backend_3d_retained_obstacle_contract_test: retained surface patch failed\n");
+        return 1;
+    }
+    if (!test_attached_object_mode_can_retain_obstacle_occupancy(EMITTER_3D_SOURCE_MODE_SURFACE_SHELL,
+                                                                 EMITTER_3D_SURFACE_ALL_FACES)) {
+        fprintf(stderr,
+                "sim_runtime_backend_3d_retained_obstacle_contract_test: retained surface shell failed\n");
+        return 1;
+    }
+    if (!test_attached_object_mode_can_retain_obstacle_occupancy(EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE,
+                                                                 EMITTER_3D_SURFACE_ALL_FACES)) {
+        fprintf(stderr,
+                "sim_runtime_backend_3d_retained_obstacle_contract_test: retained heated obstacle failed\n");
         return 1;
     }
     if (!test_import_occupancy_tracks_live_transform_updates()) {

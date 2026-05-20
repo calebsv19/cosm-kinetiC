@@ -10,6 +10,10 @@ VF2D_DATASET_TOOL_SRC := $(SRC_DIR)/tools/cli/vf2d_dataset_tool.c
 VF2D_DATASET_TOOL_BIN := vf2d_dataset_tool
 PHYSICS_TRACE_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_trace_tool.c
 PHYSICS_TRACE_TOOL_BIN := physics_trace_tool
+PHYSICS_SIM_HEADLESS_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_sim_headless.c
+PHYSICS_SIM_HEADLESS_TOOL_BIN := physics_sim_headless
+PHYSICS_SIM_JOB_RUNNER_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_sim_job_runner.c
+PHYSICS_SIM_JOB_RUNNER_TOOL_BIN := physics_sim_job_runner
 RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN := runtime_scene_emitter_diag_tool
 RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/tools/cli/runtime_scene_emitter_diag_tool.c \

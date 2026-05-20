@@ -66,6 +66,39 @@ static bool test_import_attachment_takes_source_precedence(void) {
     return true;
 }
 
+static bool test_attached_object_surface_patch_contract_resolves_new_3d_fields(void) {
+    FluidScenePreset preset = {0};
+    SimRuntimeEmitterResolved resolved = {0};
+
+    preset.emitter_count = 1;
+    preset.emitters[0] = (FluidEmitter){
+        .type = EMITTER_DENSITY_SOURCE,
+        .position_x = 0.5f,
+        .position_y = 0.5f,
+        .position_z = 1.0f,
+        .radius = 0.06f,
+        .strength = 9.0f,
+        .dir_x = 0.0f,
+        .dir_y = 0.0f,
+        .dir_z = 1.0f,
+        .attached_object = 2,
+        .attached_import = -1,
+        .source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_PATCH,
+        .surface_3d = EMITTER_3D_SURFACE_TOP,
+        .obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED,
+        .thermal_buoyancy_3d = 14.0f,
+    };
+
+    if (!sim_runtime_emitter_resolve(&preset, 0, &resolved)) return false;
+    if (resolved.source_kind != SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_OBJECT) return false;
+    if (resolved.primary_footprint != SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_OBJECT_SURFACE_PATCH) return false;
+    if (resolved.source_mode_3d != EMITTER_3D_SOURCE_MODE_SURFACE_PATCH) return false;
+    if (resolved.surface_3d != EMITTER_3D_SURFACE_TOP) return false;
+    if (resolved.obstacle_mode_3d != EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED) return false;
+    if (!nearly_equal(resolved.thermal_buoyancy_3d, 14.0f)) return false;
+    return true;
+}
+
 static bool test_3d_placement_maps_additive_world_z(void) {
     SimRuntime3DDomainDesc domain = {
         .grid_w = 96,
@@ -100,6 +133,10 @@ int main(void) {
     }
     if (!test_import_attachment_takes_source_precedence()) {
         fprintf(stderr, "sim_runtime_emitter_contract_test: attachment precedence failed\n");
+        return 1;
+    }
+    if (!test_attached_object_surface_patch_contract_resolves_new_3d_fields()) {
+        fprintf(stderr, "sim_runtime_emitter_contract_test: surface patch contract failed\n");
         return 1;
     }
     if (!test_3d_placement_maps_additive_world_z()) {

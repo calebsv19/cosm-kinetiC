@@ -16,7 +16,13 @@ typedef enum SimRuntimeEmitterSourceKind {
 typedef enum SimRuntimeEmitterFootprintKind {
     SIM_RUNTIME_EMITTER_FOOTPRINT_RADIAL_SPHERE = 0,
     SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_OBJECT_OCCUPANCY = 1,
-    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_OCCUPANCY = 2
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_OCCUPANCY = 2,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_OBJECT_SURFACE_PATCH = 3,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_SURFACE_PATCH = 4,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_OBJECT_SURFACE_SHELL = 5,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_SURFACE_SHELL = 6,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_OBJECT_HEATED_OBSTACLE = 7,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_HEATED_OBSTACLE = 8
 } SimRuntimeEmitterFootprintKind;
 
 typedef struct SimRuntimeEmitterResolved {
@@ -35,6 +41,10 @@ typedef struct SimRuntimeEmitterResolved {
     float dir_x;
     float dir_y;
     float dir_z;
+    FluidEmitter3DSourceMode source_mode_3d;
+    FluidEmitter3DSurface surface_3d;
+    FluidEmitter3DObstacleMode obstacle_mode_3d;
+    float thermal_buoyancy_3d;
     bool direction_has_magnitude;
 } SimRuntimeEmitterResolved;
 
@@ -60,5 +70,8 @@ bool sim_runtime_emitter_resolve_3d_placement(const SimRuntime3DDomainDesc *doma
 
 const char *sim_runtime_emitter_source_kind_label(SimRuntimeEmitterSourceKind kind);
 const char *sim_runtime_emitter_footprint_kind_label(SimRuntimeEmitterFootprintKind kind);
+const char *sim_runtime_emitter_3d_source_mode_label(FluidEmitter3DSourceMode mode);
+const char *sim_runtime_emitter_3d_surface_label(FluidEmitter3DSurface surface);
+const char *sim_runtime_emitter_3d_obstacle_mode_label(FluidEmitter3DObstacleMode mode);
 
 #endif // SIM_RUNTIME_EMITTER_H

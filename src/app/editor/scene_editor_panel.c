@@ -477,6 +477,13 @@ static void draw_left_object_info_card(SceneEditorState *state) {
                  physics_sim_editor_session_emitter_type_label(selected_emitter->type),
                  selected_emitter->radius,
                  selected_emitter->strength);
+        snprintf(line_g,
+                 sizeof(line_g),
+                 "3D %s  %s  %s  Thermal %.1f",
+                 physics_sim_editor_session_emitter_source_mode_3d_label(selected_emitter->source_mode_3d),
+                 physics_sim_editor_session_emitter_surface_3d_label(selected_emitter->surface_3d),
+                 physics_sim_editor_session_emitter_obstacle_mode_3d_label(selected_emitter->obstacle_mode_3d),
+                 selected_emitter->thermal_buoyancy_3d);
     } else {
         snprintf(line_d, sizeof(line_d), "Emitter none");
     }
@@ -912,9 +919,16 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     if (!physics_sim_editor_session_has_retained_scene(&state->session)) {
         scene_editor_draw_numeric_field(renderer, state->font_small,
                                         &state->radius_field, selected_em, NULL);
+    } else {
+        scene_editor_draw_numeric_field(renderer, state->font_small,
+                                        &state->radius_field, NULL, selected_retained_em);
     }
     scene_editor_draw_numeric_field(renderer, state->font_small,
                                     &state->strength_field, selected_em, selected_retained_em);
+    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+        scene_editor_draw_numeric_field(renderer, state->font_small,
+                                        &state->thermal_buoyancy_field, NULL, selected_retained_em);
+    }
     if (physics_sim_editor_session_has_physics_overlay(&state->session)) {
         int label_h = panel_font_height(renderer, state->font_small, 16);
         draw_text(renderer,
@@ -925,6 +939,9 @@ void scene_editor_panel_draw(SceneEditorState *state) {
                   COLOR_TEXT_DIM);
         scene_editor_draw_button(renderer, &state->btn_overlay_dynamic, state->font_small);
         scene_editor_draw_button(renderer, &state->btn_overlay_static, state->font_small);
+        scene_editor_draw_button(renderer, &state->btn_overlay_mode_3d, state->font_small);
+        scene_editor_draw_button(renderer, &state->btn_overlay_surface_3d, state->font_small);
+        scene_editor_draw_button(renderer, &state->btn_overlay_obstacle_3d, state->font_small);
         scene_editor_draw_button(renderer, &state->btn_overlay_vel_x_neg, state->font_small);
         scene_editor_draw_button(renderer, &state->btn_overlay_vel_x_pos, state->font_small);
         scene_editor_draw_button(renderer, &state->btn_overlay_vel_y_neg, state->font_small);

@@ -400,9 +400,13 @@ int main(int argc, char **argv) {
         }
     }
     fprintf(stdout,
-            "resolved emitter: source=%s footprint=%s attached_object=%d attached_import=%d radius=%.6f strength=%.6f dir=(%.6f, %.6f, %.6f)\n",
+            "resolved emitter: source=%s footprint=%s mode3d=%s surface3d=%s obstacle3d=%s thermal=%.6f attached_object=%d attached_import=%d radius=%.6f strength=%.6f dir=(%.6f, %.6f, %.6f)\n",
             sim_runtime_emitter_source_kind_label(resolved.source_kind),
             sim_runtime_emitter_footprint_kind_label(resolved.primary_footprint),
+            sim_runtime_emitter_3d_source_mode_label(resolved.source_mode_3d),
+            sim_runtime_emitter_3d_surface_label(resolved.surface_3d),
+            sim_runtime_emitter_3d_obstacle_mode_label(resolved.obstacle_mode_3d),
+            resolved.thermal_buoyancy_3d,
             resolved.attached_object,
             resolved.attached_import,
             resolved.radius,

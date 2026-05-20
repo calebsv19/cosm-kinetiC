@@ -1,6 +1,6 @@
 # Physics Sim Current Truth
 
-Last updated: 2026-05-17
+Last updated: 2026-05-20
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -11,6 +11,38 @@ Last updated: 2026-05-17
 
 ## Current Shipped State
 - Producer-side truthful `3D` export is complete (through `PSBU-11D`).
+- Direct retained-scene headless CLI volume runs are available through
+  `physics_sim_headless`.
+- Detached submit/status/cancel supervision is now available through
+  `physics_sim_job_runner`.
+- The first trio detached chain adapter now routes through
+  `bin/run_trio_detached_job_chain.sh`, which performs LineDrawing authoring
+  synchronously, submits PhysicsSim as the first detached child, and leaves
+  RayTracing submission to a later status refresh after `scene_bundle.json`
+  becomes available.
+- `physics_sim_headless` now writes both `run_summary.json` and
+  `run_progress.json`, rejects non-empty output roots by default, and requires
+  `--overwrite` for intentional reruns into the same root. `--resume` is
+  reserved and currently rejected.
+- `run_progress.json` is now solver-step aware:
+  - schema `physics_sim_headless_run_progress_v2`
+  - per-frame `sim_steps_completed_in_frame`
+  - `sim_steps_total_in_frame`
+  - normalized `progress_ratio`
+  - progress `stage`
+  - `updated_at_utc`
+- Detached PhysicsSim jobs now write:
+  - `build/agent_runs/jobs/<job_id>/job_request.json`
+  - `job_status.json`
+  - `run_progress.json`
+  - `stdout.log`
+  - `stderr.log`
+  - `pid.txt`
+  - `result_summary.json`
+  - output-root artifacts under the requested run directory
+- Detached status schema is `physics_sim_detached_job_status_v1` and exposes
+  `queued`, `starting`, `running`, `stalled`, `completed`, `failed`, and
+  `cancelled` states without requiring a live PTY.
 - Authoritative volumetric (`XYZ`) runs now emit:
   - raw `.vf3d`
   - additive `VF3H` `.pack`
@@ -27,6 +59,22 @@ Last updated: 2026-05-17
 
 ## Runtime and Editor Snapshot
 - Runtime/editor retained-scene lanes are active and structurally separated from legacy compatibility mapping.
+- Agent/headless retained-scene runs can now bypass menu interaction:
+  - build with `make -C physics_sim physics_sim_headless`
+  - run `physics_sim/physics_sim_headless --runtime-scene <scene_runtime.json> --frames <n> --output-root <dir> --progress-interval <n> --save-volume-frames`
+  - output includes `run_summary.json` under the selected output root
+  - `run_progress.json` now advances inside a frame instead of only at frame boundaries
+  - volume exports keep the existing `volume_frames/<Preset>/` layout with
+    `.vf3d`, `.pack`, `manifest.json`, and `scene_bundle.json`
+  - skip-present volume-only runs avoid SDL video and renderer initialization
+  - render-frame capture and presented runs still use the existing window/Vulkan renderer path
+- Detached agent supervision can now bypass a live terminal:
+  - build with `make -C physics_sim physics-sim-job-runner`
+  - submit `physics_sim/physics_sim_job_runner submit --request <request.json>`
+  - inspect `physics_sim/physics_sim_job_runner status --job-id <job_id>`
+  - cancel `physics_sim/physics_sim_job_runner cancel --job-id <job_id>`
+  - or let `bin/run_trio_detached_job_chain.sh` submit PhysicsSim on behalf of
+    a chained LineDrawing -> PhysicsSim -> RayTracing run root
 - Dense retained-runtime `3D` domains now enforce a resident-memory budget before backend allocation:
   - oversized volumetric domains are downscaled by increasing voxel size rather than attempting full dense allocation at the requested resolution
 - The `3D` scaffold backend no longer requires full dense field residency as its always-live source of truth:
@@ -96,6 +144,13 @@ Last updated: 2026-05-17
 - Stable validation:
   - `make -C physics_sim test-stable`
   - includes 3D export contract/parity, retained-scene bridge coverage, and the shared-viewport-backed scene-editor viewport contract
+- Direct headless CLI:
+  - `make -C physics_sim physics_sim_headless`
+  - `make -C physics_sim test-physics-sim-headless-cli`
+- Detached runner:
+  - `make -C physics_sim physics-sim-job-runner`
+  - `make -C physics_sim test-physics-sim-job-runner-smoke`
+  - `make -C physics_sim test-physics-sim-job-runner-policy`
 - Smoke and harness:
   - `make -C physics_sim run-headless-smoke`
   - `make -C physics_sim visual-harness`

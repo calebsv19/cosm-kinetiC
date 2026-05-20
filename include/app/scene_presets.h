@@ -12,6 +12,31 @@ typedef enum FluidEmitterType {
     EMITTER_SINK
 } FluidEmitterType;
 
+typedef enum FluidEmitter3DSourceMode {
+    EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT = 0,
+    EMITTER_3D_SOURCE_MODE_VOLUME_FILL,
+    EMITTER_3D_SOURCE_MODE_SURFACE_PATCH,
+    EMITTER_3D_SOURCE_MODE_SURFACE_SHELL,
+    EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE
+} FluidEmitter3DSourceMode;
+
+typedef enum FluidEmitter3DSurface {
+    EMITTER_3D_SURFACE_AUTO = 0,
+    EMITTER_3D_SURFACE_TOP,
+    EMITTER_3D_SURFACE_BOTTOM,
+    EMITTER_3D_SURFACE_LEFT,
+    EMITTER_3D_SURFACE_RIGHT,
+    EMITTER_3D_SURFACE_FRONT,
+    EMITTER_3D_SURFACE_BACK,
+    EMITTER_3D_SURFACE_ALL_FACES
+} FluidEmitter3DSurface;
+
+typedef enum FluidEmitter3DObstacleMode {
+    EMITTER_3D_OBSTACLE_MODE_AUTO = 0,
+    EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED,
+    EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED
+} FluidEmitter3DObstacleMode;
+
 typedef struct FluidEmitter {
     FluidEmitterType type;
     float position_x;   // normalized 0..1
@@ -24,6 +49,10 @@ typedef struct FluidEmitter {
     float dir_z;        // additive dimensional field (defaults to 0 for 2D compatibility)
     int   attached_object; // -1 if free; otherwise index into preset objects
     int   attached_import; // -1 if free; otherwise index into imported shapes
+    FluidEmitter3DSourceMode source_mode_3d;
+    FluidEmitter3DSurface surface_3d;
+    FluidEmitter3DObstacleMode obstacle_mode_3d;
+    float thermal_buoyancy_3d;
 } FluidEmitter;
 
 #define MAX_FLUID_EMITTERS 32

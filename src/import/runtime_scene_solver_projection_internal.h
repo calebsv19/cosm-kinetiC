@@ -21,6 +21,14 @@ typedef struct SolverProjectionPhysicsOverlay {
     double emitter_dir_x;
     double emitter_dir_y;
     double emitter_dir_z;
+    bool has_emitter_source_mode_3d;
+    FluidEmitter3DSourceMode emitter_source_mode_3d;
+    bool has_emitter_surface_3d;
+    FluidEmitter3DSurface emitter_surface_3d;
+    bool has_emitter_obstacle_mode_3d;
+    FluidEmitter3DObstacleMode emitter_obstacle_mode_3d;
+    bool has_emitter_thermal_buoyancy_3d;
+    double emitter_thermal_buoyancy_3d;
 } SolverProjectionPhysicsOverlay;
 
 typedef struct SolverProjectionSceneDomain {

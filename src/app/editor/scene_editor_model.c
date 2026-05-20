@@ -215,7 +215,12 @@ void begin_field_edit(SceneEditorState *state, NumericField *field) {
         const PhysicsSimEmitterOverlay *em =
             physics_sim_editor_session_selected_object_emitter(&state->session);
         if (em) {
-            float value = (field->target == FIELD_RADIUS) ? em->radius : em->strength;
+            float value = em->strength;
+            if (field->target == FIELD_RADIUS) {
+                value = em->radius;
+            } else if (field->target == FIELD_THERMAL_BUOYANCY_3D) {
+                value = em->thermal_buoyancy_3d;
+            }
             snprintf(field->buffer, sizeof(field->buffer), "%.3f", value);
         }
     } else if (state->selected_emitter >= 0 &&
@@ -246,8 +251,15 @@ void commit_field_edit(SceneEditorState *state) {
         return;
     }
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
-        if (field->target == FIELD_STRENGTH &&
-            physics_sim_editor_session_set_selected_emitter_strength(&state->session, value)) {
+        bool applied = false;
+        if (field->target == FIELD_RADIUS) {
+            applied = physics_sim_editor_session_set_selected_emitter_radius(&state->session, value);
+        } else if (field->target == FIELD_STRENGTH) {
+            applied = physics_sim_editor_session_set_selected_emitter_strength(&state->session, value);
+        } else if (field->target == FIELD_THERMAL_BUOYANCY_3D) {
+            applied = physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(&state->session, value);
+        }
+        if (applied) {
             set_dirty(state);
         }
     } else {

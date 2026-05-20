@@ -17,7 +17,8 @@ typedef struct EditorButton {
 typedef enum EditorFieldTarget {
     FIELD_NONE = 0,
     FIELD_RADIUS,
-    FIELD_STRENGTH
+    FIELD_STRENGTH,
+    FIELD_THERMAL_BUOYANCY_3D
 } EditorFieldTarget;
 
 typedef struct NumericField {

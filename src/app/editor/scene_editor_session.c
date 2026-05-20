@@ -32,6 +32,12 @@ static float session_clamp_emitter_radius(float radius) {
     return radius;
 }
 
+static float session_clamp_emitter_thermal_buoyancy(float thermal_buoyancy) {
+    if (thermal_buoyancy < 0.0f) thermal_buoyancy = 0.0f;
+    if (thermal_buoyancy > 1000.0f) thermal_buoyancy = 1000.0f;
+    return thermal_buoyancy;
+}
+
 static float session_default_emitter_radius_for_object(const CoreSceneObjectContract *object) {
     double radius = 0.08;
     if (!object) return 0.08f;
@@ -62,6 +68,22 @@ static CoreObjectVec3 session_default_emitter_direction_for_object(const CoreSce
 static bool session_is_legacy_sideways_direction(CoreObjectVec3 direction) {
     return fabs(direction.x) <= 1e-9 && fabs(direction.y - (-1.0)) <= 1e-9 &&
            fabs(direction.z) <= 1e-9;
+}
+
+static FluidEmitter3DSourceMode session_default_emitter_source_mode_3d(void) {
+    return EMITTER_3D_SOURCE_MODE_SURFACE_PATCH;
+}
+
+static FluidEmitter3DSurface session_default_emitter_surface_3d(void) {
+    return EMITTER_3D_SURFACE_TOP;
+}
+
+static FluidEmitter3DObstacleMode session_default_emitter_obstacle_mode_3d(void) {
+    return EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED;
+}
+
+static float session_default_emitter_thermal_buoyancy_3d(FluidEmitterType type) {
+    return (type == EMITTER_DENSITY_SOURCE) ? 6.0f : 0.0f;
 }
 
 static bool session_compute_retained_bounds(const PhysicsSimRetainedRuntimeScene *retained,
@@ -209,6 +231,11 @@ static void physics_sim_editor_session_seed_default_overlay(PhysicsSimEditorSess
         overlay->emitter.radius = session_default_emitter_radius_for_object(object);
         overlay->emitter.strength = session_emitter_default_strength(EMITTER_DENSITY_SOURCE);
         overlay->emitter.direction = session_default_emitter_direction_for_object(object);
+        overlay->emitter.source_mode_3d = session_default_emitter_source_mode_3d();
+        overlay->emitter.surface_3d = session_default_emitter_surface_3d();
+        overlay->emitter.obstacle_mode_3d = session_default_emitter_obstacle_mode_3d();
+        overlay->emitter.thermal_buoyancy_3d =
+            session_default_emitter_thermal_buoyancy_3d(EMITTER_DENSITY_SOURCE);
         session->physics_overlay.object_overlay_count++;
     }
 }
@@ -410,6 +437,20 @@ bool physics_sim_editor_session_set_selected_emitter_type(PhysicsSimEditorSessio
         overlay->emitter.direction.z == 0.0) {
         overlay->emitter.direction = session_default_emitter_direction_for_object(object);
     }
+    overlay->emitter.source_mode_3d = session_default_emitter_source_mode_3d();
+    overlay->emitter.surface_3d = session_default_emitter_surface_3d();
+    overlay->emitter.obstacle_mode_3d = session_default_emitter_obstacle_mode_3d();
+    overlay->emitter.thermal_buoyancy_3d =
+        session_default_emitter_thermal_buoyancy_3d(type);
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_set_selected_emitter_radius(PhysicsSimEditorSession *session,
+                                                            float radius) {
+    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    overlay->emitter.radius = session_clamp_emitter_radius(radius);
     session->physics_overlay.derived_defaults = false;
     return true;
 }
@@ -419,6 +460,93 @@ bool physics_sim_editor_session_set_selected_emitter_strength(PhysicsSimEditorSe
     PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
     if (!overlay || !overlay->emitter.active) return false;
     overlay->emitter.strength = session_clamp_emitter_strength(strength);
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(PhysicsSimEditorSession *session,
+                                                                          float thermal_buoyancy) {
+    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    overlay->emitter.thermal_buoyancy_3d = session_clamp_emitter_thermal_buoyancy(thermal_buoyancy);
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(PhysicsSimEditorSession *session) {
+    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    switch (overlay->emitter.source_mode_3d) {
+    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_SHELL;
+        break;
+    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE;
+        break;
+    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_VOLUME_FILL;
+        break;
+    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+        break;
+    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
+    default:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_PATCH;
+        break;
+    }
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_cycle_selected_emitter_surface_3d(PhysicsSimEditorSession *session) {
+    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    switch (overlay->emitter.surface_3d) {
+    case EMITTER_3D_SURFACE_TOP:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_BOTTOM;
+        break;
+    case EMITTER_3D_SURFACE_BOTTOM:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_LEFT;
+        break;
+    case EMITTER_3D_SURFACE_LEFT:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_RIGHT;
+        break;
+    case EMITTER_3D_SURFACE_RIGHT:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_FRONT;
+        break;
+    case EMITTER_3D_SURFACE_FRONT:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_BACK;
+        break;
+    case EMITTER_3D_SURFACE_BACK:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_ALL_FACES;
+        break;
+    case EMITTER_3D_SURFACE_ALL_FACES:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_AUTO;
+        break;
+    case EMITTER_3D_SURFACE_AUTO:
+    default:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_TOP;
+        break;
+    }
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(PhysicsSimEditorSession *session) {
+    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    switch (overlay->emitter.obstacle_mode_3d) {
+    case EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED:
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED;
+        break;
+    case EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED:
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
+        break;
+    case EMITTER_3D_OBSTACLE_MODE_AUTO:
+    default:
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED;
+        break;
+    }
     session->physics_overlay.derived_defaults = false;
     return true;
 }
@@ -599,6 +727,27 @@ bool physics_sim_editor_session_build_overlay_json(const PhysicsSimEditorSession
                                        physics_sim_editor_session_emitter_type_label(overlay->emitter.type)));
             json_object_object_add(emitter, "radius", json_object_new_double(overlay->emitter.radius));
             json_object_object_add(emitter, "strength", json_object_new_double(overlay->emitter.strength));
+            json_object_object_add(
+                emitter,
+                "mode_3d",
+                json_object_new_string(
+                    physics_sim_editor_session_emitter_source_mode_3d_label(
+                        overlay->emitter.source_mode_3d)));
+            json_object_object_add(
+                emitter,
+                "surface_3d",
+                json_object_new_string(
+                    physics_sim_editor_session_emitter_surface_3d_label(
+                        overlay->emitter.surface_3d)));
+            json_object_object_add(
+                emitter,
+                "obstacle_mode_3d",
+                json_object_new_string(
+                    physics_sim_editor_session_emitter_obstacle_mode_3d_label(
+                        overlay->emitter.obstacle_mode_3d)));
+            json_object_object_add(emitter,
+                                   "thermal_buoyancy_3d",
+                                   json_object_new_double(overlay->emitter.thermal_buoyancy_3d));
             json_object_object_add(direction, "x", json_object_new_double(overlay->emitter.direction.x));
             json_object_object_add(direction, "y", json_object_new_double(overlay->emitter.direction.y));
             json_object_object_add(direction, "z", json_object_new_double(overlay->emitter.direction.z));
@@ -812,6 +961,10 @@ bool physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(PhysicsS
                 json_object *type = NULL;
                 json_object *radius = NULL;
                 json_object *strength = NULL;
+                json_object *mode_3d = NULL;
+                json_object *surface_3d = NULL;
+                json_object *obstacle_mode_3d = NULL;
+                json_object *thermal_buoyancy_3d = NULL;
                 json_object *direction = NULL;
                 if (json_object_object_get_ex(emitter, "active", &active) &&
                     json_object_get_boolean(active)) {
@@ -834,6 +987,57 @@ bool physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(PhysicsS
                 if (json_object_object_get_ex(emitter, "strength", &strength) &&
                     (json_object_is_type(strength, json_type_double) || json_object_is_type(strength, json_type_int))) {
                     overlay->emitter.strength = session_clamp_emitter_strength((float)json_object_get_double(strength));
+                }
+                if (json_object_object_get_ex(emitter, "mode_3d", &mode_3d) &&
+                    json_object_is_type(mode_3d, json_type_string)) {
+                    const char *mode_text = json_object_get_string(mode_3d);
+                    overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+                    if (mode_text && strcmp(mode_text, "VolumeFill") == 0) {
+                        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_VOLUME_FILL;
+                    } else if (mode_text && strcmp(mode_text, "SurfacePatch") == 0) {
+                        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_PATCH;
+                    } else if (mode_text && strcmp(mode_text, "SurfaceShell") == 0) {
+                        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_SHELL;
+                    } else if (mode_text && strcmp(mode_text, "HeatedObstacle") == 0) {
+                        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE;
+                    }
+                }
+                if (json_object_object_get_ex(emitter, "surface_3d", &surface_3d) &&
+                    json_object_is_type(surface_3d, json_type_string)) {
+                    const char *surface_text = json_object_get_string(surface_3d);
+                    overlay->emitter.surface_3d = EMITTER_3D_SURFACE_AUTO;
+                    if (surface_text && strcmp(surface_text, "Top") == 0) {
+                        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_TOP;
+                    } else if (surface_text && strcmp(surface_text, "Bottom") == 0) {
+                        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_BOTTOM;
+                    } else if (surface_text && strcmp(surface_text, "Left") == 0) {
+                        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_LEFT;
+                    } else if (surface_text && strcmp(surface_text, "Right") == 0) {
+                        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_RIGHT;
+                    } else if (surface_text && strcmp(surface_text, "Front") == 0) {
+                        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_FRONT;
+                    } else if (surface_text && strcmp(surface_text, "Back") == 0) {
+                        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_BACK;
+                    } else if (surface_text && strcmp(surface_text, "AllFaces") == 0) {
+                        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_ALL_FACES;
+                    }
+                }
+                if (json_object_object_get_ex(emitter, "obstacle_mode_3d", &obstacle_mode_3d) &&
+                    json_object_is_type(obstacle_mode_3d, json_type_string)) {
+                    const char *obstacle_text = json_object_get_string(obstacle_mode_3d);
+                    overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
+                    if (obstacle_text && strcmp(obstacle_text, "ClearAttached") == 0) {
+                        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED;
+                    } else if (obstacle_text && strcmp(obstacle_text, "RetainAttached") == 0) {
+                        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED;
+                    }
+                }
+                if (json_object_object_get_ex(emitter, "thermal_buoyancy_3d", &thermal_buoyancy_3d) &&
+                    (json_object_is_type(thermal_buoyancy_3d, json_type_double) ||
+                     json_object_is_type(thermal_buoyancy_3d, json_type_int))) {
+                    overlay->emitter.thermal_buoyancy_3d =
+                        session_clamp_emitter_thermal_buoyancy(
+                            (float)json_object_get_double(thermal_buoyancy_3d));
                 }
                 if (json_object_object_get_ex(emitter, "direction", &direction) &&
                     json_object_is_type(direction, json_type_object)) {
@@ -919,6 +1123,56 @@ const char *physics_sim_editor_session_emitter_type_label(FluidEmitterType type)
         case EMITTER_DENSITY_SOURCE:
         default:
             return "Source";
+    }
+}
+
+const char *physics_sim_editor_session_emitter_source_mode_3d_label(FluidEmitter3DSourceMode mode) {
+    switch (mode) {
+    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
+        return "VolumeFill";
+    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
+        return "SurfacePatch";
+    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
+        return "SurfaceShell";
+    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
+        return "HeatedObstacle";
+    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
+    default:
+        return "LegacyCompat";
+    }
+}
+
+const char *physics_sim_editor_session_emitter_surface_3d_label(FluidEmitter3DSurface surface) {
+    switch (surface) {
+    case EMITTER_3D_SURFACE_TOP:
+        return "Top";
+    case EMITTER_3D_SURFACE_BOTTOM:
+        return "Bottom";
+    case EMITTER_3D_SURFACE_LEFT:
+        return "Left";
+    case EMITTER_3D_SURFACE_RIGHT:
+        return "Right";
+    case EMITTER_3D_SURFACE_FRONT:
+        return "Front";
+    case EMITTER_3D_SURFACE_BACK:
+        return "Back";
+    case EMITTER_3D_SURFACE_ALL_FACES:
+        return "AllFaces";
+    case EMITTER_3D_SURFACE_AUTO:
+    default:
+        return "Auto";
+    }
+}
+
+const char *physics_sim_editor_session_emitter_obstacle_mode_3d_label(FluidEmitter3DObstacleMode mode) {
+    switch (mode) {
+    case EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED:
+        return "ClearAttached";
+    case EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED:
+        return "RetainAttached";
+    case EMITTER_3D_OBSTACLE_MODE_AUTO:
+    default:
+        return "Auto";
     }
 }
 

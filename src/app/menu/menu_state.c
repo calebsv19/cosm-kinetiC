@@ -79,6 +79,7 @@ void menu_run_headless_batch(SceneMenuInteraction *ctx) {
     HeadlessOptions opts = {
         .enabled = true,
         .frame_limit = cfg_copy.headless_frame_count,
+        .sim_steps_per_frame = 1,
         .skip_present = cfg_copy.headless_skip_present,
         .ignore_input = false,
         .preserve_sdl_state = true

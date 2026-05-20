@@ -9,6 +9,12 @@
 static const float SCAFFOLD_EMITTER_POWER_BOOST = 40.0f;
 static const float SCAFFOLD_REF_FOOTPRINT_CELLS = 128.0f;
 static const double SCAFFOLD_IMPORT_DESIRED_FIT = 0.25;
+static const float SCAFFOLD_DENSITY_DIRECTIONAL_SCALE_LEGACY = 0.25f;
+static const float SCAFFOLD_DENSITY_DIRECTIONAL_SCALE_SURFACE = 1.0f;
+static const float SCAFFOLD_THERMAL_BUOYANCY_EMIT_SCALE = 0.12f;
+static const float SCAFFOLD_HEATED_OBSTACLE_DENSITY_SCALE = 0.10f;
+static const float SCAFFOLD_HEATED_OBSTACLE_DIRECTIONAL_SCALE = 0.15f;
+static const float SCAFFOLD_HEATED_OBSTACLE_THERMAL_SCALE = 2.5f;
 
 static double backend_3d_scaffold_axis_span(double world_min, double world_max) {
     double span = world_max - world_min;
@@ -122,6 +128,94 @@ static double backend_3d_scaffold_import_world_half_extent_z(const SimRuntime3DD
     return backend_3d_scaffold_axis_span(desc->world_min_z, desc->world_max_z) * scale_factor;
 }
 
+static float backend_3d_scaffold_density_directional_scale(
+    const SimRuntimeEmitterResolved *emitter) {
+    if (!emitter) return SCAFFOLD_DENSITY_DIRECTIONAL_SCALE_LEGACY;
+    switch (emitter->source_mode_3d) {
+    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
+    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
+    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
+        return SCAFFOLD_DENSITY_DIRECTIONAL_SCALE_SURFACE;
+    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
+    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
+    default:
+        break;
+    }
+    return SCAFFOLD_DENSITY_DIRECTIONAL_SCALE_LEGACY;
+}
+
+static bool backend_3d_scaffold_resolve_buoyancy_axis(
+    const SimRuntimeBackend3DScaffold *state,
+    const SimRuntimeEmitterResolved *emitter,
+    float *out_x,
+    float *out_y,
+    float *out_z) {
+    float axis_x = 0.0f;
+    float axis_y = 0.0f;
+    float axis_z = 0.0f;
+    float axis_len = 0.0f;
+    if (!out_x || !out_y || !out_z) return false;
+    if (state && state->scene_up_valid) {
+        axis_x = state->scene_up_x;
+        axis_y = state->scene_up_y;
+        axis_z = state->scene_up_z;
+    } else if (emitter && emitter->direction_has_magnitude) {
+        axis_x = emitter->dir_x;
+        axis_y = emitter->dir_y;
+        axis_z = emitter->dir_z;
+    } else {
+        axis_z = 1.0f;
+    }
+    axis_len = sqrtf(axis_x * axis_x + axis_y * axis_y + axis_z * axis_z);
+    if (!(axis_len > 0.0001f)) return false;
+    *out_x = axis_x / axis_len;
+    *out_y = axis_y / axis_len;
+    *out_z = axis_z / axis_len;
+    return true;
+}
+
+static float backend_3d_scaffold_thermal_buoyancy_delta(
+    const SimRuntimeEmitterResolved *emitter,
+    float per_cell) {
+    float mode_scale = 1.0f;
+    if (!emitter || per_cell <= 0.0f || emitter->thermal_buoyancy_3d <= 0.0f) return 0.0f;
+    if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE) {
+        mode_scale = SCAFFOLD_HEATED_OBSTACLE_THERMAL_SCALE;
+    }
+    return per_cell * emitter->thermal_buoyancy_3d * SCAFFOLD_THERMAL_BUOYANCY_EMIT_SCALE *
+           mode_scale;
+}
+
+static bool backend_3d_scaffold_cell_in_heated_release_band(
+    const SimRuntimeBackend3DScaffold *state,
+    const SimRuntimeEmitterResolved *emitter,
+    const SimRuntimeEmitterOrientedBox3D *box,
+    int x,
+    int y,
+    int z) {
+    float axis_x = 0.0f;
+    float axis_y = 0.0f;
+    float axis_z = 0.0f;
+    float signed_distance = 0.0f;
+    if (!box) return false;
+    if (!state || !emitter) return true;
+    if (emitter->surface_3d != EMITTER_3D_SURFACE_ALL_FACES &&
+        emitter->surface_3d != EMITTER_3D_SURFACE_AUTO) {
+        return true;
+    }
+    if (!backend_3d_scaffold_resolve_buoyancy_axis(state,
+                                                   emitter,
+                                                   &axis_x,
+                                                   &axis_y,
+                                                   &axis_z)) {
+        return true;
+    }
+    signed_distance = ((float)x - (float)box->center_x) * axis_x +
+                      ((float)y - (float)box->center_y) * axis_y +
+                      ((float)z - (float)box->center_z) * axis_z;
+    return signed_distance >= 0.0f;
+}
+
 static void backend_3d_scaffold_reset_emitter_step_stats(SimRuntimeBackend3DScaffold *state) {
     if (!state) return;
     state->emitter_step_emitters_applied = 0;
@@ -140,7 +234,13 @@ static void backend_3d_scaffold_accumulate_emitter_step_stats(
     float total_strength) {
     float density_delta = 0.0f;
     float velocity_delta = 0.0f;
+    float directional_scale = 0.0f;
+    float thermal_delta = 0.0f;
+    float per_cell = 0.0f;
     if (!state || !emitter || affected_cells == 0 || total_strength <= 0.0f) return;
+    per_cell = total_strength / (float)affected_cells;
+    directional_scale = backend_3d_scaffold_density_directional_scale(emitter);
+    thermal_delta = backend_3d_scaffold_thermal_buoyancy_delta(emitter, per_cell) * (float)affected_cells;
 
     state->emitter_step_emitters_applied += 1;
     if (emitter->source_kind == SIM_RUNTIME_EMITTER_SOURCE_FREE) {
@@ -153,8 +253,15 @@ static void backend_3d_scaffold_accumulate_emitter_step_stats(
 
     switch (emitter->type) {
     case EMITTER_DENSITY_SOURCE:
-        density_delta = total_strength;
-        velocity_delta = emitter->direction_has_magnitude ? total_strength * 0.25f : 0.0f;
+        if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE) {
+            density_delta = total_strength * SCAFFOLD_HEATED_OBSTACLE_DENSITY_SCALE;
+            velocity_delta = total_strength * SCAFFOLD_HEATED_OBSTACLE_DIRECTIONAL_SCALE;
+            velocity_delta += thermal_delta;
+        } else {
+            density_delta = total_strength;
+            velocity_delta = emitter->direction_has_magnitude ? total_strength * directional_scale : 0.0f;
+            velocity_delta += thermal_delta;
+        }
         break;
     case EMITTER_VELOCITY_JET:
         density_delta = total_strength * 0.3f;
@@ -276,6 +383,50 @@ static size_t backend_3d_scaffold_count_oriented_box_cells(const SimRuntimeEmitt
     return cells;
 }
 
+static size_t backend_3d_scaffold_count_surface_patch_cells(
+    const SimRuntimeEmitterOrientedBox3D *box,
+    FluidEmitter3DSurface surface) {
+    size_t cells = 0;
+    if (!box) return 0;
+    for (int z = box->min_z; z <= box->max_z; ++z) {
+        for (int y = box->min_y; y <= box->max_y; ++y) {
+            for (int x = box->min_x; x <= box->max_x; ++x) {
+                if (!backend_3d_scaffold_cell_in_surface_patch(box, surface, x, y, z)) continue;
+                ++cells;
+            }
+        }
+    }
+    return cells;
+}
+
+static size_t backend_3d_scaffold_count_surface_shell_cells(
+    const SimRuntimeBackend3DScaffold *state,
+    const SimRuntimeEmitterResolved *emitter,
+    const SimRuntimeEmitterOrientedBox3D *box,
+    FluidEmitter3DSurface surface) {
+    size_t cells = 0;
+    if (!box) return 0;
+    for (int z = box->min_z; z <= box->max_z; ++z) {
+        for (int y = box->min_y; y <= box->max_y; ++y) {
+            for (int x = box->min_x; x <= box->max_x; ++x) {
+                bool in_shell = false;
+                if (emitter && emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE) {
+                    in_shell = backend_3d_scaffold_cell_in_surface_shell_exterior(box, surface, x, y, z);
+                    if (in_shell &&
+                        !backend_3d_scaffold_cell_in_heated_release_band(state, emitter, box, x, y, z)) {
+                        in_shell = false;
+                    }
+                } else {
+                    in_shell = backend_3d_scaffold_cell_in_surface_shell(box, surface, x, y, z);
+                }
+                if (!in_shell) continue;
+                ++cells;
+            }
+        }
+    }
+    return cells;
+}
+
 static void backend_3d_scaffold_apply_cell(SimRuntimeBackend3DScaffold *state,
                                            const SimRuntimeEmitterResolved *emitter,
                                            int x,
@@ -286,15 +437,66 @@ static void backend_3d_scaffold_apply_cell(SimRuntimeBackend3DScaffold *state,
     float velocity_x_delta = 0.0f;
     float velocity_y_delta = 0.0f;
     float velocity_z_delta = 0.0f;
+    float directional_scale = 0.0f;
+    float buoyancy_axis_x = 0.0f;
+    float buoyancy_axis_y = 0.0f;
+    float buoyancy_axis_z = 0.0f;
+    float thermal_delta = 0.0f;
     size_t idx = 0;
     if (!state || !emitter || per_cell <= 0.0f) return;
+    directional_scale = backend_3d_scaffold_density_directional_scale(emitter);
+    thermal_delta = backend_3d_scaffold_thermal_buoyancy_delta(emitter, per_cell);
+    if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE) {
+        density_delta = per_cell * SCAFFOLD_HEATED_OBSTACLE_DENSITY_SCALE;
+        if (emitter->direction_has_magnitude) {
+            velocity_x_delta = emitter->dir_x * per_cell * SCAFFOLD_HEATED_OBSTACLE_DIRECTIONAL_SCALE;
+            velocity_y_delta = emitter->dir_y * per_cell * SCAFFOLD_HEATED_OBSTACLE_DIRECTIONAL_SCALE;
+            velocity_z_delta = emitter->dir_z * per_cell * SCAFFOLD_HEATED_OBSTACLE_DIRECTIONAL_SCALE;
+        }
+        if (thermal_delta > 0.0f &&
+            backend_3d_scaffold_resolve_buoyancy_axis(state,
+                                                      emitter,
+                                                      &buoyancy_axis_x,
+                                                      &buoyancy_axis_y,
+                                                      &buoyancy_axis_z)) {
+            velocity_x_delta = buoyancy_axis_x * thermal_delta;
+            velocity_y_delta = buoyancy_axis_y * thermal_delta;
+            velocity_z_delta = buoyancy_axis_z * thermal_delta;
+        }
+        sim_runtime_3d_brick_store_add_cell(&state->brick_store,
+                                            x,
+                                            y,
+                                            z,
+                                            density_delta,
+                                            velocity_x_delta,
+                                            velocity_y_delta,
+                                            velocity_z_delta,
+                                            0.0f);
+        if (!backend_3d_scaffold_dense_mirror_live(state)) return;
+        idx = sim_runtime_3d_volume_index(&state->volume.desc, x, y, z);
+        state->volume.density[idx] += density_delta;
+        state->volume.velocity_x[idx] += velocity_x_delta;
+        state->volume.velocity_y[idx] += velocity_y_delta;
+        state->volume.velocity_z[idx] += velocity_z_delta;
+        return;
+    }
     switch (emitter->type) {
     case EMITTER_DENSITY_SOURCE:
         density_delta = per_cell;
         if (emitter->direction_has_magnitude) {
-            velocity_x_delta = emitter->dir_x * per_cell * 0.25f;
-            velocity_y_delta = emitter->dir_y * per_cell * 0.25f;
-            velocity_z_delta = emitter->dir_z * per_cell * 0.25f;
+            velocity_x_delta = emitter->dir_x * per_cell * directional_scale;
+            velocity_y_delta = emitter->dir_y * per_cell * directional_scale;
+            velocity_z_delta = emitter->dir_z * per_cell * directional_scale;
+        }
+        if (thermal_delta > 0.0f &&
+            backend_3d_scaffold_resolve_buoyancy_axis(state,
+                                                      emitter,
+                                                      &buoyancy_axis_x,
+                                                      &buoyancy_axis_y,
+                                                      &buoyancy_axis_z)) {
+            velocity_x_delta += buoyancy_axis_x * thermal_delta;
+            velocity_y_delta += buoyancy_axis_y * thermal_delta;
+            velocity_z_delta += buoyancy_axis_z * thermal_delta;
         }
         break;
     case EMITTER_VELOCITY_JET:
@@ -391,6 +593,92 @@ static void backend_3d_scaffold_apply_oriented_box(SimRuntimeBackend3DScaffold *
     }
 }
 
+static void backend_3d_scaffold_apply_surface_patch(SimRuntimeBackend3DScaffold *state,
+                                                    const SceneState *scene,
+                                                    const SimRuntimeEmitterResolved *emitter,
+                                                    const SimRuntimeEmitterOrientedBox3D *box,
+                                                    double full_box_world_volume,
+                                                    double dt) {
+    size_t full_cells = 0;
+    size_t patch_cells = 0;
+    float total_strength = 0.0f;
+    float per_cell = 0.0f;
+    double patch_world_volume = 0.0;
+    FluidEmitter3DSurface surface = EMITTER_3D_SURFACE_TOP;
+    if (!state || !scene || !emitter || !box) return;
+    surface = backend_3d_scaffold_resolve_surface_3d(emitter->surface_3d);
+    full_cells = backend_3d_scaffold_count_oriented_box_cells(box);
+    patch_cells = backend_3d_scaffold_count_surface_patch_cells(box, surface);
+    if (full_cells == 0 || patch_cells == 0) return;
+    patch_world_volume = full_box_world_volume * ((double)patch_cells / (double)full_cells);
+    total_strength = backend_3d_scaffold_emitter_total_strength(scene,
+                                                                &state->volume.desc,
+                                                                emitter,
+                                                                (float)dt,
+                                                                patch_cells,
+                                                                patch_world_volume);
+    per_cell = total_strength / (float)patch_cells;
+    if (per_cell <= 0.0f) return;
+    backend_3d_scaffold_accumulate_emitter_step_stats(state, emitter, patch_cells, total_strength);
+
+    for (int z = box->min_z; z <= box->max_z; ++z) {
+        for (int y = box->min_y; y <= box->max_y; ++y) {
+            for (int x = box->min_x; x <= box->max_x; ++x) {
+                if (!backend_3d_scaffold_cell_in_surface_patch(box, surface, x, y, z)) continue;
+                backend_3d_scaffold_apply_cell(state, emitter, x, y, z, per_cell);
+            }
+        }
+    }
+}
+
+static void backend_3d_scaffold_apply_surface_shell(SimRuntimeBackend3DScaffold *state,
+                                                    const SceneState *scene,
+                                                    const SimRuntimeEmitterResolved *emitter,
+                                                    const SimRuntimeEmitterOrientedBox3D *box,
+                                                    double full_box_world_volume,
+                                                    double dt) {
+    size_t full_cells = 0;
+    size_t shell_cells = 0;
+    float total_strength = 0.0f;
+    float per_cell = 0.0f;
+    double shell_world_volume = 0.0;
+    FluidEmitter3DSurface surface = EMITTER_3D_SURFACE_TOP;
+    if (!state || !scene || !emitter || !box) return;
+    surface = backend_3d_scaffold_resolve_surface_3d(emitter->surface_3d);
+    full_cells = backend_3d_scaffold_count_oriented_box_cells(box);
+    shell_cells = backend_3d_scaffold_count_surface_shell_cells(state, emitter, box, surface);
+    if (full_cells == 0 || shell_cells == 0) return;
+    shell_world_volume = full_box_world_volume * ((double)shell_cells / (double)full_cells);
+    total_strength = backend_3d_scaffold_emitter_total_strength(scene,
+                                                                &state->volume.desc,
+                                                                emitter,
+                                                                (float)dt,
+                                                                shell_cells,
+                                                                shell_world_volume);
+    per_cell = total_strength / (float)shell_cells;
+    if (per_cell <= 0.0f) return;
+    backend_3d_scaffold_accumulate_emitter_step_stats(state, emitter, shell_cells, total_strength);
+
+    for (int z = box->min_z; z <= box->max_z; ++z) {
+        for (int y = box->min_y; y <= box->max_y; ++y) {
+            for (int x = box->min_x; x <= box->max_x; ++x) {
+                bool in_shell = false;
+                if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE) {
+                    in_shell = backend_3d_scaffold_cell_in_surface_shell_exterior(box, surface, x, y, z);
+                    if (in_shell &&
+                        !backend_3d_scaffold_cell_in_heated_release_band(state, emitter, box, x, y, z)) {
+                        in_shell = false;
+                    }
+                } else {
+                    in_shell = backend_3d_scaffold_cell_in_surface_shell(box, surface, x, y, z);
+                }
+                if (!in_shell) continue;
+                backend_3d_scaffold_apply_cell(state, emitter, x, y, z, per_cell);
+            }
+        }
+    }
+}
+
 static void backend_3d_scaffold_apply_free_emitter(SimRuntimeBackend3DScaffold *state,
                                                    const SceneState *scene,
                                                    const SimRuntimeEmitterResolved *emitter,
@@ -461,6 +749,27 @@ static void backend_3d_scaffold_apply_attached_object_emitter(SimRuntimeBackend3
     half_x = backend_3d_scaffold_object_world_half_extent_x(&state->volume.desc, object);
     half_y = backend_3d_scaffold_object_world_half_extent_y(&state->volume.desc, object);
     half_z = backend_3d_scaffold_object_world_half_extent_z(&state->volume.desc, object);
+    if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_SURFACE_PATCH) {
+        backend_3d_scaffold_apply_surface_patch(
+            state,
+            scene,
+            emitter,
+            &box,
+            backend_3d_scaffold_box_world_volume(half_x, half_y, half_z),
+            dt);
+        return;
+    }
+    if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_SURFACE_SHELL ||
+        emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE) {
+        backend_3d_scaffold_apply_surface_shell(
+            state,
+            scene,
+            emitter,
+            &box,
+            backend_3d_scaffold_box_world_volume(half_x, half_y, half_z),
+            dt);
+        return;
+    }
     backend_3d_scaffold_apply_oriented_box(
         state, scene, emitter, &box, backend_3d_scaffold_box_world_volume(half_x, half_y, half_z), dt);
 }
@@ -512,6 +821,27 @@ static void backend_3d_scaffold_apply_attached_import_emitter(SimRuntimeBackend3
     half_x = backend_3d_scaffold_import_world_half_extent_x(&state->volume.desc, imp);
     half_y = backend_3d_scaffold_import_world_half_extent_y(&state->volume.desc, imp);
     half_z = backend_3d_scaffold_import_world_half_extent_z(&state->volume.desc, imp);
+    if (rotated.source_mode_3d == EMITTER_3D_SOURCE_MODE_SURFACE_PATCH) {
+        backend_3d_scaffold_apply_surface_patch(
+            state,
+            scene,
+            &rotated,
+            &box,
+            backend_3d_scaffold_box_world_volume(half_x, half_y, half_z),
+            dt);
+        return;
+    }
+    if (rotated.source_mode_3d == EMITTER_3D_SOURCE_MODE_SURFACE_SHELL ||
+        rotated.source_mode_3d == EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE) {
+        backend_3d_scaffold_apply_surface_shell(
+            state,
+            scene,
+            &rotated,
+            &box,
+            backend_3d_scaffold_box_world_volume(half_x, half_y, half_z),
+            dt);
+        return;
+    }
     backend_3d_scaffold_apply_oriented_box(
         state, scene, &rotated, &box, backend_3d_scaffold_box_world_volume(half_x, half_y, half_z), dt);
 }

@@ -13,6 +13,12 @@ static int clamp_int_value(int value, int min_value, int max_value) {
     return value;
 }
 
+static float clamp_float_value(float value, float min_value, float max_value) {
+    if (value < min_value) return min_value;
+    if (value > max_value) return max_value;
+    return value;
+}
+
 void backend_3d_scaffold_fill_sphere_bounds(const SimRuntime3DDomainDesc *desc,
                                             SimRuntimeEmitterPlacement3D *placement) {
     if (!desc || !placement) return;
@@ -122,4 +128,228 @@ bool backend_3d_scaffold_build_import_box(const SimRuntime3DDomainDesc *desc,
     box.max_z = clamp_int_value((int)ceilf((float)box.center_z + span_z + 1.0f), 0, desc->grid_d - 1);
     *out_box = box;
     return true;
+}
+
+FluidEmitter3DSurface backend_3d_scaffold_resolve_surface_3d(FluidEmitter3DSurface surface) {
+    switch (surface) {
+    case EMITTER_3D_SURFACE_TOP:
+    case EMITTER_3D_SURFACE_BOTTOM:
+    case EMITTER_3D_SURFACE_LEFT:
+    case EMITTER_3D_SURFACE_RIGHT:
+    case EMITTER_3D_SURFACE_FRONT:
+    case EMITTER_3D_SURFACE_BACK:
+    case EMITTER_3D_SURFACE_ALL_FACES:
+        return surface;
+    case EMITTER_3D_SURFACE_AUTO:
+    default:
+        break;
+    }
+    return EMITTER_3D_SURFACE_TOP;
+}
+
+void backend_3d_scaffold_project_oriented_box_local(const SimRuntimeEmitterOrientedBox3D *box,
+                                                    int x,
+                                                    int y,
+                                                    int z,
+                                                    float *out_u,
+                                                    float *out_v,
+                                                    float *out_w) {
+    float dx = 0.0f;
+    float dy = 0.0f;
+    float dz = 0.0f;
+    float local_u = 0.0f;
+    float local_v = 0.0f;
+    float local_w = 0.0f;
+    if (!box) return;
+    dx = (float)(x - box->center_x);
+    dy = (float)(y - box->center_y);
+    dz = (float)(z - box->center_z);
+    local_u = dx * box->axis_u_x + dy * box->axis_u_y + dz * box->axis_u_z;
+    local_v = dx * box->axis_v_x + dy * box->axis_v_y + dz * box->axis_v_z;
+    local_w = dx * box->axis_w_x + dy * box->axis_w_y + dz * box->axis_w_z;
+    if (out_u) *out_u = local_u;
+    if (out_v) *out_v = local_v;
+    if (out_w) *out_w = local_w;
+}
+
+static float surface_band_thickness_cells(const SimRuntimeEmitterOrientedBox3D *box,
+                                          FluidEmitter3DSurface surface) {
+    float axis_half = 1.0f;
+    if (!box) return 1.0f;
+    switch (backend_3d_scaffold_resolve_surface_3d(surface)) {
+    case EMITTER_3D_SURFACE_LEFT:
+    case EMITTER_3D_SURFACE_RIGHT:
+        axis_half = box->half_u_cells;
+        break;
+    case EMITTER_3D_SURFACE_FRONT:
+    case EMITTER_3D_SURFACE_BACK:
+        axis_half = box->half_v_cells;
+        break;
+    case EMITTER_3D_SURFACE_TOP:
+    case EMITTER_3D_SURFACE_BOTTOM:
+    case EMITTER_3D_SURFACE_ALL_FACES:
+    default:
+        axis_half = box->half_w_cells;
+        break;
+    }
+    return clamp_float_value(axis_half * 0.35f, 1.0f, 2.0f);
+}
+
+static float surface_shell_thickness_cells(const SimRuntimeEmitterOrientedBox3D *box,
+                                           FluidEmitter3DSurface surface) {
+    float axis_half = 1.0f;
+    if (!box) return 1.0f;
+    switch (backend_3d_scaffold_resolve_surface_3d(surface)) {
+    case EMITTER_3D_SURFACE_LEFT:
+    case EMITTER_3D_SURFACE_RIGHT:
+        axis_half = box->half_u_cells;
+        break;
+    case EMITTER_3D_SURFACE_FRONT:
+    case EMITTER_3D_SURFACE_BACK:
+        axis_half = box->half_v_cells;
+        break;
+    case EMITTER_3D_SURFACE_TOP:
+    case EMITTER_3D_SURFACE_BOTTOM:
+    case EMITTER_3D_SURFACE_ALL_FACES:
+    default:
+        axis_half = box->half_w_cells;
+        break;
+    }
+    return clamp_float_value(axis_half * 0.75f, 1.0f, 3.0f);
+}
+
+bool backend_3d_scaffold_cell_in_surface_patch(const SimRuntimeEmitterOrientedBox3D *box,
+                                               FluidEmitter3DSurface surface,
+                                               int x,
+                                               int y,
+                                               int z) {
+    float local_u = 0.0f;
+    float local_v = 0.0f;
+    float local_w = 0.0f;
+    float thickness = 0.0f;
+    FluidEmitter3DSurface resolved = backend_3d_scaffold_resolve_surface_3d(surface);
+    if (!box) return false;
+    if (!sim_runtime_backend_3d_cell_in_oriented_box(box, x, y, z)) return false;
+
+    backend_3d_scaffold_project_oriented_box_local(box, x, y, z, &local_u, &local_v, &local_w);
+    thickness = surface_band_thickness_cells(box, resolved);
+
+    switch (resolved) {
+    case EMITTER_3D_SURFACE_TOP:
+        return local_w >= (box->half_w_cells - thickness);
+    case EMITTER_3D_SURFACE_BOTTOM:
+        return local_w <= (-box->half_w_cells + thickness);
+    case EMITTER_3D_SURFACE_LEFT:
+        return local_u <= (-box->half_u_cells + thickness);
+    case EMITTER_3D_SURFACE_RIGHT:
+        return local_u >= (box->half_u_cells - thickness);
+    case EMITTER_3D_SURFACE_FRONT:
+        return local_v >= (box->half_v_cells - thickness);
+    case EMITTER_3D_SURFACE_BACK:
+        return local_v <= (-box->half_v_cells + thickness);
+    case EMITTER_3D_SURFACE_ALL_FACES:
+        return local_u >= (box->half_u_cells - thickness) ||
+               local_u <= (-box->half_u_cells + thickness) ||
+               local_v >= (box->half_v_cells - thickness) ||
+               local_v <= (-box->half_v_cells + thickness) ||
+               local_w >= (box->half_w_cells - thickness) ||
+               local_w <= (-box->half_w_cells + thickness);
+    case EMITTER_3D_SURFACE_AUTO:
+    default:
+        break;
+    }
+    return local_w >= (box->half_w_cells - thickness);
+}
+
+bool backend_3d_scaffold_cell_in_surface_shell(const SimRuntimeEmitterOrientedBox3D *box,
+                                               FluidEmitter3DSurface surface,
+                                               int x,
+                                               int y,
+                                               int z) {
+    float local_u = 0.0f;
+    float local_v = 0.0f;
+    float local_w = 0.0f;
+    float thickness = 0.0f;
+    FluidEmitter3DSurface resolved = backend_3d_scaffold_resolve_surface_3d(surface);
+    if (!box) return false;
+    if (!sim_runtime_backend_3d_cell_in_oriented_box(box, x, y, z)) return false;
+
+    backend_3d_scaffold_project_oriented_box_local(box, x, y, z, &local_u, &local_v, &local_w);
+    thickness = surface_shell_thickness_cells(box, resolved);
+
+    switch (resolved) {
+    case EMITTER_3D_SURFACE_TOP:
+        return local_w >= (box->half_w_cells - thickness);
+    case EMITTER_3D_SURFACE_BOTTOM:
+        return local_w <= (-box->half_w_cells + thickness);
+    case EMITTER_3D_SURFACE_LEFT:
+        return local_u <= (-box->half_u_cells + thickness);
+    case EMITTER_3D_SURFACE_RIGHT:
+        return local_u >= (box->half_u_cells - thickness);
+    case EMITTER_3D_SURFACE_FRONT:
+        return local_v >= (box->half_v_cells - thickness);
+    case EMITTER_3D_SURFACE_BACK:
+        return local_v <= (-box->half_v_cells + thickness);
+    case EMITTER_3D_SURFACE_ALL_FACES:
+        return local_u >= (box->half_u_cells - thickness) ||
+               local_u <= (-box->half_u_cells + thickness) ||
+               local_v >= (box->half_v_cells - thickness) ||
+               local_v <= (-box->half_v_cells + thickness) ||
+               local_w >= (box->half_w_cells - thickness) ||
+               local_w <= (-box->half_w_cells + thickness);
+    case EMITTER_3D_SURFACE_AUTO:
+    default:
+        break;
+    }
+    return local_w >= (box->half_w_cells - thickness);
+}
+
+bool backend_3d_scaffold_cell_in_surface_shell_exterior(const SimRuntimeEmitterOrientedBox3D *box,
+                                                        FluidEmitter3DSurface surface,
+                                                        int x,
+                                                        int y,
+                                                        int z) {
+    float local_u = 0.0f;
+    float local_v = 0.0f;
+    float local_w = 0.0f;
+    float thickness = 0.0f;
+    FluidEmitter3DSurface resolved = backend_3d_scaffold_resolve_surface_3d(surface);
+    bool inside_outer_u = false;
+    bool inside_outer_v = false;
+    bool inside_outer_w = false;
+    if (!box) return false;
+    if (sim_runtime_backend_3d_cell_in_oriented_box(box, x, y, z)) return false;
+
+    backend_3d_scaffold_project_oriented_box_local(box, x, y, z, &local_u, &local_v, &local_w);
+    thickness = surface_shell_thickness_cells(box, resolved);
+    inside_outer_u = fabsf(local_u) <= (box->half_u_cells + thickness);
+    inside_outer_v = fabsf(local_v) <= (box->half_v_cells + thickness);
+    inside_outer_w = fabsf(local_w) <= (box->half_w_cells + thickness);
+    if (!inside_outer_u || !inside_outer_v || !inside_outer_w) return false;
+
+    switch (resolved) {
+    case EMITTER_3D_SURFACE_TOP:
+        return local_w > box->half_w_cells;
+    case EMITTER_3D_SURFACE_BOTTOM:
+        return local_w < -box->half_w_cells;
+    case EMITTER_3D_SURFACE_LEFT:
+        return local_u < -box->half_u_cells;
+    case EMITTER_3D_SURFACE_RIGHT:
+        return local_u > box->half_u_cells;
+    case EMITTER_3D_SURFACE_FRONT:
+        return local_v > box->half_v_cells;
+    case EMITTER_3D_SURFACE_BACK:
+        return local_v < -box->half_v_cells;
+    case EMITTER_3D_SURFACE_ALL_FACES:
+        return local_u > box->half_u_cells ||
+               local_u < -box->half_u_cells ||
+               local_v > box->half_v_cells ||
+               local_v < -box->half_v_cells ||
+               local_w > box->half_w_cells ||
+               local_w < -box->half_w_cells;
+    case EMITTER_3D_SURFACE_AUTO:
+    default:
+        break;
+    }
+    return local_w > box->half_w_cells;
 }

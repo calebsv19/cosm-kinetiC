@@ -321,6 +321,11 @@ static bool test_volume_frames_write_routes_authoritative_3d_runs_to_vf3d(void) 
         ok = fail_with_message("manifest frame entry mismatch");
         goto cleanup;
     }
+    if (!cJSON_IsString(cJSON_GetObjectItem(entry, "path")) ||
+        strcmp(cJSON_GetObjectItem(entry, "path")->valuestring, "frame_000011.vf3d") != 0) {
+        ok = fail_with_message("manifest frame path should be manifest-relative");
+        goto cleanup;
+    }
 
     bundle = read_json_file(bundle_path);
     if (!bundle) {

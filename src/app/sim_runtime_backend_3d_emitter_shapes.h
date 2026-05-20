@@ -30,5 +30,28 @@ bool backend_3d_scaffold_build_import_box(const SimRuntime3DDomainDesc *desc,
                                           const SimRuntimeEmitterPlacement3D *placement,
                                           const ImportedShape *imp,
                                           SimRuntimeEmitterOrientedBox3D *out_box);
+FluidEmitter3DSurface backend_3d_scaffold_resolve_surface_3d(FluidEmitter3DSurface surface);
+void backend_3d_scaffold_project_oriented_box_local(const SimRuntimeEmitterOrientedBox3D *box,
+                                                    int x,
+                                                    int y,
+                                                    int z,
+                                                    float *out_u,
+                                                    float *out_v,
+                                                    float *out_w);
+bool backend_3d_scaffold_cell_in_surface_patch(const SimRuntimeEmitterOrientedBox3D *box,
+                                               FluidEmitter3DSurface surface,
+                                               int x,
+                                               int y,
+                                               int z);
+bool backend_3d_scaffold_cell_in_surface_shell(const SimRuntimeEmitterOrientedBox3D *box,
+                                               FluidEmitter3DSurface surface,
+                                               int x,
+                                               int y,
+                                               int z);
+bool backend_3d_scaffold_cell_in_surface_shell_exterior(const SimRuntimeEmitterOrientedBox3D *box,
+                                                        FluidEmitter3DSurface surface,
+                                                        int x,
+                                                        int y,
+                                                        int z);
 
 #endif

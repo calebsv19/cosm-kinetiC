@@ -230,9 +230,10 @@ void draw_right_panel_summary(SceneEditorState *state) {
         if (selected_emitter) {
             snprintf(emitter_line,
                      sizeof(emitter_line),
-                     "Emitter: %s  Strength %.1f",
+                     "Emitter: %s  %s  Thermal %.1f",
                      physics_sim_editor_session_emitter_type_label(selected_emitter->type),
-                     selected_emitter->strength);
+                     physics_sim_editor_session_emitter_source_mode_3d_label(selected_emitter->source_mode_3d),
+                     selected_emitter->thermal_buoyancy_3d);
         } else {
             snprintf(emitter_line, sizeof(emitter_line), "Emitter: none");
         }

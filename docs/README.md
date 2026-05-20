@@ -14,6 +14,9 @@ Start here for public repository documentation.
 ## Public Runtime Docs
 - `README.md` (repo root): product/runtime overview, execution flow, and controls.
 - `docs/KEYBINDS.md`: full keybind list across fluid and structural lanes.
+- `docs/headless_cli.md`: direct `physics_sim_headless` command for
+  retained runtime-scene volume runs, detached runner usage, progress
+  reporting, and agent-owned output-directory policy.
 - `docs/desktop_packaging.md`: desktop app bundle workflow, launcher contract, and verification commands.
 
 ## Current Published State
@@ -35,6 +38,19 @@ Start here for public repository documentation.
     and world/screen transforms through shared `core_viewport2d`, while scene-world meaning and
     `3D` orbit behavior remain app-local
   - the editor viewport now has scene-relative far-zoom headroom for oversized retained scenes
+- direct headless retained-scene runs are now current for volume output:
+  - `make -C physics_sim physics_sim_headless`
+  - `physics_sim/physics_sim_headless --runtime-scene <scene_runtime.json> --frames <n> --output-root <dir> --progress-interval <n> --save-volume-frames`
+  - runs write `run_summary.json` and `run_progress.json`
+  - `run_progress.json` now exposes solver-step progress inside a frame
+  - non-empty output roots are rejected unless `--overwrite` is provided
+  - skip-present volume-only runs avoid SDL video/renderer initialization
+  - `--save-render-frames` and `--present` still require the existing renderer path
+- detached supervision is now current for the same lane:
+  - `make -C physics_sim physics-sim-job-runner`
+  - `physics_sim/physics_sim_job_runner submit --request <request.json>`
+  - `physics_sim/physics_sim_job_runner status --job-id <job_id>`
+  - `physics_sim/physics_sim_job_runner cancel --job-id <job_id>`
 
 ## Runtime Persistence Policy
 - tracked defaults remain under `config/`

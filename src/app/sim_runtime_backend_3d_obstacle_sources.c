@@ -54,6 +54,30 @@ static bool cell_in_oriented_box(const SimRuntimeObstacleOrientedBox3D *box,
     return sim_runtime_backend_3d_cell_in_oriented_box(box, x, y, z);
 }
 
+static bool attached_emitter_clears_obstacle(const FluidEmitter *emitter) {
+    if (!emitter) return false;
+    switch (emitter->obstacle_mode_3d) {
+    case EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED:
+        return true;
+    case EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED:
+        return false;
+    case EMITTER_3D_OBSTACLE_MODE_AUTO:
+    default:
+        break;
+    }
+    switch (emitter->source_mode_3d) {
+    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
+    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
+    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
+        return false;
+    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
+    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
+    default:
+        break;
+    }
+    return true;
+}
+
 static void mark_volume_cell(SimRuntimeBackend3DScaffold *state, int x, int y, int z) {
     if (!state) return;
     backend_3d_scaffold_set_obstacle_cell(state, x, y, z, true);
@@ -175,6 +199,7 @@ static void collect_attached_source_flags(const FluidScenePreset *preset,
     for (size_t i = 0; i < preset->emitter_count && i < MAX_FLUID_EMITTERS; ++i) {
         int object_index = preset->emitters[i].attached_object;
         int import_index = preset->emitters[i].attached_import;
+        if (!attached_emitter_clears_obstacle(&preset->emitters[i])) continue;
         if (emitter_on_object &&
             object_index >= 0 &&
             object_index < (int)MAX_PRESET_OBJECTS) {

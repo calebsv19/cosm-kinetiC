@@ -1,0 +1,549 @@
+#include "app/app_config.h"
+#include "app/scene_controller.h"
+#include "app/scene_presets.h"
+#include "geo/shape_library.h"
+#include "render/vk_shared_device.h"
+
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+
+#include <errno.h>
+#include <dirent.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
+
+#define PHYSICS_SIM_HEADLESS_PATH_MAX 1024
+
+typedef enum PhysicsSimHeadlessOutputPolicy {
+    PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS = 0,
+    PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE = 1
+} PhysicsSimHeadlessOutputPolicy;
+
+typedef struct PhysicsSimHeadlessCliOptions {
+    const char *runtime_scene_path;
+    const char *output_root;
+    const char *summary_path;
+    const char *progress_path;
+    const char *cancel_flag_path;
+    int frames;
+    int sim_steps_per_frame;
+    int progress_interval;
+    bool save_volume_frames;
+    bool save_render_frames;
+    bool skip_present;
+    PhysicsSimHeadlessOutputPolicy output_policy;
+} PhysicsSimHeadlessCliOptions;
+
+typedef struct PhysicsSimHeadlessProgressSink {
+    const char *progress_path;
+    const PhysicsSimHeadlessCliOptions *opts;
+} PhysicsSimHeadlessProgressSink;
+
+typedef struct PhysicsSimHeadlessCancelProbe {
+    const char *cancel_flag_path;
+} PhysicsSimHeadlessCancelProbe;
+
+static bool utc_now_string(char *out, size_t out_size);
+static double progress_ratio_for(const HeadlessProgressInfo *progress);
+
+static bool join_path(char *out, size_t out_size, const char *dir, const char *name);
+
+static void print_usage(const char *argv0) {
+    fprintf(stderr,
+            "usage: %s --runtime-scene <scene_runtime.json> --frames <n> "
+            "--output-root <dir> [--save-volume-frames] [--save-render-frames] "
+            "[--summary <run_summary.json>] [--progress <run_progress.json>] "
+            "[--cancel-flag <cancel_requested.flag>] "
+            "[--progress-interval <n>] [--sim-steps-per-frame <n>] "
+            "[--overwrite] [--present]\n",
+            argv0 ? argv0 : "physics_sim_headless");
+}
+
+static bool parse_int_arg(const char *text, int *out) {
+    char *end = NULL;
+    long value = 0;
+    if (!text || !text[0] || !out) return false;
+    errno = 0;
+    value = strtol(text, &end, 10);
+    if (errno != 0 || !end || *end != '\0' || value < 0 || value > 100000000L) {
+        return false;
+    }
+    *out = (int)value;
+    return true;
+}
+
+static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out) {
+    if (!out) return false;
+    memset(out, 0, sizeof(*out));
+    out->frames = 1;
+    out->sim_steps_per_frame = 1;
+    out->progress_interval = 60;
+    out->skip_present = true;
+    out->output_policy = PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS;
+
+    for (int i = 1; i < argc; ++i) {
+        if (strcmp(argv[i], "--runtime-scene") == 0) {
+            if (++i >= argc || !argv[i][0]) return false;
+            out->runtime_scene_path = argv[i];
+        } else if (strcmp(argv[i], "--frames") == 0) {
+            if (++i >= argc || !parse_int_arg(argv[i], &out->frames)) return false;
+        } else if (strcmp(argv[i], "--output-root") == 0) {
+            if (++i >= argc || !argv[i][0]) return false;
+            out->output_root = argv[i];
+        } else if (strcmp(argv[i], "--summary") == 0) {
+            if (++i >= argc || !argv[i][0]) return false;
+            out->summary_path = argv[i];
+        } else if (strcmp(argv[i], "--progress") == 0) {
+            if (++i >= argc || !argv[i][0]) return false;
+            out->progress_path = argv[i];
+        } else if (strcmp(argv[i], "--cancel-flag") == 0) {
+            if (++i >= argc || !argv[i][0]) return false;
+            out->cancel_flag_path = argv[i];
+        } else if (strcmp(argv[i], "--progress-interval") == 0) {
+            if (++i >= argc || !parse_int_arg(argv[i], &out->progress_interval)) return false;
+        } else if (strcmp(argv[i], "--sim-steps-per-frame") == 0) {
+            if (++i >= argc || !parse_int_arg(argv[i], &out->sim_steps_per_frame) ||
+                out->sim_steps_per_frame <= 0) {
+                return false;
+            }
+        } else if (strcmp(argv[i], "--save-volume-frames") == 0) {
+            out->save_volume_frames = true;
+        } else if (strcmp(argv[i], "--save-render-frames") == 0) {
+            out->save_render_frames = true;
+        } else if (strcmp(argv[i], "--overwrite") == 0) {
+            out->output_policy = PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE;
+        } else if (strcmp(argv[i], "--resume") == 0) {
+            fprintf(stderr,
+                    "[physics_sim_headless] ERROR: --resume is not supported yet; use a new output root or --overwrite.\n");
+            return false;
+        } else if (strcmp(argv[i], "--present") == 0) {
+            out->skip_present = false;
+        } else if (strcmp(argv[i], "--skip-present") == 0) {
+            out->skip_present = true;
+        } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+            print_usage(argv[0]);
+            exit(0);
+        } else {
+            return false;
+        }
+    }
+
+    return out->runtime_scene_path && out->runtime_scene_path[0] &&
+           out->output_root && out->output_root[0] &&
+           out->frames > 0;
+}
+
+static bool ensure_dir(const char *path) {
+    char tmp[PHYSICS_SIM_HEADLESS_PATH_MAX];
+    size_t len = 0;
+    if (!path || !path[0]) return false;
+    if (snprintf(tmp, sizeof(tmp), "%s", path) >= (int)sizeof(tmp)) return false;
+    len = strlen(tmp);
+    while (len > 1u && tmp[len - 1u] == '/') {
+        tmp[len - 1u] = '\0';
+        --len;
+    }
+    for (char *p = tmp + 1; *p; ++p) {
+        if (*p == '/') {
+            *p = '\0';
+            if (mkdir(tmp, 0775) != 0 && errno != EEXIST) return false;
+            *p = '/';
+        }
+    }
+    return mkdir(tmp, 0775) == 0 || errno == EEXIST;
+}
+
+static bool path_exists(const char *path) {
+    struct stat st;
+    if (!path || !path[0]) return false;
+    return stat(path, &st) == 0;
+}
+
+static bool dir_is_empty(const char *path) {
+    DIR *dir = NULL;
+    struct dirent *entry = NULL;
+    if (!path || !path[0]) return false;
+    dir = opendir(path);
+    if (!dir) return false;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        closedir(dir);
+        return false;
+    }
+    closedir(dir);
+    return true;
+}
+
+static bool remove_tree(const char *path) {
+    struct stat st;
+    DIR *dir = NULL;
+    struct dirent *entry = NULL;
+    if (!path || !path[0] || strcmp(path, "/") == 0 || strlen(path) < 8u) return false;
+    if (lstat(path, &st) != 0) return errno == ENOENT;
+    if (!S_ISDIR(st.st_mode)) return remove(path) == 0;
+
+    dir = opendir(path);
+    if (!dir) return false;
+    while ((entry = readdir(dir)) != NULL) {
+        char child[PHYSICS_SIM_HEADLESS_PATH_MAX];
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        if (!join_path(child, sizeof(child), path, entry->d_name)) {
+            closedir(dir);
+            return false;
+        }
+        if (!remove_tree(child)) {
+            closedir(dir);
+            return false;
+        }
+    }
+    closedir(dir);
+    return rmdir(path) == 0;
+}
+
+static bool join_path(char *out, size_t out_size, const char *dir, const char *name) {
+    if (!out || out_size == 0u || !dir || !name) return false;
+    return snprintf(out, out_size, "%s/%s", dir, name) < (int)out_size;
+}
+
+static void json_write_escaped(FILE *f, const char *text) {
+    const unsigned char *p = (const unsigned char *)(text ? text : "");
+    fputc('"', f);
+    while (*p) {
+        switch (*p) {
+            case '\\': fputs("\\\\", f); break;
+            case '"': fputs("\\\"", f); break;
+            case '\n': fputs("\\n", f); break;
+            case '\r': fputs("\\r", f); break;
+            case '\t': fputs("\\t", f); break;
+            default:
+                if (*p < 0x20) {
+                    fprintf(f, "\\u%04x", (unsigned int)*p);
+                } else {
+                    fputc(*p, f);
+                }
+                break;
+        }
+        ++p;
+    }
+    fputc('"', f);
+}
+
+static const char *output_policy_label(PhysicsSimHeadlessOutputPolicy policy) {
+    switch (policy) {
+        case PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE: return "overwrite";
+        case PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS:
+        default: return "fail_if_exists";
+    }
+}
+
+static bool utc_now_string(char *out, size_t out_size) {
+    time_t now = 0;
+    struct tm tm_utc;
+    if (!out || out_size == 0u) return false;
+    out[0] = '\0';
+    now = time(NULL);
+    if (now == (time_t)-1) return false;
+#if defined(__APPLE__) || defined(__unix__)
+    if (gmtime_r(&now, &tm_utc) == NULL) return false;
+#else
+    {
+        struct tm *tmp = gmtime(&now);
+        if (!tmp) return false;
+        tm_utc = *tmp;
+    }
+#endif
+    return strftime(out, out_size, "%Y-%m-%dT%H:%M:%SZ", &tm_utc) > 0u;
+}
+
+static double progress_ratio_for(const HeadlessProgressInfo *progress) {
+    double completed = 0.0;
+    if (!progress) return 0.0;
+    completed = (double)progress->frames_completed;
+    if (progress->sim_steps_total_in_frame > 0u) {
+        completed +=
+            (double)progress->sim_steps_completed_in_frame /
+            (double)progress->sim_steps_total_in_frame;
+    }
+    if (progress->frames_requested > 0u) {
+        double ratio = completed / (double)progress->frames_requested;
+        if (ratio > 1.0) ratio = 1.0;
+        return ratio;
+    }
+    return 0.0;
+}
+
+static bool write_progress_json(const char *progress_path,
+                                const PhysicsSimHeadlessCliOptions *opts,
+                                const HeadlessProgressInfo *progress,
+                                const char *status) {
+    FILE *f = NULL;
+    double progress_ratio = 0.0;
+    char updated_at_utc[32];
+    if (!progress_path || !progress_path[0] || !opts || !progress || !status) return false;
+    progress_ratio = progress_ratio_for(progress);
+    if (!utc_now_string(updated_at_utc, sizeof(updated_at_utc))) return false;
+    f = fopen(progress_path, "wb");
+    if (!f) return false;
+    fputs("{\n", f);
+    fputs("  \"schema\": \"physics_sim_headless_run_progress_v2\",\n", f);
+    fputs("  \"runtime_scene\": ", f);
+    json_write_escaped(f, opts->runtime_scene_path);
+    fputs(",\n  \"output_root\": ", f);
+    json_write_escaped(f, opts->output_root);
+    fprintf(f,
+            ",\n  \"frames_requested\": %llu,\n"
+            "  \"frames_completed\": %llu,\n"
+            "  \"frame_index\": %llu,\n"
+            "  \"sim_steps_per_frame\": %d,\n"
+            "  \"sim_steps_completed_in_frame\": %u,\n"
+            "  \"sim_steps_total_in_frame\": %u,\n"
+            "  \"progress_ratio\": %.6f,\n"
+            "  \"percent_complete\": %.6f,\n"
+            "  \"stage\": ",
+            (unsigned long long)progress->frames_requested,
+            (unsigned long long)progress->frames_completed,
+            (unsigned long long)progress->frame_index,
+            opts->sim_steps_per_frame,
+            progress->sim_steps_completed_in_frame,
+            progress->sim_steps_total_in_frame,
+            progress_ratio,
+            progress_ratio * 100.0);
+    json_write_escaped(f, progress->stage ? progress->stage : "running");
+    fprintf(f, ",\n  \"updated_at_utc\": ");
+    json_write_escaped(f, updated_at_utc);
+    fprintf(f, ",\n  \"status\": ");
+    json_write_escaped(f, status);
+    fputs("\n}\n", f);
+    return fclose(f) == 0;
+}
+
+static void progress_callback(void *user_data, const HeadlessProgressInfo *progress) {
+    PhysicsSimHeadlessProgressSink *sink = (PhysicsSimHeadlessProgressSink *)user_data;
+    const char *status = NULL;
+    if (!sink || !sink->progress_path || !sink->opts || !progress) return;
+    if (progress->final_update && progress->stage &&
+        strcmp(progress->stage, "canceled") == 0) {
+        status = "canceled";
+    } else if (progress->final_update) {
+        status = "finishing";
+    } else if (progress->stage && strcmp(progress->stage, "pending") == 0) {
+        status = "pending";
+    } else {
+        status = "running";
+    }
+    (void)write_progress_json(sink->progress_path,
+                              sink->opts,
+                              progress,
+                              status);
+    fprintf(stderr,
+            "[physics_sim_headless] progress: frame=%llu/%llu step=%u/%u stage=%s%s\n",
+            (unsigned long long)progress->frames_completed,
+            (unsigned long long)progress->frames_requested,
+            progress->sim_steps_completed_in_frame,
+            progress->sim_steps_total_in_frame,
+            progress->stage ? progress->stage : "running",
+            progress->final_update ? " final" : "");
+}
+
+static bool cancel_requested_callback(void *user_data) {
+    const PhysicsSimHeadlessCancelProbe *probe = (const PhysicsSimHeadlessCancelProbe *)user_data;
+    return probe && probe->cancel_flag_path && probe->cancel_flag_path[0] &&
+           path_exists(probe->cancel_flag_path);
+}
+
+static bool write_run_summary(const char *summary_path,
+                              const PhysicsSimHeadlessCliOptions *opts,
+                              int result_code) {
+    FILE *f = NULL;
+    if (!summary_path || !summary_path[0] || !opts) return false;
+    f = fopen(summary_path, "wb");
+    if (!f) return false;
+    fputs("{\n", f);
+    fputs("  \"schema\": \"physics_sim_headless_run_summary_v1\",\n", f);
+    fputs("  \"runtime_scene\": ", f);
+    json_write_escaped(f, opts->runtime_scene_path);
+    fputs(",\n  \"output_root\": ", f);
+    json_write_escaped(f, opts->output_root);
+    fprintf(f,
+            ",\n  \"frames_requested\": %d,\n"
+            "  \"frames_completed\": %d,\n"
+            "  \"sim_steps_per_frame\": %d,\n"
+            "  \"save_volume_frames\": %s,\n"
+            "  \"save_render_frames\": %s,\n"
+            "  \"skip_present\": %s,\n"
+            "  \"output_policy\": \"%s\",\n"
+            "  \"result_code\": %d,\n"
+            "  \"status\": \"%s\"\n",
+            opts->frames,
+            result_code == 0 ? opts->frames : 0,
+            opts->sim_steps_per_frame,
+            opts->save_volume_frames ? "true" : "false",
+            opts->save_render_frames ? "true" : "false",
+            opts->skip_present ? "true" : "false",
+            output_policy_label(opts->output_policy),
+            result_code,
+            result_code == 0 ? "passed" : (result_code == 2 ? "canceled" : "failed"));
+    fputs("}\n", f);
+    return fclose(f) == 0;
+}
+
+int main(int argc, char **argv) {
+    PhysicsSimHeadlessCliOptions opts;
+    char summary_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
+    char progress_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
+    PhysicsSimHeadlessProgressSink progress_sink;
+    PhysicsSimHeadlessCancelProbe cancel_probe;
+    HeadlessProgressInfo initial_progress = {0};
+    if (!parse_args(argc, argv, &opts)) {
+        print_usage(argv[0]);
+        return 2;
+    }
+    if (path_exists(opts.output_root)) {
+        if (opts.output_policy == PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS &&
+            !dir_is_empty(opts.output_root)) {
+            fprintf(stderr,
+                    "[physics_sim_headless] ERROR: output root already exists and is not empty: %s\n"
+                    "[physics_sim_headless]        choose a new output root or pass --overwrite.\n",
+                    opts.output_root);
+            return 1;
+        }
+        if (opts.output_policy == PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE &&
+            !remove_tree(opts.output_root)) {
+            fprintf(stderr,
+                    "[physics_sim_headless] ERROR: failed to clear output root for overwrite: %s\n",
+                    opts.output_root);
+            return 1;
+        }
+    }
+    if (!ensure_dir(opts.output_root)) {
+        fprintf(stderr, "[physics_sim_headless] ERROR: failed to create output root: %s\n", opts.output_root);
+        return 1;
+    }
+    summary_path[0] = '\0';
+    if (opts.summary_path && opts.summary_path[0]) {
+        if (snprintf(summary_path, sizeof(summary_path), "%s", opts.summary_path) >= (int)sizeof(summary_path)) {
+            fprintf(stderr, "[physics_sim_headless] ERROR: summary path too long\n");
+            return 1;
+        }
+    } else if (!join_path(summary_path, sizeof(summary_path), opts.output_root, "run_summary.json")) {
+        fprintf(stderr, "[physics_sim_headless] ERROR: default summary path too long\n");
+        return 1;
+    }
+    progress_path[0] = '\0';
+    if (opts.progress_path && opts.progress_path[0]) {
+        if (snprintf(progress_path, sizeof(progress_path), "%s", opts.progress_path) >= (int)sizeof(progress_path)) {
+            fprintf(stderr, "[physics_sim_headless] ERROR: progress path too long\n");
+            return 1;
+        }
+    } else if (!join_path(progress_path, sizeof(progress_path), opts.output_root, "run_progress.json")) {
+        fprintf(stderr, "[physics_sim_headless] ERROR: default progress path too long\n");
+        return 1;
+    }
+    opts.progress_path = progress_path;
+    progress_sink = (PhysicsSimHeadlessProgressSink){
+        .progress_path = progress_path,
+        .opts = &opts
+    };
+    cancel_probe = (PhysicsSimHeadlessCancelProbe){
+        .cancel_flag_path = opts.cancel_flag_path
+    };
+    initial_progress.frames_requested = (uint64_t)opts.frames;
+    initial_progress.stage = "pending";
+    if (!write_progress_json(progress_path,
+                             &opts,
+                             &initial_progress,
+                             "pending")) {
+        fprintf(stderr, "[physics_sim_headless] ERROR: failed to write progress: %s\n", progress_path);
+        return 1;
+    }
+
+    AppConfig cfg = app_config_default();
+    cfg.space_mode = SPACE_MODE_3D;
+    cfg.sim_mode = SIM_MODE_BOX;
+    cfg.headless_enabled = true;
+    cfg.headless_frame_count = opts.frames;
+    cfg.headless_skip_present = opts.skip_present;
+    cfg.save_volume_frames = opts.save_volume_frames;
+    cfg.save_render_frames = opts.save_render_frames;
+    snprintf(cfg.headless_output_dir, sizeof(cfg.headless_output_dir), "%s", opts.output_root);
+
+    const FluidScenePreset *base_preset = scene_presets_get_default();
+    FluidScenePreset preset = base_preset ? *base_preset : (FluidScenePreset){0};
+    ShapeAssetLibrary shape_library;
+    memset(&shape_library, 0, sizeof(shape_library));
+    SceneRuntimeLaunch runtime_launch = {0};
+    runtime_launch.has_retained_scene = true;
+    snprintf(runtime_launch.retained_runtime_scene_path,
+             sizeof(runtime_launch.retained_runtime_scene_path),
+             "%s",
+             opts.runtime_scene_path);
+    HeadlessOptions headless = {
+        .enabled = true,
+        .frame_limit = opts.frames,
+        .sim_steps_per_frame = opts.sim_steps_per_frame,
+        .skip_present = opts.skip_present,
+        .ignore_input = true,
+        .preserve_input = false,
+        .preserve_sdl_state = false,
+        .progress_interval_frames = opts.progress_interval > 0 ? (uint32_t)opts.progress_interval : 0u,
+        .progress_callback = progress_callback,
+        .progress_user_data = &progress_sink,
+        .cancel_requested = cancel_requested_callback,
+        .cancel_user_data = &cancel_probe
+    };
+
+    int result = scene_controller_run(&cfg,
+                                      &preset,
+                                      &runtime_launch,
+                                      &shape_library,
+                                      opts.output_root,
+                                      &headless);
+    if (!write_run_summary(summary_path, &opts, result)) {
+        fprintf(stderr, "[physics_sim_headless] ERROR: failed to write summary: %s\n", summary_path);
+        result = result == 0 ? 1 : result;
+    }
+    if (!write_progress_json(progress_path,
+                             &opts,
+                             &(HeadlessProgressInfo){
+                                 .frames_completed = result == 0 ? (uint64_t)opts.frames : 0u,
+                                 .frames_requested = (uint64_t)opts.frames,
+                                 .frame_index = result == 0 && opts.frames > 0
+                                                    ? (uint64_t)(opts.frames - 1)
+                                                    : 0u,
+                                 .stage = result == 0 ? "completed" :
+                                          (result == 2 ? "canceled" : "failed"),
+                                 .final_update = true
+                             },
+                             result == 0 ? "passed" : (result == 2 ? "canceled" : "failed"))) {
+        fprintf(stderr, "[physics_sim_headless] ERROR: failed to write final progress: %s\n", progress_path);
+        result = result == 0 ? 1 : result;
+    }
+
+    vk_shared_device_shutdown();
+    if (TTF_WasInit()) {
+        TTF_Quit();
+    }
+    if (SDL_WasInit(0)) {
+        SDL_Quit();
+    }
+
+    if (result == 0) {
+        printf("[physics_sim_headless] PASS\n");
+    } else {
+        printf("[physics_sim_headless] FAIL result=%d\n", result);
+    }
+    printf("[physics_sim_headless] runtime: %s\n", opts.runtime_scene_path);
+    printf("[physics_sim_headless] output:  %s\n", opts.output_root);
+    printf("[physics_sim_headless] summary: %s\n", summary_path);
+    printf("[physics_sim_headless] progress: %s\n", progress_path);
+    return result;
+}
