@@ -1,6 +1,18 @@
-# Physics Sim
+# kinetiC (`physics_sim`)
 
-Physics Sim is an SDL-based desktop sandbox for interactive fluid, particle, rigid-body, and structural experiments. The current app boots into a scene menu where you can choose a simulation mode, edit presets, run interactive sessions, or launch headless export batches for the fluid-oriented modes.
+`kinetiC` is the packaged desktop product for the `physics_sim` program. It is
+an SDL-based desktop sandbox for interactive fluid, particle, rigid-body, and
+structural experiments. The current app boots into a scene menu where you can
+choose a simulation mode, edit presets, run interactive sessions, or launch
+headless export batches for the fluid-oriented modes.
+
+Identity note:
+
+- public product name: `kinetiC`
+- repository/program key: `physics_sim`
+- launcher, binary, log, and source-level contracts still use `Physics Sim` or
+  `physics_sim` identifiers where those are part of the current technical
+  surface
 
 ## Current modes
 
@@ -16,6 +28,9 @@ Fluid-oriented modes share the scene menu, preset system, export pipeline, and s
 make
 ./physics_sim
 ```
+
+Packaging and Desktop refresh flows produce `kinetiC.app`; see
+`docs/desktop_packaging.md`.
 
 Useful build targets:
 

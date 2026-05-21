@@ -1,14 +1,20 @@
-# Physics Sim Docs Index
+# kinetiC Docs Index
 
 Start here for public repository documentation.
+
+Public identity:
+- packaged desktop product: `kinetiC`
+- repository/program key: `physics_sim`
 
 ## Scaffold State
 - `docs/current_truth.md`: current runtime structure, truthful `3D` export state, and verification snapshot.
 - `docs/future_intent.md`: next public direction, including the deferred downstream `ray_tracing` `3D` ingest/render handoff.
 - migration-friendly verification gates:
-  - `make -C physics_sim run-headless-smoke`
-  - `make -C physics_sim visual-harness`
   - `make -C physics_sim test-stable`
+  - `make -C physics_sim run-headless-smoke`
+    - currently aliases `test-stable` rather than a separate long-lived runtime lane
+  - `make -C physics_sim visual-harness`
+    - build-only readiness gate, not an unattended execution surface
   - `make -C physics_sim test-legacy`
 
 ## Public Runtime Docs
@@ -21,6 +27,8 @@ Start here for public repository documentation.
 
 ## Current Published State
 - `physics_sim` is now a truthful `3D` producer on the export side:
+- public product-facing docs should treat `kinetiC` as the primary app name and
+  use `physics_sim` where repo/runtime identifiers need to stay exact
   - authoritative volumetric runs emit `.vf3d` + `VF3H` `.pack`
   - planar runs stay on legacy `.vf2d` + `VFHD`
   - downstream `ray_tracing` ingest is the next separate lane, not part of this repo’s current public behavior

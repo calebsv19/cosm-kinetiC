@@ -1,10 +1,12 @@
-# Physics Sim Current Truth
+# kinetiC Current Truth
 
 Last updated: 2026-05-20
 
 ## Program Identity
 - Repository directory: `physics_sim/`
-- Public product name: `Physics Sim`
+- Public product name: `kinetiC`
+- Internal/repo/runtime identifiers still use `physics_sim` and `Physics Sim`
+  in launcher, log, binary, and source-level contracts where required
 - Primary runtime entry:
   - `src/main.c` (`main()` -> `physics_sim_app_main(...)`)
   - wrapper shell: `include/physics_sim/physics_sim_app_main.h`, `src/app/physics_sim_app_main.c`
@@ -144,6 +146,9 @@ Last updated: 2026-05-20
 - Stable validation:
   - `make -C physics_sim test-stable`
   - includes 3D export contract/parity, retained-scene bridge coverage, and the shared-viewport-backed scene-editor viewport contract
+- Smoke wording note:
+  - `make -C physics_sim run-headless-smoke`
+  - currently aliases `test-stable` rather than a separate long-lived runtime shell
 - Direct headless CLI:
   - `make -C physics_sim physics_sim_headless`
   - `make -C physics_sim test-physics-sim-headless-cli`
@@ -151,8 +156,7 @@ Last updated: 2026-05-20
   - `make -C physics_sim physics-sim-job-runner`
   - `make -C physics_sim test-physics-sim-job-runner-smoke`
   - `make -C physics_sim test-physics-sim-job-runner-policy`
-- Smoke and harness:
-  - `make -C physics_sim run-headless-smoke`
+- Build-only readiness:
   - `make -C physics_sim visual-harness`
 - Packaging verification:
   - `make -C physics_sim package-desktop`
