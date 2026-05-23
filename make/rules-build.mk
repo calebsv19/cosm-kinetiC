@@ -78,6 +78,10 @@ $(BUILD_DIR)/core_font/%.o: $(CORE_FONT_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
+$(BUILD_DIR)/core_headless_job/%.o: $(CORE_HEADLESS_JOB_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
 $(BUILD_DIR)/kit_viz/%.o: $(KIT_VIZ_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@

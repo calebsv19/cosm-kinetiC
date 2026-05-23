@@ -1,4 +1,5 @@
 #include "app/physics_sim_job_runner.h"
+#include "app/physics_sim_headless_job_bundle.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -39,6 +40,8 @@ typedef struct PhysicsSimDetachedJobPaths {
     char job_root[PATH_MAX];
     char job_request_path[PATH_MAX];
     char job_status_path[PATH_MAX];
+    char shared_job_path[PATH_MAX];
+    char shared_report_path[PATH_MAX];
     char progress_path[PATH_MAX];
     char stdout_log_path[PATH_MAX];
     char stderr_log_path[PATH_MAX];
@@ -48,7 +51,7 @@ typedef struct PhysicsSimDetachedJobPaths {
 } PhysicsSimDetachedJobPaths;
 
 typedef struct PhysicsSimDetachedJobRecord {
-    char job_id[64];
+    char job_id[CORE_HEADLESS_JOB_MAX_ID_LENGTH + 1];
     char state[32];
     char stage[32];
     char overwrite_policy[32];
@@ -316,6 +319,14 @@ static void build_job_paths(const char *jobs_root,
              sizeof(out_paths->job_status_path),
              "%s/job_status.json",
              out_paths->job_root);
+    snprintf(out_paths->shared_job_path,
+             sizeof(out_paths->shared_job_path),
+             "%s/job.json",
+             out_paths->job_root);
+    snprintf(out_paths->shared_report_path,
+             sizeof(out_paths->shared_report_path),
+             "%s/output/report.json",
+             out_paths->job_root);
     snprintf(out_paths->progress_path,
              sizeof(out_paths->progress_path),
              "%s/run_progress.json",
@@ -351,6 +362,27 @@ static bool generate_job_id(char *out_job_id, size_t out_job_id_size) {
                     "psjob_%lld_%06u",
                     (long long)ts.tv_sec,
                     (unsigned)(salt % 1000000u)) < (int)out_job_id_size;
+}
+
+static const char *shared_report_state_label(const char *state) {
+    if (!state || !state[0]) return "queued";
+    if (strcmp(state, "completed") == 0) return "succeeded";
+    if (strcmp(state, "starting") == 0) return "running";
+    return state;
+}
+
+static bool build_volume_frames_dir_path(const char *output_root,
+                                         char *out_path,
+                                         size_t out_path_size) {
+    if (!output_root || !output_root[0] || !out_path || out_path_size == 0u) return false;
+    return snprintf(out_path, out_path_size, "%s/volume_frames", output_root) < (int)out_path_size;
+}
+
+static bool build_render_frames_dir_path(const char *output_root,
+                                         char *out_path,
+                                         size_t out_path_size) {
+    if (!output_root || !output_root[0] || !out_path || out_path_size == 0u) return false;
+    return snprintf(out_path, out_path_size, "%s/render_frames", output_root) < (int)out_path_size;
 }
 
 static void detached_job_record_defaults(PhysicsSimDetachedJobRecord *record) {
@@ -449,6 +481,77 @@ static bool write_job_status_file(const PhysicsSimDetachedJobPaths *paths,
     json_write_string(file, record->diagnostics);
     fprintf(file, "\n}\n");
     fclose(file);
+    return true;
+}
+
+static bool write_shared_report_file(const PhysicsSimDetachedJobPaths *paths,
+                                     const PhysicsSimDetachedJobRecord *record) {
+    CoreHeadlessJobReport report;
+    CoreHeadlessJobArtifact artifacts[5];
+    char volume_frames_dir[PATH_MAX];
+    char render_frames_dir[PATH_MAX];
+    size_t artifact_count = 0u;
+    char diagnostics[256];
+
+    if (!paths || !record) return false;
+
+    core_headless_job_report_init(&report);
+    if (!copy_string(report.job_id, sizeof(report.job_id), record->job_id) ||
+        !copy_string(report.program, sizeof(report.program), "physics_sim") ||
+        !copy_string(report.state, sizeof(report.state), shared_report_state_label(record->state)) ||
+        !copy_string(report.stage, sizeof(report.stage), record->stage) ||
+        !copy_string(report.created_at, sizeof(report.created_at), record->submitted_at_utc) ||
+        !copy_string(report.started_at, sizeof(report.started_at), record->started_at_utc) ||
+        !copy_string(report.updated_at, sizeof(report.updated_at), record->updated_at_utc) ||
+        !copy_string(report.finished_at, sizeof(report.finished_at), record->finished_at_utc)) {
+        return false;
+    }
+
+    for (size_t i = 0u; i < 5u; ++i) {
+        core_headless_job_artifact_init(&artifacts[i]);
+    }
+    if (record->summary_path[0]) {
+        copy_string(artifacts[artifact_count].type, sizeof(artifacts[artifact_count].type), "result_summary");
+        copy_string(artifacts[artifact_count].path, sizeof(artifacts[artifact_count].path), record->summary_path);
+        artifact_count += 1u;
+    }
+    if (build_volume_frames_dir_path(record->output_root, volume_frames_dir, sizeof(volume_frames_dir)) &&
+        file_exists(volume_frames_dir)) {
+        copy_string(artifacts[artifact_count].type, sizeof(artifacts[artifact_count].type), "volume_frames");
+        copy_string(artifacts[artifact_count].path, sizeof(artifacts[artifact_count].path), volume_frames_dir);
+        artifact_count += 1u;
+    }
+    if (build_render_frames_dir_path(record->output_root, render_frames_dir, sizeof(render_frames_dir)) &&
+        file_exists(render_frames_dir)) {
+        copy_string(artifacts[artifact_count].type, sizeof(artifacts[artifact_count].type), "render_frames");
+        copy_string(artifacts[artifact_count].path, sizeof(artifacts[artifact_count].path), render_frames_dir);
+        artifact_count += 1u;
+    }
+    if (record->stdout_path[0]) {
+        copy_string(artifacts[artifact_count].type, sizeof(artifacts[artifact_count].type), "stdout_log");
+        copy_string(artifacts[artifact_count].path, sizeof(artifacts[artifact_count].path), record->stdout_path);
+        artifact_count += 1u;
+    }
+    if (record->stderr_path[0]) {
+        copy_string(artifacts[artifact_count].type, sizeof(artifacts[artifact_count].type), "stderr_log");
+        copy_string(artifacts[artifact_count].path, sizeof(artifacts[artifact_count].path), record->stderr_path);
+        artifact_count += 1u;
+    }
+
+    report.artifacts = artifacts;
+    report.artifact_count = artifact_count;
+    return physics_sim_headless_job_report_write(paths->shared_report_path,
+                                                 &report,
+                                                 artifacts,
+                                                 artifact_count,
+                                                 diagnostics,
+                                                 sizeof(diagnostics));
+}
+
+static bool persist_job_state(const PhysicsSimDetachedJobPaths *paths,
+                              const PhysicsSimDetachedJobRecord *record) {
+    if (!write_job_status_file(paths, record)) return false;
+    if (!write_shared_report_file(paths, record)) return false;
     return true;
 }
 
@@ -619,6 +722,109 @@ static bool load_request_file(const char *request_path,
         return false;
     }
     return true;
+}
+
+static bool load_request_for_job(const char *request_path,
+                                 PhysicsSimDetachedRequest *out_request,
+                                 PhysicsSimHeadlessJobBundle *out_bundle,
+                                 bool *out_is_shared_bundle,
+                                 char *out_diagnostics,
+                                 size_t out_diagnostics_size) {
+    char request_diag[256];
+    char bundle_diag[256];
+
+    if (out_is_shared_bundle) *out_is_shared_bundle = false;
+    if (out_bundle) memset(out_bundle, 0, sizeof(*out_bundle));
+
+    if (load_request_file(request_path, out_request, request_diag, sizeof(request_diag))) {
+        diag_set(out_diagnostics, out_diagnostics_size, "ok");
+        return true;
+    }
+
+    if (!physics_sim_headless_job_bundle_load(request_path,
+                                              out_bundle,
+                                              bundle_diag,
+                                              sizeof(bundle_diag))) {
+        if (out_diagnostics && out_diagnostics_size > 0u) {
+            snprintf(out_diagnostics,
+                     out_diagnostics_size,
+                     "request load failed (%s); outer bundle load failed (%s)",
+                     request_diag,
+                     bundle_diag);
+        }
+        return false;
+    }
+
+    if (!load_request_file(out_bundle->resolved_run_config_path,
+                           out_request,
+                           request_diag,
+                           sizeof(request_diag))) {
+        diag_set(out_diagnostics, out_diagnostics_size, request_diag);
+        return false;
+    }
+    if (!copy_string(out_request->runtime_scene_path,
+                     sizeof(out_request->runtime_scene_path),
+                     out_bundle->resolved_scene_payload_path)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "failed to apply outer scene payload path");
+        return false;
+    }
+    if (out_is_shared_bundle) *out_is_shared_bundle = true;
+    diag_set(out_diagnostics, out_diagnostics_size, "ok");
+    return true;
+}
+
+static bool build_default_shared_job_envelope(const PhysicsSimDetachedRequest *request,
+                                              const PhysicsSimDetachedJobPaths *paths,
+                                              const char *job_id,
+                                              const char *created_at_utc,
+                                              CoreHeadlessJobEnvelope *out_envelope) {
+    if (!request || !paths || !job_id || !created_at_utc || !out_envelope) return false;
+    core_headless_job_envelope_init(out_envelope);
+    if (!copy_string(out_envelope->job_id, sizeof(out_envelope->job_id), job_id) ||
+        !copy_string(out_envelope->program, sizeof(out_envelope->program), "physics_sim") ||
+        !copy_string(out_envelope->tool.name, sizeof(out_envelope->tool.name), "physics_sim_headless") ||
+        !copy_string(out_envelope->tool.version, sizeof(out_envelope->tool.version), "0.1.0") ||
+        !copy_string(out_envelope->tool.target_os, sizeof(out_envelope->tool.target_os), "linux") ||
+        !copy_string(out_envelope->tool.target_arch, sizeof(out_envelope->tool.target_arch), "x86_64") ||
+        !copy_string(out_envelope->scene_payload.schema_family,
+                     sizeof(out_envelope->scene_payload.schema_family),
+                     "codework_scene") ||
+        !copy_string(out_envelope->scene_payload.schema_variant,
+                     sizeof(out_envelope->scene_payload.schema_variant),
+                     "scene_runtime_v1") ||
+        !copy_string(out_envelope->scene_payload.path,
+                     sizeof(out_envelope->scene_payload.path),
+                     request->runtime_scene_path) ||
+        !copy_string(out_envelope->run_config.schema_family,
+                     sizeof(out_envelope->run_config.schema_family),
+                     "physics_sim_request") ||
+        !copy_string(out_envelope->run_config.schema_variant,
+                     sizeof(out_envelope->run_config.schema_variant),
+                     "physics_sim_headless_request_v1") ||
+        !copy_string(out_envelope->run_config.path,
+                     sizeof(out_envelope->run_config.path),
+                     paths->job_request_path) ||
+        !copy_string(out_envelope->outputs.root,
+                     sizeof(out_envelope->outputs.root),
+                     paths->job_root) ||
+        !copy_string(out_envelope->outputs.report_path,
+                     sizeof(out_envelope->outputs.report_path),
+                     paths->shared_report_path) ||
+        !copy_string(out_envelope->outputs.logs_dir,
+                     sizeof(out_envelope->outputs.logs_dir),
+                     paths->job_root) ||
+        !copy_string(out_envelope->outputs.artifacts_dir,
+                     sizeof(out_envelope->outputs.artifacts_dir),
+                     request->output_root) ||
+        !copy_string(out_envelope->metadata.created_by,
+                     sizeof(out_envelope->metadata.created_by),
+                     "physics_sim_job_runner") ||
+        !copy_string(out_envelope->metadata.created_at,
+                     sizeof(out_envelope->metadata.created_at),
+                     created_at_utc)) {
+        return false;
+    }
+    return core_headless_job_envelope_validate(out_envelope);
 }
 
 static bool write_canonical_request_file(const char *path,
@@ -967,7 +1173,7 @@ static bool refresh_job_status_record(const PhysicsSimDetachedJobPaths *paths,
         }
     }
     if (changed) {
-        if (!write_job_status_file(paths, record)) return false;
+        if (!persist_job_state(paths, record)) return false;
     }
     return true;
 }
@@ -992,28 +1198,28 @@ bool physics_sim_job_runner_submit(const char *argv0,
     PhysicsSimDetachedRequest request;
     PhysicsSimDetachedJobPaths paths;
     PhysicsSimDetachedJobRecord record;
+    PhysicsSimHeadlessJobBundle source_bundle;
+    CoreHeadlessJobEnvelope shared_envelope;
     char jobs_root[PATH_MAX];
     char headless_cli_path[PATH_MAX];
     char diagnostics[256];
     pid_t pid = 0;
+    bool is_shared_bundle = false;
 
     diag_set(out_diagnostics, out_diagnostics_size, "invalid input");
     if (!argv0 || !request_path || !request_path[0] || !out_job_id || out_job_id_size == 0u) {
         return false;
     }
-    if (!load_request_file(request_path, &request, diagnostics, sizeof(diagnostics))) {
+    if (!load_request_for_job(request_path,
+                              &request,
+                              &source_bundle,
+                              &is_shared_bundle,
+                              diagnostics,
+                              sizeof(diagnostics))) {
         diag_set(out_diagnostics, out_diagnostics_size, diagnostics);
         return false;
     }
     if (overwrite) request.overwrite = true;
-    if (!request.overwrite &&
-        file_exists(request.output_root) &&
-        !dir_is_empty(request.output_root)) {
-        diag_set(out_diagnostics,
-                 out_diagnostics_size,
-                 "output root already exists and is not empty; use --overwrite");
-        return false;
-    }
     if (!build_jobs_root(argv0, jobs_root_override, jobs_root, sizeof(jobs_root))) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to resolve jobs root");
         return false;
@@ -1022,13 +1228,37 @@ bool physics_sim_job_runner_submit(const char *argv0,
         diag_set(out_diagnostics, out_diagnostics_size, "failed to resolve headless cli path");
         return false;
     }
-    if (!generate_job_id(out_job_id, out_job_id_size)) {
-        diag_set(out_diagnostics, out_diagnostics_size, "failed to generate job id");
-        return false;
+    if (is_shared_bundle) {
+        if (!copy_string(out_job_id, out_job_id_size, source_bundle.envelope.job_id)) {
+            diag_set(out_diagnostics, out_diagnostics_size, "bundle job id exceeds local buffer");
+            return false;
+        }
+    } else {
+        if (!generate_job_id(out_job_id, out_job_id_size)) {
+            diag_set(out_diagnostics, out_diagnostics_size, "failed to generate job id");
+            return false;
+        }
     }
     build_job_paths(jobs_root, out_job_id, &paths);
     if (file_exists(paths.job_root)) {
         diag_set(out_diagnostics, out_diagnostics_size, "job id collision");
+        return false;
+    }
+    if (is_shared_bundle) {
+        if (snprintf(request.output_root,
+                     sizeof(request.output_root),
+                     "%s/output/artifacts",
+                     paths.job_root) >= (int)sizeof(request.output_root)) {
+            diag_set(out_diagnostics, out_diagnostics_size, "failed to derive bundle artifacts path");
+            return false;
+        }
+    }
+    if (!request.overwrite &&
+        file_exists(request.output_root) &&
+        !dir_is_empty(request.output_root)) {
+        diag_set(out_diagnostics,
+                 out_diagnostics_size,
+                 "output root already exists and is not empty; use --overwrite");
         return false;
     }
     if (!ensure_directory_exists(paths.job_root)) {
@@ -1061,7 +1291,51 @@ bool physics_sim_job_runner_submit(const char *argv0,
     record.sim_steps_completed_in_frame = 0;
     record.sim_steps_total_in_frame = request.sim_steps_per_frame;
     snprintf(record.diagnostics, sizeof(record.diagnostics), "queued for detached simulation");
-    if (!write_job_status_file(&paths, &record)) {
+    if (!build_default_shared_job_envelope(&request,
+                                           &paths,
+                                           out_job_id,
+                                           record.submitted_at_utc,
+                                           &shared_envelope)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "failed to build shared job envelope");
+        return false;
+    }
+    if (is_shared_bundle) {
+        if (!copy_string(shared_envelope.scene_payload.schema_family,
+                         sizeof(shared_envelope.scene_payload.schema_family),
+                         source_bundle.envelope.scene_payload.schema_family) ||
+            !copy_string(shared_envelope.scene_payload.schema_variant,
+                         sizeof(shared_envelope.scene_payload.schema_variant),
+                         source_bundle.envelope.scene_payload.schema_variant) ||
+            !copy_string(shared_envelope.run_config.schema_family,
+                         sizeof(shared_envelope.run_config.schema_family),
+                         source_bundle.envelope.run_config.schema_family) ||
+            !copy_string(shared_envelope.run_config.schema_variant,
+                         sizeof(shared_envelope.run_config.schema_variant),
+                         source_bundle.envelope.run_config.schema_variant) ||
+            !copy_string(shared_envelope.metadata.title,
+                         sizeof(shared_envelope.metadata.title),
+                         source_bundle.envelope.metadata.title) ||
+            !copy_string(shared_envelope.metadata.description,
+                         sizeof(shared_envelope.metadata.description),
+                         source_bundle.envelope.metadata.description) ||
+            !copy_string(shared_envelope.metadata.created_by,
+                         sizeof(shared_envelope.metadata.created_by),
+                         source_bundle.envelope.metadata.created_by) ||
+            !copy_string(shared_envelope.metadata.created_at,
+                         sizeof(shared_envelope.metadata.created_at),
+                         source_bundle.envelope.metadata.created_at)) {
+            diag_set(out_diagnostics, out_diagnostics_size, "failed to preserve source bundle metadata");
+            return false;
+        }
+    }
+    if (!physics_sim_headless_job_bundle_write(paths.shared_job_path,
+                                               &shared_envelope,
+                                               diagnostics,
+                                               sizeof(diagnostics))) {
+        diag_set(out_diagnostics, out_diagnostics_size, diagnostics);
+        return false;
+    }
+    if (!persist_job_state(&paths, &record)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to write queued job status");
         return false;
     }
@@ -1072,7 +1346,7 @@ bool physics_sim_job_runner_submit(const char *argv0,
         utc_now_string(record.updated_at_utc, sizeof(record.updated_at_utc));
         record.exit_code = 127;
         snprintf(record.diagnostics, sizeof(record.diagnostics), "failed to spawn detached simulation");
-        (void)write_job_status_file(&paths, &record);
+        (void)persist_job_state(&paths, &record);
         diag_set(out_diagnostics, out_diagnostics_size, "failed to spawn detached simulation");
         return false;
     }
@@ -1082,7 +1356,7 @@ bool physics_sim_job_runner_submit(const char *argv0,
     snprintf(record.state, sizeof(record.state), "starting");
     snprintf(record.stage, sizeof(record.stage), "starting");
     snprintf(record.diagnostics, sizeof(record.diagnostics), "detached simulation launched");
-    if (!write_pid_file(paths.pid_path, pid) || !write_job_status_file(&paths, &record)) {
+    if (!write_pid_file(paths.pid_path, pid) || !persist_job_state(&paths, &record)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to persist detached job state");
         return false;
     }
@@ -1159,7 +1433,7 @@ bool physics_sim_job_runner_cancel(const char *argv0,
     snprintf(record.diagnostics,
              sizeof(record.diagnostics),
              "cancel flag written; awaiting cooperative shutdown");
-    if (!write_job_status_file(&paths, &record)) {
+    if (!persist_job_state(&paths, &record)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to update cancel-requested status");
         return false;
     }

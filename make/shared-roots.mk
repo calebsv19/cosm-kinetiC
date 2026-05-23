@@ -2,6 +2,7 @@
 #  Shared project structure
 # =========================
 SHARED_ROOT ?= third_party/codework_shared
+SHARED_WORKSPACE_DIR ?= ../shared
 VK_RENDERER_DIR := $(SHARED_ROOT)/vk_renderer
 KIT_VIZ_DIR := $(SHARED_ROOT)/kit/kit_viz
 KIT_RENDER_DIR := $(SHARED_ROOT)/kit/kit_render
@@ -30,3 +31,8 @@ CORE_SIM_DIR := $(SHARED_ROOT)/core/core_sim
 CORE_TRACE_DIR := $(SHARED_ROOT)/core/core_trace
 CORE_THEME_DIR := $(SHARED_ROOT)/core/core_theme
 CORE_FONT_DIR := $(SHARED_ROOT)/core/core_font
+CORE_HEADLESS_JOB_DIR := $(SHARED_ROOT)/core/core_headless_job
+
+ifeq ($(wildcard $(CORE_HEADLESS_JOB_DIR)/include/core_headless_job.h),)
+CORE_HEADLESS_JOB_DIR := $(SHARED_WORKSPACE_DIR)/core/core_headless_job
+endif

@@ -1,0 +1,12 @@
+{
+  "schema_version": "physics_sim_headless_request_v1",
+  "runtime_scene_path": "__RUNTIME_SCENE__",
+  "output_root": "__OUTPUT_ROOT__",
+  "frames": 1,
+  "sim_steps_per_frame": 2,
+  "progress_interval": 1,
+  "save_volume_frames": true,
+  "save_render_frames": false,
+  "skip_present": true,
+  "overwrite": false
+}

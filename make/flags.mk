@@ -115,4 +115,4 @@ CFLAGS += -I$(KIT_VIZ_DIR)/include
 CFLAGS += -I$(KIT_RENDER_DIR)/include -DKIT_RENDER_ENABLE_VK_BACKEND=0
 CFLAGS += -I$(KIT_UI_DIR)/include
 CFLAGS += -I$(CORE_SCENE_COMPILE_DIR)/include
-CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_VIEWPORT2D_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_SIM_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_WORKSPACE_AUTHORING_DIR)/include
+CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_VIEWPORT2D_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_SIM_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_HEADLESS_JOB_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_WORKSPACE_AUTHORING_DIR)/include

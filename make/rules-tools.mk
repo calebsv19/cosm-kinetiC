@@ -53,6 +53,9 @@ test-physics-sim-headless-cli: physics_sim_headless
 test-physics-sim-job-runner-smoke: physics-sim-job-runner physics_sim_headless
 	tests/integration/run_physics_sim_job_runner_smoke.sh
 
+test-physics-sim-job-runner-bundle-smoke: physics-sim-job-runner physics_sim_headless
+	tests/integration/run_physics_sim_job_runner_bundle_smoke.sh
+
 test-physics-sim-job-runner-policy: physics-sim-job-runner physics_sim_headless
 	tests/integration/run_physics_sim_job_runner_policy.sh
 

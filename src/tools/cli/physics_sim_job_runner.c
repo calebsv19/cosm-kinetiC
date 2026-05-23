@@ -6,7 +6,7 @@
 
 static void usage(const char *argv0) {
     fprintf(stderr,
-            "usage: %s <submit|status|cancel> [--request <request.json>|--job-id <job_id>] [--jobs-root <path>] [--overwrite]\n",
+            "usage: %s <submit|status|cancel> [--request <request.json|job.json>|--job-id <job_id>] [--jobs-root <path>] [--overwrite]\n",
             argv0 ? argv0 : "physics_sim_job_runner");
 }
 
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     const char *jobs_root = NULL;
     bool overwrite = false;
     char diagnostics[256] = {0};
-    char generated_job_id[64] = {0};
+    char generated_job_id[CORE_HEADLESS_JOB_MAX_ID_LENGTH + 1] = {0};
 
     if (argc < 2) {
         usage(argv[0]);

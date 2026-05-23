@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "core_headless_job.h"
+
 #define PHYSICS_SIM_DETACHED_JOB_STATUS_SCHEMA "physics_sim_detached_job_status_v1"
 
 bool physics_sim_job_runner_default_jobs_root(const char *argv0,

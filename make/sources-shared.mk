@@ -15,6 +15,7 @@ CORE_SIM_SRCS := $(CORE_SIM_DIR)/src/core_sim.c
 CORE_TRACE_SRCS := $(CORE_TRACE_DIR)/src/core_trace.c
 CORE_THEME_SRCS := $(CORE_THEME_DIR)/src/core_theme.c
 CORE_FONT_SRCS := $(CORE_FONT_DIR)/src/core_font.c
+CORE_HEADLESS_JOB_SRCS := $(CORE_HEADLESS_JOB_DIR)/src/core_headless_job.c
 KIT_VIZ_SRCS := $(KIT_VIZ_DIR)/src/kit_viz.c
 KIT_RENDER_SRCS := \
 	$(KIT_RENDER_DIR)/src/kit_render.c \
