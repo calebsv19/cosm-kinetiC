@@ -231,18 +231,19 @@ void backend_3d_scaffold_runtime_note_export_cache_materialized(SimRuntimeBacken
 bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
                                       struct SceneState *scene,
                                       const AppConfig *cfg,
-                                      double dt) {
+                                      double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     SimRuntimeBackend3DScaffold *state = backend ? (SimRuntimeBackend3DScaffold *)backend->impl : NULL;
     SimRuntime3DForceAxis scene_up_axis = {0};
     SimRuntime3DBrickRegion raw_regions[SCAFFOLD_MAX_SOLVER_CLUSTERS] = {0};
     SimRuntime3DSolverCluster clusters[SCAFFOLD_MAX_SOLVER_CLUSTERS] = {0};
     size_t raw_region_count = 0u;
     bool cluster_limit_reached = false;
+    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
     (void)scene;
     if (state && state->obstacle_volume_dirty) {
         backend_3d_scaffold_build_obstacles(backend, scene);
     }
-    if (!state || !cfg || dt <= 0.0) return false;
+    if (!state || !cfg || dt <= zero_seconds) return false;
     state->runtime_solver_region_guard_triggered = false;
     state->runtime_solver_cluster_limit_reached = false;
     state->runtime_last_active_region_cell_count = 0u;

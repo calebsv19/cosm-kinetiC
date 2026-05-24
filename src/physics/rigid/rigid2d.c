@@ -13,11 +13,70 @@ static const int R2D_MAX_POLY_VERTS = 32;
 
 static void rigid2d_free_poly(RigidBody2D *b);
 static void rigid2d_copy_poly(RigidPoly *dst, const RigidPoly *src);
+static void resolve_ground_collision(RigidBody2D *b, float ground_y);
 
 static RigidBody2D *rigid2d_get_body(Rigid2DWorld *w, int index) {
     if (!w) return NULL;
     if (index < 0 || index >= w->count) return NULL;
     return &w->bodies[index];
+}
+
+static void rigid2d_integrate_body(
+    RigidBody2D *b,
+    Vec2 gravity_vec,
+    float ground_y,
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    if (!b) return;
+    if (b->is_static || b->inv_mass <= 0.0f || b->locked) return;
+
+    Vec2 accel = vec2(0.0f, 0.0f);
+    if (b->inv_mass > 0.0f) {
+        accel = vec2_add(accel, vec2_scale(b->force_accum, b->inv_mass));
+    }
+    if (b->gravity_enabled) {
+        accel = vec2_add(accel, gravity_vec);
+    }
+    b->velocity = vec2_add(b->velocity, vec2_scale(accel, dt_seconds));
+    if (b->inv_inertia > 0.0f) {
+        b->angular_velocity += b->torque_accum * b->inv_inertia * dt_seconds;
+    }
+
+    b->position = vec2_add(b->position, vec2_scale(b->velocity, dt_seconds));
+    b->angle += b->angular_velocity * dt_seconds;
+
+    b->force_accum = vec2(0.0f, 0.0f);
+    b->torque_accum = 0.0f;
+
+    resolve_ground_collision(b, ground_y);
+}
+
+static void rigid2d_integrate_world(
+    Rigid2DWorld *w,
+    Vec2 gravity_vec,
+    float ground_y,
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    if (!w) return;
+    for (int i = 0; i < w->count; ++i) {
+        rigid2d_integrate_body(&w->bodies[i], gravity_vec, ground_y, dt_seconds);
+    }
+}
+
+static void rigid2d_solve_manifolds(
+    Rigid2DWorld *w,
+    RigidManifold *manifolds,
+    int manifold_count,
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    if (!w || !manifolds || manifold_count <= 0) return;
+
+    for (int iter = 0; iter < R2D_IMPULSE_ITERS; ++iter) {
+        for (int mi = 0; mi < manifold_count; ++mi) {
+            RigidManifold *m = &manifolds[mi];
+            RigidBody2D *a = rigid2d_get_body(w, m->body_a);
+            RigidBody2D *b = rigid2d_get_body(w, m->body_b);
+            if (!a || !b) continue;
+            rigid2d_resolve_impulse_basic(a, b, m, dt_seconds);
+        }
+    }
 }
 
 void rigid2d_set_mass(RigidBody2D *b, float mass, float inertia) {
@@ -262,42 +321,17 @@ static int broadphase_pairs_grid(Rigid2DWorld *w,
     return pair_count;
 }
 
-void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg) {
+void rigid2d_step(Rigid2DWorld *w,
+                  double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                  const AppConfig *cfg) {
     if (!w) return;
-
-    float fdt = (float)dt;
+    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    if (dt <= zero_seconds) return;
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = (float)dt;
     float ground_y = (cfg && cfg->window_h > 0) ? (float)(cfg->window_h - 1) : 0.0f;
     Vec2 gravity_vec = w->gravity;
 
-    // Integrate and update AABBs
-    for (int i = 0; i < w->count; ++i) {
-        RigidBody2D *b = &w->bodies[i];
-        if (b->is_static || b->inv_mass <= 0.0f || b->locked) continue;
-
-        // accumulate acceleration from forces + gravity
-        Vec2 accel = vec2(0.0f, 0.0f);
-        if (b->inv_mass > 0.0f) {
-            accel = vec2_add(accel, vec2_scale(b->force_accum, b->inv_mass));
-        }
-        if (b->gravity_enabled) {
-            accel = vec2_add(accel, gravity_vec);
-        }
-        b->velocity = vec2_add(b->velocity, vec2_scale(accel, fdt));
-        if (b->inv_inertia > 0.0f) {
-            b->angular_velocity += b->torque_accum * b->inv_inertia * fdt;
-        }
-
-        // integrate pose
-        b->position = vec2_add(b->position, vec2_scale(b->velocity, fdt));
-        b->angle   += b->angular_velocity * fdt;
-
-        // clear force/torque accumulators
-        b->force_accum = vec2(0.0f, 0.0f);
-        b->torque_accum = 0.0f;
-
-        // floor collision
-        resolve_ground_collision(b, ground_y);
-    }
+    rigid2d_integrate_world(w, gravity_vec, ground_y, dt_seconds);
 
     // Update AABBs for all bodies
     for (int i = 0; i < w->count; ++i) {
@@ -444,16 +478,7 @@ void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg) {
         }
     }
 
-    // Iterative impulse solve
-    for (int iter = 0; iter < R2D_IMPULSE_ITERS; ++iter) {
-        for (int mi = 0; mi < manifold_count; ++mi) {
-            RigidManifold *m = &manifolds[mi];
-            RigidBody2D *a = rigid2d_get_body(w, m->body_a);
-            RigidBody2D *b = rigid2d_get_body(w, m->body_b);
-            if (!a || !b) continue;
-            rigid2d_resolve_impulse_basic(a, b, m, fdt);
-        }
-    }
+    rigid2d_solve_manifolds(w, manifolds, manifold_count, dt_seconds);
 
     // Positional correction (gentle) after velocity solve
     for (int mi = 0; mi < manifold_count; ++mi) {

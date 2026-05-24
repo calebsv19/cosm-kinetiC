@@ -114,12 +114,22 @@ static void runtime_scene_solver_projection_apply_json_object(json_object *src,
         (void)runtime_scene_solver_projection_parse_bool(flags, "locked", &locked);
     }
 
-    dst->position_x = runtime_scene_solver_projection_scaled_position(px, world_scale);
-    dst->position_y = runtime_scene_solver_projection_scaled_position(py, world_scale);
-    dst->position_z = runtime_scene_solver_projection_scaled_position(pz, world_scale);
-    dst->size_x = runtime_scene_solver_projection_scaled_size(sx, world_scale, 0.08f);
-    dst->size_y = runtime_scene_solver_projection_scaled_size(sy, world_scale, 0.08f);
-    dst->size_z = runtime_scene_solver_projection_scaled_size(sz, world_scale, 0.08f);
+    {
+        double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = px;
+        double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = py;
+        double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = pz;
+        double scene_size_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = sx;
+        double scene_size_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = sy;
+        double scene_size_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = sz;
+        float fallback_size [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.08f;
+
+        dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
+        dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
+        dst->position_z = runtime_scene_solver_projection_scaled_position(scene_position_z, world_scale);
+        dst->size_x = runtime_scene_solver_projection_scaled_size(scene_size_x, world_scale, fallback_size);
+        dst->size_y = runtime_scene_solver_projection_scaled_size(scene_size_y, world_scale, fallback_size);
+        dst->size_z = runtime_scene_solver_projection_scaled_size(scene_size_z, world_scale, fallback_size);
+    }
     dst->angle = (float)rz;
     dst->is_static = locked;
     dst->gravity_enabled = !locked;
@@ -150,15 +160,25 @@ static void runtime_scene_solver_projection_apply_object(
         position = object->plane_primitive.frame.origin;
         apply_frame_orientation(&object->plane_primitive.frame, dst);
         if (mapping && mapping->valid) {
+            double scene_half_width [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                object->plane_primitive.width * 0.5;
+            double scene_half_height [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                object->plane_primitive.height * 0.5;
+
             dst->size_x = (float)sim_runtime_3d_space_normalize_half_extent(
-                object->plane_primitive.width * 0.5, mapping->span_x, 0.04f);
+                scene_half_width, mapping->span_x, 0.04f);
             dst->size_y = (float)sim_runtime_3d_space_normalize_half_extent(
-                object->plane_primitive.height * 0.5, mapping->span_y, 0.04f);
+                scene_half_height, mapping->span_y, 0.04f);
         } else {
+            double scene_half_width [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                object->plane_primitive.width * 0.5;
+            double scene_half_height [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                object->plane_primitive.height * 0.5;
+
             dst->size_x = runtime_scene_solver_projection_scaled_size(
-                object->plane_primitive.width * 0.5, world_scale, fallback_size);
+                scene_half_width, world_scale, fallback_size);
             dst->size_y = runtime_scene_solver_projection_scaled_size(
-                object->plane_primitive.height * 0.5, world_scale, fallback_size);
+                scene_half_height, world_scale, fallback_size);
         }
         dst->size_z = runtime_scene_solver_projection_scaled_size(
             SOLVER_PLANE_THICKNESS * 0.5, world_scale, fallback_size);
@@ -166,33 +186,58 @@ static void runtime_scene_solver_projection_apply_object(
         position = object->rect_prism_primitive.frame.origin;
         apply_frame_orientation(&object->rect_prism_primitive.frame, dst);
         if (mapping && mapping->valid) {
+            double scene_half_width [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                object->rect_prism_primitive.width * 0.5;
+            double scene_half_height [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                object->rect_prism_primitive.height * 0.5;
+
             dst->size_x = (float)sim_runtime_3d_space_normalize_half_extent(
-                object->rect_prism_primitive.width * 0.5, mapping->span_x, 0.04f);
+                scene_half_width, mapping->span_x, 0.04f);
             dst->size_y = (float)sim_runtime_3d_space_normalize_half_extent(
-                object->rect_prism_primitive.height * 0.5, mapping->span_y, 0.04f);
+                scene_half_height, mapping->span_y, 0.04f);
         } else {
+            double scene_half_width [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                object->rect_prism_primitive.width * 0.5;
+            double scene_half_height [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                object->rect_prism_primitive.height * 0.5;
+
             dst->size_x = runtime_scene_solver_projection_scaled_size(
-                object->rect_prism_primitive.width * 0.5, world_scale, fallback_size);
+                scene_half_width, world_scale, fallback_size);
             dst->size_y = runtime_scene_solver_projection_scaled_size(
-                object->rect_prism_primitive.height * 0.5, world_scale, fallback_size);
+                scene_half_height, world_scale, fallback_size);
         }
         dst->size_z = runtime_scene_solver_projection_scaled_size(
             object->rect_prism_primitive.depth * 0.5, world_scale, fallback_size);
     } else {
         position = object->object.transform.position;
         scale = object->object.transform.scale;
-        dst->size_x = runtime_scene_solver_projection_scaled_size(scale.x, world_scale, 0.08f);
-        dst->size_y = runtime_scene_solver_projection_scaled_size(scale.y, world_scale, 0.08f);
-        dst->size_z = runtime_scene_solver_projection_scaled_size(scale.z, world_scale, 0.08f);
+        {
+            double scene_size_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = scale.x;
+            double scene_size_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = scale.y;
+            double scene_size_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = scale.z;
+            float fallback_object_size [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.08f;
+
+            dst->size_x = runtime_scene_solver_projection_scaled_size(
+                scene_size_x, world_scale, fallback_object_size);
+            dst->size_y = runtime_scene_solver_projection_scaled_size(
+                scene_size_y, world_scale, fallback_object_size);
+            dst->size_z = runtime_scene_solver_projection_scaled_size(
+                scene_size_z, world_scale, fallback_object_size);
+        }
     }
 
     if (mapping && mapping->valid) {
         apply_normalized_position(position.x, position.y, mapping, dst);
     } else {
-        dst->position_x = runtime_scene_solver_projection_scaled_position(position.x, world_scale);
-        dst->position_y = runtime_scene_solver_projection_scaled_position(position.y, world_scale);
+        double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.x;
+        double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.y;
+        dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
+        dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
     }
-    dst->position_z = runtime_scene_solver_projection_scaled_position(position.z, world_scale);
+    {
+        double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.z;
+        dst->position_z = runtime_scene_solver_projection_scaled_position(scene_position_z, world_scale);
+    }
     if (runtime_scene_solver_projection_overlay_for_object(runtime_root,
                                                            object->object.object_id,
                                                            &overlay)) {

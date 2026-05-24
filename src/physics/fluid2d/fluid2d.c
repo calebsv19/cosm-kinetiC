@@ -207,12 +207,124 @@ static void apply_buoyancy(Fluid2D *f, const AppConfig *cfg, float dt) {
     }
 }
 
+static inline void enforce_solids_if_needed(Fluid2D *f,
+                                            const uint8_t *mask,
+                                            const float *mask_vel_x,
+                                            const float *mask_vel_y);
+static void enforce_outflow_direction(
+    Fluid2D *f,
+    const AppConfig *cfg,
+    const BoundaryFlow flows[BOUNDARY_EDGE_COUNT]);
+
+static void apply_buoyancy_seconds(
+    Fluid2D *f,
+    const AppConfig *cfg,
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    apply_buoyancy(f, cfg, dt_seconds);
+}
+
 static int solver_iterations_from_config(const AppConfig *cfg) {
     int iterations = (cfg && cfg->fluid_solver_iterations > 0)
                          ? cfg->fluid_solver_iterations
                          : FLUID_SOLVER_ITERATIONS_DEFAULT;
     if (iterations < 1) iterations = 1;
     return iterations;
+}
+
+typedef struct Fluid2DLegacyStepInputs {
+    float diffusion;
+    float viscosity;
+    float solver_dt;
+    int iterations;
+} Fluid2DLegacyStepInputs;
+
+static Fluid2DLegacyStepInputs fluid2d_prepare_legacy_step_inputs(
+    const AppConfig *cfg,
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    Fluid2DLegacyStepInputs inputs;
+    inputs.diffusion = cfg ? cfg->density_diffusion : 0.0f;
+    inputs.viscosity = cfg ? cfg->velocity_damping : 0.0f;
+    /* Legacy 2D solver internals still use cell-space timestep scalars. */
+    inputs.solver_dt = dt_seconds;
+    inputs.iterations = solver_iterations_from_config(cfg);
+    return inputs;
+}
+
+static void fluid2d_run_velocity_phase(
+    Fluid2D *f,
+    const AppConfig *cfg,
+    const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
+    const uint8_t *solid_mask,
+    const float *solid_vel_x,
+    const float *solid_vel_y,
+    const Fluid2DLegacyStepInputs *step) {
+    if (!f || !cfg || !step) return;
+
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
+
+    ts_start_timer("1st_diffuse");
+    swap_buffers(&f->velX_prev, &f->velX);
+    diffuse(f, 1, f->velX, f->velX_prev, step->viscosity, step->solver_dt,
+            step->iterations, flows);
+
+    swap_buffers(&f->velY_prev, &f->velY);
+    diffuse(f, 2, f->velY, f->velY_prev, step->viscosity, step->solver_dt,
+            step->iterations, flows);
+    ts_stop_timer("1st_diffuse");
+
+    ts_start_timer("proj_advect");
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev,
+            step->iterations, flows);
+    enforce_outflow_direction(f, cfg, flows);
+
+    swap_buffers(&f->velX_prev, &f->velX);
+    swap_buffers(&f->velY_prev, &f->velY);
+    advect(f, 1, f->velX, f->velX_prev, f->velX_prev, f->velY_prev,
+           step->solver_dt, flows);
+    advect(f, 2, f->velY, f->velY_prev, f->velX_prev, f->velY_prev,
+           step->solver_dt, flows);
+
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev,
+            step->iterations, flows);
+    enforce_outflow_direction(f, cfg, flows);
+    ts_stop_timer("proj_advect");
+}
+
+static void fluid2d_run_density_phase(
+    Fluid2D *f,
+    const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
+    const uint8_t *solid_mask,
+    const float *solid_vel_x,
+    const float *solid_vel_y,
+    const Fluid2DLegacyStepInputs *step) {
+    if (!f || !step) return;
+
+    swap_buffers(&f->density_prev, &f->density);
+    diffuse(f, 0, f->density, f->density_prev, step->diffusion,
+            step->solver_dt, step->iterations, flows);
+
+    swap_buffers(&f->density_prev, &f->density);
+    advect(f, 0, f->density, f->density_prev, f->velX, f->velY,
+           step->solver_dt, flows);
+
+    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
+}
+
+static void fluid2d_apply_density_decay(
+    Fluid2D *f,
+    const AppConfig *cfg,
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    if (!f || !cfg) return;
+
+    size_t count = (size_t)f->w * (size_t)f->h;
+    float decay = (float)(cfg->density_decay * dt_seconds);
+    if (decay > 1.0f) decay = 1.0f;
+    float keep = 1.0f - decay;
+    for (size_t i = 0; i < count; ++i) {
+        f->density[i] = math_maxf(0.0f, f->density[i] * keep);
+    }
 }
 
 Fluid2D *fluid2d_create(int w, int h) {
@@ -514,64 +626,32 @@ static void enforce_outflow_direction(Fluid2D *f,
 }
 
 void fluid2d_step(Fluid2D *f,
-                  double dt,
+                  double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
                   const AppConfig *cfg,
                   const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
                   const uint8_t *solid_mask,
                   const float *solid_vel_x,
                   const float *solid_vel_y) {
     if (!f || !cfg) return;
-    float diff = cfg->density_diffusion;
-    float visc = cfg->velocity_damping;
-    float fdt  = (float)dt;
-    int iterations = solver_iterations_from_config(cfg);
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = (float)dt;
+    Fluid2DLegacyStepInputs step =
+        fluid2d_prepare_legacy_step_inputs(cfg, dt_seconds);
 
-    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
-
-    ts_start_timer("1st_diffuse");
-    swap_buffers(&f->velX_prev, &f->velX);
-    diffuse(f, 1, f->velX, f->velX_prev, visc, fdt, iterations, flows);
-
-    swap_buffers(&f->velY_prev, &f->velY);
-    diffuse(f, 2, f->velY, f->velY_prev, visc, fdt, iterations, flows);
-    ts_stop_timer("1st_diffuse");
-
-    ts_start_timer("proj_advect");
-    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
-    enforce_outflow_direction(f, cfg, flows);
-
-    swap_buffers(&f->velX_prev, &f->velX);
-    swap_buffers(&f->velY_prev, &f->velY);
-    advect(f, 1, f->velX, f->velX_prev, f->velX_prev, f->velY_prev, fdt, flows);
-    advect(f, 2, f->velY, f->velY_prev, f->velX_prev, f->velY_prev, fdt, flows);
-
-    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
-    enforce_outflow_direction(f, cfg, flows);
-    ts_stop_timer("proj_advect");
+    fluid2d_run_velocity_phase(f, cfg, flows, solid_mask, solid_vel_x,
+                               solid_vel_y, &step);
 
     ts_start_timer("buoyancy");
-    apply_buoyancy(f, cfg, fdt);
+    apply_buoyancy_seconds(f, cfg, dt_seconds);
     enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
-    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev, iterations, flows);
+    project(f, f->velX, f->velY, f->velX_prev, f->velY_prev,
+            step.iterations, flows);
     enforce_outflow_direction(f, cfg, flows);
 
-    swap_buffers(&f->density_prev, &f->density);
-    diffuse(f, 0, f->density, f->density_prev, diff, fdt, iterations, flows);
-
-    swap_buffers(&f->density_prev, &f->density);
-    advect(f, 0, f->density, f->density_prev, f->velX, f->velY, fdt, flows);
+    fluid2d_run_density_phase(f, flows, solid_mask, solid_vel_x, solid_vel_y,
+                              &step);
     ts_stop_timer("buoyancy");
-    enforce_solids_if_needed(f, solid_mask, solid_vel_x, solid_vel_y);
 
-    size_t count = (size_t)f->w * (size_t)f->h;
-    float decay = (float)(cfg->density_decay * dt);
-    if (decay > 1.0f) decay = 1.0f;
-    float keep = 1.0f - decay;
-    for (size_t i = 0; i < count; ++i) {
-        f->density[i] = math_maxf(0.0f, f->density[i] * keep);
-    }
+    fluid2d_apply_density_decay(f, cfg, dt_seconds);
 }
 
 static float sample_field(const float *field,

@@ -35,8 +35,8 @@ typedef struct SimRuntimeEmitterResolved {
     int attached_import;
     float position_x;
     float position_y;
-    float position_z;
-    float radius;
+    float position_z [[fisics::dim(length)]] [[fisics::unit(meter)]];
+    float radius [[fisics::dim(length)]] [[fisics::unit(meter)]];
     float strength;
     float dir_x;
     float dir_y;

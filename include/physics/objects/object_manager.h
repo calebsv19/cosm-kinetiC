@@ -33,7 +33,8 @@ void object_manager_shutdown(ObjectManager *mgr);
 
 SceneObject *object_manager_add_circle(ObjectManager *mgr,
                                        Vec2 position,
-                                       float radius,
+                                       float radius [[fisics::dim(length)]]
+                                                    [[fisics::unit(meter)]],
                                        bool is_static);
 SceneObject *object_manager_add_box(ObjectManager *mgr,
                                     Vec2 position,
@@ -47,7 +48,8 @@ SceneObject *object_manager_add_poly(ObjectManager *mgr,
 SceneObject *object_manager_get(ObjectManager *mgr, int id);
 bool         object_manager_remove(ObjectManager *mgr, int id);
 void         object_manager_step(ObjectManager *mgr,
-                                 double dt,
+                                 double dt [[fisics::dim(time)]]
+                                           [[fisics::unit(second)]],
                                  const AppConfig *cfg,
                                  bool gravity_enabled);
 int          object_manager_count(const ObjectManager *mgr);

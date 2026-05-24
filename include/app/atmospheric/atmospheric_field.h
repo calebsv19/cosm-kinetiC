@@ -8,9 +8,9 @@
 
 typedef struct AtmosphericFieldSample {
     float density;
-    float velocity_x;
-    float velocity_y;
-    float velocity_z;
+    float velocity_x [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]];
+    float velocity_y [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]];
+    float velocity_z [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]];
 } AtmosphericFieldSample;
 
 typedef enum AtmosphericInitialStateSource {

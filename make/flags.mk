@@ -20,8 +20,11 @@ DEBUG     := -g
 
 CFLAGS    := $(CSTD) $(WARN) $(DEBUG) $(ARCH_FLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools
 CFLAGS    += -DPHYSICS_SIM_REPO_ROOT=\"$(abspath .)\"
+CFLAGS    += -Wno-unknown-attributes
+CFLAGS    += -Wno-c23-extensions
 LDFLAGS   := $(ARCH_FLAGS)
 LIBS      :=
+FISICS_FLAGS := --overlay=physics-units
 
 ifeq ($(SHIM_MODE),shadow)
 	CFLAGS += -I$(SYS_SHIMS_OVERLAY_DIR) -I$(SYS_SHIMS_INCLUDE_DIR) -DSYS_SHIM_MODE_SHADOW=1
@@ -116,3 +119,11 @@ CFLAGS += -I$(KIT_RENDER_DIR)/include -DKIT_RENDER_ENABLE_VK_BACKEND=0
 CFLAGS += -I$(KIT_UI_DIR)/include
 CFLAGS += -I$(CORE_SCENE_COMPILE_DIR)/include
 CFLAGS += -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_SCENE_COMPILE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_VIEWPORT2D_DIR)/include -I$(CORE_PANE_DIR)/include -I$(CORE_SIM_DIR)/include -I$(CORE_DATA_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_HEADLESS_JOB_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_WORKSPACE_AUTHORING_DIR)/include
+
+ifeq ($(PACKAGE_TOOLCHAIN),fisics)
+PACKAGE_SOURCE_BIN := $(FISICS_TARGET)
+else
+PACKAGE_SOURCE_BIN := $(CLANG_TARGET)
+endif
+
+FISICS_CFLAGS = $(filter-out -Wno-unknown-attributes,$(CFLAGS))

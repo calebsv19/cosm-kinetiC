@@ -193,14 +193,18 @@ typedef struct SimRuntimeBackendOps {
     void (*build_obstacles)(SimRuntimeBackend *backend, struct SceneState *scene);
     void (*mark_obstacles_dirty)(SimRuntimeBackend *backend);
     void (*rasterize_dynamic_obstacles)(SimRuntimeBackend *backend, struct SceneState *scene);
-    void (*apply_emitters)(SimRuntimeBackend *backend, struct SceneState *scene, double dt);
-    void (*apply_boundary_flows)(SimRuntimeBackend *backend, struct SceneState *scene, double dt);
+    void (*apply_emitters)(SimRuntimeBackend *backend,
+                           struct SceneState *scene,
+                           double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+    void (*apply_boundary_flows)(SimRuntimeBackend *backend,
+                                 struct SceneState *scene,
+                                 double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
     void (*enforce_boundary_flows)(SimRuntimeBackend *backend, struct SceneState *scene);
     void (*enforce_obstacles)(SimRuntimeBackend *backend, struct SceneState *scene);
     void (*step)(SimRuntimeBackend *backend,
                  struct SceneState *scene,
                  const AppConfig *cfg,
-                 double dt);
+                 double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
     void (*inject_object_motion)(SimRuntimeBackend *backend, const struct SceneState *scene);
     void (*reset_transient_state)(SimRuntimeBackend *backend);
     void (*seed_uniform_velocity_2d)(SimRuntimeBackend *backend, float velocity_x, float velocity_y);
@@ -277,10 +281,10 @@ void sim_runtime_backend_rasterize_dynamic_obstacles(SimRuntimeBackend *backend,
 
 void sim_runtime_backend_apply_emitters(SimRuntimeBackend *backend,
                                         struct SceneState *scene,
-                                        double dt);
+                                        double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 void sim_runtime_backend_apply_boundary_flows(SimRuntimeBackend *backend,
                                               struct SceneState *scene,
-                                              double dt);
+                                              double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 void sim_runtime_backend_enforce_boundary_flows(SimRuntimeBackend *backend,
                                                 struct SceneState *scene);
 void sim_runtime_backend_enforce_obstacles(SimRuntimeBackend *backend,
@@ -288,7 +292,7 @@ void sim_runtime_backend_enforce_obstacles(SimRuntimeBackend *backend,
 void sim_runtime_backend_step(SimRuntimeBackend *backend,
                               struct SceneState *scene,
                               const AppConfig *cfg,
-                              double dt);
+                              double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 void sim_runtime_backend_inject_object_motion(SimRuntimeBackend *backend,
                                               const struct SceneState *scene);
 void sim_runtime_backend_reset_transient_state(SimRuntimeBackend *backend);

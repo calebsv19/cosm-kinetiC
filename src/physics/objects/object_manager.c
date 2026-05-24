@@ -4,6 +4,22 @@
 #include <string.h>
 #include <stdio.h>
 
+static float object_manager_length_value(
+    float value [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    return value;
+}
+
+static float object_manager_zero_length(void) {
+    float zero [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
+    return zero;
+}
+
+static Vec2 object_manager_length_vec2(
+    float x [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    float y [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    return vec2(x, y);
+}
+
 static void object_manager_reset(ObjectManager *mgr) {
     if (!mgr) return;
     mgr->objects = NULL;
@@ -117,15 +133,18 @@ static void setup_body_common(RigidBody2D *body, bool is_static) {
 
 SceneObject *object_manager_add_circle(ObjectManager *mgr,
                                        Vec2 position,
-                                       float radius,
+                                       float radius [[fisics::dim(length)]]
+                                                    [[fisics::unit(meter)]],
                                        bool is_static) {
-    if (!mgr || radius <= 0.0f) return NULL;
+    if (!mgr || radius <= object_manager_zero_length()) return NULL;
     SceneObject *obj = object_manager_emplace(mgr);
     if (!obj) return NULL;
+    float position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.x;
+    float position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.y;
     obj->type = SCENE_OBJECT_CIRCLE;
     obj->body.shape = RIGID2D_SHAPE_CIRCLE;
-    obj->body.position = position;
-    obj->body.radius = radius;
+    obj->body.position = object_manager_length_vec2(position_x, position_y);
+    obj->body.radius = object_manager_length_value(radius);
     setup_body_common(&obj->body, is_static);
     return obj;
 }
@@ -134,13 +153,24 @@ SceneObject *object_manager_add_box(ObjectManager *mgr,
                                     Vec2 position,
                                     Vec2 half_extents,
                                     bool is_static) {
-    if (!mgr || half_extents.x <= 0.0f || half_extents.y <= 0.0f) return NULL;
+    float zero_length [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        object_manager_zero_length();
+    if (!mgr || half_extents.x <= zero_length || half_extents.y <= zero_length) {
+        return NULL;
+    }
     SceneObject *obj = object_manager_emplace(mgr);
     if (!obj) return NULL;
+    float position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.x;
+    float position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.y;
+    float half_extent_x [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        half_extents.x;
+    float half_extent_y [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        half_extents.y;
     obj->type = SCENE_OBJECT_BOX;
     obj->body.shape = RIGID2D_SHAPE_AABB;
-    obj->body.position = position;
-    obj->body.half_extents = half_extents;
+    obj->body.position = object_manager_length_vec2(position_x, position_y);
+    obj->body.half_extents =
+        object_manager_length_vec2(half_extent_x, half_extent_y);
     setup_body_common(&obj->body, is_static);
     return obj;
 }
@@ -205,7 +235,8 @@ SceneObject *object_manager_objects(ObjectManager *mgr) {
 }
 
 void object_manager_step(ObjectManager *mgr,
-                         double dt,
+                         double dt [[fisics::dim(time)]]
+                                   [[fisics::unit(second)]],
                          const AppConfig *cfg,
                          bool gravity_enabled) {
     if (!mgr || !mgr->world || mgr->count == 0) return;

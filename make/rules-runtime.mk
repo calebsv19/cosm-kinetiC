@@ -10,11 +10,11 @@ run-ide-theme: $(TARGET)
 run-daw-theme: $(TARGET)
 	PHYSICS_SIM_USE_SHARED_THEME_FONT=1 PHYSICS_SIM_USE_SHARED_THEME=1 PHYSICS_SIM_USE_SHARED_FONT=1 PHYSICS_SIM_THEME_PRESET=daw_default PHYSICS_SIM_FONT_PRESET=daw_default ./$(TARGET)
 
-run-headless-smoke: all test-stable test-physics-sim-headless-cli
+run-headless-smoke: clang-build test-stable test-physics-sim-headless-cli
 	@echo "physics_sim headless smoke passed (non-interactive)"
 
-visual-harness: $(TARGET)
-	@echo "visual harness binary ready: $(TARGET)"
+visual-harness: clang-build
+	@echo "visual harness binary ready: $(CLANG_TARGET)"
 
 VIDEO_FPS ?= 30
 video:

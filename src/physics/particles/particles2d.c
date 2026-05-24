@@ -3,47 +3,71 @@
 #include <stdlib.h>
 #include <string.h>
 
+static Vec2 particles2d_gravity_accel(void) {
+    float gravity_x
+        [[fisics::dim(acceleration)]]
+        [[fisics::unit(meter_per_second_squared)]] = 0.0f;
+    float gravity_y
+        [[fisics::dim(acceleration)]]
+        [[fisics::unit(meter_per_second_squared)]] = 9.8f;
+    return vec2(gravity_x, gravity_y);
+}
+
+static float particles2d_integrate_lifetime(
+    float lifetime [[fisics::dim(time)]] [[fisics::unit(second)]],
+    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    return lifetime - dt;
+}
+
+static float particles2d_integrate_velocity_component(
+    float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
+    float accel [[fisics::dim(acceleration)]] [[fisics::unit(meter_per_second_squared)]],
+    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    return velocity + accel * dt;
+}
+
+static float particles2d_integrate_position_component(
+    float position [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
+    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    return position + velocity * dt;
+}
+
+static float particles2d_fluid_velocity_blend_factor(void) {
+    return 0.1f;
+}
+
 // Sample fluid velocity at a given position in grid coordinates
-static Vec2 sample_fluid_velocity(const Fluid2D *fluid, float x, float y) {
-    if (!fluid) return vec2(0.0f, 0.0f);
+static Vec2 particles2d_sample_legacy_fluid_velocity_grid(
+    const Fluid2D *fluid,
+    float particle_grid_x,
+    float particle_grid_y) {
+    Vec2 sampled_velocity = vec2(0.0f, 0.0f);
+    if (!fluid) return sampled_velocity;
+    /* Shared Fluid2D sampling still exposes legacy grid-space velocities. */
+    fluid2d_sample_velocity(
+        fluid, particle_grid_x, particle_grid_y, &sampled_velocity);
+    return sampled_velocity;
+}
 
-    int w = fluid->w;
-    int h = fluid->h;
+static Vec2 particles2d_apply_legacy_fluid_velocity_bridge(
+    Vec2 particle_velocity,
+    const Fluid2D *fluid,
+    Vec2 particle_position) {
+    if (!fluid) return particle_velocity;
 
-    float px = math_clampf(x, 0.5f, (float)w - 1.5f);
-    float py = math_clampf(y, 0.5f, (float)h - 1.5f);
-
-    int x0 = (int)px;
-    int y0 = (int)py;
-    int x1 = x0 + 1;
-    int y1 = y0 + 1;
-
-    float sx = px - (float)x0;
-    float sy = py - (float)y0;
-
-    size_t idx00 = (size_t)y0 * (size_t)w + (size_t)x0;
-    size_t idx10 = (size_t)y0 * (size_t)w + (size_t)x1;
-    size_t idx01 = (size_t)y1 * (size_t)w + (size_t)x0;
-    size_t idx11 = (size_t)y1 * (size_t)w + (size_t)x1;
-
-    float vx00 = fluid->velX[idx00];
-    float vy00 = fluid->velY[idx00];
-    float vx10 = fluid->velX[idx10];
-    float vy10 = fluid->velY[idx10];
-    float vx01 = fluid->velX[idx01];
-    float vy01 = fluid->velY[idx01];
-    float vx11 = fluid->velX[idx11];
-    float vy11 = fluid->velY[idx11];
-
-    float vx0 = math_lerp(vx00, vx10, sx);
-    float vy0 = math_lerp(vy00, vy10, sx);
-    float vx1 = math_lerp(vx01, vx11, sx);
-    float vy1 = math_lerp(vy01, vy11, sx);
-
-    float vx = math_lerp(vx0, vx1, sy);
-    float vy = math_lerp(vy0, vy1, sy);
-
-    return vec2(vx, vy);
+    /*
+     * Legacy compatibility bridge:
+     * - particle positions are still sampled directly in grid coordinates
+     * - sampled fluid values are still legacy scalar grid-space velocities
+     * - blend keeps the seam localized until fluid/world units are separated
+     */
+    Vec2 sampled_grid_velocity = particles2d_sample_legacy_fluid_velocity_grid(
+        fluid, particle_position.x, particle_position.y);
+    return vec2_lerp(
+        particle_velocity,
+        sampled_grid_velocity,
+        particles2d_fluid_velocity_blend_factor());
 }
 
 Particles2D *particles2d_create(int capacity) {
@@ -91,7 +115,7 @@ void particles2d_spawn(Particles2D *p,
 }
 
 void particles2d_step(Particles2D *p,
-                      double dt,
+                      double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
                       const AppConfig *cfg,
                       const Fluid2D   *fluid,
                       const Rigid2DWorld *rigid) {
@@ -99,32 +123,65 @@ void particles2d_step(Particles2D *p,
     (void)rigid;
     if (!p || p->count == 0) return;
 
-    float fdt = (float)dt;
-    Vec2 gravity = vec2(0.0f, 9.8f);
+    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    if (dt <= zero_seconds) return;
+
+    float fdt [[fisics::dim(time)]] [[fisics::unit(second)]] = (float)dt;
+    Vec2 gravity = particles2d_gravity_accel();
 
     int write_index = 0;
     for (int i = 0; i < p->count; ++i) {
         Particle2D pt = p->particles[i];
 
         // Kill dead particles
-        pt.lifetime -= fdt;
-        if (pt.lifetime <= 0.0f) {
+        {
+            float lifetime_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = pt.lifetime;
+            lifetime_seconds = particles2d_integrate_lifetime(lifetime_seconds, fdt);
+            pt.lifetime = lifetime_seconds;
+        }
+        if (pt.lifetime <= zero_seconds) {
             continue;
         }
 
         // Apply gravity
-        pt.velocity = vec2_add(pt.velocity, vec2_scale(gravity, fdt));
-
-        // Apply fluid velocity influence if available
-        if (fluid) {
-            // Here we assume particle.position is in "grid space"
-            Vec2 fv = sample_fluid_velocity(fluid, pt.position.x, pt.position.y);
-            // Blend particle velocity slightly toward fluid
-            pt.velocity = vec2_lerp(pt.velocity, fv, 0.1f);
+        {
+            float velocity_x
+                [[fisics::dim(velocity)]]
+                [[fisics::unit(meter_per_second)]] = pt.velocity.x;
+            float velocity_y
+                [[fisics::dim(velocity)]]
+                [[fisics::unit(meter_per_second)]] = pt.velocity.y;
+            float gravity_x
+                [[fisics::dim(acceleration)]]
+                [[fisics::unit(meter_per_second_squared)]] = gravity.x;
+            float gravity_y
+                [[fisics::dim(acceleration)]]
+                [[fisics::unit(meter_per_second_squared)]] = gravity.y;
+            pt.velocity.x = particles2d_integrate_velocity_component(
+                velocity_x, gravity_x, fdt);
+            pt.velocity.y = particles2d_integrate_velocity_component(
+                velocity_y, gravity_y, fdt);
         }
 
+        // Apply fluid velocity influence if available
+        pt.velocity = particles2d_apply_legacy_fluid_velocity_bridge(
+            pt.velocity, fluid, pt.position);
+
         // Integrate
-        pt.position = vec2_add(pt.position, vec2_scale(pt.velocity, fdt));
+        {
+            float position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = pt.position.x;
+            float position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = pt.position.y;
+            float velocity_x
+                [[fisics::dim(velocity)]]
+                [[fisics::unit(meter_per_second)]] = pt.velocity.x;
+            float velocity_y
+                [[fisics::dim(velocity)]]
+                [[fisics::unit(meter_per_second)]] = pt.velocity.y;
+            pt.position.x = particles2d_integrate_position_component(
+                position_x, velocity_x, fdt);
+            pt.position.y = particles2d_integrate_position_component(
+                position_y, velocity_y, fdt);
+        }
 
         // Write back to compacted array
         p->particles[write_index++] = pt;

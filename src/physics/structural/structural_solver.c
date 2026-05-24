@@ -207,11 +207,112 @@ static void apply_frame_releases(float k_local[6][6],
     }
 }
 
+static bool structural_member_axis_2d(const StructNode *a,
+                                      const StructNode *bnode,
+                                      float *out_dx,
+                                      float *out_dy,
+                                      float *out_length,
+                                      float *out_c,
+                                      float *out_s) {
+    if (!a || !bnode || !out_dx || !out_dy || !out_length || !out_c || !out_s) {
+        return false;
+    }
+
+    float ax [[fisics::dim(length)]] [[fisics::unit(meter)]] = a->x;
+    float ay [[fisics::dim(length)]] [[fisics::unit(meter)]] = a->y;
+    float bx [[fisics::dim(length)]] [[fisics::unit(meter)]] = bnode->x;
+    float by [[fisics::dim(length)]] [[fisics::unit(meter)]] = bnode->y;
+    float dx [[fisics::dim(length)]] [[fisics::unit(meter)]] = bx - ax;
+    float dy [[fisics::dim(length)]] [[fisics::unit(meter)]] = by - ay;
+    float length [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        sqrtf(dx * dx + dy * dy);
+    float minimum_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = 1e-4f;
+    if (length < minimum_length) return false;
+
+    *out_dx = dx;
+    *out_dy = dy;
+    *out_length = length;
+    *out_c = dx / length;
+    *out_s = dy / length;
+    return true;
+}
+
+static void structural_apply_planar_nodal_force_components(
+    float *b,
+    int dof_x,
+    int dof_y,
+    float fx [[fisics::dim(force)]] [[fisics::unit(newton)]],
+    float fy [[fisics::dim(force)]] [[fisics::unit(newton)]]) {
+    if (!b) return;
+    if (dof_x >= 0) b[dof_x] += fx;
+    if (dof_y >= 0) b[dof_y] += fy;
+}
+
+static float structural_material_cross_sectional_area(
+    const StructMaterial *mat) {
+    float area [[fisics::dim(area)]] [[fisics::unit(square_meter)]] = 1.0f;
+    if (mat) area = mat->area;
+    return area;
+}
+
+static float structural_material_youngs_modulus(
+    const StructMaterial *mat) {
+    float youngs_modulus
+        [[fisics::dim(pressure)]]
+        [[fisics::unit(pascal)]] = 1.0f;
+    if (mat) youngs_modulus = mat->youngs_modulus;
+    return youngs_modulus;
+}
+
+static float structural_material_second_moment_of_area(
+    const StructMaterial *mat) {
+    float moment_inertia
+        [[fisics::dim(second_moment_of_area)]]
+        [[fisics::unit(meter_to_fourth)]] = 1.0f;
+    if (mat) moment_inertia = mat->moment_inertia;
+    return moment_inertia;
+}
+
+static float structural_axial_stress_from_force(
+    float axial_force [[fisics::dim(force)]] [[fisics::unit(newton)]],
+    float area [[fisics::dim(area)]] [[fisics::unit(square_meter)]]) {
+    float minimum_area [[fisics::dim(area)]] [[fisics::unit(square_meter)]] =
+        1e-8f;
+    if (area <= minimum_area) return 0.0f;
+    float axial_stress
+        [[fisics::dim(pressure)]]
+        [[fisics::unit(pascal)]] = axial_force / area;
+    return axial_stress;
+}
+
+static float structural_axial_stiffness_coefficient(
+    float youngs_modulus [[fisics::dim(pressure)]] [[fisics::unit(pascal)]],
+    float area [[fisics::dim(area)]] [[fisics::unit(square_meter)]],
+    float length [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    return (youngs_modulus * area) / length;
+}
+
+static float structural_bending_stiffness_coefficient(
+    float youngs_modulus [[fisics::dim(pressure)]] [[fisics::unit(pascal)]],
+    float moment_inertia
+        [[fisics::dim(second_moment_of_area)]]
+        [[fisics::unit(meter_to_fourth)]],
+    float length [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    float length_squared = length * length;
+    float length_cubed = length_squared * length;
+    return (youngs_modulus * moment_inertia) / length_cubed;
+}
+
 static void add_frame_gravity_loads(const StructuralScene *scene,
                                     const int *dof_map,
                                     float *b) {
     if (!scene || !dof_map || !b) return;
-    if (!scene->gravity_enabled || fabsf(scene->gravity_strength) < 1e-6f) return;
+    {
+        float gravity_strength
+            [[fisics::dim(acceleration)]]
+            [[fisics::unit(meter_per_second_squared)]] = scene->gravity_strength;
+        if (!scene->gravity_enabled || fabsf(gravity_strength) < 1e-6f) return;
+    }
 
     for (size_t e = 0; e < scene->edge_count; ++e) {
         const StructEdge *edge = &scene->edges[e];
@@ -224,19 +325,19 @@ static void add_frame_gravity_loads(const StructuralScene *scene,
         if (idx_a < 0 || idx_b < 0) continue;
         const StructNode *a = &scene->nodes[idx_a];
         const StructNode *bnode = &scene->nodes[idx_b];
-        float dx = bnode->x - a->x;
-        float dy = bnode->y - a->y;
-        float L = sqrtf(dx * dx + dy * dy);
-        if (L < 1e-4f) continue;
-        float c = dx / L;
-        float s = dy / L;
+        float dx = 0.0f;
+        float dy = 0.0f;
+        float L = 0.0f;
+        float c = 0.0f;
+        float s = 0.0f;
+        if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) continue;
 
         float density = 1.0f;
         float area = 1.0f;
         if (edge->material_index >= 0 && edge->material_index < (int)scene->material_count) {
             const StructMaterial *mat = &scene->materials[edge->material_index];
             density = mat->density;
-            area = mat->area;
+            area = structural_material_cross_sectional_area(mat);
         }
         float w = density * area * scene->gravity_strength;
         float q_axial = w * s;
@@ -328,8 +429,9 @@ bool structural_solve_truss(StructuralScene *scene, StructuralSolveResult *resul
         if (node_index < 0) continue;
         int dof_x = dof_map[node_index * 2];
         int dof_y = dof_map[node_index * 2 + 1];
-        if (dof_x >= 0) b[dof_x] += load->fx;
-        if (dof_y >= 0) b[dof_y] += load->fy;
+        float load_fx [[fisics::dim(force)]] [[fisics::unit(newton)]] = load->fx;
+        float load_fy [[fisics::dim(force)]] [[fisics::unit(newton)]] = load->fy;
+        structural_apply_planar_nodal_force_components(b, dof_x, dof_y, load_fx, load_fy);
     }
 
     SparseTriplet trips[MAX_ENTRIES];
@@ -346,21 +448,21 @@ bool structural_solve_truss(StructuralScene *scene, StructuralSolveResult *resul
         if (idx_a < 0 || idx_b < 0) continue;
         const StructNode *a = &scene->nodes[idx_a];
         const StructNode *bnode = &scene->nodes[idx_b];
-        float dx = bnode->x - a->x;
-        float dy = bnode->y - a->y;
-        float L = sqrtf(dx * dx + dy * dy);
-        if (L < 1e-4f) continue;
-        float c = dx / L;
-        float s = dy / L;
+        float dx = 0.0f;
+        float dy = 0.0f;
+        float L = 0.0f;
+        float c = 0.0f;
+        float s = 0.0f;
+        if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) continue;
 
         float E = 1.0f;
         float A = 1.0f;
         if (edge->material_index >= 0 && edge->material_index < (int)scene->material_count) {
             const StructMaterial *mat = &scene->materials[edge->material_index];
-            E = mat->youngs_modulus;
-            A = mat->area;
+            E = structural_material_youngs_modulus(mat);
+            A = structural_material_cross_sectional_area(mat);
         }
-        float k = (E * A) / L;
+        float k = structural_axial_stiffness_coefficient(E, A, L);
 
         float k_local[4][4] = {
             { c * c,  c * s, -c * c, -c * s },
@@ -432,31 +534,34 @@ bool structural_solve_truss(StructuralScene *scene, StructuralSolveResult *resul
         if (idx_a < 0 || idx_b < 0) continue;
         const StructNode *a = &scene->nodes[idx_a];
         const StructNode *bnode = &scene->nodes[idx_b];
-        float dx = bnode->x - a->x;
-        float dy = bnode->y - a->y;
-        float L = sqrtf(dx * dx + dy * dy);
-        if (L < 1e-4f) {
+        float dx = 0.0f;
+        float dy = 0.0f;
+        float L = 0.0f;
+        float c = 0.0f;
+        float s = 0.0f;
+        if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) {
             edge->axial_force = 0.0f;
             edge->axial_stress = 0.0f;
             continue;
         }
-        float c = dx / L;
-        float s = dy / L;
 
         float E = 1.0f;
         float A = 1.0f;
         if (edge->material_index >= 0 && edge->material_index < (int)scene->material_count) {
             const StructMaterial *mat = &scene->materials[edge->material_index];
-            E = mat->youngs_modulus;
-            A = mat->area;
+            E = structural_material_youngs_modulus(mat);
+            A = structural_material_cross_sectional_area(mat);
         }
-        float k = (E * A) / L;
+        float k = structural_axial_stiffness_coefficient(E, A, L);
 
-        float dux = scene->disp_x[idx_b] - scene->disp_x[idx_a];
-        float duy = scene->disp_y[idx_b] - scene->disp_y[idx_a];
-        float axial = dux * c + duy * s;
+        float dux [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            scene->disp_x[idx_b] - scene->disp_x[idx_a];
+        float duy [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            scene->disp_y[idx_b] - scene->disp_y[idx_a];
+        float axial [[fisics::dim(length)]] [[fisics::unit(meter)]] = dux * c + duy * s;
         edge->axial_force = k * axial;
-        edge->axial_stress = (A > 0.0f) ? edge->axial_force / A : 0.0f;
+        edge->axial_stress =
+            structural_axial_stress_from_force(edge->axial_force, A);
     }
 
     return true;
@@ -507,8 +612,9 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
         int dof_x = dof_map[node_index * 3];
         int dof_y = dof_map[node_index * 3 + 1];
         int dof_t = dof_map[node_index * 3 + 2];
-        if (dof_x >= 0) b[dof_x] += load->fx;
-        if (dof_y >= 0) b[dof_y] += load->fy;
+        float load_fx [[fisics::dim(force)]] [[fisics::unit(newton)]] = load->fx;
+        float load_fy [[fisics::dim(force)]] [[fisics::unit(newton)]] = load->fy;
+        structural_apply_planar_nodal_force_components(b, dof_x, dof_y, load_fx, load_fy);
         if (dof_t >= 0) b[dof_t] += load->mz;
     }
     add_frame_gravity_loads(scene, dof_map, b);
@@ -527,27 +633,26 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
         if (idx_a < 0 || idx_b < 0) continue;
         const StructNode *a = &scene->nodes[idx_a];
         const StructNode *bnode = &scene->nodes[idx_b];
-        float dx = bnode->x - a->x;
-        float dy = bnode->y - a->y;
-        float L = sqrtf(dx * dx + dy * dy);
-        if (L < 1e-4f) continue;
-        float c = dx / L;
-        float s = dy / L;
+        float dx = 0.0f;
+        float dy = 0.0f;
+        float L = 0.0f;
+        float c = 0.0f;
+        float s = 0.0f;
+        if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) continue;
 
         float E = 1.0f;
         float A = 1.0f;
         float I = 1.0f;
         if (edge->material_index >= 0 && edge->material_index < (int)scene->material_count) {
             const StructMaterial *mat = &scene->materials[edge->material_index];
-            E = mat->youngs_modulus;
-            A = mat->area;
-            I = mat->moment_inertia;
+            E = structural_material_youngs_modulus(mat);
+            A = structural_material_cross_sectional_area(mat);
+            I = structural_material_second_moment_of_area(mat);
         }
 
         float L2 = L * L;
-        float L3 = L2 * L;
-        float k_axial = (E * A) / L;
-        float k_bend = (E * I) / L3;
+        float k_axial = structural_axial_stiffness_coefficient(E, A, L);
+        float k_bend = structural_bending_stiffness_coefficient(E, I, L);
 
         float k_local[6][6] = {
             { k_axial, 0.0f, 0.0f, -k_axial, 0.0f, 0.0f },
@@ -657,10 +762,12 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
         if (idx_a < 0 || idx_b < 0) continue;
         const StructNode *a = &scene->nodes[idx_a];
         const StructNode *bnode = &scene->nodes[idx_b];
-        float dx = bnode->x - a->x;
-        float dy = bnode->y - a->y;
-        float L = sqrtf(dx * dx + dy * dy);
-        if (L < 1e-4f) {
+        float dx = 0.0f;
+        float dy = 0.0f;
+        float L = 0.0f;
+        float c = 0.0f;
+        float s = 0.0f;
+        if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) {
             edge->axial_force = 0.0f;
             edge->axial_stress = 0.0f;
             edge->shear_force_a = 0.0f;
@@ -669,23 +776,20 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
             edge->bending_moment_b = 0.0f;
             continue;
         }
-        float c = dx / L;
-        float s = dy / L;
 
         float E = 1.0f;
         float A = 1.0f;
         float I = 1.0f;
         if (edge->material_index >= 0 && edge->material_index < (int)scene->material_count) {
             const StructMaterial *mat = &scene->materials[edge->material_index];
-            E = mat->youngs_modulus;
-            A = mat->area;
-            I = mat->moment_inertia;
+            E = structural_material_youngs_modulus(mat);
+            A = structural_material_cross_sectional_area(mat);
+            I = structural_material_second_moment_of_area(mat);
         }
 
         float L2 = L * L;
-        float L3 = L2 * L;
-        float k_axial = (E * A) / L;
-        float k_bend = (E * I) / L3;
+        float k_axial = structural_axial_stiffness_coefficient(E, A, L);
+        float k_bend = structural_bending_stiffness_coefficient(E, I, L);
 
         float k_local[6][6] = {
             { k_axial, 0.0f, 0.0f, -k_axial, 0.0f, 0.0f },
@@ -697,10 +801,14 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
         };
         apply_frame_releases(k_local, edge->release_a, edge->release_b);
 
-        float u1 = c * scene->disp_x[idx_a] + s * scene->disp_y[idx_a];
-        float v1 = -s * scene->disp_x[idx_a] + c * scene->disp_y[idx_a];
-        float u2 = c * scene->disp_x[idx_b] + s * scene->disp_y[idx_b];
-        float v2 = -s * scene->disp_x[idx_b] + c * scene->disp_y[idx_b];
+        float disp_ax [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene->disp_x[idx_a];
+        float disp_ay [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene->disp_y[idx_a];
+        float disp_bx [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene->disp_x[idx_b];
+        float disp_by [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene->disp_y[idx_b];
+        float u1 [[fisics::dim(length)]] [[fisics::unit(meter)]] = c * disp_ax + s * disp_ay;
+        float v1 [[fisics::dim(length)]] [[fisics::unit(meter)]] = -s * disp_ax + c * disp_ay;
+        float u2 [[fisics::dim(length)]] [[fisics::unit(meter)]] = c * disp_bx + s * disp_by;
+        float v2 [[fisics::dim(length)]] [[fisics::unit(meter)]] = -s * disp_bx + c * disp_by;
         float d_local[6] = {
             u1,
             v1,
@@ -720,7 +828,8 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
         }
 
         edge->axial_force = f_local[0];
-        edge->axial_stress = (A > 0.0f) ? edge->axial_force / A : 0.0f;
+        edge->axial_stress =
+            structural_axial_stress_from_force(edge->axial_force, A);
         edge->shear_force_a = f_local[1];
         edge->bending_moment_a = f_local[2];
         edge->shear_force_b = f_local[4];
@@ -752,10 +861,12 @@ void structural_compute_frame_internal_forces_ex(StructuralScene *scene,
         if (idx_a < 0 || idx_b < 0) continue;
         const StructNode *a = &scene->nodes[idx_a];
         const StructNode *bnode = &scene->nodes[idx_b];
-        float dx = bnode->x - a->x;
-        float dy = bnode->y - a->y;
-        float L = sqrtf(dx * dx + dy * dy);
-        if (L < 1e-4f) {
+        float dx = 0.0f;
+        float dy = 0.0f;
+        float L = 0.0f;
+        float c = 0.0f;
+        float s = 0.0f;
+        if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) {
             if (update_edges) {
                 edge->axial_force = 0.0f;
                 edge->axial_stress = 0.0f;
@@ -766,23 +877,20 @@ void structural_compute_frame_internal_forces_ex(StructuralScene *scene,
             }
             continue;
         }
-        float c = dx / L;
-        float s = dy / L;
 
         float E = 1.0f;
         float A = 1.0f;
         float I = 1.0f;
         if (edge->material_index >= 0 && edge->material_index < (int)scene->material_count) {
             const StructMaterial *mat = &scene->materials[edge->material_index];
-            E = mat->youngs_modulus;
-            A = mat->area;
-            I = mat->moment_inertia;
+            E = structural_material_youngs_modulus(mat);
+            A = structural_material_cross_sectional_area(mat);
+            I = structural_material_second_moment_of_area(mat);
         }
 
         float L2 = L * L;
-        float L3 = L2 * L;
-        float k_axial = (E * A) / L;
-        float k_bend = (E * I) / L3;
+        float k_axial = structural_axial_stiffness_coefficient(E, A, L);
+        float k_bend = structural_bending_stiffness_coefficient(E, I, L);
 
         float k_local[6][6] = {
             { k_axial, 0.0f, 0.0f, -k_axial, 0.0f, 0.0f },
@@ -794,17 +902,17 @@ void structural_compute_frame_internal_forces_ex(StructuralScene *scene,
         };
         apply_frame_releases(k_local, edge->release_a, edge->release_b);
 
-        float uax = u[idx_a * 3 + 0];
-        float uay = u[idx_a * 3 + 1];
+        float uax [[fisics::dim(length)]] [[fisics::unit(meter)]] = u[idx_a * 3 + 0];
+        float uay [[fisics::dim(length)]] [[fisics::unit(meter)]] = u[idx_a * 3 + 1];
         float tax = u[idx_a * 3 + 2];
-        float ubx = u[idx_b * 3 + 0];
-        float uby = u[idx_b * 3 + 1];
+        float ubx [[fisics::dim(length)]] [[fisics::unit(meter)]] = u[idx_b * 3 + 0];
+        float uby [[fisics::dim(length)]] [[fisics::unit(meter)]] = u[idx_b * 3 + 1];
         float tbx = u[idx_b * 3 + 2];
 
-        float u1 = c * uax + s * uay;
-        float v1 = -s * uax + c * uay;
-        float u2 = c * ubx + s * uby;
-        float v2 = -s * ubx + c * uby;
+        float u1 [[fisics::dim(length)]] [[fisics::unit(meter)]] = c * uax + s * uay;
+        float v1 [[fisics::dim(length)]] [[fisics::unit(meter)]] = -s * uax + c * uay;
+        float u2 [[fisics::dim(length)]] [[fisics::unit(meter)]] = c * ubx + s * uby;
+        float v2 [[fisics::dim(length)]] [[fisics::unit(meter)]] = -s * ubx + c * uby;
         float d_local[6] = {
             u1,
             v1,
@@ -825,7 +933,8 @@ void structural_compute_frame_internal_forces_ex(StructuralScene *scene,
 
         if (update_edges) {
             edge->axial_force = f_local[0];
-            edge->axial_stress = (A > 0.0f) ? edge->axial_force / A : 0.0f;
+            edge->axial_stress =
+                structural_axial_stress_from_force(edge->axial_force, A);
             edge->shear_force_a = f_local[1];
             edge->bending_moment_a = f_local[2];
             edge->shear_force_b = f_local[4];
@@ -888,27 +997,26 @@ void structural_apply_frame_stiffness(const StructuralScene *scene,
         if (idx_a < 0 || idx_b < 0) continue;
         const StructNode *a = &scene->nodes[idx_a];
         const StructNode *bnode = &scene->nodes[idx_b];
-        float dx = bnode->x - a->x;
-        float dy = bnode->y - a->y;
-        float L = sqrtf(dx * dx + dy * dy);
-        if (L < 1e-4f) continue;
-        float c = dx / L;
-        float s = dy / L;
+        float dx = 0.0f;
+        float dy = 0.0f;
+        float L = 0.0f;
+        float c = 0.0f;
+        float s = 0.0f;
+        if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) continue;
 
         float E = 1.0f;
         float A = 1.0f;
         float I = 1.0f;
         if (edge->material_index >= 0 && edge->material_index < (int)scene->material_count) {
             const StructMaterial *mat = &scene->materials[edge->material_index];
-            E = mat->youngs_modulus;
-            A = mat->area;
-            I = mat->moment_inertia;
+            E = structural_material_youngs_modulus(mat);
+            A = structural_material_cross_sectional_area(mat);
+            I = structural_material_second_moment_of_area(mat);
         }
 
         float L2 = L * L;
-        float L3 = L2 * L;
-        float k_axial = (E * A) / L;
-        float k_bend = (E * I) / L3;
+        float k_axial = structural_axial_stiffness_coefficient(E, A, L);
+        float k_bend = structural_bending_stiffness_coefficient(E, I, L);
 
         float k_local[6][6] = {
             { k_axial, 0.0f, 0.0f, -k_axial, 0.0f, 0.0f },

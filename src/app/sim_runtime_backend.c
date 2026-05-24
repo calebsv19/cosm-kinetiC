@@ -96,7 +96,7 @@ void sim_runtime_backend_rasterize_dynamic_obstacles(SimRuntimeBackend *backend,
 
 void sim_runtime_backend_apply_emitters(SimRuntimeBackend *backend,
                                         struct SceneState *scene,
-                                        double dt) {
+                                        double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     if (backend && backend->ops && backend->ops->apply_emitters) {
         backend->ops->apply_emitters(backend, scene, dt);
     }
@@ -104,7 +104,7 @@ void sim_runtime_backend_apply_emitters(SimRuntimeBackend *backend,
 
 void sim_runtime_backend_apply_boundary_flows(SimRuntimeBackend *backend,
                                               struct SceneState *scene,
-                                              double dt) {
+                                              double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     if (backend && backend->ops && backend->ops->apply_boundary_flows) {
         backend->ops->apply_boundary_flows(backend, scene, dt);
     }
@@ -127,7 +127,7 @@ void sim_runtime_backend_enforce_obstacles(SimRuntimeBackend *backend,
 void sim_runtime_backend_step(SimRuntimeBackend *backend,
                               struct SceneState *scene,
                               const AppConfig *cfg,
-                              double dt) {
+                              double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     if (backend && backend->ops && backend->ops->step) {
         backend->ops->step(backend, scene, cfg, dt);
     }

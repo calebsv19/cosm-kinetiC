@@ -79,14 +79,16 @@ static void wind_prepare(SceneState *scene) {
     wind_apply_default_boundaries(scene->config, (FluidScenePreset *)scene->preset);
 }
 
-static void wind_pre_substep(SceneState *scene, double dt) {
+static void wind_pre_substep(SceneState *scene,
+                             double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     (void)dt;
     if (!scene || !scene->config || !scene->preset) return;
     scene_set_emitters_enabled(scene, false);
     wind_apply_default_boundaries(scene->config, (FluidScenePreset *)scene->preset);
 }
 
-static void wind_post_substep(SceneState *scene, double dt) {
+static void wind_post_substep(SceneState *scene,
+                              double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     (void)scene;
     (void)dt;
 }

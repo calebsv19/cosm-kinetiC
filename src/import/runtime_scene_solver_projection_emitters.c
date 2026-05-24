@@ -127,9 +127,13 @@ void runtime_scene_solver_projection_apply_emitters_from_lights(json_object *run
         memset(dst, 0, sizeof(*dst));
 
         if (runtime_scene_solver_projection_parse_vec3(light, "position", &lx, &ly, &lz)) {
-            dst->position_x = runtime_scene_solver_projection_scaled_position(lx, world_scale);
-            dst->position_y = runtime_scene_solver_projection_scaled_position(ly, world_scale);
-            dst->position_z = runtime_scene_solver_projection_scaled_position(lz, world_scale);
+            double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = lx;
+            double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = ly;
+            double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = lz;
+
+            dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
+            dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
+            dst->position_z = runtime_scene_solver_projection_scaled_position(scene_position_z, world_scale);
         } else {
             dst->position_x = 0.5f;
             dst->position_y = 0.5f;
@@ -183,18 +187,35 @@ int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
         memset(dst, 0, sizeof(*dst));
         dst->type = overlay.emitter_type;
         if (mapping.valid) {
+            double scene_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                overlay.emitter_radius;
+            double scene_span_min [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                (mapping.span_x < mapping.span_y ? mapping.span_x : mapping.span_y);
+
             apply_normalized_emitter_position(origin.x, origin.y, &mapping, dst);
             dst->radius = (float)sim_runtime_3d_space_normalize_half_extent(
-                overlay.emitter_radius,
-                (mapping.span_x < mapping.span_y ? mapping.span_x : mapping.span_y),
+                scene_emitter_radius,
+                scene_span_min,
                 0.0);
         } else {
-            dst->position_x = runtime_scene_solver_projection_scaled_position(origin.x, world_scale);
-            dst->position_y = runtime_scene_solver_projection_scaled_position(origin.y, world_scale);
+            double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = origin.x;
+            double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = origin.y;
+            double scene_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                overlay.emitter_radius;
+            double scaled_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                scene_emitter_radius * world_scale;
+            float min_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
+            float max_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 5000.0f;
+
+            dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
+            dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
             dst->radius = runtime_scene_solver_projection_clampf_dim(
-                (float)(overlay.emitter_radius * world_scale), 0.0f, 5000.0f);
+                (float)scaled_emitter_radius, min_radius, max_radius);
         }
-        dst->position_z = runtime_scene_solver_projection_scaled_position(origin.z, world_scale);
+        {
+            double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = origin.z;
+            dst->position_z = runtime_scene_solver_projection_scaled_position(scene_position_z, world_scale);
+        }
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)overlay.emitter_strength,
                                                                    0.0f,
                                                                    5000.0f);
@@ -251,11 +272,23 @@ int runtime_scene_solver_projection_apply_emitters_from_runtime_root_objects(
         dst = &in_out_preset->emitters[in_out_preset->emitter_count];
         memset(dst, 0, sizeof(*dst));
         dst->type = overlay.emitter_type;
-        dst->position_x = runtime_scene_solver_projection_scaled_position(px, world_scale);
-        dst->position_y = runtime_scene_solver_projection_scaled_position(py, world_scale);
-        dst->position_z = runtime_scene_solver_projection_scaled_position(pz, world_scale);
-        dst->radius = runtime_scene_solver_projection_clampf_dim(
-            (float)(overlay.emitter_radius * world_scale), 0.0f, 5000.0f);
+        {
+            double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = px;
+            double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = py;
+            double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = pz;
+            double scene_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                overlay.emitter_radius;
+            double scaled_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+                scene_emitter_radius * world_scale;
+            float min_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
+            float max_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 5000.0f;
+
+            dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
+            dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
+            dst->position_z = runtime_scene_solver_projection_scaled_position(scene_position_z, world_scale);
+            dst->radius = runtime_scene_solver_projection_clampf_dim(
+                (float)scaled_emitter_radius, min_radius, max_radius);
+        }
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)overlay.emitter_strength,
                                                                    0.0f,
                                                                    5000.0f);

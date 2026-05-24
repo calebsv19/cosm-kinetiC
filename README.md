@@ -32,6 +32,126 @@ make
 Packaging and Desktop refresh flows produce `kinetiC.app`; see
 `docs/desktop_packaging.md`.
 
+Compiler-units dual-toolchain contract:
+
+```bash
+make clang-build
+make fisics-build
+make dump-sema
+make dump-sema-runtime-3d-solver-step
+make dump-sema-fluid2d
+make dump-sema-rigid2d
+make dump-sema-rigid2d-collision
+make dump-sema-structural-runtime
+make dump-sema-particles2d
+make dump-sema-structural-solver
+make dump-sema-atmospheric-field
+make dump-sema-object-manager
+make dump-sema-soft-body
+make dump-sema-runtime-fields-2d
+make dump-sema-runtime-backend-2d
+make dump-sema-runtime-backend-3d-emitters
+make dump-sema-runtime-backend-3d-runtime
+make dump-sema-runtime-backend-3d-obstacles
+make dump-sema-runtime-emitter
+make dump-sema-runtime-obstacle
+make test-rigid2d-collision-contract
+make test-sim-runtime-backend-2d-runtime-fields-contract
+make test-sim-runtime-backend-2d-contract
+make test-sim-runtime-backend-3d-emitter-contract
+make test-sim-runtime-backend-3d-attached-emitter-contract
+make test-sim-runtime-backend-3d-obstacle-contract
+make test-sim-runtime-emitter-contract
+make test-sim-runtime-obstacle-contract
+make toolchain-contract
+make package-desktop
+make PACKAGE_TOOLCHAIN=fisics package-desktop
+```
+
+- `make` and `make clang-build` keep the normal Clang build as the default path.
+- `make fisics-build` builds the same program through `fisiCs` with the
+  `physics-units` overlay enabled.
+- `make dump-sema` writes a semantic dump for the retained-scene projection
+  seam under `build/fisics/`.
+- `make dump-sema-runtime-3d-solver-step` writes a second semantic dump for the
+  first `3D` solver-step math seam under `build/fisics/`.
+- `make dump-sema-fluid2d` writes a third semantic dump for the legacy `2D`
+  fluid solver seam under `build/fisics/`.
+- `make dump-sema-rigid2d` writes a fourth semantic dump for the rigid-body
+  solver seam under `build/fisics/`.
+- `make dump-sema-rigid2d-collision` writes a fifth semantic dump for the
+  deeper rigid-body collision/impulse seam under `build/fisics/`.
+- `make dump-sema-structural-runtime` writes a sixth semantic dump for the
+  structural dynamic-runtime integrator seam under `build/fisics/`.
+- `make dump-sema-particles2d` writes a seventh semantic dump for the `2D`
+  particle integrator seam under `build/fisics/`.
+- `make dump-sema-structural-solver` writes an eighth semantic dump for the
+  structural static solver seam under `build/fisics/`.
+- `make dump-sema-atmospheric-field` writes a ninth semantic dump for the
+  atmospheric density/wind field generator seam under `build/fisics/`.
+- `make dump-sema-object-manager` writes a tenth semantic dump for the rigid
+  object-manager seam under `build/fisics/`.
+- `make dump-sema-soft-body` writes an eleventh semantic dump for the soft-body
+  spring-network/constraint seam under `build/fisics/`.
+- `make dump-sema-runtime-fields-2d` writes a twelfth semantic dump for the
+  `2D` backend runtime-fields/emitter seam under `build/fisics/`.
+- `make dump-sema-runtime-backend-2d` writes a thirteenth semantic dump for the
+  adjacent `2D` backend host/runtime seam under `build/fisics/`.
+- `make dump-sema-runtime-backend-3d-emitters` writes a fourteenth semantic
+  dump for the `3D` scaffold emitter application seam under `build/fisics/`.
+- `make dump-sema-runtime-backend-3d-runtime` writes a fifteenth semantic dump
+  for the `3D` scaffold runtime region-step seam under `build/fisics/`.
+- `make dump-sema-runtime-backend-3d-obstacles` writes a sixteenth semantic
+  dump for the `3D` scaffold obstacle enforcement/materialization seam under
+  `build/fisics/`.
+- `make dump-sema-runtime-emitter` writes a seventeenth semantic dump for the
+  emitter support seam under `build/fisics/`, covering resolved `position_z`,
+  resolved `radius`, and the `3D` world-space-to-grid placement bridge under
+  `src/app/`.
+- `make dump-sema-runtime-obstacle` writes an eighteenth semantic dump for the
+  obstacle support seam under `build/fisics/`, covering obstacle contract
+  policy, source-footprint routing, and domain-face slab bounds under
+  `src/app/`.
+- `make test-rigid2d-collision-contract` validates the deeper rigid-body
+  collision lane directly: typed restitution thresholding, typed penetration
+  bias velocity, and typed tangent-speed/friction response at the manifold
+  seam.
+- `make test-sim-runtime-backend-2d-runtime-fields-contract` validates the
+  current bounded `2D` runtime-fields lane directly: zero-`dt` emitter no-op
+  handling, free-emitter density/velocity injection, and attached-object
+  emitter footprint injection into the fluid field, plus moving-obstacle mask
+  and obstacle-velocity bridge writes.
+- `make test-sim-runtime-backend-2d-contract` validates the first bounded
+  backend-host lane directly: zero-`dt` boundary-flow no-op handling,
+  positive-`dt` boundary emission into the field, and object-motion velocity
+  injection through the backend host seam.
+- `make test-sim-runtime-emitter-contract` validates the bounded emitter
+  support seam directly: normalized direction handling, sanitized placement
+  defaults, and `3D` placement/radius-to-cell conversion through
+  `src/app/sim_runtime_emitter.c`.
+- `make test-sim-runtime-obstacle-contract` validates the bounded obstacle
+  support seam directly: default storage/compatibility policy, source
+  footprint routing, and domain-face slab bounds through
+  `src/app/sim_runtime_obstacle.c`.
+- `make test-sim-runtime-backend-3d-emitter-contract` validates the bounded
+  free-emitter `3D` scaffold lane directly: volumetric write coverage, tiny
+  transport behavior, scene-up rise, and emitted-mass stability.
+- `make test-sim-runtime-backend-3d-attached-emitter-contract` validates the
+  bounded attached-emitter `3D` scaffold lane directly: object/import
+  occupancy, surface patch/shell routing, heated-obstacle release, thermal
+  lift, and world-footprint stability.
+- `make test-sim-runtime-backend-3d-obstacle-contract` validates the bounded
+  `3D` scaffold obstacle lane directly: occupancy/slice sync, boundary
+  enforcement, live solver coupling, and brick-local obstacle authority.
+- `make test-soft-body-contract` validates the current soft-body reference lane:
+  node/spring storage, pinned-node behavior, gravity, spring pull response, and
+  rest-length plus triangle-area preservation through iterative constraint
+  relaxation.
+- `make package-desktop` packages the Clang binary by default so normal desktop
+  expectations do not change.
+- `make PACKAGE_TOOLCHAIN=fisics package-desktop` packages the `fisiCs` build
+  explicitly when compiler-overlay validation is the goal.
+
 Useful build targets:
 
 ```bash

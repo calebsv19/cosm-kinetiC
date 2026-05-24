@@ -12,6 +12,6 @@ void backend_3d_scaffold_runtime_note_export_cache_materialized(SimRuntimeBacken
 bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
                                       struct SceneState *scene,
                                       const AppConfig *cfg,
-                                      double dt);
+                                      double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 
 #endif

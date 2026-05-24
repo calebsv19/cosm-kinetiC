@@ -53,9 +53,17 @@ typedef struct SolverProjectionXYDomainMapping {
 } SolverProjectionXYDomainMapping;
 
 float runtime_scene_solver_projection_clampf_dim(float v, float min_v, float max_v);
-float runtime_scene_solver_projection_domain_dimension(double extent, double world_scale, float fallback);
-float runtime_scene_solver_projection_scaled_size(double dimension, double world_scale, float fallback);
-float runtime_scene_solver_projection_scaled_position(double coord, double world_scale);
+float runtime_scene_solver_projection_domain_dimension(
+    double extent [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double world_scale,
+    float fallback [[fisics::dim(length)]] [[fisics::unit(meter)]]);
+float runtime_scene_solver_projection_scaled_size(
+    double dimension [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double world_scale,
+    float fallback [[fisics::dim(length)]] [[fisics::unit(meter)]]);
+float runtime_scene_solver_projection_scaled_position(
+    double coord [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double world_scale);
 float runtime_scene_solver_projection_normalize_velocity(double value, double span);
 bool runtime_scene_solver_projection_parse_vec3(json_object *root,
                                                 const char *key,

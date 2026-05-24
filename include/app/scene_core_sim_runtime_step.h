@@ -28,7 +28,7 @@ void physics_sim_scene_core_sim_set_paused(SceneState *scene, bool paused);
 bool physics_sim_scene_core_sim_step(SceneState *scene,
                                      AppConfig *cfg,
                                      const SimModeHooks *mode_hooks,
-                                     double dt,
+                                     double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
                                      PhysicsSimSceneCoreSimStepResult *result);
 
 #endif

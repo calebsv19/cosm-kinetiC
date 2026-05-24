@@ -19,12 +19,16 @@ static void atmospheric_prepare(SceneState *scene) {
     (void)scene;
 }
 
-static void atmospheric_pre_substep(SceneState *scene, double dt) {
+static void atmospheric_pre_substep(
+    SceneState *scene,
+    double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     (void)scene;
     (void)dt;
 }
 
-static void atmospheric_post_substep(SceneState *scene, double dt) {
+static void atmospheric_post_substep(
+    SceneState *scene,
+    double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     (void)scene;
     (void)dt;
 }

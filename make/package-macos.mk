@@ -1,12 +1,12 @@
 # =========================
 #  macOS desktop packaging
 # =========================
-package-desktop: all
+package-desktop: $(PACKAGE_SOURCE_BIN)
 	@echo "Preparing desktop package..."
 	@rm -rf "$(PACKAGE_APP_DIR)"
 	@mkdir -p "$(PACKAGE_MACOS_DIR)" "$(PACKAGE_RESOURCES_DIR)" "$(PACKAGE_FRAMEWORKS_DIR)"
 	@cp "$(PACKAGE_INFO_PLIST_SRC)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
-	@cp "$(TARGET)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
+	@cp "$(PACKAGE_SOURCE_BIN)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
 	@cp "$(PACKAGE_LAUNCHER_SRC)" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
 	@PACKAGE_DEP_SEARCH_ROOTS="$(TARGET_DEP_SEARCH_ROOTS)" "$(PACKAGE_DYLIB_BUNDLER)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_FRAMEWORKS_DIR)"
 	@chmod +x "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"

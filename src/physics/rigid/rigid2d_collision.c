@@ -456,15 +456,65 @@ void rigid2d_positional_correction(RigidBody2D *a,
     if (!b->is_static) b->position = vec2_add(b->position, vec2_scale(correction, b->inv_mass));
 }
 
+static float rigid2d_inverse_step_seconds(
+    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float min_step_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] =
+        1.0f / 60.0f;
+    float safe_dt = (dt > zero_seconds) ? dt : min_step_seconds;
+    return 1.0f / safe_dt;
+}
+
+static float rigid2d_collision_restitution_velocity(
+    float vel_along_normal [[fisics::dim(velocity)]]
+                           [[fisics::unit(meter_per_second)]],
+    float restitution) {
+    float rest_thresh [[fisics::dim(velocity)]]
+                      [[fisics::unit(meter_per_second)]] = 0.5f;
+    return (vel_along_normal < -rest_thresh) ? restitution : 0.0f;
+}
+
+static float rigid2d_collision_bias_velocity(
+    float penetration [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    const float baumgarte = 0.25f;
+    float bias_slop [[fisics::dim(length)]] [[fisics::unit(meter)]] = 2.0f;
+    float zero_velocity [[fisics::dim(velocity)]]
+                        [[fisics::unit(meter_per_second)]] = 0.0f;
+    if (penetration <= bias_slop) return zero_velocity;
+    return -baumgarte * (penetration - bias_slop) * rigid2d_inverse_step_seconds(dt);
+}
+
+static float rigid2d_collision_tangent_speed(
+    Vec2 relative_velocity,
+    Vec2 normal,
+    Vec2 *tangent_out) {
+    Vec2 tangent_velocity =
+        vec2_sub(relative_velocity, vec2_scale(normal, vec2_dot(relative_velocity, normal)));
+    float tangent_speed [[fisics::dim(velocity)]]
+                        [[fisics::unit(meter_per_second)]] = vec2_len(tangent_velocity);
+    float min_tangent_speed [[fisics::dim(velocity)]]
+                            [[fisics::unit(meter_per_second)]] = 1e-5f;
+    float zero_velocity [[fisics::dim(velocity)]]
+                        [[fisics::unit(meter_per_second)]] = 0.0f;
+    if (tangent_speed < min_tangent_speed) {
+        if (tangent_out) *tangent_out = vec2(0.0f, 0.0f);
+        return zero_velocity;
+    }
+    if (tangent_out) *tangent_out = vec2_scale(tangent_velocity, 1.0f / tangent_speed);
+    return tangent_speed;
+}
+
 void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                                    RigidBody2D *b,
                                    RigidManifold *m,
-                                   float dt) {
+                                   float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     if (!a || !b || !m || m->contact_count <= 0) return;
     Vec2 normal = m->normal;
-    const float baumgarte = 0.25f;
-    const float bias_slop = 2.0f;
-    const float inv_dt = (dt > 1e-5f) ? (1.0f / dt) : 60.0f;
+    float zero_velocity [[fisics::dim(velocity)]]
+                        [[fisics::unit(meter_per_second)]] = 0.0f;
+    float min_tangent_speed [[fisics::dim(velocity)]]
+                            [[fisics::unit(meter_per_second)]] = 1e-5f;
     // First pass: normal impulses
     for (int ci = 0; ci < m->contact_count; ++ci) {
         Vec2 cp = m->contacts[ci].position;
@@ -475,8 +525,9 @@ void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                                                       b->angular_velocity * rB.x)),
                            vec2_add(a->velocity, vec2(-a->angular_velocity * rA.y,
                                                       a->angular_velocity * rA.x)));
-        float vel_along_normal = vec2_dot(rv, normal);
-        if (vel_along_normal > 0.0f) continue;
+        float vel_along_normal [[fisics::dim(velocity)]]
+                               [[fisics::unit(meter_per_second)]] = vec2_dot(rv, normal);
+        if (vel_along_normal > zero_velocity) continue;
 
         float raN = rA.x * normal.y - rA.y * normal.x; // cross(rA, n)
         float rbN = rB.x * normal.y - rB.y * normal.x; // cross(rB, n)
@@ -484,13 +535,10 @@ void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                               (raN * raN) * a->inv_inertia + (rbN * rbN) * b->inv_inertia;
         if (inv_mass_norm <= 0.0f) continue;
 
-        const float rest_thresh = 0.5f;
-        float e = (vel_along_normal < -rest_thresh) ? m->restitution : 0.0f;
-        float bias = 0.0f;
-        float pen = m->contacts[ci].penetration;
-        if (pen > bias_slop) {
-            bias = -baumgarte * (pen - bias_slop) * inv_dt;
-        }
+        float e = rigid2d_collision_restitution_velocity(vel_along_normal, m->restitution);
+        float pen [[fisics::dim(length)]] [[fisics::unit(meter)]] = m->contacts[ci].penetration;
+        float bias [[fisics::dim(velocity)]]
+                   [[fisics::unit(meter_per_second)]] = rigid2d_collision_bias_velocity(pen, dt);
         float j = -(1.0f + e) * vel_along_normal + bias;
         j /= inv_mass_norm;
         // Clamp angular contribution to avoid huge spin from shallow contacts.
@@ -522,11 +570,14 @@ void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                                                       b->angular_velocity * rB.x)),
                            vec2_add(a->velocity, vec2(-a->angular_velocity * rA.y,
                                                       a->angular_velocity * rA.x)));
-        Vec2 tdir = vec2_sub(rv, vec2_scale(normal, vec2_dot(rv, normal)));
-        float tlen = vec2_len(tdir);
-        if (tlen < 1e-5f) continue;
-        Vec2 tnorm = vec2_scale(tdir, 1.0f / tlen);
-        float vel_along_tangent = vec2_dot(rv, tnorm);
+        Vec2 tnorm;
+        float tangent_speed [[fisics::dim(velocity)]]
+                            [[fisics::unit(meter_per_second)]] =
+            rigid2d_collision_tangent_speed(rv, normal, &tnorm);
+        if (tangent_speed < min_tangent_speed) continue;
+        float vel_along_tangent [[fisics::dim(velocity)]]
+                                [[fisics::unit(meter_per_second)]] =
+            vec2_dot(rv, tnorm);
         float raT = rA.x * tnorm.y - rA.y * tnorm.x;
         float rbT = rB.x * tnorm.y - rB.y * tnorm.x;
         float inv_mass_tan = a->inv_mass + b->inv_mass +

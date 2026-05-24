@@ -62,23 +62,47 @@ float runtime_scene_solver_projection_clampf_dim(float v, float min_v, float max
     return v;
 }
 
-float runtime_scene_solver_projection_domain_dimension(double extent, double world_scale, float fallback) {
-    double scaled = extent * world_scale;
-    if (scaled <= 0.0) scaled = fallback;
-    if (scaled > 4096.0) scaled = 4096.0;
-    return (float)scaled;
+float runtime_scene_solver_projection_domain_dimension(
+    double extent [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double world_scale,
+    float fallback [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    double scene_extent [[fisics::dim(length)]] [[fisics::unit(meter)]] = extent;
+    double scaled_extent [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene_extent * world_scale;
+    double zero_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0;
+    float fallback_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = fallback;
+    double max_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = 4096.0;
+
+    if (scaled_extent <= zero_length) scaled_extent = fallback_length;
+    if (scaled_extent > max_length) scaled_extent = max_length;
+    return (float)scaled_extent;
 }
 
-float runtime_scene_solver_projection_scaled_size(double dimension, double world_scale, float fallback) {
-    double scaled = dimension * world_scale;
-    if (scaled <= 0.0) scaled = fallback;
-    return runtime_scene_solver_projection_clampf_dim((float)scaled, SOLVER_SIZE_MIN, SOLVER_SIZE_MAX);
+float runtime_scene_solver_projection_scaled_size(
+    double dimension [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double world_scale,
+    float fallback [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    double scene_dimension [[fisics::dim(length)]] [[fisics::unit(meter)]] = dimension;
+    double scaled_dimension [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene_dimension * world_scale;
+    double zero_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0;
+    float fallback_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = fallback;
+    float min_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = SOLVER_SIZE_MIN;
+    float max_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = SOLVER_SIZE_MAX;
+
+    if (scaled_dimension <= zero_length) scaled_dimension = fallback_length;
+    return runtime_scene_solver_projection_clampf_dim((float)scaled_dimension, min_length, max_length);
 }
 
-float runtime_scene_solver_projection_scaled_position(double coord, double world_scale) {
-    return runtime_scene_solver_projection_clampf_dim((float)(coord * world_scale),
-                                                      -SOLVER_POSITION_LIMIT,
-                                                      SOLVER_POSITION_LIMIT);
+float runtime_scene_solver_projection_scaled_position(
+    double coord [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double world_scale) {
+    double scene_coord [[fisics::dim(length)]] [[fisics::unit(meter)]] = coord;
+    double scaled_coord [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene_coord * world_scale;
+    float min_position [[fisics::dim(length)]] [[fisics::unit(meter)]] = -SOLVER_POSITION_LIMIT;
+    float max_position [[fisics::dim(length)]] [[fisics::unit(meter)]] = SOLVER_POSITION_LIMIT;
+
+    return runtime_scene_solver_projection_clampf_dim((float)scaled_coord,
+                                                      min_position,
+                                                      max_position);
 }
 
 float runtime_scene_solver_projection_normalize_velocity(double value, double span) {

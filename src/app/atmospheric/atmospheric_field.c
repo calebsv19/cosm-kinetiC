@@ -36,6 +36,13 @@ static float lerpf_local(float a, float b, float t) {
     return a + (b - a) * t;
 }
 
+static float atmospheric_velocity_from_curl(
+    float base_wind [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
+    float curl_component,
+    float turbulence_strength [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]]) {
+    return base_wind + curl_component * turbulence_strength;
+}
+
 static float value_noise_3d(float x, float y, float z, uint32_t seed) {
     int ix = (int)floorf(x);
     int iy = (int)floorf(y);
@@ -245,6 +252,16 @@ static AtmosphericFieldSample sample_field(const AtmosphericPresetSettings *sett
         sample.density = 0.0f;
     }
 
+    float base_wind_x [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+        local.base_wind_x;
+    float base_wind_y [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+        local.base_wind_y;
+    float base_wind_z [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+        local.base_wind_z;
+    float turbulence_strength [[fisics::dim(velocity)]]
+                             [[fisics::unit(meter_per_second)]] =
+        local.turbulence_strength;
+
     const float e = 0.015f;
     if (use_z) {
         float ax_y1 = fbm_noise((x + 11.0f) * local.noise_scale,
@@ -299,9 +316,12 @@ static AtmosphericFieldSample sample_field(const AtmosphericPresetSettings *sett
         float curl_x = (az_y1 - az_y0 - (ay_z1 - ay_z0)) * inv;
         float curl_y = (ax_z1 - ax_z0 - (az_x1 - az_x0)) * inv;
         float curl_z = (ay_x1 - ay_x0 - (ax_y1 - ax_y0)) * inv;
-        sample.velocity_x = local.base_wind_x + curl_x * local.turbulence_strength;
-        sample.velocity_y = local.base_wind_y + curl_y * local.turbulence_strength;
-        sample.velocity_z = local.base_wind_z + curl_z * local.turbulence_strength;
+        sample.velocity_x =
+            atmospheric_velocity_from_curl(base_wind_x, curl_x, turbulence_strength);
+        sample.velocity_y =
+            atmospheric_velocity_from_curl(base_wind_y, curl_y, turbulence_strength);
+        sample.velocity_z =
+            atmospheric_velocity_from_curl(base_wind_z, curl_z, turbulence_strength);
     } else {
         float n_y1 = fbm_noise(x * local.noise_scale,
                                (y + e) * local.noise_scale,
@@ -320,8 +340,10 @@ static AtmosphericFieldSample sample_field(const AtmosphericPresetSettings *sett
                                0.5f * local.noise_scale,
                                local.seed + 211u);
         float inv = 0.5f / e;
-        sample.velocity_x = local.base_wind_x + (n_y1 - n_y0) * inv * local.turbulence_strength;
-        sample.velocity_y = local.base_wind_y - (n_x1 - n_x0) * inv * local.turbulence_strength;
+        sample.velocity_x = atmospheric_velocity_from_curl(
+            base_wind_x, (n_y1 - n_y0) * inv, turbulence_strength);
+        sample.velocity_y = atmospheric_velocity_from_curl(
+            base_wind_y, -(n_x1 - n_x0) * inv, turbulence_strength);
         sample.velocity_z = 0.0f;
     }
     return sample;

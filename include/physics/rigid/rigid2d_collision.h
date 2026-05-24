@@ -26,6 +26,6 @@ void rigid2d_positional_correction(RigidBody2D *a,
 void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                                    RigidBody2D *b,
                                    RigidManifold *m,
-                                   float dt);
+                                   float dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 
 #endif // RIGID2D_COLLISION_H

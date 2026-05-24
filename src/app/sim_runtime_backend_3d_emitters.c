@@ -848,9 +848,10 @@ static void backend_3d_scaffold_apply_attached_import_emitter(SimRuntimeBackend3
 
 void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
                                         SceneState *scene,
-                                        double dt) {
+                                        double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     SimRuntimeBackend3DScaffold *state = NULL;
-    if (!backend || !scene || !scene->preset || dt <= 0.0) return;
+    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
+    if (!backend || !scene || !scene->preset || dt <= zero_seconds) return;
     state = (SimRuntimeBackend3DScaffold *)backend->impl;
     if (!state) return;
     backend_3d_scaffold_reset_emitter_step_stats(state);

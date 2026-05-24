@@ -38,6 +38,25 @@ test-atmospheric-field-contract: $(ATMOSPHERIC_FIELD_CONTRACT_TEST_SRCS)
 		-o $(BUILD_DIR)/atmospheric_field_contract_test $(ATMOSPHERIC_FIELD_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/atmospheric_field_contract_test
 
+test-soft-body-contract: $(SOFT_BODY_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/soft_body_contract_test $(SOFT_BODY_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/soft_body_contract_test
+
+test-sim-runtime-backend-2d-runtime-fields-contract: $(SIM_RUNTIME_BACKEND_2D_RUNTIME_FIELDS_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-o $(BUILD_DIR)/sim_runtime_backend_2d_runtime_fields_contract_test $(SIM_RUNTIME_BACKEND_2D_RUNTIME_FIELDS_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_2d_runtime_fields_contract_test
+
+test-sim-runtime-backend-2d-contract: $(SIM_RUNTIME_BACKEND_2D_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-o $(BUILD_DIR)/sim_runtime_backend_2d_contract_test $(SIM_RUNTIME_BACKEND_2D_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_2d_contract_test
+
 test-atmospheric-warm-start-contract: $(ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
@@ -55,6 +74,25 @@ PRESET_IO_DIMENSIONAL_TEST_SRCS := \
 ATMOSPHERIC_FIELD_CONTRACT_TEST_SRCS := \
 	tests/atmospheric_field_contract_test.c \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c
+
+SOFT_BODY_CONTRACT_TEST_SRCS := \
+	tests/soft_body_contract_test.c \
+	$(SRC_DIR)/physics/soft/soft_body.c
+
+SIM_RUNTIME_BACKEND_2D_RUNTIME_FIELDS_CONTRACT_TEST_SRCS := \
+	tests/sim_runtime_backend_2d_runtime_fields_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_backend_2d_runtime_fields.c \
+	$(SRC_DIR)/physics/fluid2d/fluid2d.c \
+	$(SRC_DIR)/physics/fluid2d/fluid2d_boundary.c
+
+SIM_RUNTIME_BACKEND_2D_CONTRACT_TEST_SRCS := \
+	tests/sim_runtime_backend_2d_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_2d.c \
+	$(SRC_DIR)/app/sim_runtime_backend_2d_runtime_fields.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
+	$(SRC_DIR)/physics/fluid2d/fluid2d.c \
+	$(SRC_DIR)/physics/fluid2d/fluid2d_boundary.c
 
 ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS := \
 	tests/atmospheric_warm_start_contract_test.c \
@@ -395,6 +433,10 @@ SCENE_OBJECTS_RUNTIME_TEST_SRCS := \
 	$(SRC_DIR)/physics/rigid/rigid2d.c \
 	$(SRC_DIR)/physics/rigid/rigid2d_collision.c
 
+RIGID2D_COLLISION_CONTRACT_TEST_SRCS := \
+	tests/rigid2d_collision_contract_test.c \
+	$(SRC_DIR)/physics/rigid/rigid2d_collision.c
+
 STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS := \
 	tests/structural_runtime_split_contract_test.c \
 	$(SRC_DIR)/app/structural/structural_controller_runtime.c \
@@ -616,6 +658,12 @@ test-scene-objects-runtime-contract: $(SCENE_OBJECTS_RUNTIME_TEST_SRCS)
 		-o $(BUILD_DIR)/scene_objects_runtime_contract_test $(SCENE_OBJECTS_RUNTIME_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_objects_runtime_contract_test
 
+test-rigid2d-collision-contract: $(RIGID2D_COLLISION_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-o $(BUILD_DIR)/rigid2d_collision_contract_test $(RIGID2D_COLLISION_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/rigid2d_collision_contract_test
+
 test-scene-editor-retained-document-contract: $(SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
@@ -632,9 +680,9 @@ test-scene-editor-scene-library-contract: $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS
 
 test-physics-sim-workspace-authoring-host: $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -I$(KIT_WORKSPACE_AUTHORING_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_PANE_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_RENDER_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include \
-		-o $(BUILD_DIR)/physics_sim_workspace_authoring_host_test $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS) -lm
+	$(CC) $(CFLAGS) \
+		-I$(KIT_WORKSPACE_AUTHORING_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_PANE_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_RENDER_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include \
+		-o $(BUILD_DIR)/physics_sim_workspace_authoring_host_test $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS) $(LIBS)
 	$(BUILD_DIR)/physics_sim_workspace_authoring_host_test
 
 test-scene-editor-pane-host-contract: $(SCENE_EDITOR_PANE_HOST_TEST_SRCS)

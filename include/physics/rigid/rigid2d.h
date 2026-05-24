@@ -81,6 +81,8 @@ int rigid2d_add_body(Rigid2DWorld *w, const RigidBody2D *body);
 void rigid2d_set_mass(RigidBody2D *b, float mass, float inertia);
 
 // Integrate motion, handle simple circle-circle and circle-floor collisions.
-void rigid2d_step(Rigid2DWorld *w, double dt, const AppConfig *cfg);
+void rigid2d_step(Rigid2DWorld *w,
+                  double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                  const AppConfig *cfg);
 
 #endif // RIGID2D_H

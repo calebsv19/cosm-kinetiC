@@ -28,7 +28,7 @@ void fluid2d_add_density(Fluid2D *f, int x, int y, float amount);
 void fluid2d_add_velocity(Fluid2D *f, int x, int y, float vx, float vy);
 
 void fluid2d_step(Fluid2D *f,
-                  double dt,
+                  double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
                   const AppConfig *cfg,
                   const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
                   const uint8_t *solid_mask,

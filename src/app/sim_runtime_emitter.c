@@ -119,16 +119,20 @@ bool sim_runtime_emitter_resolve(const FluidScenePreset *preset,
                                  SimRuntimeEmitterResolved *out_resolved) {
     const FluidEmitter *emitter = NULL;
     SimRuntimeEmitterResolved resolved = {0};
+    float resolved_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
+    float resolved_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
     if (!preset || !out_resolved) return false;
     if (emitter_index >= preset->emitter_count || emitter_index >= MAX_FLUID_EMITTERS) return false;
 
     emitter = &preset->emitters[emitter_index];
+    resolved_position_z = emitter->position_z;
+    resolved_radius = emitter->radius > 0.0f ? emitter->radius : 0.0f;
     resolved.emitter_index = emitter_index;
     resolved.type = emitter->type;
     resolved.position_x = clamp_unit(emitter->position_x);
     resolved.position_y = clamp_unit(emitter->position_y);
-    resolved.position_z = emitter->position_z;
-    resolved.radius = emitter->radius > 0.0f ? emitter->radius : 0.0f;
+    resolved.position_z = resolved_position_z;
+    resolved.radius = resolved_radius;
     resolved.strength = emitter->strength;
     resolved.dir_x = emitter->dir_x;
     resolved.dir_y = emitter->dir_y;
@@ -165,8 +169,12 @@ bool sim_runtime_emitter_resolve_3d_placement(const SimRuntime3DDomainDesc *doma
                                               SimRuntimeEmitterPlacement3D *out_placement) {
     SimRuntimeEmitterPlacement3D placement = {0};
     int max_axis_cells = 0;
+    float position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
+    float radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
     if (!domain || !resolved || !out_placement) return false;
     if (domain->grid_w <= 0 || domain->grid_h <= 0 || domain->grid_d <= 0) return false;
+    position_z = resolved->position_z;
+    radius = resolved->radius;
 
     placement.center_x = clamp_int_value((int)lroundf(resolved->position_x * (float)(domain->grid_w - 1)),
                                          0,
@@ -174,13 +182,13 @@ bool sim_runtime_emitter_resolve_3d_placement(const SimRuntime3DDomainDesc *doma
     placement.center_y = clamp_int_value((int)lroundf(resolved->position_y * (float)(domain->grid_h - 1)),
                                          0,
                                          domain->grid_h - 1);
-    placement.center_z = sim_runtime_3d_space_world_to_grid_axis(resolved->position_z,
+    placement.center_z = sim_runtime_3d_space_world_to_grid_axis(position_z,
                                                                  domain->world_min_z,
                                                                  domain->voxel_size,
                                                                  domain->grid_d);
 
     max_axis_cells = max3_int(domain->grid_w, domain->grid_h, domain->grid_d);
-    placement.radius_cells = (int)ceilf(resolved->radius * (float)max_axis_cells);
+    placement.radius_cells = (int)ceilf(radius * (float)max_axis_cells);
     if (placement.radius_cells < 1) placement.radius_cells = 1;
 
     placement.min_x = clamp_int_value(placement.center_x - placement.radius_cells, 0, domain->grid_w - 1);

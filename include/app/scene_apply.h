@@ -3,8 +3,10 @@
 
 #include "app/scene_state.h"
 
-void scene_apply_emitters(SceneState *scene, double dt);
-void scene_apply_boundary_flows(SceneState *scene, double dt);
+void scene_apply_emitters(SceneState *scene,
+                          double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+void scene_apply_boundary_flows(SceneState *scene,
+                                double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 void scene_enforce_boundary_flows(SceneState *scene);
 void scene_enforce_obstacles(SceneState *scene);
 

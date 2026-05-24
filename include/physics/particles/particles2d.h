@@ -31,7 +31,7 @@ void particles2d_spawn(Particles2D *p,
 
 // Step particles; optionally respond to fluid velocity and gravity.
 void particles2d_step(Particles2D *p,
-                      double dt,
+                      double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
                       const AppConfig *cfg,
                       const Fluid2D   *fluid,
                       const Rigid2DWorld *rigid);

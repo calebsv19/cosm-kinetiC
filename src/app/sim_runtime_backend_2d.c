@@ -20,6 +20,31 @@ static const float BRUSH_DENSITY = 20.0f;
 static const float BRUSH_VEL_SCALE = 35.0f;
 static const float BRUSH_VELOCITY_DENSITY = 4.0f;
 
+static float backend_2d_velocity_magnitude(
+    float velocity_x [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
+    float velocity_y [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]]) {
+    float speed [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+        sqrtf(velocity_x * velocity_x + velocity_y * velocity_y);
+    return speed;
+}
+
+static void backend_2d_inject_velocity_sample(
+    Fluid2D *fluid,
+    int gx,
+    int gy,
+    float velocity_x [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
+    float velocity_y [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
+    float velocity_scale) {
+    float injected_velocity_x [[fisics::dim(velocity)]]
+                              [[fisics::unit(meter_per_second)]] =
+        velocity_x * velocity_scale;
+    float injected_velocity_y [[fisics::dim(velocity)]]
+                              [[fisics::unit(meter_per_second)]] =
+        velocity_y * velocity_scale;
+    if (!fluid) return;
+    fluid2d_add_velocity(fluid, gx, gy, injected_velocity_x, injected_velocity_y);
+}
+
 static void backend_2d_destroy(SimRuntimeBackend *backend) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
     if (state) {
@@ -56,9 +81,12 @@ static void backend_2d_capture_atmospheric_seed_stats(SimRuntimeBackend2D *state
     cell_count = (size_t)state->fluid->w * (size_t)state->fluid->h;
     for (size_t i = 0; i < cell_count; ++i) {
         float density = state->fluid->density ? state->fluid->density[i] : 0.0f;
-        float vx = state->fluid->velX ? state->fluid->velX[i] : 0.0f;
-        float vy = state->fluid->velY ? state->fluid->velY[i] : 0.0f;
-        float speed = sqrtf(vx * vx + vy * vy);
+        float vx [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+            state->fluid->velX ? state->fluid->velX[i] : 0.0f;
+        float vy [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+            state->fluid->velY ? state->fluid->velY[i] : 0.0f;
+        float speed [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+            backend_2d_velocity_magnitude(vx, vy);
         if (density > max_density) max_density = density;
         if (speed > max_velocity) max_velocity = speed;
     }
@@ -546,9 +574,11 @@ static void backend_2d_build_obstacles(SimRuntimeBackend *backend, SceneState *s
 
 static void backend_2d_apply_boundary_flows(SimRuntimeBackend *backend,
                                             SceneState *scene,
-                                            double dt) {
+                                            double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
     if (!scene || !scene->preset || !state || !state->fluid) return;
+    if (dt <= zero_seconds) return;
     if (scene->config && scene->config->sim_mode == SIM_MODE_WIND_TUNNEL) {
         static const int wind_ramp_steps_max = 200;
         float ramp = 1.0f;
@@ -590,10 +620,12 @@ static void backend_2d_enforce_obstacles(SimRuntimeBackend *backend,
 static void backend_2d_step(SimRuntimeBackend *backend,
                             SceneState *scene,
                             const AppConfig *cfg,
-                            double dt) {
+                            double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
     const BoundaryFlow *flows = NULL;
+    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
     if (!scene || !cfg || !state || !state->fluid) return;
+    if (dt <= zero_seconds) return;
     flows = scene->preset ? scene->preset->boundary_flows : NULL;
     fluid2d_step(state->fluid,
                  dt,
@@ -627,12 +659,20 @@ static void backend_2d_inject_object_motion(SimRuntimeBackend *backend,
             if (gx >= cfg->grid_w) gx = cfg->grid_w - 1;
             if (gy < 0) gy = 0;
             if (gy >= cfg->grid_h) gy = cfg->grid_h - 1;
-
-            fluid2d_add_velocity(state->fluid,
-                                 gx,
-                                 gy,
-                                 obj->body.velocity.x * vel_scale,
-                                 obj->body.velocity.y * vel_scale);
+            {
+                float object_velocity_x [[fisics::dim(velocity)]]
+                                        [[fisics::unit(meter_per_second)]] =
+                    obj->body.velocity.x;
+                float object_velocity_y [[fisics::dim(velocity)]]
+                                        [[fisics::unit(meter_per_second)]] =
+                    obj->body.velocity.y;
+                backend_2d_inject_velocity_sample(state->fluid,
+                                                  gx,
+                                                  gy,
+                                                  object_velocity_x,
+                                                  object_velocity_y,
+                                                  vel_scale);
+            }
         }
     }
 }

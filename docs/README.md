@@ -10,6 +10,36 @@ Public identity:
 - `docs/current_truth.md`: current runtime structure, truthful `3D` export state, and verification snapshot.
 - `docs/future_intent.md`: next public direction, including the deferred downstream `ray_tracing` `3D` ingest/render handoff.
 - migration-friendly verification gates:
+  - `make -C physics_sim clang-build`
+  - `make -C physics_sim fisics-build`
+  - `make -C physics_sim dump-sema`
+  - `make -C physics_sim dump-sema-runtime-3d-solver-step`
+  - `make -C physics_sim dump-sema-fluid2d`
+  - `make -C physics_sim dump-sema-rigid2d`
+  - `make -C physics_sim dump-sema-rigid2d-collision`
+  - `make -C physics_sim dump-sema-structural-runtime`
+  - `make -C physics_sim dump-sema-particles2d`
+  - `make -C physics_sim dump-sema-structural-solver`
+  - `make -C physics_sim dump-sema-atmospheric-field`
+  - `make -C physics_sim dump-sema-object-manager`
+  - `make -C physics_sim dump-sema-soft-body`
+  - `make -C physics_sim dump-sema-runtime-fields-2d`
+  - `make -C physics_sim dump-sema-runtime-backend-2d`
+  - `make -C physics_sim dump-sema-runtime-backend-3d-emitters`
+  - `make -C physics_sim dump-sema-runtime-backend-3d-runtime`
+  - `make -C physics_sim dump-sema-runtime-backend-3d-obstacles`
+  - `make -C physics_sim dump-sema-runtime-emitter`
+  - `make -C physics_sim dump-sema-runtime-obstacle`
+  - `make -C physics_sim test-rigid2d-collision-contract`
+  - `make -C physics_sim test-sim-runtime-backend-2d-runtime-fields-contract`
+  - `make -C physics_sim test-sim-runtime-backend-2d-contract`
+  - `make -C physics_sim test-sim-runtime-backend-3d-emitter-contract`
+  - `make -C physics_sim test-sim-runtime-backend-3d-attached-emitter-contract`
+  - `make -C physics_sim test-sim-runtime-backend-3d-obstacle-contract`
+  - `make -C physics_sim test-sim-runtime-emitter-contract`
+  - `make -C physics_sim test-sim-runtime-obstacle-contract`
+  - `make -C physics_sim test-soft-body-contract`
+  - `make -C physics_sim toolchain-contract`
   - `make -C physics_sim test-stable`
   - `make -C physics_sim run-headless-smoke`
     - currently aliases `test-stable` rather than a separate long-lived runtime lane
@@ -59,6 +89,39 @@ Public identity:
   - `physics_sim/physics_sim_job_runner submit --request <request.json>`
   - `physics_sim/physics_sim_job_runner status --job-id <job_id>`
   - `physics_sim/physics_sim_job_runner cancel --job-id <job_id>`
+- compiler-overlay validation now has a first explicit customer contract:
+  - `make -C physics_sim clang-build`
+  - `make -C physics_sim fisics-build`
+  - `make -C physics_sim dump-sema`
+  - `make -C physics_sim dump-sema-runtime-3d-solver-step`
+  - `make -C physics_sim dump-sema-fluid2d`
+  - `make -C physics_sim dump-sema-rigid2d`
+  - `make -C physics_sim dump-sema-rigid2d-collision`
+  - `make -C physics_sim dump-sema-structural-runtime`
+  - `make -C physics_sim dump-sema-particles2d`
+  - `make -C physics_sim dump-sema-structural-solver`
+  - `make -C physics_sim dump-sema-atmospheric-field`
+  - `make -C physics_sim dump-sema-object-manager`
+  - `make -C physics_sim dump-sema-soft-body`
+  - `make -C physics_sim dump-sema-runtime-fields-2d`
+  - `make -C physics_sim dump-sema-runtime-backend-2d`
+  - `make -C physics_sim dump-sema-runtime-backend-3d-emitters`
+  - `make -C physics_sim dump-sema-runtime-backend-3d-runtime`
+  - `make -C physics_sim dump-sema-runtime-backend-3d-obstacles`
+  - `make -C physics_sim dump-sema-runtime-emitter`
+  - `make -C physics_sim dump-sema-runtime-obstacle`
+  - `make -C physics_sim test-rigid2d-collision-contract`
+  - `make -C physics_sim test-sim-runtime-backend-2d-runtime-fields-contract`
+  - `make -C physics_sim test-sim-runtime-backend-2d-contract`
+  - `make -C physics_sim test-sim-runtime-backend-3d-emitter-contract`
+  - `make -C physics_sim test-sim-runtime-backend-3d-attached-emitter-contract`
+  - `make -C physics_sim test-sim-runtime-backend-3d-obstacle-contract`
+  - `make -C physics_sim test-sim-runtime-emitter-contract`
+  - `make -C physics_sim test-sim-runtime-obstacle-contract`
+  - `make -C physics_sim toolchain-contract`
+  - `make -C physics_sim package-desktop`
+  - `make -C physics_sim PACKAGE_TOOLCHAIN=fisics package-desktop`
+  - desktop packaging stays Clang-default unless `PACKAGE_TOOLCHAIN=fisics` is set
 
 ## Runtime Persistence Policy
 - tracked defaults remain under `config/`

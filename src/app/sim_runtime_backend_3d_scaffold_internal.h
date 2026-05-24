@@ -110,7 +110,7 @@ static inline bool backend_3d_scaffold_dense_mirror_live(
 
 void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
                                         struct SceneState *scene,
-                                        double dt);
+                                        double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 void backend_3d_scaffold_rasterize_retained_object_obstacles(
     SimRuntimeBackend3DScaffold *state,
     const struct SceneState *scene);

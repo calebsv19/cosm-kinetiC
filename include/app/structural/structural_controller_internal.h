@@ -75,7 +75,9 @@ void structural_controller_runtime_view_clear(StructuralRuntimeView *view);
 void structural_controller_runtime_view_resize(StructuralRuntimeView *view, size_t node_count);
 void structural_controller_runtime_view_sync_from_scene(StructuralRuntimeView *view,
                                                         const StructuralScene *scene);
-void structural_controller_runtime_step_dynamic(StructuralController *ctrl, float dt);
+void structural_controller_runtime_step_dynamic(
+    StructuralController *ctrl,
+    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 
 void structural_controller_render_scene(SDL_Renderer *renderer, StructuralController *ctrl);
 

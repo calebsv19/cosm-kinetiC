@@ -9,8 +9,10 @@ struct SceneState;
 typedef struct SimModeHooks {
     void (*configure_app)(AppConfig *cfg, FluidScenePreset *preset);
     void (*prepare_scene)(struct SceneState *scene);
-    void (*pre_substep)(struct SceneState *scene, double dt);
-    void (*post_substep)(struct SceneState *scene, double dt);
+    void (*pre_substep)(struct SceneState *scene,
+                        double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+    void (*post_substep)(struct SceneState *scene,
+                         double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 } SimModeHooks;
 
 typedef enum SimBackendLane {

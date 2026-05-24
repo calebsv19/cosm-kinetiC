@@ -56,6 +56,8 @@ void backend_2d_compute_obstacle_distance(const SceneState *scene,
 
 void backend_2d_build_emitter_masks(SimRuntimeBackend *backend, SceneState *scene);
 void backend_2d_rasterize_dynamic_obstacles(SimRuntimeBackend *backend, SceneState *scene);
-void backend_2d_apply_emitters(SimRuntimeBackend *backend, SceneState *scene, double dt);
+void backend_2d_apply_emitters(SimRuntimeBackend *backend,
+                               SceneState *scene,
+                               double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
 
 #endif // SIM_RUNTIME_BACKEND_2D_INTERNAL_H

@@ -359,12 +359,13 @@ static void apply_buoyancy(SimRuntime3DVolume *volume,
                            const uint8_t *solid_mask,
                            const SimRuntime3DForceAxis *scene_up_axis,
                            float buoyancy_force,
-                           float dt) {
+                           float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     float axis_x = 0.0f;
     float axis_y = -1.0f;
     float axis_z = 0.0f;
     float axis_len = 0.0f;
-    if (!volume || !scratch || buoyancy_force == 0.0f || dt <= 0.0f) return;
+    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    if (!volume || !scratch || buoyancy_force == 0.0f || dt <= zero_seconds) return;
     if (scene_up_axis && scene_up_axis->valid) {
         axis_x = scene_up_axis->x;
         axis_y = scene_up_axis->y;
@@ -581,8 +582,9 @@ static void advect_density(SimRuntime3DVolume *volume,
                            float dt_cells,
                            float diffusion_blend,
                            float density_decay,
-                           float dt) {
+                           float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
     const SimRuntime3DDomainDesc *desc = NULL;
+    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
     if (!volume || !scratch) return;
     desc = &volume->desc;
 
@@ -612,7 +614,7 @@ static void advect_density(SimRuntime3DVolume *volume,
         diffuse_scalar_field(volume->density, scratch->density_prev, desc, solid_mask, diffusion_blend);
     }
 
-    if (density_decay > 0.0f && dt > 0.0f) {
+    if (density_decay > 0.0f && dt > zero_seconds) {
         float decay_mul = 1.0f - density_decay * (float)dt;
         if (decay_mul < 0.0f) decay_mul = 0.0f;
         for (size_t i = 0; i < desc->cell_count; ++i) {
@@ -638,32 +640,35 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                                            const uint8_t *solid_mask,
                                            const SimRuntime3DForceAxis *scene_up_axis,
                                            const AppConfig *cfg,
-                                           double dt,
+                                           double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
                                            float max_velocity_displacement_cells_limit,
                                            SimRuntime3DSolverStepMetrics *out_metrics) {
-    float dt_f = 0.0f;
-    float voxel_size = 1.0f;
+    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
+    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float zero_meters [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
+    float one_meter [[fisics::dim(length)]] [[fisics::unit(meter)]] = 1.0f;
+    float voxel_size [[fisics::dim(length)]] [[fisics::unit(meter)]] = 1.0f;
     float dt_cells = 0.0f;
     float diffusion_blend = 0.0f;
     float viscosity_blend = 0.0f;
     int iterations = 0;
     SimRuntime3DSolverStepMetrics metrics = {0};
-    if (!volume || !scratch || !cfg || dt <= 0.0) return false;
+    if (!volume || !scratch || !cfg || dt <= zero_seconds) return false;
     if (volume->desc.cell_count == 0 || scratch->desc.cell_count != volume->desc.cell_count) {
         return false;
     }
     if (!sim_runtime_3d_solver_capture_previous_fields(scratch, volume)) return false;
 
-    dt_f = (float)dt;
-    voxel_size = volume->desc.voxel_size > 0.0f ? volume->desc.voxel_size : 1.0f;
-    dt_cells = dt_f / voxel_size;
-    diffusion_blend = clamp_float_value(cfg->density_diffusion * dt_f, 0.0f, 0.2f);
-    viscosity_blend = clamp_float_value(cfg->velocity_damping * dt_f, 0.0f, 0.25f);
+    dt_seconds = (float)dt;
+    voxel_size = volume->desc.voxel_size > zero_meters ? volume->desc.voxel_size : one_meter;
+    dt_cells = dt_seconds / voxel_size;
+    diffusion_blend = clamp_float_value(cfg->density_diffusion * dt_seconds, 0.0f, 0.2f);
+    viscosity_blend = clamp_float_value(cfg->velocity_damping * dt_seconds, 0.0f, 0.25f);
     iterations = sim_runtime_3d_solver_iterations_for_config(cfg);
     apply_velocity_safety_clamp(volume,
                                 scratch,
                                 solid_mask,
-                                dt_f,
+                                dt_seconds,
                                 max_velocity_displacement_cells_limit,
                                 &metrics);
 
@@ -675,13 +680,19 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                    solid_mask,
                    scene_up_axis,
                    cfg->fluid_buoyancy_force,
-                   dt_f);
+                   dt_seconds);
     compute_divergence(volume, scratch, solid_mask);
     project_velocity(volume, scratch, solid_mask, iterations);
     enforce_no_through_wall_velocity(volume, solid_mask);
     metrics.max_abs_divergence_after_project =
         compute_max_abs_divergence_for_volume(volume, solid_mask);
-    advect_density(volume, scratch, solid_mask, dt_cells, diffusion_blend, cfg->density_decay, dt);
+    advect_density(volume,
+                   scratch,
+                   solid_mask,
+                   dt_cells,
+                   diffusion_blend,
+                   cfg->density_decay,
+                   dt_seconds);
     apply_solid_mask(volume, solid_mask);
     if (out_metrics) {
         *out_metrics = metrics;
