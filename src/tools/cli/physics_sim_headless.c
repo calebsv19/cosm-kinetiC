@@ -2,7 +2,6 @@
 #include "app/scene_controller.h"
 #include "app/scene_presets.h"
 #include "geo/shape_library.h"
-#include "render/vk_shared_device.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -528,7 +527,6 @@ int main(int argc, char **argv) {
         result = result == 0 ? 1 : result;
     }
 
-    vk_shared_device_shutdown();
     if (TTF_WasInit()) {
         TTF_Quit();
     }

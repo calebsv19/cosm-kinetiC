@@ -1,4 +1,5 @@
 #include "app/scene_controller.h"
+#include "app/scene_controller_internal.h"
 
 #include <SDL2/SDL.h>
 #include <math.h>
@@ -27,46 +28,11 @@
 #include "input/stroke_buffer.h"
 #include "render/renderer_sdl.h"
 #include "render/retained_runtime_scene_overlay.h"
-#include "render/vk_shared_device.h"
 #include "export/export_paths.h"
 #include "export/volume_frames.h"
 #include "export/render_frames.h"
 #include "timing.h"
 #include "timer_hud/time_scope.h"
-
-typedef struct CommandDispatchContext {
-    SceneState *scene;
-    bool        snapshot_requested;
-} CommandDispatchContext;
-
-typedef struct StrokeSampler {
-    StrokeBuffer buffer;
-    BrushMode    brush_mode;
-    bool         pointer_down;
-    float        last_emit_x;
-    float        last_emit_y;
-    float        current_x;
-    float        current_y;
-    double       accumulator;
-    double       sample_interval;
-    float        sample_spacing;
-} StrokeSampler;
-
-typedef struct SceneControllerRs1DiagTotals {
-    uint64_t frame_count;
-    uint64_t derive_ns_total;
-    uint64_t submit_ns_total;
-    uint64_t invalidation_reason_bits_total;
-    uint64_t dispatched_commands_total;
-} SceneControllerRs1DiagTotals;
-
-typedef struct SceneControllerIr1DiagTotals {
-    uint64_t frame_count;
-    uint64_t routed_global_total;
-    uint64_t routed_scene_total;
-    uint64_t routed_fallback_total;
-    uint64_t invalidation_reason_bits_total;
-} SceneControllerIr1DiagTotals;
 
 static bool scene_controller_retained_runtime_view_active(const SceneState *scene) {
     return retained_runtime_scene_overlay_active(scene);
@@ -152,10 +118,6 @@ static void scene_controller_runtime_key_up(void *user,
     }
 }
 
-static const double DEFAULT_SAMPLE_RATE = 240.0;
-static const float  DEFAULT_SAMPLE_SPACING = 3.0f;
-static const size_t MAX_SAMPLES_PER_FRAME = 512;
-
 static bool handle_scene_command(const Command *cmd, void *user_data) {
     CommandDispatchContext *ctx = (CommandDispatchContext *)user_data;
     if (!ctx || !cmd) return false;
@@ -204,105 +166,6 @@ static void build_snapshot_path(char *buffer, size_t buffer_size,
     if (!buffer || buffer_size == 0) return;
     const char *base_dir = (dir && dir[0]) ? dir : physics_sim_default_snapshot_dir();
     snprintf(buffer, buffer_size, "%s/frame_%04d.ps2d", base_dir, index);
-}
-
-static void stroke_sampler_init(StrokeSampler *sampler,
-                                size_t capacity,
-                                const AppConfig *cfg) {
-    if (!sampler) return;
-    stroke_buffer_init(&sampler->buffer, capacity);
-    sampler->brush_mode = BRUSH_MODE_DENSITY;
-    sampler->pointer_down = false;
-    sampler->last_emit_x = sampler->last_emit_y = 0.0f;
-    sampler->current_x = sampler->current_y = 0.0f;
-    sampler->accumulator = 0.0;
-    double rate = (cfg && cfg->stroke_sample_rate > 0.0)
-                      ? cfg->stroke_sample_rate
-                      : DEFAULT_SAMPLE_RATE;
-    sampler->sample_interval = 1.0 / rate;
-    sampler->sample_spacing = (cfg && cfg->stroke_spacing > 0.0f)
-                                  ? cfg->stroke_spacing
-                                  : DEFAULT_SAMPLE_SPACING;
-}
-
-static void stroke_sampler_shutdown(StrokeSampler *sampler) {
-    if (!sampler) return;
-    stroke_buffer_shutdown(&sampler->buffer);
-}
-
-static void stroke_sampler_capture(StrokeSampler *sampler,
-                                   const InputCommands *cmds,
-                                   double dt) {
-    if (!sampler || !cmds) return;
-    sampler->accumulator += dt;
-
-    if (cmds->brush_mode_changed) {
-        sampler->brush_mode = cmds->brush_mode;
-    }
-
-    sampler->current_x = (float)cmds->mouse_x;
-    sampler->current_y = (float)cmds->mouse_y;
-
-    if (!cmds->mouse_down) {
-        sampler->pointer_down = false;
-        sampler->accumulator = fmin(sampler->accumulator, sampler->sample_interval);
-        return;
-    }
-
-    if (!sampler->pointer_down) {
-        sampler->pointer_down = true;
-        sampler->last_emit_x = sampler->current_x;
-        sampler->last_emit_y = sampler->current_y;
-        StrokeSample sample = {
-            .x = (int)lroundf(sampler->current_x),
-            .y = (int)lroundf(sampler->current_y),
-            .vx = 0.0f,
-            .vy = 0.0f,
-            .mode = sampler->brush_mode
-        };
-        stroke_buffer_push(&sampler->buffer, &sample);
-    }
-
-    while (sampler->accumulator >= sampler->sample_interval) {
-        sampler->accumulator -= sampler->sample_interval;
-
-        float dx = sampler->current_x - sampler->last_emit_x;
-        float dy = sampler->current_y - sampler->last_emit_y;
-        float dist = sqrtf(dx * dx + dy * dy);
-        float spacing = (sampler->sample_spacing > 0.0f)
-                            ? sampler->sample_spacing
-                            : DEFAULT_SAMPLE_SPACING;
-        int steps = (spacing > 0.0f) ? (int)ceilf(dist / spacing) : 1;
-        if (steps < 1) steps = 1;
-        float step_x = (steps > 0) ? dx / (float)steps : 0.0f;
-        float step_y = (steps > 0) ? dy / (float)steps : 0.0f;
-
-        for (int i = 0; i < steps; ++i) {
-            sampler->last_emit_x += step_x;
-            sampler->last_emit_y += step_y;
-            StrokeSample sample = {
-                .x = (int)lroundf(sampler->last_emit_x),
-                .y = (int)lroundf(sampler->last_emit_y),
-                .vx = step_x,
-                .vy = step_y,
-                .mode = sampler->brush_mode
-            };
-            stroke_buffer_push(&sampler->buffer, &sample);
-        }
-    }
-}
-
-static void stroke_sampler_apply(StrokeSampler *sampler,
-                                 SceneState *scene,
-                                 size_t max_samples) {
-    if (!sampler || !scene) return;
-    size_t processed = 0;
-    StrokeSample sample;
-    while (processed < max_samples &&
-           stroke_buffer_pop(&sampler->buffer, &sample)) {
-        scene_apply_brush_sample(scene, &sample);
-        ++processed;
-    }
 }
 
 static void scene_controller_input_intake_phase(InputContextManager *ctx_mgr,
@@ -469,7 +332,7 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
     if (!scene_controller_retained_runtime_view_active(scene)) {
         scene_apply_input(scene, &input_frame->effective_commands);
         stroke_sampler_capture(sampler, &input_frame->effective_commands, dt);
-        stroke_sampler_apply(sampler, scene, MAX_SAMPLES_PER_FRAME);
+        stroke_sampler_apply(sampler, scene, SCENE_CONTROLLER_MAX_SAMPLES_PER_FRAME);
     }
 
     {

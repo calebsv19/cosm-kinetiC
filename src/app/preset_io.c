@@ -1,4 +1,5 @@
 #include "app/preset_io.h"
+#include "app/preset_io_internal.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -8,10 +9,9 @@
 #include "app/atmospheric/atmospheric_field.h"
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
-static const int PRESET_FILE_VERSION = 15;
 static const char *STRUCTURAL_SCENE_DEFAULT = "config/structural_scene.txt";
 
-static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
+FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     switch (domain) {
     case SCENE_DOMAIN_BOX:
     case SCENE_DOMAIN_WIND_TUNNEL:
@@ -23,7 +23,7 @@ static FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     }
 }
 
-static FluidSceneDimensionMode sanitize_dimension_mode(FluidSceneDimensionMode mode) {
+FluidSceneDimensionMode sanitize_dimension_mode(FluidSceneDimensionMode mode) {
     switch (mode) {
     case SCENE_DIMENSION_MODE_2D:
     case SCENE_DIMENSION_MODE_3D:
@@ -98,7 +98,7 @@ static void default_emitter_direction_for_mode(FluidSceneDimensionMode mode,
     *out_z = 0.0f;
 }
 
-static void sanitize_emitter(FluidEmitter *em, FluidSceneDimensionMode dimension_mode) {
+void sanitize_emitter(FluidEmitter *em, FluidSceneDimensionMode dimension_mode) {
     if (!em) return;
     if (!isfinite(em->position_x)) em->position_x = 0.5f;
     if (!isfinite(em->position_y)) em->position_y = 0.5f;
@@ -155,7 +155,7 @@ static void sanitize_emitter(FluidEmitter *em, FluidSceneDimensionMode dimension
     em->dir_z = 0.0f;
 }
 
-static void sanitize_preset_object(PresetObject *obj) {
+void sanitize_preset_object(PresetObject *obj) {
     if (!obj) return;
     obj->position_x = clampf(isfinite(obj->position_x) ? obj->position_x : 0.5f, 0.0f, 1.0f);
     obj->position_y = clampf(isfinite(obj->position_y) ? obj->position_y : 0.5f, 0.0f, 1.0f);
@@ -171,7 +171,7 @@ static void sanitize_preset_object(PresetObject *obj) {
     }
 }
 
-static void sanitize_import_shape(ImportedShape *imp) {
+void sanitize_import_shape(ImportedShape *imp) {
     if (!imp) return;
     if (imp->shape_id < -1) imp->shape_id = -1;
     // Allow wider-than-unit spans for wide/tall canvases; keep reasonable bounds.
@@ -203,7 +203,7 @@ static void sanitize_import_shape(ImportedShape *imp) {
     }
 }
 
-static void boundary_flows_reset(BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
+void boundary_flows_reset(BoundaryFlow flows[BOUNDARY_EDGE_COUNT]) {
     if (!flows) return;
     for (int i = 0; i < BOUNDARY_EDGE_COUNT; ++i) {
         flows[i].mode = BOUNDARY_FLOW_DISABLED;
@@ -221,8 +221,8 @@ static void boundary_flow_sanitize(BoundaryFlow *flow) {
     }
 }
 
-static void boundary_flows_assign(BoundaryFlow dst[BOUNDARY_EDGE_COUNT],
-                                  const BoundaryFlow src[BOUNDARY_EDGE_COUNT]) {
+void boundary_flows_assign(BoundaryFlow dst[BOUNDARY_EDGE_COUNT],
+                           const BoundaryFlow src[BOUNDARY_EDGE_COUNT]) {
     if (!dst) return;
     if (!src) {
         boundary_flows_reset(dst);
@@ -234,11 +234,11 @@ static void boundary_flows_assign(BoundaryFlow dst[BOUNDARY_EDGE_COUNT],
     }
 }
 
-static void sanitize_atmosphere(AtmosphericPresetSettings *settings) {
+void sanitize_atmosphere(AtmosphericPresetSettings *settings) {
     atmospheric_preset_sanitize(settings);
 }
 
-static float sanitize_dimension_value(float value) {
+float sanitize_dimension_value(float value) {
     if (!isfinite(value) || value <= 0.0f) {
         return 1.0f;
     }
@@ -248,7 +248,7 @@ static float sanitize_dimension_value(float value) {
     return value;
 }
 
-static void preset_slot_reset(CustomPresetSlot *slot, int index) {
+void preset_slot_reset(CustomPresetSlot *slot, int index) {
     if (!slot) return;
     slot->occupied = false;
     snprintf(slot->name, sizeof(slot->name), "%s %d", DEFAULT_SLOT_LABEL, index + 1);
@@ -264,7 +264,7 @@ static void preset_slot_reset(CustomPresetSlot *slot, int index) {
     slot->preset.atmosphere.enabled = false;
 }
 
-static bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
+bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
     if (!lib) return false;
     if (desired <= lib->slot_capacity) return true;
     int new_capacity = lib->slot_capacity > 0 ? lib->slot_capacity : CUSTOM_PRESET_LIBRARY_INITIAL_CAPACITY;
@@ -287,110 +287,6 @@ static bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
     free(lib->slots);
     lib->slots = new_slots;
     lib->slot_capacity = new_capacity;
-    return true;
-}
-
-void preset_library_init(CustomPresetLibrary *lib) {
-    if (!lib) return;
-    memset(lib, 0, sizeof(*lib));
-    lib->slots = NULL;
-    lib->slot_capacity = 0;
-    lib->slot_count = 0;
-    lib->active_slot = 0;
-}
-
-void preset_library_shutdown(CustomPresetLibrary *lib) {
-    if (!lib) return;
-    free(lib->slots);
-    lib->slots = NULL;
-    lib->slot_capacity = 0;
-    lib->slot_count = 0;
-    lib->active_slot = 0;
-}
-
-int preset_library_count(const CustomPresetLibrary *lib) {
-    if (!lib) return 0;
-    return lib->slot_count;
-}
-
-CustomPresetSlot *preset_library_get_slot(CustomPresetLibrary *lib, int index) {
-    if (!lib || index < 0 || index >= lib->slot_count) return NULL;
-    return &lib->slots[index];
-}
-
-const CustomPresetSlot *preset_library_get_slot_const(const CustomPresetLibrary *lib,
-                                                      int index) {
-    if (!lib || index < 0 || index >= lib->slot_count) return NULL;
-    return &lib->slots[index];
-}
-
-CustomPresetSlot *preset_library_add_slot(CustomPresetLibrary *lib,
-                                          const char *name,
-                                          const FluidScenePreset *preset_copy) {
-    if (!lib) return NULL;
-    if (!preset_library_reserve(lib, lib->slot_count + 1)) {
-        return NULL;
-    }
-
-    CustomPresetSlot *slot = &lib->slots[lib->slot_count];
-    preset_slot_reset(slot, lib->slot_count);
-    if (name && name[0] != '\0') {
-        snprintf(slot->name, sizeof(slot->name), "%s", name);
-    }
-    if (preset_copy) {
-        slot->preset = *preset_copy;
-        slot->preset.domain = sanitize_domain(preset_copy->domain);
-        slot->preset.dimension_mode = sanitize_dimension_mode(preset_copy->dimension_mode);
-        slot->preset.domain_width = sanitize_dimension_value(preset_copy->domain_width);
-        slot->preset.domain_height = sanitize_dimension_value(preset_copy->domain_height);
-        if (slot->preset.emitter_count > MAX_FLUID_EMITTERS) {
-            slot->preset.emitter_count = MAX_FLUID_EMITTERS;
-        }
-        if (slot->preset.object_count > MAX_PRESET_OBJECTS) {
-            slot->preset.object_count = MAX_PRESET_OBJECTS;
-        }
-        if (slot->preset.import_shape_count > MAX_IMPORTED_SHAPES) {
-            slot->preset.import_shape_count = MAX_IMPORTED_SHAPES;
-        }
-        for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
-            sanitize_emitter(&slot->preset.emitters[e], slot->preset.dimension_mode);
-        }
-        for (size_t o = 0; o < slot->preset.object_count; ++o) {
-            sanitize_preset_object(&slot->preset.objects[o]);
-        }
-        for (size_t s = 0; s < slot->preset.import_shape_count; ++s) {
-            sanitize_import_shape(&slot->preset.import_shapes[s]);
-        }
-        sanitize_atmosphere(&slot->preset.atmosphere);
-        boundary_flows_assign(slot->preset.boundary_flows,
-                              preset_copy->boundary_flows);
-    } else {
-        memset(&slot->preset, 0, sizeof(slot->preset));
-        slot->preset.is_custom = true;
-        boundary_flows_reset(slot->preset.boundary_flows);
-        slot->preset.domain = SCENE_DOMAIN_BOX;
-        slot->preset.dimension_mode = SCENE_DIMENSION_MODE_2D;
-        slot->preset.domain_width = 1.0f;
-        slot->preset.domain_height = 1.0f;
-        slot->preset.structural_scene_path[0] = '\0';
-        slot->preset.atmosphere.enabled = false;
-    }
-    slot->preset.name = slot->name;
-    slot->occupied = true;
-    lib->slot_count++;
-    return slot;
-}
-
-bool preset_library_remove_slot(CustomPresetLibrary *lib, int index) {
-    if (!lib || index < 0 || index >= lib->slot_count) return false;
-    for (int i = index; i + 1 < lib->slot_count; ++i) {
-        lib->slots[i] = lib->slots[i + 1];
-    }
-    lib->slot_count--;
-    if (lib->active_slot >= lib->slot_count) {
-        lib->active_slot = lib->slot_count - 1;
-        if (lib->active_slot < 0) lib->active_slot = 0;
-    }
     return true;
 }
 
@@ -989,144 +885,6 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
     lib->active_slot = (active_slot >= 0 && active_slot < lib->slot_count)
                            ? active_slot
                            : 0;
-
-    fclose(f);
-    return true;
-}
-
-bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
-    if (!path || !lib) return false;
-    FILE *f = fopen(path, "w");
-    if (!f) return false;
-
-    int count = lib->slot_count;
-    if (count < 0) count = 0;
-    fprintf(f, "%d %d %d\n", PRESET_FILE_VERSION, lib->active_slot, count);
-    for (int i = 0; i < count; ++i) {
-        const CustomPresetSlot *slot = &lib->slots[i];
-        fprintf(f, "%d %d\n", slot->occupied ? 1 : 0, sanitize_domain(slot->preset.domain));
-        float domain_w = sanitize_dimension_value(slot->preset.domain_width);
-        float domain_h = sanitize_dimension_value(slot->preset.domain_height);
-        fprintf(f, "%.6f %.6f\n", domain_w, domain_h);
-        fprintf(f, "%d\n", (int)sanitize_dimension_mode(slot->preset.dimension_mode));
-        const char *name = (slot->name[0] != '\0') ? slot->name : DEFAULT_SLOT_LABEL;
-        fprintf(f, "%s\n", name);
-        fprintf(f, "%s\n", slot->preset.structural_scene_path);
-        AtmosphericPresetSettings atmosphere = slot->preset.atmosphere;
-        sanitize_atmosphere(&atmosphere);
-        fprintf(f,
-                "ATMOS %d %d %u %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %zu\n",
-                atmosphere.enabled ? 1 : 0,
-                slot->preset.atmospheric_initial_state_enabled ? 1 : 0,
-                (unsigned int)atmosphere.seed,
-                atmosphere.base_density,
-                atmosphere.density_scale,
-                atmosphere.density_threshold,
-                atmosphere.base_wind_x,
-                atmosphere.base_wind_y,
-                atmosphere.base_wind_z,
-                atmosphere.turbulence_strength,
-                atmosphere.noise_scale,
-                atmosphere.detail_scale,
-                atmosphere.band_min_y,
-                atmosphere.band_max_y,
-                atmosphere.band_edge_falloff,
-                atmosphere.region_count);
-        for (size_t r = 0; r < atmosphere.region_count; ++r) {
-            const AtmosphericDensityRegion *region = &atmosphere.regions[r];
-            fprintf(f,
-                    "AREG %d %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
-                    region->enabled ? 1 : 0,
-                    (int)region->shape,
-                    region->center_x,
-                    region->center_y,
-                    region->center_z,
-                    region->size_x,
-                    region->size_y,
-                    region->size_z,
-                    region->density,
-                    region->falloff);
-        }
-        fprintf(f, "%zu\n", slot->preset.emitter_count);
-        for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
-            FluidEmitter emitter = slot->preset.emitters[e];
-            sanitize_emitter(&emitter, sanitize_dimension_mode(slot->preset.dimension_mode));
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %d %d %d %d %d %.6f\n",
-                    emitter.type,
-                    emitter.position_x,
-                    emitter.position_y,
-                    emitter.position_z,
-                    emitter.radius,
-                    emitter.strength,
-                    emitter.dir_x,
-                    emitter.dir_y,
-                    emitter.dir_z,
-                    emitter.attached_object,
-                    emitter.attached_import,
-                    (int)emitter.source_mode_3d,
-                    (int)emitter.surface_3d,
-                    (int)emitter.obstacle_mode_3d,
-                    emitter.thermal_buoyancy_3d);
-        }
-        fprintf(f, "FLOW %d\n", BOUNDARY_EDGE_COUNT);
-        for (int edge = 0; edge < BOUNDARY_EDGE_COUNT; ++edge) {
-            const BoundaryFlow *flow = &slot->preset.boundary_flows[edge];
-            fprintf(f, "%d %d %.6f\n",
-                    edge,
-                    flow->mode,
-                    flow->strength);
-        }
-        fprintf(f, "OBJ %zu\n", slot->preset.object_count);
-        for (size_t o = 0; o < slot->preset.object_count; ++o) {
-            const PresetObject *obj = &slot->preset.objects[o];
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %d %d\n",
-                    obj->type,
-                    obj->position_x,
-                    obj->position_y,
-                    obj->position_z,
-                    obj->size_x,
-                    obj->size_y,
-                    obj->size_z,
-                    obj->angle,
-                    obj->is_static ? 1 : 0,
-                    obj->gravity_enabled ? 1 : 0);
-        }
-        size_t shape_count = slot->preset.import_shape_count;
-        if (shape_count > MAX_IMPORTED_SHAPES) shape_count = MAX_IMPORTED_SHAPES;
-        fprintf(f, "SHAPE %zu\n", shape_count);
-        for (size_t s = 0; s < shape_count; ++s) {
-            ImportedShape imp = slot->preset.import_shapes[s];
-            sanitize_import_shape(&imp);
-            fprintf(f, "%s\n", imp.path);
-            fprintf(f, "%.6f %.6f %.6f %.6f %.6f %d %.6f %.6f %d %d %d %d\n",
-                    imp.position_x,
-                    imp.position_y,
-                    imp.position_z,
-                    imp.scale,
-                    imp.rotation_deg,
-                    imp.enabled ? 1 : 0,
-                    imp.density,
-                    imp.friction,
-                    imp.is_static ? 1 : 0,
-                    imp.gravity_enabled ? 1 : 0,
-                    imp.collider_vert_count,
-                    imp.collider_part_count);
-            for (int vi = 0; vi < imp.collider_vert_count; ++vi) {
-                fprintf(f, "%.6f %.6f\n", imp.collider_verts[vi].x, imp.collider_verts[vi].y);
-            }
-            for (int pi = 0; pi < imp.collider_part_count; ++pi) {
-                fprintf(f, "%d %d\n", imp.collider_part_offsets[pi], imp.collider_part_counts[pi]);
-                int offset = imp.collider_part_offsets[pi];
-                for (int vi = 0; vi < imp.collider_part_counts[pi]; ++vi) {
-                    int idx = offset + vi;
-                    if (idx < 0 || idx >= 128) break;
-                    fprintf(f, "%.6f %.6f\n",
-                            imp.collider_parts_verts[idx].x,
-                            imp.collider_parts_verts[idx].y);
-                }
-            }
-        }
-    }
 
     fclose(f);
     return true;

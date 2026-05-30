@@ -119,9 +119,12 @@ Public identity:
   - `make -C physics_sim test-sim-runtime-emitter-contract`
   - `make -C physics_sim test-sim-runtime-obstacle-contract`
   - `make -C physics_sim toolchain-contract`
+  - `make -C physics_sim package-linux-worker-self-test`
   - `make -C physics_sim package-desktop`
   - `make -C physics_sim PACKAGE_TOOLCHAIN=fisics package-desktop`
   - desktop packaging stays Clang-default unless `PACKAGE_TOOLCHAIN=fisics` is set
+  - Linux worker packaging now follows the Linux build-host architecture by
+    default (`linux-x86_64` or `linux-aarch64`)
 
 ## Runtime Persistence Policy
 - tracked defaults remain under `config/`

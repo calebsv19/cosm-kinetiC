@@ -3,6 +3,8 @@
 # =========================
 SDL_CFLAGS :=
 SDL_LIBS   :=
+SDL_TTF_CFLAGS :=
+SDL_TTF_LIBS :=
 VULKAN_CFLAGS :=
 VULKAN_LIBS :=
 JSON_CFLAGS :=
@@ -11,6 +13,8 @@ JSON_LIBS :=
 ifneq ($(UNAME_S),Darwin)
 SDL_CFLAGS := $(shell sdl2-config --cflags 2>/dev/null)
 SDL_LIBS   := $(shell sdl2-config --libs 2>/dev/null)
+SDL_TTF_CFLAGS := $(shell pkg-config --cflags SDL2_ttf 2>/dev/null)
+SDL_TTF_LIBS := $(shell pkg-config --libs SDL2_ttf 2>/dev/null)
 JSON_CFLAGS := $(shell pkg-config --cflags json-c 2>/dev/null)
 JSON_LIBS := $(shell pkg-config --libs json-c 2>/dev/null)
 endif
@@ -36,12 +40,16 @@ ifeq ($(UNAME_S),Linux)
 
     ifneq ($(SDL_CFLAGS),)
         # Prefer sdl2-config if present
-        CFLAGS += $(SDL_CFLAGS)
-        LIBS   += $(SDL_LIBS)
+        CFLAGS += $(SDL_CFLAGS) $(SDL_TTF_CFLAGS)
+        ifneq ($(strip $(SDL_TTF_LIBS)),)
+            LIBS += $(SDL_TTF_LIBS) $(SDL_LIBS)
+        else
+            LIBS += -lSDL2_ttf $(SDL_LIBS)
+        endif
     else
         # Fallback: system headers
         CFLAGS += -I/usr/include/SDL2
-        LIBS   += -lSDL2 -lSDL2_ttf
+        LIBS   += -lSDL2_ttf -lSDL2
     endif
 
     # Linux needs librt for clock_gettime
@@ -61,11 +69,13 @@ ifeq ($(UNAME_S),Darwin)
     # which conflicts with our #include <SDL2/SDL.h> pattern.
     SDL_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags sdl2 2>/dev/null)
     SDL_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs sdl2 2>/dev/null)
+    SDL_TTF_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags SDL2_ttf 2>/dev/null)
+    SDL_TTF_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs SDL2_ttf 2>/dev/null)
     JSON_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags json-c 2>/dev/null)
     JSON_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs json-c 2>/dev/null)
     CFLAGS  += -D_POSIX_C_SOURCE=200809L -D_THREAD_SAFE
     ifneq ($(strip $(SDL_CFLAGS)),)
-        CFLAGS += $(SDL_CFLAGS)
+        CFLAGS += $(SDL_CFLAGS) $(SDL_TTF_CFLAGS)
     else
         CFLAGS += -I$(TARGET_HOMEBREW_PREFIX)/include
     endif
@@ -75,10 +85,14 @@ ifeq ($(UNAME_S),Darwin)
         CFLAGS += -I$(TARGET_HOMEBREW_PREFIX)/include
     endif
     ifneq ($(strip $(SDL_LIBS)),)
-        LIBS += $(SDL_LIBS) -lSDL2_ttf
+        ifneq ($(strip $(SDL_TTF_LIBS)),)
+            LIBS += $(SDL_TTF_LIBS) $(SDL_LIBS)
+        else
+            LIBS += -lSDL2_ttf $(SDL_LIBS)
+        endif
     else
         LDFLAGS += -L$(TARGET_HOMEBREW_PREFIX)/lib
-        LIBS += -lSDL2 -lSDL2_ttf
+        LIBS += -lSDL2_ttf -lSDL2
     endif
     ifeq ($(strip $(JSON_LIBS)),)
         JSON_LIBS := -L$(TARGET_HOMEBREW_PREFIX)/lib -ljson-c
@@ -105,6 +119,7 @@ endif
 
 LIBS += -lm
 LIBS += $(JSON_LIBS)
+HEADLESS_WORKER_LIBS := $(filter-out $(VULKAN_LIBS),$(LIBS))
 
 TIMER_HUD_INCLUDE := -I$(TIMER_HUD_DIR)/include -I$(TIMER_HUD_DIR)/external
 

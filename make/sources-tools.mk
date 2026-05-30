@@ -46,6 +46,7 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/app/sim_runtime_obstacle.c \
 	$(SRC_DIR)/app/scene_objects.c \
 	$(SRC_DIR)/app/editor/scene_editor_session.c \
+	$(SRC_DIR)/app/editor/scene_editor_session_labels.c \
 	$(SRC_DIR)/physics/objects/object_manager.c \
 	$(SRC_DIR)/physics/rigid/rigid2d.c \
 	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \

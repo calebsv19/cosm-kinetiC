@@ -40,6 +40,10 @@ void wrap_text_lines(SDL_Renderer *renderer,
                      int *out_count);
 int panel_font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback);
 
+void scene_editor_panel_draw_object_list(SceneEditorState *state);
+void scene_editor_panel_draw_scene_library_summary(SceneEditorState *state);
+void scene_editor_panel_draw_retained_object_list(SceneEditorState *state);
+void scene_editor_panel_draw_left_object_info_card(SceneEditorState *state);
 void draw_center_pane_summary(SceneEditorState *state);
 void draw_right_panel_summary(SceneEditorState *state);
 

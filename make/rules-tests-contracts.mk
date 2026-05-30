@@ -68,6 +68,8 @@ test-atmospheric-warm-start-contract: $(ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRC
 PRESET_IO_DIMENSIONAL_TEST_SRCS := \
 	tests/preset_io_dimensional_contract_test.c \
 	$(SRC_DIR)/app/preset_io.c \
+	$(SRC_DIR)/app/preset_io_library.c \
+	$(SRC_DIR)/app/preset_io_save.c \
 	$(SRC_DIR)/app/scene_presets.c \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c
 
@@ -103,6 +105,7 @@ ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
@@ -149,6 +152,7 @@ SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
@@ -172,6 +176,7 @@ SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
@@ -195,6 +200,7 @@ SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
@@ -218,6 +224,7 @@ SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
@@ -247,6 +254,7 @@ SIM_RUNTIME_BACKEND_REPORTING_TEST_SRCS := \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
@@ -342,6 +350,8 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_emitters.c \
 	$(SRC_DIR)/app/scene_objects.c \
 	$(SRC_DIR)/app/editor/scene_editor_session.c \
+	$(SRC_DIR)/app/editor/scene_editor_session_overlay_edit.c \
+	$(SRC_DIR)/app/editor/scene_editor_session_labels.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
@@ -380,6 +390,7 @@ RUNTIME_SCENE_3D_TRUTH_TEST_SRCS := \
 	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
@@ -416,6 +427,7 @@ SCENE_RUNTIME_LAUNCH_PROJECTION_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/scene_objects.c \
 	$(SRC_DIR)/app/editor/scene_editor_session.c \
+	$(SRC_DIR)/app/editor/scene_editor_session_labels.c \
 	$(SRC_DIR)/physics/objects/object_manager.c \
 	$(SRC_DIR)/physics/rigid/rigid2d.c \
 	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \
@@ -441,7 +453,8 @@ STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS := \
 	tests/structural_runtime_split_contract_test.c \
 	$(SRC_DIR)/app/structural/structural_controller_runtime.c \
 	$(SRC_DIR)/physics/structural/structural_scene.c \
-	$(SRC_DIR)/physics/structural/structural_solver.c
+	$(SRC_DIR)/physics/structural/structural_solver.c \
+	$(SRC_DIR)/physics/structural/structural_sparse_matrix.c
 
 SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS := \
 	tests/scene_editor_scene_library_contract_test.c \
@@ -768,6 +781,7 @@ VOLUME_FRAMES_3D_EXPORT_TEST_SRCS := \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
@@ -812,6 +826,7 @@ VOLUME_FRAMES_3D_TINY_PARITY_TEST_SRCS := \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \

@@ -187,6 +187,7 @@ Last updated: 2026-05-23
 - Build-only readiness:
   - `make -C physics_sim visual-harness`
 - Packaging verification:
+  - `make -C physics_sim package-linux-worker-self-test`
   - `make -C physics_sim package-desktop`
   - `make -C physics_sim PACKAGE_TOOLCHAIN=fisics package-desktop`
   - `make -C physics_sim package-desktop-smoke`
@@ -198,6 +199,11 @@ Last updated: 2026-05-23
 ## Release and Packaging Snapshot
 - Release-readiness phases are complete through artifact flow (`RL0`-`RL3`).
 - Signed/notarized/stapled distribution flow is established for production release operations.
+- Linux worker packaging now emits truthful host-architecture metadata for
+  either `linux-x86_64` or `linux-aarch64` by default:
+  - `make -C physics_sim package-linux-worker`
+  - the package manifest platform follows the Linux build host architecture
+  - `LINUX_WORKER_PLATFORM=<value>` remains available for explicit override
 - The first compiler-overlay dual-toolchain contract is now active for app-local validation:
   - `clang-build` writes the default app binary to `build/clang/physics_sim`
   - `make` still copies the Clang binary to the repo-root `physics_sim` path for compatibility

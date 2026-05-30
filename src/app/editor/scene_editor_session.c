@@ -11,15 +11,6 @@ static void session_diag(char *out_diagnostics, size_t out_diagnostics_size, con
     snprintf(out_diagnostics, out_diagnostics_size, "%s", message);
 }
 
-static float session_emitter_default_strength(FluidEmitterType type) {
-    switch (type) {
-        case EMITTER_DENSITY_SOURCE: return 8.0f;
-        case EMITTER_VELOCITY_JET:   return 40.0f;
-        case EMITTER_SINK:           return 25.0f;
-        default:                     return 8.0f;
-    }
-}
-
 static float session_clamp_emitter_strength(float strength) {
     if (strength < 0.1f) strength = 0.1f;
     if (strength > 5000.0f) strength = 5000.0f;
@@ -36,6 +27,15 @@ static float session_clamp_emitter_thermal_buoyancy(float thermal_buoyancy) {
     if (thermal_buoyancy < 0.0f) thermal_buoyancy = 0.0f;
     if (thermal_buoyancy > 1000.0f) thermal_buoyancy = 1000.0f;
     return thermal_buoyancy;
+}
+
+static float session_emitter_default_strength(FluidEmitterType type) {
+    switch (type) {
+        case EMITTER_DENSITY_SOURCE: return 8.0f;
+        case EMITTER_VELOCITY_JET:   return 40.0f;
+        case EMITTER_SINK:           return 25.0f;
+        default:                     return 8.0f;
+    }
 }
 
 static float session_default_emitter_radius_for_object(const CoreSceneObjectContract *object) {
@@ -240,15 +240,6 @@ static void physics_sim_editor_session_seed_default_overlay(PhysicsSimEditorSess
     }
 }
 
-static PhysicsSimObjectOverlay *physics_sim_editor_session_selected_overlay_mut(PhysicsSimEditorSession *session) {
-    if (!session || !session->has_physics_overlay) return NULL;
-    if (session->selection.retained_object_index < 0 ||
-        session->selection.retained_object_index >= session->physics_overlay.object_overlay_count) {
-        return NULL;
-    }
-    return &session->physics_overlay.object_overlays[session->selection.retained_object_index];
-}
-
 static PhysicsSimObjectOverlay *physics_sim_editor_session_find_overlay_by_object_id_mut(PhysicsSimEditorSession *session,
                                                                                           const char *object_id) {
     int i = 0;
@@ -399,203 +390,6 @@ void physics_sim_editor_session_scene_domain_dimensions(const PhysicsSimEditorSe
     if (out_width) *out_width = fabs(domain->max.x - domain->min.x);
     if (out_height) *out_height = fabs(domain->max.y - domain->min.y);
     if (out_depth) *out_depth = fabs(domain->max.z - domain->min.z);
-}
-
-bool physics_sim_editor_session_set_selected_motion_mode(PhysicsSimEditorSession *session,
-                                                         PhysicsSimOverlayMotionMode mode) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay) return false;
-    overlay->motion_mode = mode;
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_set_selected_emitter_type(PhysicsSimEditorSession *session,
-                                                          FluidEmitterType type,
-                                                          bool toggle_clear) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    const CoreSceneObjectContract *object = NULL;
-    if (!overlay || !session || !session->has_retained_scene) return false;
-
-    if (toggle_clear && overlay->emitter.active && overlay->emitter.type == type) {
-        overlay->emitter.active = false;
-        session->physics_overlay.derived_defaults = false;
-        return true;
-    }
-
-    object = physics_sim_editor_session_selected_object(session);
-    overlay->emitter.active = true;
-    overlay->emitter.type = type;
-    overlay->motion_mode = PHYSICS_SIM_OVERLAY_MOTION_DYNAMIC;
-    if (overlay->emitter.radius <= 0.0f) {
-        overlay->emitter.radius = session_default_emitter_radius_for_object(object);
-    }
-    overlay->emitter.radius = session_clamp_emitter_radius(overlay->emitter.radius);
-    overlay->emitter.strength = session_clamp_emitter_strength(session_emitter_default_strength(type));
-    if (overlay->emitter.direction.x == 0.0 &&
-        overlay->emitter.direction.y == 0.0 &&
-        overlay->emitter.direction.z == 0.0) {
-        overlay->emitter.direction = session_default_emitter_direction_for_object(object);
-    }
-    overlay->emitter.source_mode_3d = session_default_emitter_source_mode_3d();
-    overlay->emitter.surface_3d = session_default_emitter_surface_3d();
-    overlay->emitter.obstacle_mode_3d = session_default_emitter_obstacle_mode_3d();
-    overlay->emitter.thermal_buoyancy_3d =
-        session_default_emitter_thermal_buoyancy_3d(type);
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_set_selected_emitter_radius(PhysicsSimEditorSession *session,
-                                                            float radius) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay || !overlay->emitter.active) return false;
-    overlay->emitter.radius = session_clamp_emitter_radius(radius);
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_set_selected_emitter_strength(PhysicsSimEditorSession *session,
-                                                              float strength) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay || !overlay->emitter.active) return false;
-    overlay->emitter.strength = session_clamp_emitter_strength(strength);
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(PhysicsSimEditorSession *session,
-                                                                          float thermal_buoyancy) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay || !overlay->emitter.active) return false;
-    overlay->emitter.thermal_buoyancy_3d = session_clamp_emitter_thermal_buoyancy(thermal_buoyancy);
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(PhysicsSimEditorSession *session) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay || !overlay->emitter.active) return false;
-    switch (overlay->emitter.source_mode_3d) {
-    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
-        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_SHELL;
-        break;
-    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
-        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE;
-        break;
-    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
-        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_VOLUME_FILL;
-        break;
-    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
-        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
-        break;
-    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
-    default:
-        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_PATCH;
-        break;
-    }
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_cycle_selected_emitter_surface_3d(PhysicsSimEditorSession *session) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay || !overlay->emitter.active) return false;
-    switch (overlay->emitter.surface_3d) {
-    case EMITTER_3D_SURFACE_TOP:
-        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_BOTTOM;
-        break;
-    case EMITTER_3D_SURFACE_BOTTOM:
-        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_LEFT;
-        break;
-    case EMITTER_3D_SURFACE_LEFT:
-        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_RIGHT;
-        break;
-    case EMITTER_3D_SURFACE_RIGHT:
-        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_FRONT;
-        break;
-    case EMITTER_3D_SURFACE_FRONT:
-        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_BACK;
-        break;
-    case EMITTER_3D_SURFACE_BACK:
-        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_ALL_FACES;
-        break;
-    case EMITTER_3D_SURFACE_ALL_FACES:
-        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_AUTO;
-        break;
-    case EMITTER_3D_SURFACE_AUTO:
-    default:
-        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_TOP;
-        break;
-    }
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(PhysicsSimEditorSession *session) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay || !overlay->emitter.active) return false;
-    switch (overlay->emitter.obstacle_mode_3d) {
-    case EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED:
-        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED;
-        break;
-    case EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED:
-        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
-        break;
-    case EMITTER_3D_OBSTACLE_MODE_AUTO:
-    default:
-        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED;
-        break;
-    }
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_set_scene_domain_size(PhysicsSimEditorSession *session,
-                                                      double width,
-                                                      double height,
-                                                      double depth) {
-    PhysicsSimDomainOverlay *domain = NULL;
-    CoreObjectVec3 center = {0};
-    if (!session || !session->has_physics_overlay) return false;
-    if (width <= 0.0 || height <= 0.0 || depth <= 0.0) return false;
-    domain = &session->physics_overlay.scene_domain;
-    if (!domain->active) return false;
-
-    center.x = 0.5 * (domain->min.x + domain->max.x);
-    center.y = 0.5 * (domain->min.y + domain->max.y);
-    center.z = 0.5 * (domain->min.z + domain->max.z);
-    domain->min.x = center.x - width * 0.5;
-    domain->max.x = center.x + width * 0.5;
-    domain->min.y = center.y - height * 0.5;
-    domain->max.y = center.y + height * 0.5;
-    domain->min.z = center.z - depth * 0.5;
-    domain->max.z = center.z + depth * 0.5;
-    domain->seeded_from_retained_bounds = false;
-    domain->derived_defaults = false;
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_nudge_selected_velocity(PhysicsSimEditorSession *session,
-                                                        double dx,
-                                                        double dy,
-                                                        double dz) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay) return false;
-    overlay->initial_velocity.x += dx;
-    overlay->initial_velocity.y += dy;
-    overlay->initial_velocity.z += dz;
-    session->physics_overlay.derived_defaults = false;
-    return true;
-}
-
-bool physics_sim_editor_session_reset_selected_velocity(PhysicsSimEditorSession *session) {
-    PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
-    if (!overlay) return false;
-    overlay->initial_velocity = (CoreObjectVec3){0};
-    session->physics_overlay.derived_defaults = false;
-    return true;
 }
 
 bool physics_sim_editor_session_build_overlay_json(const PhysicsSimEditorSession *session,
@@ -1084,137 +878,4 @@ bool physics_sim_editor_session_mark_overlay_applied(PhysicsSimEditorSession *se
     session->physics_overlay.scene_domain.logical_clock = session->physics_overlay.logical_clock;
     session->physics_overlay.scene_domain.derived_defaults = false;
     return true;
-}
-
-const char *physics_sim_editor_session_object_kind_label(CoreSceneObjectKind kind) {
-    switch (kind) {
-        case CORE_SCENE_OBJECT_KIND_PLANE_PRIMITIVE:
-            return "Plane Primitive";
-        case CORE_SCENE_OBJECT_KIND_RECT_PRISM_PRIMITIVE:
-            return "Rect Prism Primitive";
-        case CORE_SCENE_OBJECT_KIND_CURVE_PATH:
-            return "Curve Path";
-        case CORE_SCENE_OBJECT_KIND_POINT_SET:
-            return "Point Set";
-        case CORE_SCENE_OBJECT_KIND_EDGE_SET:
-            return "Edge Set";
-        case CORE_SCENE_OBJECT_KIND_UNKNOWN:
-        default:
-            return "Unknown";
-    }
-}
-
-const char *physics_sim_editor_session_motion_mode_label(PhysicsSimOverlayMotionMode mode) {
-    switch (mode) {
-        case PHYSICS_SIM_OVERLAY_MOTION_STATIC:
-            return "Static";
-        case PHYSICS_SIM_OVERLAY_MOTION_DYNAMIC:
-        default:
-            return "Dynamic";
-    }
-}
-
-const char *physics_sim_editor_session_emitter_type_label(FluidEmitterType type) {
-    switch (type) {
-        case EMITTER_VELOCITY_JET:
-            return "Jet";
-        case EMITTER_SINK:
-            return "Sink";
-        case EMITTER_DENSITY_SOURCE:
-        default:
-            return "Source";
-    }
-}
-
-const char *physics_sim_editor_session_emitter_source_mode_3d_label(FluidEmitter3DSourceMode mode) {
-    switch (mode) {
-    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
-        return "VolumeFill";
-    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
-        return "SurfacePatch";
-    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
-        return "SurfaceShell";
-    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
-        return "HeatedObstacle";
-    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
-    default:
-        return "LegacyCompat";
-    }
-}
-
-const char *physics_sim_editor_session_emitter_surface_3d_label(FluidEmitter3DSurface surface) {
-    switch (surface) {
-    case EMITTER_3D_SURFACE_TOP:
-        return "Top";
-    case EMITTER_3D_SURFACE_BOTTOM:
-        return "Bottom";
-    case EMITTER_3D_SURFACE_LEFT:
-        return "Left";
-    case EMITTER_3D_SURFACE_RIGHT:
-        return "Right";
-    case EMITTER_3D_SURFACE_FRONT:
-        return "Front";
-    case EMITTER_3D_SURFACE_BACK:
-        return "Back";
-    case EMITTER_3D_SURFACE_ALL_FACES:
-        return "AllFaces";
-    case EMITTER_3D_SURFACE_AUTO:
-    default:
-        return "Auto";
-    }
-}
-
-const char *physics_sim_editor_session_emitter_obstacle_mode_3d_label(FluidEmitter3DObstacleMode mode) {
-    switch (mode) {
-    case EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED:
-        return "ClearAttached";
-    case EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED:
-        return "RetainAttached";
-    case EMITTER_3D_OBSTACLE_MODE_AUTO:
-    default:
-        return "Auto";
-    }
-}
-
-const char *physics_sim_editor_session_legacy_selection_summary(const PhysicsSimEditorSession *session,
-                                                                char *buffer,
-                                                                size_t buffer_size) {
-    const char *summary = "Legacy Selection: none";
-    if (!buffer || buffer_size == 0) return "";
-    buffer[0] = '\0';
-
-    if (!session) {
-        snprintf(buffer, buffer_size, "%s", summary);
-        return buffer;
-    }
-
-    switch (session->legacy_selection.kind) {
-        case SELECTION_EMITTER:
-            snprintf(buffer,
-                     buffer_size,
-                     "Legacy Selection: emitter=%d object=%d import=%d",
-                     session->legacy_selection.emitter_index,
-                     session->legacy_selection.object_index,
-                     session->legacy_selection.import_index);
-            break;
-        case SELECTION_OBJECT:
-            snprintf(buffer,
-                     buffer_size,
-                     "Legacy Selection: object=%d emitter=%d",
-                     session->legacy_selection.object_index,
-                     session->legacy_selection.emitter_index);
-            break;
-        case SELECTION_IMPORT:
-            snprintf(buffer,
-                     buffer_size,
-                     "Legacy Selection: import=%d emitter=%d",
-                     session->legacy_selection.import_index,
-                     session->legacy_selection.emitter_index);
-            break;
-        case SELECTION_NONE:
-        default:
-            snprintf(buffer, buffer_size, "%s", summary);
-            break;
-    }
-    return buffer;
 }

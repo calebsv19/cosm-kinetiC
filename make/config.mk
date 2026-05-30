@@ -7,6 +7,11 @@ CC        := $(CLANG)
 CSTD      := -std=c11
 PKG_CONFIG ?= pkg-config
 
+UNAME_S   := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+CSTD      := -std=c2x
+endif
+
 SRC_DIR   := src
 INC_DIR   := include
 BUILD_DIR := build

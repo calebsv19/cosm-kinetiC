@@ -144,6 +144,8 @@ bool backend_3d_scaffold_obstacle_fill_slice_xy(const SimRuntimeBackend3DScaffol
                                                 uint8_t *out_solid_mask,
                                                 size_t out_cell_count);
 size_t backend_3d_scaffold_obstacle_solid_cell_count(const SimRuntimeBackend3DScaffold *state);
+bool backend_3d_scaffold_ensure_export_cache(SimRuntimeBackend3DScaffold *state);
+void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DScaffold *state);
 void backend_3d_scaffold_clear_obstacle_bricks(SimRuntimeBackend3DScaffold *state);
 void backend_3d_scaffold_mark_obstacles_dirty(SimRuntimeBackend *backend);
 void backend_3d_scaffold_rasterize_dynamic_obstacles(SimRuntimeBackend *backend,
@@ -154,5 +156,15 @@ void backend_3d_scaffold_enforce_obstacles(SimRuntimeBackend *backend,
                                            struct SceneState *scene);
 bool backend_3d_scaffold_get_obstacle_view_2d(const SimRuntimeBackend *backend,
                                               SceneObstacleFieldView2D *out_view);
+bool backend_3d_scaffold_get_debug_volume_view_3d(const SimRuntimeBackend *backend,
+                                                  SceneDebugVolumeView3D *out_view);
+bool backend_3d_scaffold_get_volume_export_view_3d(const SimRuntimeBackend *backend,
+                                                   SceneFluidVolumeExportView3D *out_view);
+bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
+                                    SimRuntimeBackendReport *out_report);
+bool backend_3d_scaffold_get_compatibility_slice_activity(const SimRuntimeBackend *backend,
+                                                          int slice_z,
+                                                          bool *out_has_fluid,
+                                                          bool *out_has_obstacles);
 
 #endif
