@@ -36,7 +36,7 @@ static bool spawn_detached_headless(const char *headless_cli_path,
     pid = fork();
     if (pid < 0) return false;
     if (pid == 0) {
-        char *argv[24];
+        char *argv[30];
         int argc = 0;
         int null_fd = -1;
         if (setsid() < 0) _exit(126);
@@ -68,8 +68,19 @@ static bool spawn_detached_headless(const char *headless_cli_path,
         argv[argc++] = progress_interval_arg;
         argv[argc++] = (char *)"--sim-steps-per-frame";
         argv[argc++] = sim_steps_arg;
+        if (request->grid[0]) {
+            argv[argc++] = (char *)"--grid";
+            argv[argc++] = (char *)request->grid;
+        }
+        if (request->wind_shot_camera_profile[0]) {
+            argv[argc++] = (char *)"--wind-shot-camera";
+            argv[argc++] = (char *)request->wind_shot_camera_profile;
+        }
         if (request->save_volume_frames) argv[argc++] = (char *)"--save-volume-frames";
         if (request->save_render_frames) argv[argc++] = (char *)"--save-render-frames";
+        if (request->save_wind_projection_frames) {
+            argv[argc++] = (char *)"--save-wind-projection-frames";
+        }
         argv[argc++] = (char *)(request->skip_present ? "--skip-present" : "--present");
         if (request->overwrite) argv[argc++] = (char *)"--overwrite";
         argv[argc] = NULL;
@@ -78,6 +89,27 @@ static bool spawn_detached_headless(const char *headless_cli_path,
         _exit(127);
     }
     if (out_pid) *out_pid = pid;
+    return true;
+}
+
+static bool validate_grid_request(const char *text) {
+    const char *p = text;
+    char *end = NULL;
+    if (!text || !text[0]) return false;
+    for (int axis = 0; axis < 3; ++axis) {
+        long value = 0;
+        errno = 0;
+        value = strtol(p, &end, 10);
+        if (errno != 0 || end == p || value < 4 || value > 512) {
+            return false;
+        }
+        if (axis < 2) {
+            if (*end != 'x' && *end != 'X') return false;
+            p = end + 1;
+        } else if (*end != '\0') {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -98,6 +130,9 @@ static bool load_request_file(const char *request_path,
     out_request->frames = 1;
     out_request->sim_steps_per_frame = 1;
     out_request->progress_interval = 1;
+    copy_string(out_request->wind_shot_camera_profile,
+                sizeof(out_request->wind_shot_camera_profile),
+                "three_quarter");
     out_request->skip_present = true;
 
     root = json_object_from_file(request_path);
@@ -124,8 +159,32 @@ static bool load_request_file(const char *request_path,
     (void)json_get_int(root, "frames", &out_request->frames);
     (void)json_get_int(root, "sim_steps_per_frame", &out_request->sim_steps_per_frame);
     (void)json_get_int(root, "progress_interval", &out_request->progress_interval);
+    if (json_get_string(root, "wind_shot_camera", &text_value) ||
+        json_get_string(root, "wind_shot_camera_profile", &text_value)) {
+        if (strcmp(text_value, "three_quarter") != 0 &&
+            strcmp(text_value, "side") != 0 &&
+            strcmp(text_value, "top") != 0 &&
+            strcmp(text_value, "downstream") != 0 &&
+            strcmp(text_value, "runtime_default") != 0) {
+            json_object_put(root);
+            diag_set(out_diagnostics, out_diagnostics_size, "invalid wind_shot_camera profile");
+            return false;
+        }
+        copy_string(out_request->wind_shot_camera_profile,
+                    sizeof(out_request->wind_shot_camera_profile),
+                    text_value);
+    }
+    if (json_get_string(root, "grid", &text_value)) {
+        if (!validate_grid_request(text_value) ||
+            !copy_string(out_request->grid, sizeof(out_request->grid), text_value)) {
+            json_object_put(root);
+            diag_set(out_diagnostics, out_diagnostics_size, "invalid grid override");
+            return false;
+        }
+    }
     (void)json_get_bool(root, "save_volume_frames", &out_request->save_volume_frames);
     (void)json_get_bool(root, "save_render_frames", &out_request->save_render_frames);
+    (void)json_get_bool(root, "save_wind_projection_frames", &out_request->save_wind_projection_frames);
     (void)json_get_bool(root, "skip_present", &out_request->skip_present);
     (void)json_get_bool(root, "overwrite", &out_request->overwrite);
     json_object_put(root);
@@ -272,8 +331,22 @@ static bool write_canonical_request_file(const char *path,
     fprintf(file, "  \"frames\": %d,\n", request->frames);
     fprintf(file, "  \"sim_steps_per_frame\": %d,\n", request->sim_steps_per_frame);
     fprintf(file, "  \"progress_interval\": %d,\n", request->progress_interval);
+    if (request->grid[0]) {
+        fprintf(file, "  \"grid\": ");
+        json_write_string(file, request->grid);
+        fprintf(file, ",\n");
+    }
+    fprintf(file, "  \"wind_shot_camera\": ");
+    json_write_string(file,
+                      request->wind_shot_camera_profile[0]
+                          ? request->wind_shot_camera_profile
+                          : "three_quarter");
+    fprintf(file, ",\n");
     fprintf(file, "  \"save_volume_frames\": %s,\n", request->save_volume_frames ? "true" : "false");
     fprintf(file, "  \"save_render_frames\": %s,\n", request->save_render_frames ? "true" : "false");
+    fprintf(file,
+            "  \"save_wind_projection_frames\": %s,\n",
+            request->save_wind_projection_frames ? "true" : "false");
     fprintf(file, "  \"skip_present\": %s,\n", request->skip_present ? "true" : "false");
     fprintf(file, "  \"overwrite\": %s\n", request->overwrite ? "true" : "false");
     fprintf(file, "}\n");

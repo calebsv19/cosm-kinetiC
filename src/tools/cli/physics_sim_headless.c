@@ -32,9 +32,15 @@ typedef struct PhysicsSimHeadlessCliOptions {
     int frames;
     int sim_steps_per_frame;
     int progress_interval;
+    int grid_w;
+    int grid_h;
+    int grid_d;
+    bool grid_override;
     bool save_volume_frames;
     bool save_render_frames;
+    bool save_wind_projection_frames;
     bool skip_present;
+    HeadlessWindShotCameraProfile wind_shot_camera_profile;
     PhysicsSimHeadlessOutputPolicy output_policy;
 } PhysicsSimHeadlessCliOptions;
 
@@ -42,6 +48,11 @@ typedef struct PhysicsSimHeadlessProgressSink {
     const char *progress_path;
     const PhysicsSimHeadlessCliOptions *opts;
 } PhysicsSimHeadlessProgressSink;
+
+typedef struct PhysicsSimHeadlessWindAnalysisSink {
+    const char *timeseries_path;
+    const PhysicsSimHeadlessCliOptions *opts;
+} PhysicsSimHeadlessWindAnalysisSink;
 
 typedef struct PhysicsSimHeadlessCancelProbe {
     const char *cancel_flag_path;
@@ -56,9 +67,12 @@ static void print_usage(const char *argv0) {
     fprintf(stderr,
             "usage: %s --runtime-scene <scene_runtime.json> --frames <n> "
             "--output-root <dir> [--save-volume-frames] [--save-render-frames] "
+            "[--save-wind-projection-frames] "
             "[--summary <run_summary.json>] [--progress <run_progress.json>] "
             "[--cancel-flag <cancel_requested.flag>] "
             "[--progress-interval <n>] [--sim-steps-per-frame <n>] "
+            "[--grid <width>x<height>x<depth>] "
+            "[--wind-shot-camera <three_quarter|side|top|downstream|runtime_default>] "
             "[--overwrite] [--present]\n",
             argv0 ? argv0 : "physics_sim_headless");
 }
@@ -76,6 +90,30 @@ static bool parse_int_arg(const char *text, int *out) {
     return true;
 }
 
+static bool parse_grid_arg(const char *text, int *out_w, int *out_h, int *out_d) {
+    const char *p = text;
+    char *end = NULL;
+    long values[3] = {0, 0, 0};
+    if (!text || !text[0] || !out_w || !out_h || !out_d) return false;
+    for (int axis = 0; axis < 3; ++axis) {
+        errno = 0;
+        values[axis] = strtol(p, &end, 10);
+        if (errno != 0 || end == p || values[axis] < 4 || values[axis] > 512) {
+            return false;
+        }
+        if (axis < 2) {
+            if (*end != 'x' && *end != 'X') return false;
+            p = end + 1;
+        } else if (*end != '\0') {
+            return false;
+        }
+    }
+    *out_w = (int)values[0];
+    *out_h = (int)values[1];
+    *out_d = (int)values[2];
+    return true;
+}
+
 static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out) {
     if (!out) return false;
     memset(out, 0, sizeof(*out));
@@ -83,6 +121,7 @@ static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out)
     out->sim_steps_per_frame = 1;
     out->progress_interval = 60;
     out->skip_present = true;
+    out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER;
     out->output_policy = PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS;
 
     for (int i = 1; i < argc; ++i) {
@@ -110,10 +149,35 @@ static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out)
                 out->sim_steps_per_frame <= 0) {
                 return false;
             }
+        } else if (strcmp(argv[i], "--grid") == 0) {
+            if (++i >= argc || !parse_grid_arg(argv[i],
+                                               &out->grid_w,
+                                               &out->grid_h,
+                                               &out->grid_d)) {
+                return false;
+            }
+            out->grid_override = true;
+        } else if (strcmp(argv[i], "--wind-shot-camera") == 0) {
+            if (++i >= argc || !argv[i][0]) return false;
+            if (strcmp(argv[i], "three_quarter") == 0) {
+                out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER;
+            } else if (strcmp(argv[i], "side") == 0) {
+                out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_SIDE;
+            } else if (strcmp(argv[i], "top") == 0) {
+                out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_TOP;
+            } else if (strcmp(argv[i], "downstream") == 0) {
+                out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_DOWNSTREAM;
+            } else if (strcmp(argv[i], "runtime_default") == 0) {
+                out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_RUNTIME_DEFAULT;
+            } else {
+                return false;
+            }
         } else if (strcmp(argv[i], "--save-volume-frames") == 0) {
             out->save_volume_frames = true;
         } else if (strcmp(argv[i], "--save-render-frames") == 0) {
             out->save_render_frames = true;
+        } else if (strcmp(argv[i], "--save-wind-projection-frames") == 0) {
+            out->save_wind_projection_frames = true;
         } else if (strcmp(argv[i], "--overwrite") == 0) {
             out->output_policy = PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE;
         } else if (strcmp(argv[i], "--resume") == 0) {
@@ -244,6 +308,55 @@ static const char *output_policy_label(PhysicsSimHeadlessOutputPolicy policy) {
     }
 }
 
+static const char *wind_shot_camera_profile_label(HeadlessWindShotCameraProfile profile) {
+    switch (profile) {
+        case HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER: return "three_quarter";
+        case HEADLESS_WIND_SHOT_CAMERA_SIDE: return "side";
+        case HEADLESS_WIND_SHOT_CAMERA_TOP: return "top";
+        case HEADLESS_WIND_SHOT_CAMERA_DOWNSTREAM: return "downstream";
+        case HEADLESS_WIND_SHOT_CAMERA_RUNTIME_DEFAULT:
+        default:
+            return "runtime_default";
+    }
+}
+
+static void wind_shot_camera_profile_values(HeadlessWindShotCameraProfile profile,
+                                            float *out_yaw_deg,
+                                            float *out_pitch_deg,
+                                            float *out_distance_scale) {
+    float yaw_deg = -35.0f;
+    float pitch_deg = 24.0f;
+    float distance_scale = 1.0f;
+    switch (profile) {
+        case HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER:
+            yaw_deg = -38.0f;
+            pitch_deg = 22.0f;
+            distance_scale = 1.08f;
+            break;
+        case HEADLESS_WIND_SHOT_CAMERA_SIDE:
+            yaw_deg = 0.0f;
+            pitch_deg = 12.0f;
+            distance_scale = 1.08f;
+            break;
+        case HEADLESS_WIND_SHOT_CAMERA_TOP:
+            yaw_deg = 0.0f;
+            pitch_deg = 82.0f;
+            distance_scale = 1.16f;
+            break;
+        case HEADLESS_WIND_SHOT_CAMERA_DOWNSTREAM:
+            yaw_deg = -90.0f;
+            pitch_deg = 14.0f;
+            distance_scale = 1.12f;
+            break;
+        case HEADLESS_WIND_SHOT_CAMERA_RUNTIME_DEFAULT:
+        default:
+            break;
+    }
+    if (out_yaw_deg) *out_yaw_deg = yaw_deg;
+    if (out_pitch_deg) *out_pitch_deg = pitch_deg;
+    if (out_distance_scale) *out_distance_scale = distance_scale;
+}
+
 static bool utc_now_string(char *out, size_t out_size) {
     time_t now = 0;
     struct tm tm_utc;
@@ -298,6 +411,16 @@ static bool write_progress_json(const char *progress_path,
     json_write_escaped(f, opts->runtime_scene_path);
     fputs(",\n  \"output_root\": ", f);
     json_write_escaped(f, opts->output_root);
+    if (opts->grid_override) {
+        fprintf(f,
+                ",\n  \"grid_override\": true,\n"
+                "  \"grid\": {\"width\": %d, \"height\": %d, \"depth\": %d}",
+                opts->grid_w,
+                opts->grid_h,
+                opts->grid_d);
+    } else {
+        fputs(",\n  \"grid_override\": false", f);
+    }
     fprintf(f,
             ",\n  \"frames_requested\": %llu,\n"
             "  \"frames_completed\": %llu,\n"
@@ -323,6 +446,149 @@ static bool write_progress_json(const char *progress_path,
     json_write_escaped(f, status);
     fputs("\n}\n", f);
     return fclose(f) == 0;
+}
+
+static bool write_wind_shot_manifest(const char *manifest_path,
+                                     const char *timeseries_path,
+                                     const char *summary_path,
+                                     const char *progress_path,
+                                     const PhysicsSimHeadlessCliOptions *opts) {
+    FILE *f = NULL;
+    char created_at_utc[32];
+    float camera_yaw_deg = 0.0f;
+    float camera_pitch_deg = 0.0f;
+    float camera_distance_scale = 1.0f;
+    if (!manifest_path || !manifest_path[0] || !timeseries_path || !summary_path ||
+        !progress_path || !opts) {
+        return false;
+    }
+    if (!utc_now_string(created_at_utc, sizeof(created_at_utc))) return false;
+    wind_shot_camera_profile_values(opts->wind_shot_camera_profile,
+                                    &camera_yaw_deg,
+                                    &camera_pitch_deg,
+                                    &camera_distance_scale);
+    f = fopen(manifest_path, "wb");
+    if (!f) return false;
+    fputs("{\n", f);
+    fputs("  \"schema\": \"physics_sim_wind_shot_manifest_v1\",\n", f);
+    fputs("  \"runtime_scene\": ", f);
+    json_write_escaped(f, opts->runtime_scene_path);
+    fputs(",\n  \"output_root\": ", f);
+    json_write_escaped(f, opts->output_root);
+    fputs(",\n  \"summary\": ", f);
+    json_write_escaped(f, summary_path);
+    fputs(",\n  \"progress\": ", f);
+    json_write_escaped(f, progress_path);
+    fputs(",\n  \"wind_analysis_timeseries\": ", f);
+    json_write_escaped(f, timeseries_path);
+    fputs(",\n  \"wind_projection_frames\": ", f);
+    json_write_escaped(f, opts->save_wind_projection_frames
+                              ? "wind_projection_frames/frame_%06d.bmp"
+                              : "");
+    if (opts->grid_override) {
+        fprintf(f,
+                ",\n  \"grid_override\": true,\n"
+                "  \"grid\": {\"width\": %d, \"height\": %d, \"depth\": %d}",
+                opts->grid_w,
+                opts->grid_h,
+                opts->grid_d);
+    } else {
+        fputs(",\n  \"grid_override\": false", f);
+    }
+    fprintf(f,
+            ",\n  \"frames_requested\": %d,\n"
+            "  \"sim_steps_per_frame\": %d,\n"
+            "  \"save_volume_frames\": %s,\n"
+            "  \"save_render_frames\": %s,\n"
+            "  \"save_wind_projection_frames\": %s,\n"
+            "  \"skip_present\": %s,\n"
+            "  \"output_policy\": \"%s\",\n",
+            opts->frames,
+            opts->sim_steps_per_frame,
+            opts->save_volume_frames ? "true" : "false",
+            opts->save_render_frames ? "true" : "false",
+            opts->save_wind_projection_frames ? "true" : "false",
+            opts->skip_present ? "true" : "false",
+            output_policy_label(opts->output_policy));
+    fputs("  \"camera_source\": \"wind_shot_profile\",\n", f);
+    fputs("  \"camera_profile\": ", f);
+    json_write_escaped(f, wind_shot_camera_profile_label(opts->wind_shot_camera_profile));
+    fprintf(f,
+            ",\n  \"camera_yaw_deg\": %.9g,\n"
+            "  \"camera_pitch_deg\": %.9g,\n"
+            "  \"camera_distance_scale\": %.9g,\n",
+            camera_yaw_deg,
+            camera_pitch_deg,
+            camera_distance_scale);
+    fputs("  \"analysis_schema\": \"physics_sim_wind_analysis_frame_v1\",\n", f);
+    fputs("  \"analysis_fields\": [\n", f);
+    fputs("    \"sampled_cells\",\n", f);
+    fputs("    \"pressure_delta\",\n", f);
+    fputs("    \"inlet_pressure_avg\",\n", f);
+    fputs("    \"outlet_pressure_avg\",\n", f);
+    fputs("    \"inlet_throughput\",\n", f);
+    fputs("    \"outlet_throughput\",\n", f);
+    fputs("    \"throughput_delta\",\n", f);
+    fputs("    \"drag_pressure_proxy\",\n", f);
+    fputs("    \"vorticity_avg\",\n", f);
+    fputs("    \"vorticity_max\"\n", f);
+    fputs("  ],\n", f);
+    fputs("  \"created_at_utc\": ", f);
+    json_write_escaped(f, created_at_utc);
+    fputs("\n}\n", f);
+    return fclose(f) == 0;
+}
+
+static bool reset_wind_analysis_timeseries(const char *timeseries_path) {
+    FILE *f = NULL;
+    if (!timeseries_path || !timeseries_path[0]) return false;
+    f = fopen(timeseries_path, "wb");
+    if (!f) return false;
+    return fclose(f) == 0;
+}
+
+static void wind_analysis_frame_callback(void *user_data,
+                                         uint64_t frame_index,
+                                         const SimRuntimeBackendReport *backend_report) {
+    PhysicsSimHeadlessWindAnalysisSink *sink =
+        (PhysicsSimHeadlessWindAnalysisSink *)user_data;
+    FILE *f = NULL;
+    if (!sink || !sink->timeseries_path || !sink->opts || !backend_report) return;
+    f = fopen(sink->timeseries_path, "ab");
+    if (!f) return;
+    fprintf(f,
+            "{\"schema\":\"physics_sim_wind_analysis_frame_v1\","
+            "\"frame_index\":%llu,"
+            "\"sim_steps_per_frame\":%d,"
+            "\"available\":%s",
+            (unsigned long long)frame_index,
+            sink->opts->sim_steps_per_frame,
+            backend_report->wind_analysis_available ? "true" : "false");
+    if (backend_report->wind_analysis_available) {
+        fprintf(f,
+                ",\"sampled_cells\":%zu,"
+                "\"pressure_delta\":%.9g,"
+                "\"inlet_pressure_avg\":%.9g,"
+                "\"outlet_pressure_avg\":%.9g,"
+                "\"inlet_throughput\":%.9g,"
+                "\"outlet_throughput\":%.9g,"
+                "\"throughput_delta\":%.9g,"
+                "\"drag_pressure_proxy\":%.9g,"
+                "\"vorticity_avg\":%.9g,"
+                "\"vorticity_max\":%.9g",
+                backend_report->wind_analysis_sampled_cells,
+                backend_report->wind_analysis_pressure_delta,
+                backend_report->wind_analysis_inlet_pressure_avg,
+                backend_report->wind_analysis_outlet_pressure_avg,
+                backend_report->wind_analysis_inlet_throughput,
+                backend_report->wind_analysis_outlet_throughput,
+                backend_report->wind_analysis_throughput_delta,
+                backend_report->wind_analysis_drag_pressure_proxy,
+                backend_report->wind_analysis_vorticity_avg,
+                backend_report->wind_analysis_vorticity_max);
+    }
+    fputs("}\n", f);
+    (void)fclose(f);
 }
 
 static void progress_callback(void *user_data, const HeadlessProgressInfo *progress) {
@@ -361,6 +627,7 @@ static bool cancel_requested_callback(void *user_data) {
 
 static bool write_run_summary(const char *summary_path,
                               const PhysicsSimHeadlessCliOptions *opts,
+                              const SimRuntimeBackendReport *backend_report,
                               int result_code) {
     FILE *f = NULL;
     if (!summary_path || !summary_path[0] || !opts) return false;
@@ -372,25 +639,65 @@ static bool write_run_summary(const char *summary_path,
     json_write_escaped(f, opts->runtime_scene_path);
     fputs(",\n  \"output_root\": ", f);
     json_write_escaped(f, opts->output_root);
+    if (opts->grid_override) {
+        fprintf(f,
+                ",\n  \"grid_override\": true,\n"
+                "  \"grid\": {\"width\": %d, \"height\": %d, \"depth\": %d}",
+                opts->grid_w,
+                opts->grid_h,
+                opts->grid_d);
+    } else {
+        fputs(",\n  \"grid_override\": false", f);
+    }
     fprintf(f,
             ",\n  \"frames_requested\": %d,\n"
             "  \"frames_completed\": %d,\n"
             "  \"sim_steps_per_frame\": %d,\n"
             "  \"save_volume_frames\": %s,\n"
             "  \"save_render_frames\": %s,\n"
+            "  \"save_wind_projection_frames\": %s,\n"
             "  \"skip_present\": %s,\n"
             "  \"output_policy\": \"%s\",\n"
             "  \"result_code\": %d,\n"
-            "  \"status\": \"%s\"\n",
+            "  \"status\": \"%s\"",
             opts->frames,
             result_code == 0 ? opts->frames : 0,
             opts->sim_steps_per_frame,
             opts->save_volume_frames ? "true" : "false",
             opts->save_render_frames ? "true" : "false",
+            opts->save_wind_projection_frames ? "true" : "false",
             opts->skip_present ? "true" : "false",
             output_policy_label(opts->output_policy),
             result_code,
             result_code == 0 ? "passed" : (result_code == 2 ? "canceled" : "failed"));
+    if (backend_report && backend_report->wind_analysis_available) {
+        fprintf(f,
+                ",\n  \"wind_analysis\": {\n"
+                "    \"schema\": \"physics_sim_wind_analysis_v1\",\n"
+                "    \"sampled_cells\": %zu,\n"
+                "    \"pressure_delta\": %.9g,\n"
+                "    \"inlet_pressure_avg\": %.9g,\n"
+                "    \"outlet_pressure_avg\": %.9g,\n"
+                "    \"inlet_throughput\": %.9g,\n"
+                "    \"outlet_throughput\": %.9g,\n"
+                "    \"throughput_delta\": %.9g,\n"
+                "    \"drag_pressure_proxy\": %.9g,\n"
+                "    \"vorticity_avg\": %.9g,\n"
+                "    \"vorticity_max\": %.9g\n"
+                "  }\n",
+                backend_report->wind_analysis_sampled_cells,
+                backend_report->wind_analysis_pressure_delta,
+                backend_report->wind_analysis_inlet_pressure_avg,
+                backend_report->wind_analysis_outlet_pressure_avg,
+                backend_report->wind_analysis_inlet_throughput,
+                backend_report->wind_analysis_outlet_throughput,
+                backend_report->wind_analysis_throughput_delta,
+                backend_report->wind_analysis_drag_pressure_proxy,
+                backend_report->wind_analysis_vorticity_avg,
+                backend_report->wind_analysis_vorticity_max);
+    } else {
+        fputc('\n', f);
+    }
     fputs("}\n", f);
     return fclose(f) == 0;
 }
@@ -399,9 +706,13 @@ int main(int argc, char **argv) {
     PhysicsSimHeadlessCliOptions opts;
     char summary_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
     char progress_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
+    char wind_shot_manifest_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
+    char wind_analysis_timeseries_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
     PhysicsSimHeadlessProgressSink progress_sink;
+    PhysicsSimHeadlessWindAnalysisSink wind_analysis_sink;
     PhysicsSimHeadlessCancelProbe cancel_probe;
     HeadlessProgressInfo initial_progress = {0};
+    SimRuntimeBackendReport final_backend_report = {0};
     if (!parse_args(argc, argv, &opts)) {
         print_usage(argv[0]);
         return 2;
@@ -448,8 +759,42 @@ int main(int argc, char **argv) {
         return 1;
     }
     opts.progress_path = progress_path;
+    if (!join_path(wind_shot_manifest_path,
+                   sizeof(wind_shot_manifest_path),
+                   opts.output_root,
+                   "wind_shot_manifest.json")) {
+        fprintf(stderr, "[physics_sim_headless] ERROR: default wind shot manifest path too long\n");
+        return 1;
+    }
+    if (!join_path(wind_analysis_timeseries_path,
+                   sizeof(wind_analysis_timeseries_path),
+                   opts.output_root,
+                   "wind_analysis_timeseries.jsonl")) {
+        fprintf(stderr, "[physics_sim_headless] ERROR: default wind analysis timeseries path too long\n");
+        return 1;
+    }
+    if (!write_wind_shot_manifest(wind_shot_manifest_path,
+                                  wind_analysis_timeseries_path,
+                                  summary_path,
+                                  progress_path,
+                                  &opts)) {
+        fprintf(stderr,
+                "[physics_sim_headless] ERROR: failed to write wind shot manifest: %s\n",
+                wind_shot_manifest_path);
+        return 1;
+    }
+    if (!reset_wind_analysis_timeseries(wind_analysis_timeseries_path)) {
+        fprintf(stderr,
+                "[physics_sim_headless] ERROR: failed to initialize wind analysis timeseries: %s\n",
+                wind_analysis_timeseries_path);
+        return 1;
+    }
     progress_sink = (PhysicsSimHeadlessProgressSink){
         .progress_path = progress_path,
+        .opts = &opts
+    };
+    wind_analysis_sink = (PhysicsSimHeadlessWindAnalysisSink){
+        .timeseries_path = wind_analysis_timeseries_path,
         .opts = &opts
     };
     cancel_probe = (PhysicsSimHeadlessCancelProbe){
@@ -473,6 +818,11 @@ int main(int argc, char **argv) {
     cfg.headless_skip_present = opts.skip_present;
     cfg.save_volume_frames = opts.save_volume_frames;
     cfg.save_render_frames = opts.save_render_frames;
+    if (opts.grid_override) {
+        cfg.grid_w = opts.grid_w;
+        cfg.grid_h = opts.grid_h;
+        cfg.grid_d = opts.grid_d;
+    }
     snprintf(cfg.headless_output_dir, sizeof(cfg.headless_output_dir), "%s", opts.output_root);
 
     const FluidScenePreset *base_preset = scene_presets_get_default();
@@ -497,7 +847,12 @@ int main(int argc, char **argv) {
         .progress_callback = progress_callback,
         .progress_user_data = &progress_sink,
         .cancel_requested = cancel_requested_callback,
-        .cancel_user_data = &cancel_probe
+        .cancel_user_data = &cancel_probe,
+        .frame_analysis_callback = wind_analysis_frame_callback,
+        .frame_analysis_user_data = &wind_analysis_sink,
+        .wind_shot_camera_profile = opts.wind_shot_camera_profile,
+        .save_wind_projection_frames = opts.save_wind_projection_frames,
+        .final_backend_report = &final_backend_report
     };
 
     int result = scene_controller_run(&cfg,
@@ -506,7 +861,7 @@ int main(int argc, char **argv) {
                                       &shape_library,
                                       opts.output_root,
                                       &headless);
-    if (!write_run_summary(summary_path, &opts, result)) {
+    if (!write_run_summary(summary_path, &opts, &final_backend_report, result)) {
         fprintf(stderr, "[physics_sim_headless] ERROR: failed to write summary: %s\n", summary_path);
         result = result == 0 ? 1 : result;
     }

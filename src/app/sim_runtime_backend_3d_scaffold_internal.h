@@ -10,6 +10,7 @@
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
 #include "app/sim_runtime_backend.h"
+#include "app/wind_tunnel_3d.h"
 #include "core_sim.h"
 
 typedef struct SimRuntimeBackend3DScaffold {
@@ -32,6 +33,8 @@ typedef struct SimRuntimeBackend3DScaffold {
     float scene_up_y;
     float scene_up_z;
     PhysicsSimRuntimeSceneUpSource scene_up_source;
+    bool wind_tunnel_active;
+    WindTunnel3DConfig wind_tunnel;
     bool debug_volume_stats_dirty;
     bool export_volume_cache_dirty;
     bool runtime_solver_region_guard_triggered;
@@ -145,6 +148,7 @@ bool backend_3d_scaffold_obstacle_fill_slice_xy(const SimRuntimeBackend3DScaffol
                                                 size_t out_cell_count);
 size_t backend_3d_scaffold_obstacle_solid_cell_count(const SimRuntimeBackend3DScaffold *state);
 bool backend_3d_scaffold_ensure_export_cache(SimRuntimeBackend3DScaffold *state);
+void backend_3d_scaffold_mark_fluid_dirty(SimRuntimeBackend3DScaffold *state);
 void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DScaffold *state);
 void backend_3d_scaffold_clear_obstacle_bricks(SimRuntimeBackend3DScaffold *state);
 void backend_3d_scaffold_mark_obstacles_dirty(SimRuntimeBackend *backend);
@@ -152,6 +156,8 @@ void backend_3d_scaffold_rasterize_dynamic_obstacles(SimRuntimeBackend *backend,
                                                      struct SceneState *scene);
 void backend_3d_scaffold_enforce_boundary_flows(SimRuntimeBackend *backend,
                                                 struct SceneState *scene);
+void backend_3d_scaffold_apply_wind_tunnel_boundary(SimRuntimeBackend3DScaffold *state,
+                                                    const struct SceneState *scene);
 void backend_3d_scaffold_enforce_obstacles(SimRuntimeBackend *backend,
                                            struct SceneState *scene);
 bool backend_3d_scaffold_get_obstacle_view_2d(const SimRuntimeBackend *backend,

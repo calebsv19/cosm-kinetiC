@@ -3,6 +3,7 @@
 #include "app/scene_state.h"
 #include "app/sim_runtime_3d_solver_core_sim.h"
 
+#include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,12 +50,358 @@ static bool backend_3d_scaffold_region_cell_count(const SimRuntime3DBrickRegion 
     return true;
 }
 
+static void backend_3d_scaffold_expand_region_for_wind_corridor(
+    const SimRuntimeBackend3DScaffold *state,
+    SimRuntime3DBrickRegion *region) {
+    if (!state || !region || !state->wind_tunnel_active ||
+        !wind_tunnel_3d_config_validate(&state->wind_tunnel)) {
+        return;
+    }
+
+    switch (state->wind_tunnel.inlet_face) {
+    case WIND_TUNNEL_3D_FACE_LEFT:
+    case WIND_TUNNEL_3D_FACE_RIGHT:
+        if (state->wind_tunnel.outlet_face == WIND_TUNNEL_3D_FACE_LEFT ||
+            state->wind_tunnel.outlet_face == WIND_TUNNEL_3D_FACE_RIGHT) {
+            region->min_x = 0;
+            region->max_x = state->volume.desc.grid_w - 1;
+            region->min_y = 0;
+            region->max_y = state->volume.desc.grid_h - 1;
+            region->min_z = 0;
+            region->max_z = state->volume.desc.grid_d - 1;
+        }
+        break;
+    case WIND_TUNNEL_3D_FACE_BOTTOM:
+    case WIND_TUNNEL_3D_FACE_TOP:
+        if (state->wind_tunnel.outlet_face == WIND_TUNNEL_3D_FACE_BOTTOM ||
+            state->wind_tunnel.outlet_face == WIND_TUNNEL_3D_FACE_TOP) {
+            region->min_x = 0;
+            region->max_x = state->volume.desc.grid_w - 1;
+            region->min_y = 0;
+            region->max_y = state->volume.desc.grid_h - 1;
+            region->min_z = 0;
+            region->max_z = state->volume.desc.grid_d - 1;
+        }
+        break;
+    case WIND_TUNNEL_3D_FACE_FRONT:
+    case WIND_TUNNEL_3D_FACE_BACK:
+        if (state->wind_tunnel.outlet_face == WIND_TUNNEL_3D_FACE_FRONT ||
+            state->wind_tunnel.outlet_face == WIND_TUNNEL_3D_FACE_BACK) {
+            region->min_x = 0;
+            region->max_x = state->volume.desc.grid_w - 1;
+            region->min_y = 0;
+            region->max_y = state->volume.desc.grid_h - 1;
+            region->min_z = 0;
+            region->max_z = state->volume.desc.grid_d - 1;
+        }
+        break;
+    case WIND_TUNNEL_3D_FACE_NONE:
+    default:
+        break;
+    }
+}
+
 static bool backend_3d_scaffold_regions_overlap(const SimRuntime3DBrickRegion *a,
                                                 const SimRuntime3DBrickRegion *b) {
     if (!a || !b) return false;
     return !(a->max_x < b->min_x || b->max_x < a->min_x ||
              a->max_y < b->min_y || b->max_y < a->min_y ||
              a->max_z < b->min_z || b->max_z < a->min_z);
+}
+
+static bool backend_3d_scaffold_wind_carrier_velocity(const SimRuntimeBackend3DScaffold *state,
+                                                      float *out_vx,
+                                                      float *out_vy,
+                                                      float *out_vz) {
+    float speed = 0.0f;
+    if (out_vx) *out_vx = 0.0f;
+    if (out_vy) *out_vy = 0.0f;
+    if (out_vz) *out_vz = 0.0f;
+    if (!state || !state->wind_tunnel_active ||
+        !wind_tunnel_3d_config_validate(&state->wind_tunnel)) {
+        return false;
+    }
+    speed = state->wind_tunnel.inflow_speed;
+    switch (state->wind_tunnel.inlet_face) {
+    case WIND_TUNNEL_3D_FACE_LEFT:
+        if (state->wind_tunnel.outlet_face != WIND_TUNNEL_3D_FACE_RIGHT) return false;
+        if (out_vx) *out_vx = speed;
+        return true;
+    case WIND_TUNNEL_3D_FACE_RIGHT:
+        if (state->wind_tunnel.outlet_face != WIND_TUNNEL_3D_FACE_LEFT) return false;
+        if (out_vx) *out_vx = -speed;
+        return true;
+    case WIND_TUNNEL_3D_FACE_BOTTOM:
+        if (state->wind_tunnel.outlet_face != WIND_TUNNEL_3D_FACE_TOP) return false;
+        if (out_vy) *out_vy = speed;
+        return true;
+    case WIND_TUNNEL_3D_FACE_TOP:
+        if (state->wind_tunnel.outlet_face != WIND_TUNNEL_3D_FACE_BOTTOM) return false;
+        if (out_vy) *out_vy = -speed;
+        return true;
+    case WIND_TUNNEL_3D_FACE_FRONT:
+        if (state->wind_tunnel.outlet_face != WIND_TUNNEL_3D_FACE_BACK) return false;
+        if (out_vz) *out_vz = speed;
+        return true;
+    case WIND_TUNNEL_3D_FACE_BACK:
+        if (state->wind_tunnel.outlet_face != WIND_TUNNEL_3D_FACE_FRONT) return false;
+        if (out_vz) *out_vz = -speed;
+        return true;
+    case WIND_TUNNEL_3D_FACE_NONE:
+    default:
+        return false;
+    }
+}
+
+static bool backend_3d_scaffold_wind_axis(float vx,
+                                          float vy,
+                                          float vz,
+                                          int *out_axis,
+                                          int *out_sign,
+                                          float *out_speed) {
+    float ax = fabsf(vx);
+    float ay = fabsf(vy);
+    float az = fabsf(vz);
+    int axis = 0;
+    float speed = ax;
+    float value = vx;
+    if (ay > speed) {
+        axis = 1;
+        speed = ay;
+        value = vy;
+    }
+    if (az > speed) {
+        axis = 2;
+        speed = az;
+        value = vz;
+    }
+    if (speed <= 0.0f) return false;
+    if (out_axis) *out_axis = axis;
+    if (out_sign) *out_sign = value >= 0.0f ? 1 : -1;
+    if (out_speed) *out_speed = speed;
+    return true;
+}
+
+static bool backend_3d_scaffold_solver_solid_at(const SimRuntime3DVolume *volume,
+                                                const uint8_t *solid_mask,
+                                                int x,
+                                                int y,
+                                                int z) {
+    if (!volume || !solid_mask) return false;
+    if (x < 0 || x >= volume->desc.grid_w ||
+        y < 0 || y >= volume->desc.grid_h ||
+        z < 0 || z >= volume->desc.grid_d) {
+        return false;
+    }
+    return solid_mask[sim_runtime_3d_volume_index(&volume->desc, x, y, z)] != 0u;
+}
+
+static void backend_3d_scaffold_apply_wind_wake_modifier(const SimRuntime3DVolume *volume,
+                                                         const uint8_t *solid_mask,
+                                                         int x,
+                                                         int y,
+                                                         int z,
+                                                         int axis,
+                                                         int sign,
+                                                         float speed,
+                                                         float *io_vx,
+                                                         float *io_vy,
+                                                         float *io_vz,
+                                                         float *io_pressure) {
+    float velocity_scale = 1.0f;
+    float swirl_a = 0.0f;
+    float swirl_b = 0.0f;
+    float pressure_lift = 0.0f;
+    if (!volume || !solid_mask || !io_vx || !io_vy || !io_vz || speed <= 0.0f) return;
+
+    for (int depth = 1; depth <= 5; ++depth) {
+        int upstream_x = x;
+        int upstream_y = y;
+        int upstream_z = z;
+        if (axis == 0) upstream_x -= sign * depth;
+        if (axis == 1) upstream_y -= sign * depth;
+        if (axis == 2) upstream_z -= sign * depth;
+        for (int offset_b = -2; offset_b <= 2; ++offset_b) {
+            for (int offset_a = -2; offset_a <= 2; ++offset_a) {
+                int sx = upstream_x;
+                int sy = upstream_y;
+                int sz = upstream_z;
+                int abs_a = abs(offset_a);
+                int abs_b = abs(offset_b);
+                int max_abs = abs_a > abs_b ? abs_a : abs_b;
+                float depth_weight = (float)(6 - depth) / 5.0f;
+                float lateral_weight = (float)(3 - max_abs) / 3.0f;
+                float influence = 0.0f;
+                int vortex_a = offset_a;
+                int vortex_b = offset_b;
+                if (lateral_weight <= 0.0f) continue;
+                if (axis == 0) {
+                    sy += offset_a;
+                    sz += offset_b;
+                } else if (axis == 1) {
+                    sx += offset_a;
+                    sz += offset_b;
+                } else {
+                    sx += offset_a;
+                    sy += offset_b;
+                }
+                if (!backend_3d_scaffold_solver_solid_at(volume, solid_mask, sx, sy, sz)) continue;
+                influence = depth_weight * lateral_weight;
+                {
+                    float candidate_scale = 1.0f - 0.78f * influence;
+                    if (candidate_scale < velocity_scale) velocity_scale = candidate_scale;
+                }
+                if (vortex_a == 0 && vortex_b == 0) {
+                    vortex_a = ((x + y + z + depth) & 1) ? 1 : -1;
+                    vortex_b = ((x + z + depth) & 1) ? -1 : 1;
+                }
+                swirl_a += (float)(-vortex_b) * influence;
+                swirl_b += (float)(vortex_a) * influence;
+                pressure_lift += influence;
+            }
+        }
+    }
+
+    if (velocity_scale >= 0.999f && fabsf(swirl_a) < 0.0001f && fabsf(swirl_b) < 0.0001f) return;
+    if (velocity_scale < 0.12f) velocity_scale = 0.12f;
+    if (axis == 0) {
+        *io_vx *= velocity_scale;
+        *io_vy += swirl_a * speed * 0.12f;
+        *io_vz += swirl_b * speed * 0.12f;
+    } else if (axis == 1) {
+        *io_vy *= velocity_scale;
+        *io_vx += swirl_a * speed * 0.12f;
+        *io_vz += swirl_b * speed * 0.12f;
+    } else {
+        *io_vz *= velocity_scale;
+        *io_vx += swirl_a * speed * 0.12f;
+        *io_vy += swirl_b * speed * 0.12f;
+    }
+    if (io_pressure && pressure_lift > 0.0f) {
+        *io_pressure += pressure_lift * speed * speed * 0.0015f;
+    }
+}
+
+static void backend_3d_scaffold_apply_wind_carrier_transport(SimRuntimeBackend3DScaffold *state,
+                                                             double dt) {
+    float vx = 0.0f;
+    float vy = 0.0f;
+    float vz = 0.0f;
+    float voxel_size = 1.0f;
+    float dt_cells = 0.0f;
+    int wind_axis = 0;
+    int wind_sign = 1;
+    float wind_speed = 0.0f;
+    if (!state || !state->solver_volume.density || !state->solver_scratch.density_prev ||
+        !backend_3d_scaffold_wind_carrier_velocity(state, &vx, &vy, &vz) || dt <= 0.0) {
+        return;
+    }
+    if (!backend_3d_scaffold_wind_axis(vx, vy, vz, &wind_axis, &wind_sign, &wind_speed)) return;
+    voxel_size = state->solver_volume.desc.voxel_size > 0.0f
+                     ? state->solver_volume.desc.voxel_size
+                     : 1.0f;
+    dt_cells = (float)dt / voxel_size;
+    if (state->runtime_solver_max_velocity_displacement_cells_limit > 0.0f) {
+        float max_displacement = state->runtime_solver_max_velocity_displacement_cells_limit;
+        float dx = vx * dt_cells;
+        float dy = vy * dt_cells;
+        float dz = vz * dt_cells;
+        float displacement_sq = dx * dx + dy * dy + dz * dz;
+        if (displacement_sq > max_displacement * max_displacement && displacement_sq > 0.0f) {
+            float scale = max_displacement / sqrtf(displacement_sq);
+            vx *= scale;
+            vy *= scale;
+            vz *= scale;
+        }
+    }
+
+    memcpy(state->solver_scratch.density_prev,
+           state->solver_volume.density,
+           state->solver_volume.desc.cell_count * sizeof(float));
+
+    for (int z = 0; z < state->solver_volume.desc.grid_d; ++z) {
+        for (int y = 0; y < state->solver_volume.desc.grid_h; ++y) {
+            for (int x = 0; x < state->solver_volume.desc.grid_w; ++x) {
+                size_t idx = sim_runtime_3d_volume_index(&state->solver_volume.desc, x, y, z);
+                float cell_vx = vx;
+                float cell_vy = vy;
+                float cell_vz = vz;
+                float cell_pressure = state->solver_volume.pressure[idx];
+                float sample_x = 0.0f;
+                float sample_y = 0.0f;
+                float sample_z = 0.0f;
+                if (state->solver_solid_mask && state->solver_solid_mask[idx]) {
+                    state->solver_volume.density[idx] = 0.0f;
+                    state->solver_volume.velocity_x[idx] = 0.0f;
+                    state->solver_volume.velocity_y[idx] = 0.0f;
+                    state->solver_volume.velocity_z[idx] = 0.0f;
+                    continue;
+                }
+                backend_3d_scaffold_apply_wind_wake_modifier(&state->solver_volume,
+                                                             state->solver_solid_mask,
+                                                             x,
+                                                             y,
+                                                             z,
+                                                             wind_axis,
+                                                             wind_sign,
+                                                             wind_speed,
+                                                             &cell_vx,
+                                                             &cell_vy,
+                                                             &cell_vz,
+                                                             &cell_pressure);
+                sample_x = (float)x - cell_vx * dt_cells;
+                sample_y = (float)y - cell_vy * dt_cells;
+                sample_z = (float)z - cell_vz * dt_cells;
+                state->solver_volume.density[idx] =
+                    sim_runtime_3d_sample_field_trilinear(state->solver_scratch.density_prev,
+                                                          &state->solver_volume.desc,
+                                                          sample_x,
+                                                          sample_y,
+                                                          sample_z);
+                state->solver_volume.velocity_x[idx] = cell_vx;
+                state->solver_volume.velocity_y[idx] = cell_vy;
+                state->solver_volume.velocity_z[idx] = cell_vz;
+                state->solver_volume.pressure[idx] = cell_pressure;
+            }
+        }
+    }
+
+    {
+        int slab = state->wind_tunnel.inlet_slab_cells > 0
+                       ? state->wind_tunnel.inlet_slab_cells
+                       : 1;
+        int min_x = 0;
+        int max_x = state->solver_volume.desc.grid_w;
+        int min_y = 0;
+        int max_y = state->solver_volume.desc.grid_h;
+        int min_z = 0;
+        int max_z = state->solver_volume.desc.grid_d;
+        if (state->wind_tunnel.inlet_face == WIND_TUNNEL_3D_FACE_LEFT) {
+            if (slab < max_x) max_x = slab;
+        } else if (state->wind_tunnel.inlet_face == WIND_TUNNEL_3D_FACE_RIGHT) {
+            if (slab < max_x) min_x = max_x - slab;
+        } else if (state->wind_tunnel.inlet_face == WIND_TUNNEL_3D_FACE_BOTTOM) {
+            if (slab < max_y) max_y = slab;
+        } else if (state->wind_tunnel.inlet_face == WIND_TUNNEL_3D_FACE_TOP) {
+            if (slab < max_y) min_y = max_y - slab;
+        } else if (state->wind_tunnel.inlet_face == WIND_TUNNEL_3D_FACE_FRONT) {
+            if (slab < max_z) max_z = slab;
+        } else if (state->wind_tunnel.inlet_face == WIND_TUNNEL_3D_FACE_BACK) {
+            if (slab < max_z) min_z = max_z - slab;
+        }
+        for (int z = min_z; z < max_z; ++z) {
+            for (int y = min_y; y < max_y; ++y) {
+                for (int x = min_x; x < max_x; ++x) {
+                    size_t idx = sim_runtime_3d_volume_index(&state->solver_volume.desc, x, y, z);
+                    if (state->solver_solid_mask && state->solver_solid_mask[idx]) continue;
+                    state->solver_volume.density[idx] = state->wind_tunnel.inflow_density;
+                    state->solver_volume.velocity_x[idx] = vx;
+                    state->solver_volume.velocity_y[idx] = vy;
+                    state->solver_volume.velocity_z[idx] = vz;
+                }
+            }
+        }
+    }
 }
 
 static void backend_3d_scaffold_region_union(SimRuntime3DBrickRegion *dst,
@@ -299,6 +646,8 @@ bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
                                                                     &clusters[i].solver_region,
                                                                     SCAFFOLD_SOLVER_OBSTACLE_BRICK_MARGIN);
         backend_3d_scaffold_region_align_to_bricks(state, &clusters[i].solver_region);
+        backend_3d_scaffold_expand_region_for_wind_corridor(state, &clusters[i].solver_region);
+        backend_3d_scaffold_region_align_to_bricks(state, &clusters[i].solver_region);
         if (!backend_3d_scaffold_region_cell_count(&clusters[i].solver_region,
                                                    &solver_region_cell_count)) {
             return false;
@@ -389,6 +738,7 @@ bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
                     solver_metrics.max_abs_divergence_after_project;
             }
         }
+        backend_3d_scaffold_apply_wind_carrier_transport(state, dt);
         if (!sim_runtime_3d_brick_store_commit_region(&state->brick_store,
                                                       &clusters[i].solver_region,
                                                       &state->solver_volume)) {

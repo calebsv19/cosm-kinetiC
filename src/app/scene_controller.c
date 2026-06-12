@@ -31,11 +31,67 @@
 #include "export/export_paths.h"
 #include "export/volume_frames.h"
 #include "export/render_frames.h"
+#include "export/wind_projection_frames.h"
 #include "timing.h"
 #include "timer_hud/time_scope.h"
 
 static bool scene_controller_retained_runtime_view_active(const SceneState *scene) {
     return retained_runtime_scene_overlay_active(scene);
+}
+
+static bool scene_controller_wind_shot_camera_profile(
+    HeadlessWindShotCameraProfile profile,
+    float *out_yaw_deg,
+    float *out_pitch_deg,
+    float *out_distance_scale) {
+    if (!out_yaw_deg || !out_pitch_deg || !out_distance_scale) return false;
+    switch (profile) {
+        case HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER:
+            *out_yaw_deg = -38.0f;
+            *out_pitch_deg = 22.0f;
+            *out_distance_scale = 1.08f;
+            return true;
+        case HEADLESS_WIND_SHOT_CAMERA_SIDE:
+            *out_yaw_deg = 0.0f;
+            *out_pitch_deg = 12.0f;
+            *out_distance_scale = 1.08f;
+            return true;
+        case HEADLESS_WIND_SHOT_CAMERA_TOP:
+            *out_yaw_deg = 0.0f;
+            *out_pitch_deg = 82.0f;
+            *out_distance_scale = 1.16f;
+            return true;
+        case HEADLESS_WIND_SHOT_CAMERA_DOWNSTREAM:
+            *out_yaw_deg = -90.0f;
+            *out_pitch_deg = 14.0f;
+            *out_distance_scale = 1.12f;
+            return true;
+        case HEADLESS_WIND_SHOT_CAMERA_RUNTIME_DEFAULT:
+        default:
+            return false;
+    }
+}
+
+static bool scene_controller_apply_wind_shot_camera(SceneState *scene,
+                                                    const HeadlessOptions *headless) {
+    float yaw_deg = 0.0f;
+    float pitch_deg = 0.0f;
+    float distance_scale = 1.0f;
+    if (!scene || !headless) return false;
+    if (!scene_controller_wind_shot_camera_profile(headless->wind_shot_camera_profile,
+                                                   &yaw_deg,
+                                                   &pitch_deg,
+                                                   &distance_scale)) {
+        return false;
+    }
+    scene->runtime_viewport.orbit_yaw_deg = yaw_deg;
+    scene->runtime_viewport.orbit_pitch_deg = pitch_deg;
+    if (distance_scale > 0.0f && isfinite(distance_scale)) {
+        scene->runtime_viewport.orbit_distance *= distance_scale;
+    }
+    scene->runtime_viewport.navigation_active = false;
+    scene->runtime_viewport.navigation_mode = SCENE_EDITOR_VIEWPORT_NAV_NONE;
+    return true;
 }
 
 static void scene_controller_runtime_pointer_down(void *user,
@@ -422,7 +478,8 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
     const AppConfig *cfg,
     const SceneControllerUpdateFrame *update_frame,
     bool headless_mode,
-    bool skip_present) {
+    bool skip_present,
+    bool save_wind_projection_frames) {
     SceneControllerRenderDeriveFrame frame = {0};
     const char *quality_label = NULL;
     SimRuntimeBackendReport backend_report = {0};
@@ -446,8 +503,10 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
     frame.headless_mode = headless_mode;
     frame.frame_index = update_frame->frame_index;
     frame.invalidation_reason_bits = update_frame->invalidation_reason_bits;
+    frame.backend_report = backend_report;
     frame.should_save_volume_frames = cfg->save_volume_frames;
     frame.should_save_render_frames = cfg->save_render_frames;
+    frame.should_save_wind_projection_frames = save_wind_projection_frames;
     frame.should_present = !headless_mode || !skip_present;
 
     frame.hud = (RendererHudInfo){
@@ -549,6 +608,14 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .backend_emitter_step_last_footprint_cells = backend_report.emitter_step_last_footprint_cells,
         .backend_emitter_step_density_delta = backend_report.emitter_step_density_delta,
         .backend_emitter_step_velocity_magnitude_delta = backend_report.emitter_step_velocity_magnitude_delta,
+        .backend_wind_analysis_available = backend_report.wind_analysis_available,
+        .backend_wind_analysis_sampled_cells = backend_report.wind_analysis_sampled_cells,
+        .backend_wind_analysis_pressure_delta = backend_report.wind_analysis_pressure_delta,
+        .backend_wind_analysis_inlet_throughput = backend_report.wind_analysis_inlet_throughput,
+        .backend_wind_analysis_outlet_throughput = backend_report.wind_analysis_outlet_throughput,
+        .backend_wind_analysis_drag_pressure_proxy = backend_report.wind_analysis_drag_pressure_proxy,
+        .backend_wind_analysis_vorticity_avg = backend_report.wind_analysis_vorticity_avg,
+        .backend_wind_analysis_vorticity_max = backend_report.wind_analysis_vorticity_max,
         .tunnel_inflow_speed = cfg->tunnel_inflow_speed,
         .vorticity_enabled = renderer_sdl_vorticity_enabled(),
         .pressure_enabled = renderer_sdl_pressure_enabled(),
@@ -573,7 +640,10 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .physics_substeps = cfg->physics_substeps
     };
 
-    if (frame.should_save_volume_frames || frame.should_save_render_frames || frame.should_present) {
+    if (frame.should_save_volume_frames ||
+        frame.should_save_wind_projection_frames ||
+        frame.should_save_render_frames ||
+        frame.should_present) {
         frame.invalidation_reason_bits |= SCENE_CONTROLLER_INVALIDATION_RENDER_OUTPUT;
     }
 
@@ -582,6 +652,7 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
 
 static void scene_controller_render_submit_phase(const SceneState *scene,
                                                  const SceneControllerRenderDeriveFrame *derive_frame,
+                                                 bool renderer_available,
                                                  bool *io_running,
                                                  bool *io_aborted) {
     if (!scene || !derive_frame || !derive_frame->valid || !io_running || !io_aborted) {
@@ -591,8 +662,12 @@ static void scene_controller_render_submit_phase(const SceneState *scene,
     if (derive_frame->should_save_volume_frames) {
         volume_frames_write(scene, derive_frame->frame_index);
     }
+    if (derive_frame->should_save_wind_projection_frames) {
+        wind_projection_frames_write_bmp(scene, derive_frame->frame_index);
+    }
 
     if ((derive_frame->should_save_render_frames || derive_frame->should_present) &&
+        renderer_available &&
         renderer_sdl_render_scene(scene)) {
         if (derive_frame->should_save_render_frames) {
             uint8_t *pixels = NULL;
@@ -608,6 +683,12 @@ static void scene_controller_render_submit_phase(const SceneState *scene,
         }
         if (derive_frame->should_present) {
             renderer_sdl_present_with_hud(&derive_frame->hud);
+        }
+    } else if (derive_frame->should_save_render_frames && !derive_frame->should_present) {
+        if (!wind_projection_frames_write_render_fallback_bmp(scene, derive_frame->frame_index)) {
+            fprintf(stderr,
+                    "[scene] Failed to write headless render-frame fallback for frame %llu.\n",
+                    (unsigned long long)derive_frame->frame_index);
         }
     }
 
@@ -633,8 +714,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
     bool headless_mode = headless && headless->enabled;
     bool renderer_required = !headless_mode ||
                              !headless ||
-                             !headless->skip_present ||
-                             cfg.save_render_frames;
+                             !headless->skip_present;
     Uint32 sdl_init_flags = SDL_INIT_TIMER | (renderer_required ? SDL_INIT_VIDEO : 0u);
     bool sdl_initialized = false;
     if ((SDL_WasInit(sdl_init_flags) & sdl_init_flags) != sdl_init_flags) {
@@ -699,6 +779,9 @@ int scene_controller_run(const AppConfig *initial_cfg,
         (void)scene_load_runtime_visual_bootstrap(&scene,
                                                   runtime_launch->retained_runtime_scene_path);
         (void)retained_runtime_scene_overlay_frame_view(&scene, cfg.window_w, cfg.window_h);
+        if (headless_mode && headless) {
+            (void)scene_controller_apply_wind_shot_camera(&scene, headless);
+        }
     }
     if (cfg.sim_mode == SIM_MODE_ATMOSPHERIC &&
         mode_route.requested_space_mode == SPACE_MODE_3D &&
@@ -869,11 +952,23 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                                 &cfg,
                                                 &update_frame,
                                                 headless_mode,
-                                                headless_mode && headless && headless->skip_present);
+                                                headless_mode && headless && headless->skip_present,
+                                                headless_mode && headless &&
+                                                    headless->save_wind_projection_frames);
         uint64_t derive_end = SDL_GetPerformanceCounter();
 
-        scene_controller_render_submit_phase(&scene, &derive_frame, &running, &aborted);
+        scene_controller_render_submit_phase(&scene,
+                                             &derive_frame,
+                                             renderer_required,
+                                             &running,
+                                             &aborted);
         uint64_t submit_end = SDL_GetPerformanceCounter();
+
+        if (headless_mode && headless && headless->frame_analysis_callback && derive_frame.valid) {
+            headless->frame_analysis_callback(headless->frame_analysis_user_data,
+                                              derive_frame.frame_index,
+                                              &derive_frame.backend_report);
+        }
 
         {
             uint64_t derive_ns = 0;
@@ -946,6 +1041,9 @@ int scene_controller_run(const AppConfig *initial_cfg,
         ts_frame_end();
     }
 
+    if (headless_mode && headless && headless->final_backend_report) {
+        (void)scene_backend_report(&scene, headless->final_backend_report);
+    }
     scene_destroy(&scene);
     stroke_sampler_shutdown(&sampler);
     command_bus_shutdown(&bus);

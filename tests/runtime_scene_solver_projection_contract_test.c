@@ -612,6 +612,66 @@ static bool test_solver_projection_scene_domain_falls_back_to_retained_bounds(vo
     return true;
 }
 
+static bool test_solver_projection_wind_tunnel_overlay_selects_wind_3d(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_solver_projection_wind_tunnel\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{"
+          "\"physics_sim\":{"
+            "\"wind_tunnel\":{"
+              "\"active\":true,"
+              "\"inlet_face\":\"Front\","
+              "\"outlet_face\":\"Back\","
+              "\"inflow_speed\":18.5,"
+              "\"inflow_density\":0.75,"
+              "\"inlet_slab_cells\":2,"
+              "\"outlet_policy\":\"Receive\","
+              "\"wall_policy\":\"NoSlip\""
+            "}"
+          "}"
+        "}"
+        "}";
+    json_object *root = json_tokener_parse(runtime_json);
+    RuntimeSceneBridgePreflight summary = {0};
+    PhysicsSimRetainedRuntimeScene retained = {0};
+    AppConfig cfg = app_config_default();
+    const FluidScenePreset *base = scene_presets_get_default();
+    FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
+    bool ok = false;
+    if (!root || !json_object_is_type(root, json_type_object)) {
+        if (root) json_object_put(root);
+        return false;
+    }
+
+    retained.root.space_mode_default = CORE_SCENE_SPACE_MODE_3D;
+    retained.root.world_scale = 1.0;
+    cfg.sim_mode = SIM_MODE_BOX;
+    cfg.space_mode = SPACE_MODE_2D;
+
+    ok = runtime_scene_solver_projection_apply_runtime(&retained, root, &cfg, &preset, &summary);
+    json_object_put(root);
+    if (!ok) return false;
+
+    if (cfg.sim_mode != SIM_MODE_WIND_TUNNEL) return false;
+    if (cfg.space_mode != SPACE_MODE_3D) return false;
+    if (fabsf(cfg.tunnel_inflow_speed - 18.5f) > 1e-6f) return false;
+    if (fabsf(cfg.tunnel_inflow_density - 0.75f) > 1e-6f) return false;
+    if (preset.dimension_mode != SCENE_DIMENSION_MODE_3D) return false;
+    if (preset.domain != SCENE_DOMAIN_WIND_TUNNEL) return false;
+    return true;
+}
+
 int main(void) {
     if (!test_solver_projection_maps_scaled_runtime_scene()) {
         fprintf(stderr, "runtime_scene_solver_projection_contract_test: scaled runtime mapping failed\n");
@@ -647,6 +707,10 @@ int main(void) {
     }
     if (!test_solver_projection_scene_domain_falls_back_to_retained_bounds()) {
         fprintf(stderr, "runtime_scene_solver_projection_contract_test: retained-bounds fallback failed\n");
+        return 1;
+    }
+    if (!test_solver_projection_wind_tunnel_overlay_selects_wind_3d()) {
+        fprintf(stderr, "runtime_scene_solver_projection_contract_test: wind tunnel overlay failed\n");
         return 1;
     }
     fprintf(stdout, "runtime_scene_solver_projection_contract_test: success\n");

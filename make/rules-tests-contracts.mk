@@ -105,6 +105,9 @@ ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
@@ -136,7 +139,12 @@ ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS := \
 
 SIM_MODE_ROUTE_CONTRACT_TEST_SRCS := \
 	tests/sim_mode_route_contract_test.c \
-	$(SRC_DIR)/app/sim_modes/sim_mode_dispatch.c
+	$(SRC_DIR)/app/sim_modes/sim_mode_dispatch.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c
+
+WIND_TUNNEL_3D_CONTRACT_TEST_SRCS := \
+	tests/wind_tunnel_3d_contract_test.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c
 
 SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS := \
 	tests/sim_runtime_emitter_contract_test.c \
@@ -152,6 +160,9 @@ SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
@@ -176,6 +187,9 @@ SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
@@ -200,6 +214,9 @@ SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
@@ -219,11 +236,43 @@ SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_obstacle.c \
 	$(CORE_SIM_DIR)/src/core_sim.c
 
+SIM_RUNTIME_BACKEND_3D_WIND_TUNNEL_TEST_SRCS := \
+	tests/sim_runtime_backend_3d_wind_tunnel_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
+	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c
+
 SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_retained_obstacle_contract_test.c \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
@@ -254,6 +303,9 @@ SIM_RUNTIME_BACKEND_REPORTING_TEST_SRCS := \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
@@ -348,6 +400,7 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_emitters.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/scene_objects.c \
 	$(SRC_DIR)/app/editor/scene_editor_session.c \
 	$(SRC_DIR)/app/editor/scene_editor_session_overlay_edit.c \
@@ -373,6 +426,7 @@ RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS := \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_emitters.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
@@ -390,6 +444,9 @@ RUNTIME_SCENE_3D_TRUTH_TEST_SRCS := \
 	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
@@ -420,6 +477,7 @@ SCENE_RUNTIME_LAUNCH_PROJECTION_TEST_SRCS := \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_emitters.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
@@ -537,6 +595,13 @@ test-sim-mode-route-contract: $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS)
 		-o $(BUILD_DIR)/sim_mode_route_contract_test $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_mode_route_contract_test
 
+test-wind-tunnel-3d-contract: $(WIND_TUNNEL_3D_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/wind_tunnel_3d_contract_test $(WIND_TUNNEL_3D_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/wind_tunnel_3d_contract_test
+
 test-sim-runtime-emitter-contract: $(SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
@@ -571,6 +636,13 @@ test-sim-runtime-backend-3d-obstacle-contract: $(SIM_RUNTIME_BACKEND_3D_OBSTACLE
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_backend_3d_obstacle_contract_test $(SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_backend_3d_obstacle_contract_test
+
+test-sim-runtime-backend-3d-wind-tunnel-contract: $(SIM_RUNTIME_BACKEND_3D_WIND_TUNNEL_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_backend_3d_wind_tunnel_contract_test $(SIM_RUNTIME_BACKEND_3D_WIND_TUNNEL_TEST_SRCS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_3d_wind_tunnel_contract_test
 
 test-sim-runtime-backend-3d-retained-obstacle-contract: $(SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
@@ -781,6 +853,9 @@ VOLUME_FRAMES_3D_EXPORT_TEST_SRCS := \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
@@ -826,6 +901,9 @@ VOLUME_FRAMES_3D_TINY_PARITY_TEST_SRCS := \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \

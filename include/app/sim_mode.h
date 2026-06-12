@@ -28,6 +28,7 @@ typedef struct SimModeRoute {
     bool backend_uses_canonical_2d_solver;
     bool fallback_to_2d_projection;
     bool constrained_3d_solver_scaffold;
+    bool wind_tunnel_3d_active;
     int  constrained_3d_min_substeps;
     float constrained_3d_buoyancy_scale;
     const SimModeHooks *hooks;

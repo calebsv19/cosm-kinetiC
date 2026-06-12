@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "import/runtime_scene_solver_projection.h"
+#include "app/wind_tunnel_3d.h"
 
 typedef struct SolverProjectionPhysicsOverlay {
     bool found;
@@ -79,6 +80,9 @@ void runtime_scene_solver_projection_apply_space_mode(const PhysicsSimRetainedRu
                                                       FluidScenePreset *in_out_preset);
 bool runtime_scene_solver_projection_overlay_scene_domain(json_object *runtime_root,
                                                           SolverProjectionSceneDomain *out_domain);
+bool runtime_scene_solver_projection_overlay_wind_tunnel(json_object *runtime_root,
+                                                         const AppConfig *base_cfg,
+                                                         WindTunnel3DConfig *out_config);
 void runtime_scene_solver_projection_resolve_xy_domain_mapping(
     const PhysicsSimRetainedRuntimeScene *retained_scene,
     json_object *runtime_root,
@@ -90,6 +94,9 @@ void runtime_scene_solver_projection_apply_scene_domain(
     const PhysicsSimRetainedRuntimeScene *retained_scene,
     json_object *runtime_root,
     FluidScenePreset *in_out_preset);
+void runtime_scene_solver_projection_apply_wind_tunnel(json_object *runtime_root,
+                                                       AppConfig *in_out_cfg,
+                                                       FluidScenePreset *in_out_preset);
 void runtime_scene_solver_projection_apply_objects(const PhysicsSimRetainedRuntimeScene *retained_scene,
                                                    json_object *runtime_root,
                                                    FluidScenePreset *in_out_preset,

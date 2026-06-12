@@ -84,6 +84,11 @@ Public identity:
   - non-empty output roots are rejected unless `--overwrite` is provided
   - skip-present volume-only runs avoid SDL video/renderer initialization
   - `--save-render-frames` and `--present` still require the existing renderer path
+  - Wind long-tunnel visual proof:
+    `make -C physics_sim test-physics-sim-headless-wind-long-tunnel-visual`
+    validates the authored long-box tunnel fixture, nonblank and changing
+    analyzer projection frames, final Wind metrics, and records any
+    display/Vulkan blocker for renderer-frame capture
 - detached supervision is now current for the same lane:
   - `make -C physics_sim physics-sim-job-runner`
   - `physics_sim/physics_sim_job_runner submit --request <request.json>`

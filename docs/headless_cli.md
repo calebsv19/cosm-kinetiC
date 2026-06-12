@@ -20,6 +20,7 @@ physics_sim/physics_sim_headless \
   --runtime-scene _private_workspace_artifacts/agent_runs/physics_trio/<scene_slug>/line_drawing/scene_runtime.json \
   --frames 100 \
   --sim-steps-per-frame 8 \
+  --grid 96x48x48 \
   --output-root _private_workspace_artifacts/agent_runs/physics_trio/<scene_slug>/physics_sim \
   --progress-interval 25 \
   --save-volume-frames
@@ -41,15 +42,69 @@ Useful flags:
   `<output-root>/run_progress.json`.
 - `--progress-interval <n>`: write progress every `n` completed frames.
   Defaults to `60`; use `0` to keep only initial/final progress writes.
+- `--grid <width>x<height>x<depth>`: optional 3D resolution override for
+  headless analysis runs. This is useful for long Wind tunnel stats-only probes
+  where the desktop default grid is too expensive for iterative solver tuning.
+- `--wind-shot-camera <profile>`: deterministic retained-runtime viewport
+  profile for Wind shot render captures and manifest metadata. Supported
+  profiles are `three_quarter` (default), `side`, `top`, `downstream`, and
+  `runtime_default`.
 - `--overwrite`: clear an existing output root before running. Without this,
   the CLI refuses to run when the output root already exists and is not empty.
 - `--resume`: reserved and currently rejected; resume needs frame-continuation
   semantics before it can be truthful.
 - `--save-volume-frames`: export `.vf3d`, `.pack`, `manifest.json`, and
   `scene_bundle.json` under `volume_frames/<Preset>/`.
+- `--save-wind-projection-frames`: export deterministic headless Wind analyzer
+  BMP frames under `wind_projection_frames/`. These do not require SDL/Vulkan
+  renderer capture; red is max velocity magnitude, green is max density, and
+  blue is max pressure magnitude through the 3D volume depth.
 - `--save-render-frames`: capture rendered frames through the existing renderer.
 - `--skip-present`: default. Suppresses presentation.
 - `--present`: use the existing presented renderer path.
+
+Long-tunnel Wind visual proof:
+
+- `tests/fixtures/runtime_scene_wind_tunnel_3d_long_box.json` is the current
+  authored long-tunnel fixture. It uses a `6.0 x 1.5 x 1.5` meter scene domain,
+  one locked box near the first third of the tunnel, left inlet, and right
+  outlet.
+- `make -C physics_sim test-physics-sim-headless-wind-long-tunnel-visual`
+  runs the fixture with a `96x24x24` grid, writes Wind analyzer projection
+  frames, validates the initial and final projection BMPs are nonblank and
+  different, checks final Wind metrics, attempts renderer frame capture, and writes
+  `tmp/headless_wind_long_tunnel_visual/long_tunnel_visual_summary.txt`.
+- Renderer-frame capture in that smoke is reported separately from analyzer
+  projection output. If the environment cannot initialize the SDL/Vulkan video
+  path, the smoke records `renderer_blocker.txt` and keeps the deterministic
+  analyzer/projection proof as the hard requirement.
+
+Wind shot outputs:
+
+- every headless run now initializes `wind_shot_manifest.json` under the output
+  root. For `3D` Wind tunnel scenes this records the repeatable shot contract:
+  runtime scene, output paths, frame count, sim steps per frame, frame export
+  toggles, presentation mode, and the active analysis schema.
+- every headless run also initializes `wind_analysis_timeseries.jsonl`. For
+  active `3D` Wind tunnel scenes, each completed output frame appends one
+  `physics_sim_wind_analysis_frame_v1` JSON object with sampled-cell count,
+  inlet/outlet pressure averages, pressure delta, inlet/outlet throughput,
+  throughput delta, pressure-delta drag proxy, average vorticity, and max
+  vorticity.
+- Wind tunnel throughput uses role-aware signs: inlet flow is positive into the
+  tunnel, outlet flow is positive out of the tunnel. Outlet throughput samples
+  the configured outlet band, matching the inlet slab width, so coarse grids can
+  report near-exit transport without relying on a single terminal voxel.
+- Static authored 3D objects are included in the Wind tunnel solid mask. The
+  carrier pass now applies a deterministic downstream wake response around
+  solid cells, so headless stats can distinguish an empty tunnel from a tunnel
+  with an object through pressure delta, throughput delta, and vorticity.
+  `tests/fixtures/runtime_scene_wind_tunnel_3d_obstacle.json` is the current
+  no-frame analyzer fixture for this path.
+- `tests/fixtures/runtime_scene_wind_tunnel_3d_long_box.json` is the current
+  visual proof fixture for the same path.
+- non-Wind scenes may emit frame rows with `"available": false`; consumers
+  should key off that field before reading Wind metrics.
 
 Output summary schema:
 
@@ -58,6 +113,8 @@ Output summary schema:
   "schema": "physics_sim_headless_run_summary_v1",
   "runtime_scene": "<input scene_runtime.json>",
   "output_root": "<output root>",
+  "grid_override": true,
+  "grid": {"width": 96, "height": 48, "depth": 48},
   "frames_requested": 2,
   "frames_completed": 2,
   "sim_steps_per_frame": 8,
@@ -67,6 +124,56 @@ Output summary schema:
   "output_policy": "fail_if_exists",
   "result_code": 0,
   "status": "passed"
+}
+```
+
+Wind shot manifest schema:
+
+```json
+{
+  "schema": "physics_sim_wind_shot_manifest_v1",
+  "runtime_scene": "<input scene_runtime.json>",
+  "output_root": "<output root>",
+  "summary": "<output root>/run_summary.json",
+  "progress": "<output root>/run_progress.json",
+  "wind_analysis_timeseries": "<output root>/wind_analysis_timeseries.jsonl",
+  "wind_projection_frames": "wind_projection_frames/frame_%06d.bmp",
+  "grid_override": true,
+  "grid": {"width": 64, "height": 32, "depth": 32},
+  "frames_requested": 4,
+  "sim_steps_per_frame": 4,
+  "save_volume_frames": true,
+  "save_render_frames": false,
+  "save_wind_projection_frames": true,
+  "skip_present": true,
+  "output_policy": "overwrite",
+  "camera_source": "wind_shot_profile",
+  "camera_profile": "side",
+  "camera_yaw_deg": 0,
+  "camera_pitch_deg": 12,
+  "camera_distance_scale": 1.08,
+  "analysis_schema": "physics_sim_wind_analysis_frame_v1"
+}
+```
+
+Wind analysis time-series row schema:
+
+```json
+{
+  "schema": "physics_sim_wind_analysis_frame_v1",
+  "frame_index": 0,
+  "sim_steps_per_frame": 4,
+  "available": true,
+  "sampled_cells": 7303132,
+  "pressure_delta": -0.001376565,
+  "inlet_pressure_avg": -0.001376565,
+  "outlet_pressure_avg": 0,
+  "inlet_throughput": 0.782050848,
+  "outlet_throughput": 0,
+  "throughput_delta": 0.782050848,
+  "drag_pressure_proxy": -0.001385713,
+  "vorticity_avg": 0.070993669,
+  "vorticity_max": 145.33876
 }
 ```
 
@@ -142,8 +249,11 @@ Detached request schema:
   "frames": 100,
   "sim_steps_per_frame": 8,
   "progress_interval": 25,
+  "grid": "96x48x48",
+  "wind_shot_camera": "three_quarter",
   "save_volume_frames": true,
   "save_render_frames": false,
+  "save_wind_projection_frames": true,
   "skip_present": true,
   "overwrite": false
 }

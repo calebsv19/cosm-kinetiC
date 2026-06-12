@@ -1,5 +1,7 @@
 #include "app/sim_runtime_backend_3d_scaffold_internal.h"
 
+#include "app/wind_tunnel_3d_analysis.h"
+
 static SimRuntimeBackend3DScaffold *backend_3d_scaffold_state(SimRuntimeBackend *backend) {
     return backend ? (SimRuntimeBackend3DScaffold *)backend->impl : NULL;
 }
@@ -109,12 +111,18 @@ bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
                                     SimRuntimeBackendReport *out_report) {
     const SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state_const(backend);
     const SimRuntime3DDomainDesc *desc = NULL;
+    SceneFluidVolumeExportView3D export_view = {0};
+    WindTunnel3DAnalysisReport wind_analysis = {0};
     if (!state || !out_report) return false;
     desc = &state->volume.desc;
     if (state->obstacle_volume_dirty) {
         backend_3d_scaffold_build_obstacles((SimRuntimeBackend *)backend, NULL);
     }
     backend_3d_scaffold_update_debug_volume_stats((SimRuntimeBackend3DScaffold *)state);
+    if (state->wind_tunnel_active &&
+        backend_3d_scaffold_get_volume_export_view_3d(backend, &export_view)) {
+        (void)wind_tunnel_3d_analyze_volume(&export_view, &state->wind_tunnel, &wind_analysis);
+    }
 
     *out_report = (SimRuntimeBackendReport){
         .kind = SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD,
@@ -214,6 +222,17 @@ bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
         .emitter_step_last_footprint_cells = state->emitter_step_last_footprint_cells,
         .emitter_step_density_delta = state->emitter_step_density_delta,
         .emitter_step_velocity_magnitude_delta = state->emitter_step_velocity_magnitude_delta,
+        .wind_analysis_available = wind_analysis.valid,
+        .wind_analysis_sampled_cells = wind_analysis.sampled_cells,
+        .wind_analysis_inlet_pressure_avg = wind_analysis.inlet_pressure_avg,
+        .wind_analysis_outlet_pressure_avg = wind_analysis.outlet_pressure_avg,
+        .wind_analysis_pressure_delta = wind_analysis.pressure_delta,
+        .wind_analysis_inlet_throughput = wind_analysis.inlet_throughput,
+        .wind_analysis_outlet_throughput = wind_analysis.outlet_throughput,
+        .wind_analysis_throughput_delta = wind_analysis.throughput_delta,
+        .wind_analysis_drag_pressure_proxy = wind_analysis.drag_pressure_proxy,
+        .wind_analysis_vorticity_avg = wind_analysis.vorticity_avg,
+        .wind_analysis_vorticity_max = wind_analysis.vorticity_max,
     };
     return true;
 }

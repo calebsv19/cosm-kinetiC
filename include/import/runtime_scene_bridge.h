@@ -6,6 +6,7 @@
 
 #include "app/app_config.h"
 #include "app/scene_presets.h"
+#include "app/wind_tunnel_3d.h"
 #include "core_scene.h"
 
 typedef struct RuntimeSceneBridgePreflight {
@@ -71,6 +72,8 @@ typedef struct PhysicsSimRuntimeVisualBootstrap {
     PhysicsSimRetainedRuntimeScene retained_scene;
     PhysicsSimRuntimeSceneBounds scene_domain;
     bool scene_domain_authored;
+    WindTunnel3DConfig wind_tunnel;
+    bool wind_tunnel_authored;
     PhysicsSimRuntimeSceneUpVector scene_up;
 } PhysicsSimRuntimeVisualBootstrap;
 

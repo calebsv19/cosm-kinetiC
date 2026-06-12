@@ -109,6 +109,59 @@ static bool test_runtime_scene_bridge_rejects_noncanonical_unit_system(void) {
     return true;
 }
 
+static bool test_runtime_scene_bridge_bootstrap_hydrates_wind_tunnel_overlay(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_bridge_wind_tunnel\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{"
+          "\"physics_sim\":{"
+            "\"scene_domain\":{"
+              "\"active\":true,"
+              "\"shape\":\"box\","
+              "\"min\":{\"x\":-4.0,\"y\":-1.0,\"z\":-1.0},"
+              "\"max\":{\"x\":4.0,\"y\":1.0,\"z\":1.0}"
+            "},"
+            "\"wind_tunnel\":{"
+              "\"active\":true,"
+              "\"inlet_face\":\"Left\","
+              "\"outlet_face\":\"Right\","
+              "\"inflow_speed\":22.0,"
+              "\"inflow_density\":0.5,"
+              "\"inlet_slab_cells\":3"
+            "}"
+          "}"
+        "}"
+        "}";
+    PhysicsSimRuntimeVisualBootstrap bootstrap = {0};
+    char diagnostics[256] = {0};
+    if (!runtime_scene_bridge_load_visual_bootstrap_json(runtime_json,
+                                                         &bootstrap,
+                                                         diagnostics,
+                                                         sizeof(diagnostics))) {
+        return false;
+    }
+    if (!bootstrap.valid) return false;
+    if (!bootstrap.scene_domain_authored) return false;
+    if (!bootstrap.wind_tunnel_authored) return false;
+    if (bootstrap.wind_tunnel.inlet_face != WIND_TUNNEL_3D_FACE_LEFT) return false;
+    if (bootstrap.wind_tunnel.outlet_face != WIND_TUNNEL_3D_FACE_RIGHT) return false;
+    if (fabsf(bootstrap.wind_tunnel.inflow_speed - 22.0f) > 1e-6f) return false;
+    if (fabsf(bootstrap.wind_tunnel.inflow_density - 0.5f) > 1e-6f) return false;
+    if (bootstrap.wind_tunnel.inlet_slab_cells != 3) return false;
+    return true;
+}
+
 static bool test_runtime_scene_bridge_apply_fixture(void) {
     RuntimeSceneBridgePreflight summary;
     AppConfig cfg = app_config_default();
@@ -670,6 +723,10 @@ int main(int argc, char **argv) {
     }
     if (!test_runtime_scene_bridge_rejects_noncanonical_unit_system()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: noncanonical unit-system rejection failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_bootstrap_hydrates_wind_tunnel_overlay()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: wind tunnel bootstrap failed\n");
         return 1;
     }
     if (!test_runtime_scene_bridge_apply_fixture()) {

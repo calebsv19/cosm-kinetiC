@@ -442,6 +442,21 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         wind_line[0] = '\0';
     }
 
+    char wind_analysis_line[192];
+    if (hud->sim_mode == SIM_MODE_WIND_TUNNEL && hud->backend_wind_analysis_available) {
+        snprintf(wind_analysis_line,
+                 sizeof(wind_analysis_line),
+                 "Wind analysis: dp=%+.3f Qin=%.3f Qout=%.3f drag_proxy=%+.3f vort(avg/max)=%.3f/%.3f",
+                 hud->backend_wind_analysis_pressure_delta,
+                 hud->backend_wind_analysis_inlet_throughput,
+                 hud->backend_wind_analysis_outlet_throughput,
+                 hud->backend_wind_analysis_drag_pressure_proxy,
+                 hud->backend_wind_analysis_vorticity_avg,
+                 hud->backend_wind_analysis_vorticity_max);
+    } else {
+        wind_analysis_line[0] = '\0';
+    }
+
     char quality_line[64];
     snprintf(quality_line, sizeof(quality_line), "Quality: %s",
              (hud->quality_name && hud->quality_name[0]) ? hud->quality_name : "Custom");
@@ -560,6 +575,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     if (debug_cue_line[0]) lines[line_count++] = debug_cue_line;
     lines[line_count++] = preset_line;
     if (wind_line[0]) lines[line_count++] = wind_line;
+    if (wind_analysis_line[0]) lines[line_count++] = wind_analysis_line;
     lines[line_count++] = quality_line;
     if (hud->paused) lines[line_count++] = solver_line;
     if (overlays_line[0]) {

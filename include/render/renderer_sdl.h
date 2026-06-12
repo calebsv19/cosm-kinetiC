@@ -91,6 +91,14 @@ typedef struct RendererHudInfo {
     size_t      backend_emitter_step_last_footprint_cells;
     float       backend_emitter_step_density_delta;
     float       backend_emitter_step_velocity_magnitude_delta;
+    bool        backend_wind_analysis_available;
+    size_t      backend_wind_analysis_sampled_cells;
+    float       backend_wind_analysis_pressure_delta;
+    float       backend_wind_analysis_inlet_throughput;
+    float       backend_wind_analysis_outlet_throughput;
+    float       backend_wind_analysis_drag_pressure_proxy;
+    float       backend_wind_analysis_vorticity_avg;
+    float       backend_wind_analysis_vorticity_max;
     float       tunnel_inflow_speed;
     bool        vorticity_enabled;
     bool        pressure_enabled;

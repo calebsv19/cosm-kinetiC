@@ -176,6 +176,17 @@ typedef struct SimRuntimeBackendReport {
     size_t emitter_step_last_footprint_cells;
     float emitter_step_density_delta;
     float emitter_step_velocity_magnitude_delta;
+    bool wind_analysis_available;
+    size_t wind_analysis_sampled_cells;
+    float wind_analysis_inlet_pressure_avg;
+    float wind_analysis_outlet_pressure_avg;
+    float wind_analysis_pressure_delta;
+    float wind_analysis_inlet_throughput;
+    float wind_analysis_outlet_throughput;
+    float wind_analysis_throughput_delta;
+    float wind_analysis_drag_pressure_proxy;
+    float wind_analysis_vorticity_avg;
+    float wind_analysis_vorticity_max;
 } SimRuntimeBackendReport;
 
 typedef struct SimRuntimeBackend SimRuntimeBackend;

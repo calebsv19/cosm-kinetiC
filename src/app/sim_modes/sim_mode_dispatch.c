@@ -1,4 +1,5 @@
 #include "app/sim_mode.h"
+#include "app/wind_tunnel_3d.h"
 
 extern const SimModeHooks g_sim_mode_box;
 extern const SimModeHooks g_sim_mode_wind;
@@ -34,6 +35,7 @@ SimModeRoute sim_mode_resolve_route(SimulationMode mode, SpaceMode space_mode) {
     route.backend_uses_canonical_2d_solver = true;
     route.fallback_to_2d_projection = false;
     route.constrained_3d_solver_scaffold = false;
+    route.wind_tunnel_3d_active = false;
     route.constrained_3d_min_substeps = 1;
     route.constrained_3d_buoyancy_scale = 1.0f;
     route.hooks = sim_mode_hooks_for_simulation_mode(mode);
@@ -44,6 +46,7 @@ SimModeRoute sim_mode_resolve_route(SimulationMode mode, SpaceMode space_mode) {
         route.fallback_to_2d_projection = true;
         route.backend_uses_canonical_2d_solver = false;
         route.constrained_3d_solver_scaffold = false;
+        route.wind_tunnel_3d_active = wind_tunnel_3d_route_active(mode, route.requested_space_mode);
         route.constrained_3d_min_substeps = 1;
         route.constrained_3d_buoyancy_scale = 1.0f;
     }

@@ -3,6 +3,7 @@
 
 #include "app/app_config.h"
 #include "app/scene_presets.h"
+#include "app/sim_runtime_backend.h"
 #include "geo/shape_library.h"
 #include "input/input.h"
 #include "render/renderer_sdl.h"
@@ -22,6 +23,17 @@ typedef struct HeadlessProgressInfo {
 typedef void (*HeadlessProgressCallback)(void *user_data,
                                          const HeadlessProgressInfo *progress);
 typedef bool (*HeadlessCancelRequestedFn)(void *user_data);
+typedef void (*HeadlessFrameAnalysisCallback)(void *user_data,
+                                              uint64_t frame_index,
+                                              const SimRuntimeBackendReport *backend_report);
+
+typedef enum HeadlessWindShotCameraProfile {
+    HEADLESS_WIND_SHOT_CAMERA_RUNTIME_DEFAULT = 0,
+    HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER = 1,
+    HEADLESS_WIND_SHOT_CAMERA_SIDE = 2,
+    HEADLESS_WIND_SHOT_CAMERA_TOP = 3,
+    HEADLESS_WIND_SHOT_CAMERA_DOWNSTREAM = 4
+} HeadlessWindShotCameraProfile;
 
 typedef struct HeadlessOptions {
     bool enabled;
@@ -36,6 +48,11 @@ typedef struct HeadlessOptions {
     void *progress_user_data;
     HeadlessCancelRequestedFn cancel_requested;
     void *cancel_user_data;
+    HeadlessFrameAnalysisCallback frame_analysis_callback;
+    void *frame_analysis_user_data;
+    HeadlessWindShotCameraProfile wind_shot_camera_profile;
+    bool save_wind_projection_frames;
+    SimRuntimeBackendReport *final_backend_report;
 } HeadlessOptions;
 
 typedef struct SceneRuntimeLaunch {
@@ -127,9 +144,11 @@ typedef struct SceneControllerRenderDeriveFrame {
     bool should_present;
     bool should_save_render_frames;
     bool should_save_volume_frames;
+    bool should_save_wind_projection_frames;
     bool headless_mode;
     uint64_t frame_index;
     uint32_t invalidation_reason_bits;
+    SimRuntimeBackendReport backend_report;
     RendererHudInfo hud;
 } SceneControllerRenderDeriveFrame;
 

@@ -146,6 +146,20 @@ bool runtime_scene_solver_projection_parse_bool(json_object *root,
     return true;
 }
 
+static bool runtime_scene_solver_projection_parse_number(json_object *root,
+                                                         const char *key,
+                                                         double *out_value) {
+    json_object *node = NULL;
+    if (!root || !key || !out_value) return false;
+    if (!json_object_object_get_ex(root, key, &node) ||
+        (!json_object_is_type(node, json_type_double) &&
+         !json_object_is_type(node, json_type_int))) {
+        return false;
+    }
+    *out_value = json_object_get_double(node);
+    return true;
+}
+
 void runtime_scene_solver_projection_apply_space_mode(const PhysicsSimRetainedRuntimeScene *retained_scene,
                                                       AppConfig *in_out_cfg,
                                                       FluidScenePreset *in_out_preset) {
@@ -210,6 +224,67 @@ bool runtime_scene_solver_projection_overlay_scene_domain(json_object *runtime_r
         return true;
     }
 
+    return true;
+}
+
+bool runtime_scene_solver_projection_overlay_wind_tunnel(json_object *runtime_root,
+                                                         const AppConfig *base_cfg,
+                                                         WindTunnel3DConfig *out_config) {
+    json_object *extensions = NULL;
+    json_object *physics_sim = NULL;
+    json_object *wind_tunnel = NULL;
+    json_object *node = NULL;
+    WindTunnel3DConfig config = wind_tunnel_3d_config_default(base_cfg);
+    double number = 0.0;
+    if (out_config) memset(out_config, 0, sizeof(*out_config));
+    if (!runtime_root || !out_config) return false;
+    if (!json_object_object_get_ex(runtime_root, "extensions", &extensions) ||
+        !json_object_is_type(extensions, json_type_object)) {
+        return false;
+    }
+    if (!json_object_object_get_ex(extensions, "physics_sim", &physics_sim) ||
+        !json_object_is_type(physics_sim, json_type_object)) {
+        return false;
+    }
+    if (!json_object_object_get_ex(physics_sim, "wind_tunnel", &wind_tunnel) ||
+        !json_object_is_type(wind_tunnel, json_type_object)) {
+        return false;
+    }
+
+    (void)runtime_scene_solver_projection_parse_bool(wind_tunnel, "active", &config.active);
+    if (!config.active) {
+        *out_config = config;
+        return true;
+    }
+    if (json_object_object_get_ex(wind_tunnel, "inlet_face", &node) &&
+        json_object_is_type(node, json_type_string)) {
+        (void)wind_tunnel_3d_face_from_label(json_object_get_string(node), &config.inlet_face);
+    }
+    if (json_object_object_get_ex(wind_tunnel, "outlet_face", &node) &&
+        json_object_is_type(node, json_type_string)) {
+        (void)wind_tunnel_3d_face_from_label(json_object_get_string(node), &config.outlet_face);
+    }
+    if (runtime_scene_solver_projection_parse_number(wind_tunnel, "inflow_speed", &number)) {
+        config.inflow_speed = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(wind_tunnel, "inflow_density", &number)) {
+        config.inflow_density = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(wind_tunnel, "inlet_slab_cells", &number)) {
+        config.inlet_slab_cells = (int)number;
+    }
+    if (json_object_object_get_ex(wind_tunnel, "outlet_policy", &node) &&
+        json_object_is_type(node, json_type_string)) {
+        (void)wind_tunnel_3d_outlet_policy_from_label(json_object_get_string(node),
+                                                      &config.outlet_policy);
+    }
+    if (json_object_object_get_ex(wind_tunnel, "wall_policy", &node) &&
+        json_object_is_type(node, json_type_string)) {
+        (void)wind_tunnel_3d_wall_policy_from_label(json_object_get_string(node),
+                                                    &config.wall_policy);
+    }
+    if (!wind_tunnel_3d_config_validate(&config)) return false;
+    *out_config = config;
     return true;
 }
 
@@ -451,4 +526,21 @@ void runtime_scene_solver_projection_apply_scene_domain(
         runtime_scene_solver_projection_domain_dimension(max_x - min_x, world_scale, 1.0f);
     in_out_preset->domain_height =
         runtime_scene_solver_projection_domain_dimension(max_y - min_y, world_scale, 1.0f);
+}
+
+void runtime_scene_solver_projection_apply_wind_tunnel(json_object *runtime_root,
+                                                       AppConfig *in_out_cfg,
+                                                       FluidScenePreset *in_out_preset) {
+    WindTunnel3DConfig config = {0};
+    if (!runtime_root || !in_out_cfg || !in_out_preset) return;
+    if (!runtime_scene_solver_projection_overlay_wind_tunnel(runtime_root, in_out_cfg, &config)) {
+        return;
+    }
+    if (!config.active) return;
+    in_out_cfg->sim_mode = SIM_MODE_WIND_TUNNEL;
+    in_out_cfg->space_mode = SPACE_MODE_3D;
+    in_out_cfg->tunnel_inflow_speed = config.inflow_speed;
+    in_out_cfg->tunnel_inflow_density = config.inflow_density;
+    in_out_preset->dimension_mode = SCENE_DIMENSION_MODE_3D;
+    in_out_preset->domain = SCENE_DOMAIN_WIND_TUNNEL;
 }

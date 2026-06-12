@@ -24,8 +24,11 @@ typedef struct PhysicsSimDetachedRequest {
     int frames;
     int sim_steps_per_frame;
     int progress_interval;
+    char grid[32];
+    char wind_shot_camera_profile[32];
     bool save_volume_frames;
     bool save_render_frames;
+    bool save_wind_projection_frames;
     bool skip_present;
     bool overwrite;
 } PhysicsSimDetachedRequest;

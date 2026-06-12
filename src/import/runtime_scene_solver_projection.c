@@ -14,6 +14,7 @@ bool runtime_scene_solver_projection_apply_runtime(const PhysicsSimRetainedRunti
 
     runtime_scene_solver_projection_apply_space_mode(retained_scene, in_out_cfg, in_out_preset);
     runtime_scene_solver_projection_apply_scene_domain(retained_scene, runtime_root, in_out_preset);
+    runtime_scene_solver_projection_apply_wind_tunnel(runtime_root, in_out_cfg, in_out_preset);
     if (retained_scene->retained_object_count > 0) {
         runtime_scene_solver_projection_apply_objects(retained_scene,
                                                       runtime_root,

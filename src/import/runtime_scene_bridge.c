@@ -1,5 +1,6 @@
 #include "import/runtime_scene_bridge.h"
 #include "import/runtime_scene_solver_projection.h"
+#include "import/runtime_scene_solver_projection_internal.h"
 
 #include "core_scene_overlay_merge_shared.h"
 #include "core_io.h"
@@ -766,6 +767,11 @@ bool runtime_scene_bridge_load_visual_bootstrap_json(const char *runtime_scene_j
                g_last_retained_scene.bounds.enabled) {
         out_bootstrap->scene_domain = g_last_retained_scene.bounds;
         out_bootstrap->scene_domain_authored = false;
+    }
+    if (runtime_scene_solver_projection_overlay_wind_tunnel(root,
+                                                            NULL,
+                                                            &out_bootstrap->wind_tunnel)) {
+        out_bootstrap->wind_tunnel_authored = out_bootstrap->wind_tunnel.active;
     }
 
     bridge_diag(out_diagnostics, out_diagnostics_size, "ok");

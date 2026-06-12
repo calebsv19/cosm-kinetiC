@@ -4,6 +4,7 @@
 
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
+#include "app/wind_tunnel_3d.h"
 
 static float clamp_positive(float value, float fallback) {
     if (!isfinite(value) || value <= 0.0f) {
@@ -54,6 +55,12 @@ static void wind_seed_velocity_field(SceneState *scene) {
 
 static void wind_configure(AppConfig *cfg, FluidScenePreset *preset) {
     if (!cfg || !preset) return;
+    wind_apply_config_tweaks(cfg);
+    if (wind_tunnel_3d_route_active(cfg->sim_mode, cfg->space_mode)) {
+        preset->dimension_mode = SCENE_DIMENSION_MODE_3D;
+        preset->domain = SCENE_DOMAIN_WIND_TUNNEL;
+        return;
+    }
     const int max_window_w = 1536;
     float width = clamp_positive(preset->domain_width, 1.0f);
     float height = clamp_positive(preset->domain_height, 1.0f);
@@ -67,7 +74,6 @@ static void wind_configure(AppConfig *cfg, FluidScenePreset *preset) {
     cfg->window_w = max_window_w;
     cfg->window_h = (int)lroundf((float)max_window_w / aspect);
     if (cfg->window_h < 256) cfg->window_h = 256;
-    wind_apply_config_tweaks(cfg);
     wind_apply_default_boundaries(cfg, preset);
 }
 
@@ -75,6 +81,7 @@ static void wind_prepare(SceneState *scene) {
     if (!scene || !scene->config || !scene->preset) return;
     scene_set_emitters_enabled(scene, false);
     sim_runtime_backend_reset_transient_state(scene->backend);
+    if (scene->mode_route.wind_tunnel_3d_active) return;
     wind_seed_velocity_field(scene);
     wind_apply_default_boundaries(scene->config, (FluidScenePreset *)scene->preset);
 }
@@ -84,6 +91,7 @@ static void wind_pre_substep(SceneState *scene,
     (void)dt;
     if (!scene || !scene->config || !scene->preset) return;
     scene_set_emitters_enabled(scene, false);
+    if (scene->mode_route.wind_tunnel_3d_active) return;
     wind_apply_default_boundaries(scene->config, (FluidScenePreset *)scene->preset);
 }
 

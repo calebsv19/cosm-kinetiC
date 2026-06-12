@@ -50,6 +50,12 @@ test-trio-scene-contract-diff:
 test-physics-sim-headless-cli: physics_sim_headless
 	tests/integration/run_physics_sim_headless_cli.sh
 
+test-physics-sim-headless-wind-analysis: physics_sim_headless
+	tests/integration/run_physics_sim_headless_wind_analysis.sh
+
+test-physics-sim-headless-wind-long-tunnel-visual: physics_sim_headless
+	tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh
+
 test-physics-sim-job-runner-smoke: physics-sim-job-runner physics_sim_headless
 	tests/integration/run_physics_sim_job_runner_smoke.sh
 

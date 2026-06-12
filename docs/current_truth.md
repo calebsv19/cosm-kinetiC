@@ -70,6 +70,11 @@ Last updated: 2026-05-23
     `.vf3d`, `.pack`, `manifest.json`, and `scene_bundle.json`
   - skip-present volume-only runs avoid SDL video and renderer initialization
   - render-frame capture and presented runs still use the existing window/Vulkan renderer path
+  - Wind long-tunnel visual proof is available with
+    `make -C physics_sim test-physics-sim-headless-wind-long-tunnel-visual`;
+    it validates the long-box tunnel fixture, nonblank and changing analyzer
+    projection BMPs, final Wind metrics, and records a renderer blocker when
+    SDL/Vulkan video capture is unavailable
 - Detached agent supervision can now bypass a live terminal:
   - build with `make -C physics_sim physics-sim-job-runner`
   - submit `physics_sim/physics_sim_job_runner submit --request <request.json>`

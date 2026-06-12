@@ -19,6 +19,7 @@ static bool test_route_2d_canonical_backend(void) {
     if (!route.backend_uses_canonical_2d_solver) return false;
     if (route.fallback_to_2d_projection) return false;
     if (route.constrained_3d_solver_scaffold) return false;
+    if (route.wind_tunnel_3d_active) return false;
     if (route.constrained_3d_min_substeps != 1) return false;
     if (route.constrained_3d_buoyancy_scale != 1.0f) return false;
     if (!route.hooks) return false;
@@ -33,6 +34,7 @@ static bool test_route_3d_controlled_lane(void) {
     if (route.backend_uses_canonical_2d_solver) return false;
     if (!route.fallback_to_2d_projection) return false;
     if (route.constrained_3d_solver_scaffold) return false;
+    if (route.wind_tunnel_3d_active) return false;
     if (route.constrained_3d_min_substeps != 1) return false;
     if (route.constrained_3d_buoyancy_scale != 1.0f) return false;
     if (!route.hooks) return false;
@@ -48,6 +50,20 @@ static bool test_invalid_space_mode_clamps_to_2d(void) {
     if (!route.backend_uses_canonical_2d_solver) return false;
     if (route.fallback_to_2d_projection) return false;
     if (route.constrained_3d_solver_scaffold) return false;
+    if (route.wind_tunnel_3d_active) return false;
+    return true;
+}
+
+static bool test_wind_tunnel_route_promotes_3d_wind_lane_only(void) {
+    SimModeRoute wind2d = sim_mode_resolve_route(SIM_MODE_WIND_TUNNEL, SPACE_MODE_2D);
+    SimModeRoute wind3d = sim_mode_resolve_route(SIM_MODE_WIND_TUNNEL, SPACE_MODE_3D);
+    if (wind2d.backend_lane != SIM_BACKEND_CANONICAL_2D) return false;
+    if (wind2d.wind_tunnel_3d_active) return false;
+    if (wind2d.hooks != &g_sim_mode_wind) return false;
+    if (wind3d.backend_lane != SIM_BACKEND_CONTROLLED_3D) return false;
+    if (!wind3d.fallback_to_2d_projection) return false;
+    if (!wind3d.wind_tunnel_3d_active) return false;
+    if (wind3d.hooks != &g_sim_mode_wind) return false;
     return true;
 }
 
@@ -97,6 +113,10 @@ int main(void) {
     }
     if (!test_atmospheric_route_uses_atmospheric_hooks_in_2d_and_3d()) {
         fprintf(stderr, "sim_mode_route_contract_test: atmospheric route contract failed\n");
+        return 1;
+    }
+    if (!test_wind_tunnel_route_promotes_3d_wind_lane_only()) {
+        fprintf(stderr, "sim_mode_route_contract_test: wind 3D route contract failed\n");
         return 1;
     }
     if (!test_step_policy_activation_rules()) {

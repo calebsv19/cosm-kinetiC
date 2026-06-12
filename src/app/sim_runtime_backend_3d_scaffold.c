@@ -84,7 +84,7 @@ static bool backend_3d_scaffold_accumulate_sparse_stats(int x,
     return true;
 }
 
-static void backend_3d_scaffold_mark_fluid_dirty(SimRuntimeBackend3DScaffold *state) {
+void backend_3d_scaffold_mark_fluid_dirty(SimRuntimeBackend3DScaffold *state) {
     if (!state) return;
     state->debug_volume_stats_dirty = true;
     state->export_volume_cache_dirty = true;
@@ -708,9 +708,8 @@ static void backend_3d_scaffold_mark_emitters_dirty(SimRuntimeBackend *backend) 
 static void backend_3d_scaffold_apply_boundary_flows(SimRuntimeBackend *backend,
                                                      struct SceneState *scene,
                                                      double dt) {
-    (void)backend;
-    (void)scene;
     (void)dt;
+    backend_3d_scaffold_apply_wind_tunnel_boundary(backend_3d_scaffold_state(backend), scene);
 }
 
 static void backend_3d_scaffold_step(SimRuntimeBackend *backend,
@@ -837,8 +836,6 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
     SimRuntime3DDomainDesc desc = {0};
     size_t slice_cells = 0;
 
-    (void)mode_route;
-
     if (!cfg) return NULL;
     if (!sim_runtime_3d_domain_desc_resolve(cfg, preset, runtime_visual, &desc)) return NULL;
 
@@ -869,6 +866,13 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
     }
 
     sim_runtime_obstacle_contract_default(&state->obstacle_contract);
+    if (mode_route && mode_route->wind_tunnel_3d_active) {
+        state->wind_tunnel_active = true;
+        state->wind_tunnel = (runtime_visual && runtime_visual->wind_tunnel_authored)
+                                 ? runtime_visual->wind_tunnel
+                                 : wind_tunnel_3d_config_default(cfg);
+        state->wind_tunnel.active = state->wind_tunnel_active;
+    }
     if (runtime_visual && runtime_visual->scene_up.valid) {
         state->scene_up_valid = true;
         state->scene_up_x = (float)runtime_visual->scene_up.direction.x;
