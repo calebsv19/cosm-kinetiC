@@ -11,6 +11,8 @@
 typedef struct SceneEditorBootstrap {
     bool has_retained_scene;
     PhysicsSimRetainedRuntimeScene retained_scene;
+    bool wind_tunnel_authored;
+    WindTunnel3DConfig wind_tunnel;
     char retained_runtime_scene_path[512];
 } SceneEditorBootstrap;
 
@@ -88,6 +90,9 @@ typedef struct PhysicsSimEditorSession {
 
     bool has_retained_scene;
     PhysicsSimRetainedRuntimeScene retained_scene;
+    bool has_wind_tunnel_config;
+    bool wind_tunnel_authored;
+    WindTunnel3DConfig wind_tunnel;
     bool has_physics_overlay;
     PhysicsSimSceneOverlay physics_overlay;
 
@@ -105,6 +110,9 @@ void physics_sim_editor_session_set_legacy_selection(PhysicsSimEditorSession *se
                                                      int object_index,
                                                      int import_index);
 bool physics_sim_editor_session_has_retained_scene(const PhysicsSimEditorSession *session);
+bool physics_sim_editor_session_has_wind_tunnel_config(const PhysicsSimEditorSession *session);
+bool physics_sim_editor_session_wind_tunnel_authored(const PhysicsSimEditorSession *session);
+const WindTunnel3DConfig *physics_sim_editor_session_wind_tunnel_config(const PhysicsSimEditorSession *session);
 int physics_sim_editor_session_retained_object_count(const PhysicsSimEditorSession *session);
 const char *physics_sim_editor_session_scene_id(const PhysicsSimEditorSession *session);
 bool physics_sim_editor_session_has_physics_overlay(const PhysicsSimEditorSession *session);

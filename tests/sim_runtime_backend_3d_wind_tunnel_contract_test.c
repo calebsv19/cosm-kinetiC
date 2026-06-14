@@ -1,5 +1,6 @@
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
+#include "app/wind_tunnel_3d_inspector.h"
 #include "sim_runtime_backend_3d_test_support.h"
 
 #include <math.h>
@@ -420,6 +421,119 @@ static bool test_wind_tunnel_static_object_creates_wake_response(void) {
     return true;
 }
 
+static bool test_wind_tunnel_inspector_snapshot_exposes_solver_fields(void) {
+    FluidScenePreset preset = {0};
+    AppConfig cfg = app_config_default();
+    SimModeRoute route = {
+        .simulation_mode = SIM_MODE_WIND_TUNNEL,
+        .requested_space_mode = SPACE_MODE_3D,
+        .projection_space_mode = SPACE_MODE_2D,
+        .backend_lane = SIM_BACKEND_CONTROLLED_3D,
+        .wind_tunnel_3d_active = true,
+    };
+    PhysicsSimRuntimeVisualBootstrap visual = {0};
+    SimRuntimeBackend *backend = NULL;
+    SceneState scene = {0};
+    WindTunnel3DInspectorState inspector_state = wind_tunnel_3d_inspector_default_state();
+    WindTunnel3DInspectorSnapshot snapshot = {0};
+
+    cfg.grid_w = 24;
+    cfg.grid_h = 12;
+    cfg.grid_d = 12;
+    cfg.tunnel_inflow_speed = 12.0f;
+    cfg.tunnel_inflow_density = 0.75f;
+    cfg.fluid_3d_solver_region_cell_budget = 24 * 12 * 12;
+    cfg.fluid_3d_max_velocity_displacement_cells = 4.0f;
+
+    preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+    preset.domain = SCENE_DOMAIN_WIND_TUNNEL;
+    preset.object_count = 1u;
+    preset.objects[0] = (PresetObject){
+        .type = PRESET_OBJECT_BOX,
+        .position_x = 0.43f,
+        .position_y = 0.50f,
+        .position_z = 0.60f,
+        .size_x = 0.09f,
+        .size_y = 0.16f,
+        .size_z = 0.16f,
+        .is_static = true,
+        .gravity_enabled = false,
+    };
+
+    visual.scene_domain.enabled = true;
+    visual.scene_domain_authored = true;
+    visual.scene_domain.min = (CoreObjectVec3){0.0, 0.0, 0.0};
+    visual.scene_domain.max = (CoreObjectVec3){2.4, 1.2, 1.2};
+    visual.wind_tunnel_authored = true;
+    visual.wind_tunnel = wind_tunnel_3d_config_default(&cfg);
+    visual.wind_tunnel.inlet_slab_cells = 2;
+    visual.wind_tunnel.outlet_policy = WIND_TUNNEL_3D_OUTLET_RECEIVE;
+
+    backend = sim_runtime_backend_create(&cfg, &preset, &route, &visual);
+    if (!backend) return false;
+
+    scene.mode_route = route;
+    scene.config = &cfg;
+    scene.backend = backend;
+    scene.preset = &preset;
+    scene.runtime_visual = visual;
+    sim_runtime_backend_build_obstacles(backend, &scene);
+
+    for (int i = 0; i < 60; ++i) {
+        sim_runtime_backend_apply_boundary_flows(backend, &scene, 1.0 / 30.0);
+        sim_runtime_backend_step(backend, &scene, &cfg, 1.0 / 30.0);
+    }
+    sim_runtime_backend_apply_boundary_flows(backend, &scene, 1.0 / 30.0);
+
+    if (!wind_tunnel_3d_inspector_snapshot_from_backend(backend, &inspector_state, &snapshot)) {
+        sim_runtime_backend_destroy(backend);
+        return false;
+    }
+    if (!snapshot.available ||
+        !snapshot.analysis_available ||
+        !snapshot.speed_available ||
+        !snapshot.pressure_available ||
+        !snapshot.vorticity_available ||
+        !snapshot.dye_density_available ||
+        !snapshot.solid_mask_available ||
+        snapshot.field_mode != WIND_TUNNEL_3D_INSPECTOR_FIELD_SPEED ||
+        snapshot.slice_axis != WIND_TUNNEL_3D_INSPECTOR_AXIS_Z ||
+        snapshot.slice_sampled_cells == 0u ||
+        !(snapshot.slice_max > 0.0f) ||
+        !(snapshot.outlet_throughput > 0.0f) ||
+        !(snapshot.vorticity_max > 0.0f) ||
+        !snapshot.object_readout_available ||
+        snapshot.object_solid_cells == 0u ||
+        !(snapshot.object_drag_pressure_proxy > 0.0f) ||
+        !snapshot.inlet_label ||
+        !snapshot.outlet_label) {
+        fprintf(stderr,
+                "inspector snapshot: available=%d analysis=%d fields=%d/%d/%d/%d/%d "
+                "slice_cells=%zu slice_max=%g qout=%g vort=%g object=%d cells=%zu drag=%g faces=%s/%s\n",
+                snapshot.available ? 1 : 0,
+                snapshot.analysis_available ? 1 : 0,
+                snapshot.speed_available ? 1 : 0,
+                snapshot.pressure_available ? 1 : 0,
+                snapshot.vorticity_available ? 1 : 0,
+                snapshot.dye_density_available ? 1 : 0,
+                snapshot.solid_mask_available ? 1 : 0,
+                snapshot.slice_sampled_cells,
+                snapshot.slice_max,
+                snapshot.outlet_throughput,
+                snapshot.vorticity_max,
+                snapshot.object_readout_available ? 1 : 0,
+                snapshot.object_solid_cells,
+                snapshot.object_drag_pressure_proxy,
+                snapshot.inlet_label ? snapshot.inlet_label : "(null)",
+                snapshot.outlet_label ? snapshot.outlet_label : "(null)");
+        sim_runtime_backend_destroy(backend);
+        return false;
+    }
+
+    sim_runtime_backend_destroy(backend);
+    return true;
+}
+
 int main(void) {
     if (!test_wind_tunnel_boundary_writes_inlet_and_receive_outlet()) {
         fprintf(stderr, "sim_runtime_backend_3d_wind_tunnel_contract_test: inlet/outlet write failed\n");
@@ -435,6 +549,10 @@ int main(void) {
     }
     if (!test_wind_tunnel_static_object_creates_wake_response()) {
         fprintf(stderr, "sim_runtime_backend_3d_wind_tunnel_contract_test: static object wake failed\n");
+        return 1;
+    }
+    if (!test_wind_tunnel_inspector_snapshot_exposes_solver_fields()) {
+        fprintf(stderr, "sim_runtime_backend_3d_wind_tunnel_contract_test: inspector snapshot failed\n");
         return 1;
     }
     fprintf(stdout, "sim_runtime_backend_3d_wind_tunnel_contract_test: success\n");

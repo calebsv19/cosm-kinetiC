@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "app/wind_tunnel_3d_inspector.h"
 #include "app/scene_state.h"
 
 typedef struct RendererHudInfo {
@@ -101,6 +102,8 @@ typedef struct RendererHudInfo {
     float       backend_wind_analysis_object_drag_pressure_proxy;
     float       backend_wind_analysis_vorticity_avg;
     float       backend_wind_analysis_vorticity_max;
+    bool        wind_inspector_available;
+    WindTunnel3DInspectorSnapshot wind_inspector;
     float       tunnel_inflow_speed;
     bool        vorticity_enabled;
     bool        pressure_enabled;

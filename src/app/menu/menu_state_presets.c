@@ -159,6 +159,7 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
     AppConfig cfg_copy = {0};
     FluidScenePreset projected = {0};
     PhysicsSimRetainedRuntimeScene retained = {0};
+    PhysicsSimRuntimeVisualBootstrap visual_bootstrap = {0};
 
     if (!ctx || !ctx->cfg || !ctx->selection) return false;
     if (ctx->scene_library.retained_scenes.count <= 0) {
@@ -204,6 +205,14 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
     memset(&ctx->editor_bootstrap, 0, sizeof(ctx->editor_bootstrap));
     ctx->editor_bootstrap.has_retained_scene = true;
     ctx->editor_bootstrap.retained_scene = retained;
+    if (runtime_scene_bridge_load_visual_bootstrap_file(entry->source_path,
+                                                        &visual_bootstrap,
+                                                        NULL,
+                                                        0) &&
+        visual_bootstrap.wind_tunnel_authored) {
+        ctx->editor_bootstrap.wind_tunnel_authored = true;
+        ctx->editor_bootstrap.wind_tunnel = visual_bootstrap.wind_tunnel;
+    }
     snprintf(ctx->editor_bootstrap.retained_runtime_scene_path,
              sizeof(ctx->editor_bootstrap.retained_runtime_scene_path),
              "%s",

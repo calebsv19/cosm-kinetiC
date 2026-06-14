@@ -1,6 +1,7 @@
 #include "app/editor/scene_editor_canvas_retained.h"
 
 #include "app/editor/scene_editor_internal.h"
+#include "app/editor/scene_editor_wind_setup.h"
 
 #include <math.h>
 
@@ -28,6 +29,17 @@ static void retained_draw_line(SDL_Renderer *renderer,
                                SDL_Color color) {
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     SDL_RenderDrawLine(renderer, x0, y0, x1, y1);
+}
+
+static void retained_draw_thick_line(SDL_Renderer *renderer,
+                                     int x0,
+                                     int y0,
+                                     int x1,
+                                     int y1,
+                                     SDL_Color color) {
+    retained_draw_line(renderer, x0, y0, x1, y1, color);
+    retained_draw_line(renderer, x0 + 1, y0, x1 + 1, y1, color);
+    retained_draw_line(renderer, x0, y0 + 1, x1, y1 + 1, color);
 }
 
 static SDL_Rect retained_viewport_rect(const SceneEditorState *state) {
@@ -175,6 +187,97 @@ void scene_editor_canvas_draw_retained_domain_box(SDL_Renderer *renderer,
                               corners[edges[i][1]],
                               edge_color);
     }
+}
+
+static void retained_domain_box_corners(const PhysicsSimDomainOverlay *domain,
+                                        CoreObjectVec3 corners[8]) {
+    int index = 0;
+    if (!domain || !corners) return;
+    for (int sx = 0; sx <= 1; ++sx) {
+        for (int sy = 0; sy <= 1; ++sy) {
+            for (int sz = 0; sz <= 1; ++sz) {
+                corners[index++] = (CoreObjectVec3){
+                    sx ? domain->max.x : domain->min.x,
+                    sy ? domain->max.y : domain->min.y,
+                    sz ? domain->max.z : domain->min.z
+                };
+            }
+        }
+    }
+}
+
+static bool retained_domain_face_indices(WindTunnel3DFace face, int out_indices[4]) {
+    static const int left[4] = {0, 1, 3, 2};
+    static const int right[4] = {4, 6, 7, 5};
+    static const int top[4] = {2, 3, 7, 6};
+    static const int bottom[4] = {0, 4, 5, 1};
+    static const int front[4] = {0, 2, 6, 4};
+    static const int back[4] = {1, 5, 7, 3};
+    const int *src = NULL;
+    if (!out_indices) return false;
+    switch (face) {
+        case WIND_TUNNEL_3D_FACE_LEFT: src = left; break;
+        case WIND_TUNNEL_3D_FACE_RIGHT: src = right; break;
+        case WIND_TUNNEL_3D_FACE_TOP: src = top; break;
+        case WIND_TUNNEL_3D_FACE_BOTTOM: src = bottom; break;
+        case WIND_TUNNEL_3D_FACE_FRONT: src = front; break;
+        case WIND_TUNNEL_3D_FACE_BACK: src = back; break;
+        case WIND_TUNNEL_3D_FACE_NONE:
+        default: return false;
+    }
+    for (int i = 0; i < 4; ++i) {
+        out_indices[i] = src[i];
+    }
+    return true;
+}
+
+static void retained_draw_domain_face(SDL_Renderer *renderer,
+                                      const SceneEditorState *state,
+                                      const CoreObjectVec3 corners[8],
+                                      WindTunnel3DFace face,
+                                      SDL_Color color) {
+    SDL_Rect rect = {0};
+    int indices[4] = {0};
+    SDL_Point points[5];
+    if (!renderer || !state || !corners) return;
+    if (!retained_domain_face_indices(face, indices)) return;
+    rect = retained_viewport_rect(state);
+    for (int i = 0; i < 4; ++i) {
+        scene_editor_viewport_project_point3(&state->viewport,
+                                             rect.x,
+                                             rect.y,
+                                             rect.w,
+                                             rect.h,
+                                             (float)corners[indices[i]].x,
+                                             (float)corners[indices[i]].y,
+                                             (float)corners[indices[i]].z,
+                                             &points[i].x,
+                                             &points[i].y);
+    }
+    points[4] = points[0];
+    for (int i = 1; i < 5; ++i) {
+        retained_draw_thick_line(renderer,
+                                 points[i - 1].x,
+                                 points[i - 1].y,
+                                 points[i].x,
+                                 points[i].y,
+                                 color);
+    }
+}
+
+void scene_editor_canvas_draw_retained_wind_faces(SDL_Renderer *renderer,
+                                                  const SceneEditorState *state,
+                                                  const PhysicsSimDomainOverlay *domain) {
+    SceneEditorWindSetupSummary wind_setup;
+    CoreObjectVec3 corners[8];
+    SDL_Color inlet_color = {88, 218, 126, 255};
+    SDL_Color outlet_color = {235, 84, 86, 255};
+    if (!renderer || !state || !domain || !domain->active) return;
+    wind_setup = scene_editor_wind_setup_summary(&state->cfg, &state->session);
+    if (!wind_setup.active) return;
+    retained_domain_box_corners(domain, corners);
+    retained_draw_domain_face(renderer, state, corners, wind_setup.config.inlet_face, inlet_color);
+    retained_draw_domain_face(renderer, state, corners, wind_setup.config.outlet_face, outlet_color);
 }
 
 static void draw_retained_plane(SDL_Renderer *renderer,

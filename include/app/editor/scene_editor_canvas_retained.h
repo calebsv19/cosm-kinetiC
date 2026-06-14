@@ -13,6 +13,9 @@ void scene_editor_canvas_draw_retained_origin_axes(SDL_Renderer *renderer,
 void scene_editor_canvas_draw_retained_domain_box(SDL_Renderer *renderer,
                                                   const SceneEditorState *state,
                                                   const PhysicsSimDomainOverlay *domain);
+void scene_editor_canvas_draw_retained_wind_faces(SDL_Renderer *renderer,
+                                                  const SceneEditorState *state,
+                                                  const PhysicsSimDomainOverlay *domain);
 void scene_editor_canvas_draw_retained_object_overlay(SDL_Renderer *renderer,
                                                       const SceneEditorState *state,
                                                       const CoreSceneObjectContract *object,

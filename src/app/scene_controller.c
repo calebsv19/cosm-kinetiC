@@ -22,6 +22,7 @@
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
 #include "app/sim_runtime_backend.h"
+#include "app/wind_tunnel_3d_inspector.h"
 #include "app/quality_profiles.h"
 #include "app/data_paths.h"
 #include "input/input.h"
@@ -483,6 +484,8 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
     SceneControllerRenderDeriveFrame frame = {0};
     const char *quality_label = NULL;
     SimRuntimeBackendReport backend_report = {0};
+    WindTunnel3DInspectorState wind_inspector_state = wind_tunnel_3d_inspector_default_state();
+    WindTunnel3DInspectorSnapshot wind_inspector = {0};
     bool compatibility_slice_has_activity = false;
     bool compatibility_slice_has_obstacles = false;
 
@@ -492,6 +495,9 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
 
     quality_label = quality_profile_name_for_space_mode(cfg->space_mode, cfg->quality_index);
     (void)scene_backend_report(scene, &backend_report);
+    (void)wind_tunnel_3d_inspector_snapshot_from_backend(scene->backend,
+                                                         &wind_inspector_state,
+                                                         &wind_inspector);
     if (backend_report.compatibility_view_2d_available &&
         scene_backend_compatibility_slice_activity(scene,
                                                    backend_report.compatibility_slice_z,
@@ -620,6 +626,8 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
             backend_report.wind_analysis_object_drag_pressure_proxy,
         .backend_wind_analysis_vorticity_avg = backend_report.wind_analysis_vorticity_avg,
         .backend_wind_analysis_vorticity_max = backend_report.wind_analysis_vorticity_max,
+        .wind_inspector_available = wind_inspector.available,
+        .wind_inspector = wind_inspector,
         .tunnel_inflow_speed = cfg->tunnel_inflow_speed,
         .vorticity_enabled = renderer_sdl_vorticity_enabled(),
         .pressure_enabled = renderer_sdl_pressure_enabled(),

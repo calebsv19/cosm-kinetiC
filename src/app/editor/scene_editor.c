@@ -142,6 +142,7 @@ static void editor_layout_controls(SceneEditorState *state) {
     int overlay_button_h = 0;
     int velocity_button_h = 0;
     int summary_top = 0;
+    int summary_min_h = 0;
     int info_line_step = 0;
     if (!state) return;
 
@@ -171,17 +172,21 @@ static void editor_layout_controls(SceneEditorState *state) {
     state->radius_field.label = "Radius";
     state->radius_field.target = FIELD_RADIUS;
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
-        state->radius_field.rect = (SDL_Rect){right_x, inspector_top + 8, right_field_w, field_h};
-        state->strength_field.rect = (SDL_Rect){right_x,
-                                                state->radius_field.rect.y + state->radius_field.rect.h + 12,
-                                                right_field_w,
-                                                field_h};
+        int compact_field_h = small_h + 10;
+        int compact_gap = 8;
+        int compact_w = (right_field_w - compact_gap * 2) / 3;
+        if (compact_field_h < 28) compact_field_h = 28;
+        if (compact_w < 48) compact_w = 48;
+        state->radius_field.rect = (SDL_Rect){right_x, inspector_top + 8, compact_w, compact_field_h};
+        state->strength_field.rect = (SDL_Rect){right_x + compact_w + compact_gap,
+                                                state->radius_field.rect.y,
+                                                compact_w,
+                                                compact_field_h};
         state->strength_field.label = "Emitter Strength";
-        state->thermal_buoyancy_field.rect = (SDL_Rect){right_x,
-                                                        state->strength_field.rect.y +
-                                                            state->strength_field.rect.h + 12,
-                                                        right_field_w,
-                                                        field_h};
+        state->thermal_buoyancy_field.rect = (SDL_Rect){right_x + (compact_w + compact_gap) * 2,
+                                                        state->radius_field.rect.y,
+                                                        right_field_w - (compact_w + compact_gap) * 2,
+                                                        compact_field_h};
         state->thermal_buoyancy_field.label = "Thermal Lift";
     } else {
         state->strength_field.rect = (SDL_Rect){right_x,
@@ -196,7 +201,7 @@ static void editor_layout_controls(SceneEditorState *state) {
     state->thermal_buoyancy_field.target = FIELD_THERMAL_BUOYANCY_3D;
 
     overlay_top = physics_sim_editor_session_has_retained_scene(&state->session)
-                      ? (state->thermal_buoyancy_field.rect.y + state->thermal_buoyancy_field.rect.h + 18)
+                      ? (state->radius_field.rect.y + state->radius_field.rect.h + 18)
                       : (state->strength_field.rect.y + state->strength_field.rect.h + 18);
     overlay_row_button_w = (right_field_w - overlay_gap * 2) / 3;
     if (overlay_row_button_w < 52) overlay_row_button_w = 52;
@@ -314,8 +319,9 @@ static void editor_layout_controls(SceneEditorState *state) {
     cancel_y = state->right_panel_rect.y + state->right_panel_rect.h - bottom_pad - cancel_h;
     save_y = cancel_y - 6 - save_h;
     apply_y = save_y - 6 - apply_h;
-    if (apply_y < summary_top + 220) {
-        apply_y = summary_top + 220;
+    summary_min_h = physics_sim_editor_session_has_retained_scene(&state->session) ? 168 : 220;
+    if (apply_y < summary_top + summary_min_h) {
+        apply_y = summary_top + summary_min_h;
         save_y = apply_y + apply_h + 6;
         cancel_y = save_y + save_h + 6;
     }

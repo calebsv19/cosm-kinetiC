@@ -283,6 +283,12 @@ void physics_sim_editor_session_init(PhysicsSimEditorSession *session,
 
     session->retained_scene = bootstrap->retained_scene;
     session->has_retained_scene = true;
+    if (bootstrap->wind_tunnel_authored &&
+        wind_tunnel_3d_config_validate(&bootstrap->wind_tunnel)) {
+        session->has_wind_tunnel_config = true;
+        session->wind_tunnel_authored = true;
+        session->wind_tunnel = bootstrap->wind_tunnel;
+    }
     physics_sim_editor_session_seed_default_overlay(session);
     physics_sim_editor_session_select_retained_index(session, 0);
 }
@@ -321,6 +327,20 @@ void physics_sim_editor_session_set_legacy_selection(PhysicsSimEditorSession *se
 
 bool physics_sim_editor_session_has_retained_scene(const PhysicsSimEditorSession *session) {
     return session && session->has_retained_scene;
+}
+
+bool physics_sim_editor_session_has_wind_tunnel_config(const PhysicsSimEditorSession *session) {
+    return session && session->has_retained_scene && session->has_wind_tunnel_config;
+}
+
+bool physics_sim_editor_session_wind_tunnel_authored(const PhysicsSimEditorSession *session) {
+    return physics_sim_editor_session_has_wind_tunnel_config(session) &&
+           session->wind_tunnel_authored;
+}
+
+const WindTunnel3DConfig *physics_sim_editor_session_wind_tunnel_config(const PhysicsSimEditorSession *session) {
+    if (!physics_sim_editor_session_has_wind_tunnel_config(session)) return NULL;
+    return &session->wind_tunnel;
 }
 
 bool physics_sim_editor_session_has_physics_overlay(const PhysicsSimEditorSession *session) {

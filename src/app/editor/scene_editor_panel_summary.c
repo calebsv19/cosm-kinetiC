@@ -1,8 +1,10 @@
 #include "app/editor/scene_editor_panel_internal.h"
 
 #include "app/editor/scene_editor_model.h"
+#include "app/editor/scene_editor_wind_setup.h"
 
 #include <stdio.h>
+#include <string.h>
 
 static void draw_status_card(SceneEditorState *state,
                              int x,
@@ -22,6 +24,8 @@ static void draw_status_card(SceneEditorState *state,
     int line_h = 0;
     int card_h = 0;
     int current_y = 0;
+    bool overlay_default = false;
+    bool save_default = false;
     if (!state || !state->renderer || !physics_sim_editor_session_has_retained_scene(&state->session)) return;
 
     line_h = panel_font_height(state->renderer, state->font_small, 15);
@@ -38,6 +42,10 @@ static void draw_status_card(SceneEditorState *state,
     } else {
         snprintf(overlay_line, sizeof(overlay_line), "Overlay: no local changes");
     }
+    overlay_default = !state->dirty &&
+                      (!state->overlay_apply_diagnostics[0] ||
+                       strstr(state->overlay_apply_diagnostics, "not yet applied") != NULL ||
+                       strstr(state->overlay_apply_diagnostics, "no local changes") != NULL);
 
     if (state->save_scene_diagnostics[0]) {
         snprintf(save_line, sizeof(save_line), "Scene Save: %s", state->save_scene_diagnostics);
@@ -48,6 +56,14 @@ static void draw_status_card(SceneEditorState *state,
     } else {
         snprintf(save_line, sizeof(save_line), "Scene Save: not yet saved");
         save_color = COLOR_STATUS_WARN;
+    }
+    save_default = !state->dirty &&
+                   (!state->save_scene_diagnostics[0] ||
+                    strstr(state->save_scene_diagnostics, "not yet saved") != NULL ||
+                    strstr(state->save_scene_diagnostics, "First save target") != NULL ||
+                    strstr(state->save_scene_diagnostics, "Save target") != NULL);
+    if (overlay_default && save_default) {
+        return;
     }
 
     wrap_text_lines(state->renderer,
@@ -136,12 +152,13 @@ void draw_right_panel_summary(SceneEditorState *state) {
     char selected_line_b[160];
     char emitter_line[160];
     char domain_line[160];
-    char domain_runtime_line[160];
+    char wind_line[160];
     char wrapped[2][192];
     const CoreSceneObjectContract *selected_retained = NULL;
     const PhysicsSimObjectOverlay *selected_overlay = NULL;
     const PhysicsSimEmitterOverlay *selected_emitter = NULL;
     const PhysicsSimDomainOverlay *scene_domain = NULL;
+    SceneEditorWindSetupSummary wind_setup;
     int line_y = 0;
     int line_step = 0;
     int x = 0;
@@ -160,7 +177,8 @@ void draw_right_panel_summary(SceneEditorState *state) {
     selected_line_b[0] = '\0';
     emitter_line[0] = '\0';
     domain_line[0] = '\0';
-    domain_runtime_line[0] = '\0';
+    wind_line[0] = '\0';
+    wind_setup = scene_editor_wind_setup_summary(&state->cfg, &state->session);
     if (state->selection_kind == SELECTION_EMITTER &&
         state->selected_emitter >= 0 &&
         state->selected_emitter < (int)state->working.emitter_count) {
@@ -251,9 +269,15 @@ void draw_right_panel_summary(SceneEditorState *state) {
                  width,
                  height,
                  depth);
-        snprintf(domain_runtime_line,
-                 sizeof(domain_runtime_line),
-                 "Runtime domain: XY active; depth saved only");
+        if (wind_setup.active) {
+            snprintf(wind_line,
+                     sizeof(wind_line),
+                     "Wind: %s -> %s  %.1f / %.1f",
+                     wind_setup.inlet_label,
+                     wind_setup.outlet_label,
+                     wind_setup.config.inflow_speed,
+                     wind_setup.config.inflow_density);
+        }
     }
 
     current_y = line_y;
@@ -283,8 +307,8 @@ void draw_right_panel_summary(SceneEditorState *state) {
             current_y += line_step;
         }
     }
-    if (domain_runtime_line[0]) {
-        wrap_text_lines(state->renderer, state->font_small, domain_runtime_line, text_w, 2, wrapped, NULL);
+    if (wind_line[0]) {
+        wrap_text_lines(state->renderer, state->font_small, wind_line, text_w, 2, wrapped, NULL);
         for (int i = 0; i < 2 && wrapped[i][0]; ++i) {
             draw_text(state->renderer, state->font_small, wrapped[i], x, current_y, COLOR_TEXT_DIM);
             current_y += line_step;

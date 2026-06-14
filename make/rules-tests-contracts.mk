@@ -107,6 +107,7 @@ ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
 	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_inspector.c \
 	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
@@ -162,6 +163,7 @@ SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
 	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_inspector.c \
 	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
@@ -189,6 +191,7 @@ SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
 	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_inspector.c \
 	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
@@ -245,6 +248,7 @@ SIM_RUNTIME_BACKEND_3D_WIND_TUNNEL_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
 	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_inspector.c \
 	$(SRC_DIR)/app/wind_tunnel_3d.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
@@ -562,6 +566,13 @@ SCENE_EDITOR_VIEWPORT_TEST_SRCS := \
 	$(CORE_VIEWPORT2D_DIR)/src/core_viewport2d.c \
 	$(CORE_BASE_DIR)/src/core_base.c
 
+SCENE_EDITOR_WIND_SETUP_TEST_SRCS := \
+	tests/scene_editor_wind_setup_contract_test.c \
+	$(SRC_DIR)/app/editor/scene_editor_wind_setup.c \
+	$(SRC_DIR)/app/editor/scene_editor_session.c \
+	$(SRC_DIR)/app/editor/scene_editor_session_overlay_edit.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c
+
 RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_SRCS := \
 	tests/retained_runtime_scene_overlay_geom_contract_test.c \
 	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c
@@ -783,6 +794,13 @@ test-scene-editor-viewport-contract: $(SCENE_EDITOR_VIEWPORT_TEST_SRCS)
 		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_VIEWPORT2D_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_viewport_contract_test $(SCENE_EDITOR_VIEWPORT_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_viewport_contract_test
+
+test-scene-editor-wind-setup-contract: $(SCENE_EDITOR_WIND_SETUP_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		$(JSON_CFLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_BASE_DIR)/include \
+		-o $(BUILD_DIR)/scene_editor_wind_setup_contract_test $(SCENE_EDITOR_WIND_SETUP_TEST_SRCS) $(JSON_LIBS) -lm
+	$(BUILD_DIR)/scene_editor_wind_setup_contract_test
 
 test-retained-runtime-scene-overlay-geom-contract: $(RETAINED_RUNTIME_SCENE_OVERLAY_GEOM_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)

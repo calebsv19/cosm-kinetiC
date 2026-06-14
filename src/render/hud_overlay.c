@@ -460,6 +460,56 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         wind_analysis_line[0] = '\0';
     }
 
+    char wind_inspector_line[224];
+    char wind_inspector_metrics_line[224];
+    char wind_inspector_object_line[192];
+    if (hud->sim_mode == SIM_MODE_WIND_TUNNEL && hud->wind_inspector_available) {
+        const WindTunnel3DInspectorSnapshot *inspector = &hud->wind_inspector;
+        snprintf(wind_inspector_line,
+                 sizeof(wind_inspector_line),
+                 "Wind inspector: %s slice %s=%d depth=%.2f min/avg/max %.3f/%.3f/%.3f solid=%zu/%zu",
+                 inspector->field_label ? inspector->field_label : "Field",
+                 inspector->slice_axis_label ? inspector->slice_axis_label : "?",
+                 inspector->slice_index,
+                 inspector->normalized_slice_depth,
+                 inspector->slice_min,
+                 inspector->slice_avg,
+                 inspector->slice_max,
+                 inspector->slice_solid_cells,
+                 inspector->solid_cells);
+        snprintf(wind_inspector_metrics_line,
+                 sizeof(wind_inspector_metrics_line),
+                 "Wind faces: %s -> %s speed=%.2f rho=%.2f dp=%+.3f dQ=%+.3f Qout=%.3f vort=%.3f/%.3f",
+                 inspector->inlet_label ? inspector->inlet_label : "inlet",
+                 inspector->outlet_label ? inspector->outlet_label : "outlet",
+                 inspector->inflow_speed,
+                 inspector->inflow_density,
+                 inspector->pressure_delta,
+                 inspector->throughput_delta,
+                 inspector->outlet_throughput,
+                 inspector->vorticity_avg,
+                 inspector->vorticity_max);
+        if (inspector->object_readout_available) {
+            snprintf(wind_inspector_object_line,
+                     sizeof(wind_inspector_object_line),
+                     "Wind object: cells=%zu area=%.3f p %.3f -> %.3f dp=%+.3f drag=%.3f",
+                     inspector->object_solid_cells,
+                     inspector->object_projected_area,
+                     inspector->object_upstream_pressure_avg,
+                     inspector->object_downstream_pressure_avg,
+                     inspector->object_pressure_delta,
+                     inspector->object_drag_pressure_proxy);
+        } else {
+            snprintf(wind_inspector_object_line,
+                     sizeof(wind_inspector_object_line),
+                     "Wind object: no object readout available");
+        }
+    } else {
+        wind_inspector_line[0] = '\0';
+        wind_inspector_metrics_line[0] = '\0';
+        wind_inspector_object_line[0] = '\0';
+    }
+
     char quality_line[64];
     snprintf(quality_line, sizeof(quality_line), "Quality: %s",
              (hud->quality_name && hud->quality_name[0]) ? hud->quality_name : "Custom");
@@ -554,7 +604,7 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     const char *hint_line_a = "Keys: P/C/E Esc 1/2  V/B/S/L  Shift+S  T slice";
     const char *hint_line_b = "Paths: K/J  Shift+V/B/L  G grav  H elastic";
 
-    enum { MAX_HUD_LINES = 32 };
+    enum { MAX_HUD_LINES = 40 };
     const char *lines[MAX_HUD_LINES];
     const char *draw_lines[MAX_HUD_LINES];
     size_t line_count = 0;
@@ -579,6 +629,9 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     lines[line_count++] = preset_line;
     if (wind_line[0]) lines[line_count++] = wind_line;
     if (wind_analysis_line[0]) lines[line_count++] = wind_analysis_line;
+    if (wind_inspector_line[0]) lines[line_count++] = wind_inspector_line;
+    if (wind_inspector_metrics_line[0]) lines[line_count++] = wind_inspector_metrics_line;
+    if (wind_inspector_object_line[0]) lines[line_count++] = wind_inspector_object_line;
     lines[line_count++] = quality_line;
     if (hud->paused) lines[line_count++] = solver_line;
     if (overlays_line[0]) {

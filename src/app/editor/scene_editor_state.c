@@ -645,6 +645,7 @@ bool editor_load_runtime_scene_fixture(SceneEditorState *state,
                                        size_t out_diagnostics_size) {
     RuntimeSceneBridgePreflight summary = {0};
     PhysicsSimRetainedRuntimeScene retained = {0};
+    PhysicsSimRuntimeVisualBootstrap visual_bootstrap = {0};
     SceneEditorBootstrap bootstrap = {0};
     const char *scene_id = NULL;
     CoreBuffer file_data = {0};
@@ -696,6 +697,14 @@ bool editor_load_runtime_scene_fixture(SceneEditorState *state,
 
     bootstrap.has_retained_scene = true;
     bootstrap.retained_scene = retained;
+    if (runtime_scene_bridge_load_visual_bootstrap_json(state->retained_runtime_scene_json,
+                                                        &visual_bootstrap,
+                                                        NULL,
+                                                        0) &&
+        visual_bootstrap.wind_tunnel_authored) {
+        bootstrap.wind_tunnel_authored = true;
+        bootstrap.wind_tunnel = visual_bootstrap.wind_tunnel;
+    }
     physics_sim_editor_session_init(&state->session, &state->working, &bootstrap);
     if (!physics_sim_editor_session_hydrate_overlay_from_runtime_scene_json(&state->session,
                                                                             state->retained_runtime_scene_json,

@@ -8,6 +8,7 @@
 #include "app/app_config.h"
 #include "app/sim_mode.h"
 #include "app/sim_runtime_3d_domain.h"
+#include "app/wind_tunnel_3d.h"
 #include "import/runtime_scene_bridge.h"
 #include "input/stroke_buffer.h"
 
@@ -176,6 +177,12 @@ typedef struct SimRuntimeBackendReport {
     size_t emitter_step_last_footprint_cells;
     float emitter_step_density_delta;
     float emitter_step_velocity_magnitude_delta;
+    bool wind_tunnel_active;
+    WindTunnel3DFace wind_tunnel_inlet_face;
+    WindTunnel3DFace wind_tunnel_outlet_face;
+    float wind_tunnel_inflow_speed;
+    float wind_tunnel_inflow_density;
+    int wind_tunnel_inlet_slab_cells;
     bool wind_analysis_available;
     size_t wind_analysis_sampled_cells;
     float wind_analysis_inlet_pressure_avg;
