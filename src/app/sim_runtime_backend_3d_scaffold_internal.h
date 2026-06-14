@@ -35,6 +35,7 @@ typedef struct SimRuntimeBackend3DScaffold {
     PhysicsSimRuntimeSceneUpSource scene_up_source;
     bool wind_tunnel_active;
     WindTunnel3DConfig wind_tunnel;
+    uint64_t wind_step_index;
     bool debug_volume_stats_dirty;
     bool export_volume_cache_dirty;
     bool runtime_solver_region_guard_triggered;

@@ -47,10 +47,13 @@ typedef struct SolverProjectionXYDomainMapping {
     bool valid;
     double min_x;
     double min_y;
+    double min_z;
     double max_x;
     double max_y;
+    double max_z;
     double span_x;
     double span_y;
+    double span_z;
 } SolverProjectionXYDomainMapping;
 
 float runtime_scene_solver_projection_clampf_dim(float v, float min_v, float max_v);

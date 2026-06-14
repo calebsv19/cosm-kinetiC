@@ -40,6 +40,7 @@ typedef struct PhysicsSimHeadlessCliOptions {
     bool save_render_frames;
     bool save_wind_projection_frames;
     bool skip_present;
+    WindVisualMode wind_visual_mode;
     HeadlessWindShotCameraProfile wind_shot_camera_profile;
     PhysicsSimHeadlessOutputPolicy output_policy;
 } PhysicsSimHeadlessCliOptions;
@@ -73,6 +74,7 @@ static void print_usage(const char *argv0) {
             "[--progress-interval <n>] [--sim-steps-per-frame <n>] "
             "[--grid <width>x<height>x<depth>] "
             "[--wind-shot-camera <three_quarter|side|top|downstream|runtime_default>] "
+            "[--wind-visual-mode <flow|speed|speed_deficit|vorticity|object_mask|slice_speed_deficit|slice_vorticity|volume_speed_deficit|volume_vorticity>] "
             "[--overwrite] [--present]\n",
             argv0 ? argv0 : "physics_sim_headless");
 }
@@ -114,6 +116,47 @@ static bool parse_grid_arg(const char *text, int *out_w, int *out_h, int *out_d)
     return true;
 }
 
+static const char *wind_visual_mode_label(WindVisualMode mode) {
+    switch (mode) {
+    case WIND_VISUAL_MODE_FLOW: return "flow";
+    case WIND_VISUAL_MODE_SPEED: return "speed";
+    case WIND_VISUAL_MODE_SPEED_DEFICIT: return "speed_deficit";
+    case WIND_VISUAL_MODE_VORTICITY: return "vorticity";
+    case WIND_VISUAL_MODE_OBJECT_MASK: return "object_mask";
+    case WIND_VISUAL_MODE_SLICE_SPEED_DEFICIT: return "slice_speed_deficit";
+    case WIND_VISUAL_MODE_SLICE_VORTICITY: return "slice_vorticity";
+    case WIND_VISUAL_MODE_VOLUME_SPEED_DEFICIT: return "volume_speed_deficit";
+    case WIND_VISUAL_MODE_VOLUME_VORTICITY: return "volume_vorticity";
+    default: return "flow";
+    }
+}
+
+static bool parse_wind_visual_mode_arg(const char *text, WindVisualMode *out_mode) {
+    if (!text || !text[0] || !out_mode) return false;
+    if (strcmp(text, "flow") == 0) {
+        *out_mode = WIND_VISUAL_MODE_FLOW;
+    } else if (strcmp(text, "speed") == 0) {
+        *out_mode = WIND_VISUAL_MODE_SPEED;
+    } else if (strcmp(text, "speed_deficit") == 0) {
+        *out_mode = WIND_VISUAL_MODE_SPEED_DEFICIT;
+    } else if (strcmp(text, "vorticity") == 0) {
+        *out_mode = WIND_VISUAL_MODE_VORTICITY;
+    } else if (strcmp(text, "object_mask") == 0) {
+        *out_mode = WIND_VISUAL_MODE_OBJECT_MASK;
+    } else if (strcmp(text, "slice_speed_deficit") == 0) {
+        *out_mode = WIND_VISUAL_MODE_SLICE_SPEED_DEFICIT;
+    } else if (strcmp(text, "slice_vorticity") == 0) {
+        *out_mode = WIND_VISUAL_MODE_SLICE_VORTICITY;
+    } else if (strcmp(text, "volume_speed_deficit") == 0) {
+        *out_mode = WIND_VISUAL_MODE_VOLUME_SPEED_DEFICIT;
+    } else if (strcmp(text, "volume_vorticity") == 0) {
+        *out_mode = WIND_VISUAL_MODE_VOLUME_VORTICITY;
+    } else {
+        return false;
+    }
+    return true;
+}
+
 static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out) {
     if (!out) return false;
     memset(out, 0, sizeof(*out));
@@ -121,6 +164,7 @@ static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out)
     out->sim_steps_per_frame = 1;
     out->progress_interval = 60;
     out->skip_present = true;
+    out->wind_visual_mode = WIND_VISUAL_MODE_FLOW;
     out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER;
     out->output_policy = PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS;
 
@@ -170,6 +214,10 @@ static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out)
             } else if (strcmp(argv[i], "runtime_default") == 0) {
                 out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_RUNTIME_DEFAULT;
             } else {
+                return false;
+            }
+        } else if (strcmp(argv[i], "--wind-visual-mode") == 0) {
+            if (++i >= argc || !parse_wind_visual_mode_arg(argv[i], &out->wind_visual_mode)) {
                 return false;
             }
         } else if (strcmp(argv[i], "--save-volume-frames") == 0) {
@@ -513,6 +561,8 @@ static bool write_wind_shot_manifest(const char *manifest_path,
     fputs("  \"camera_source\": \"wind_shot_profile\",\n", f);
     fputs("  \"camera_profile\": ", f);
     json_write_escaped(f, wind_shot_camera_profile_label(opts->wind_shot_camera_profile));
+    fputs(",\n  \"wind_visual_mode\": ", f);
+    json_write_escaped(f, wind_visual_mode_label(opts->wind_visual_mode));
     fprintf(f,
             ",\n  \"camera_yaw_deg\": %.9g,\n"
             "  \"camera_pitch_deg\": %.9g,\n"
@@ -530,6 +580,13 @@ static bool write_wind_shot_manifest(const char *manifest_path,
     fputs("    \"outlet_throughput\",\n", f);
     fputs("    \"throughput_delta\",\n", f);
     fputs("    \"drag_pressure_proxy\",\n", f);
+    fputs("    \"object_drag_available\",\n", f);
+    fputs("    \"object_solid_cells\",\n", f);
+    fputs("    \"object_projected_area\",\n", f);
+    fputs("    \"object_upstream_pressure_avg\",\n", f);
+    fputs("    \"object_downstream_pressure_avg\",\n", f);
+    fputs("    \"object_pressure_delta\",\n", f);
+    fputs("    \"object_drag_pressure_proxy\",\n", f);
     fputs("    \"vorticity_avg\",\n", f);
     fputs("    \"vorticity_max\"\n", f);
     fputs("  ],\n", f);
@@ -574,6 +631,13 @@ static void wind_analysis_frame_callback(void *user_data,
                 "\"outlet_throughput\":%.9g,"
                 "\"throughput_delta\":%.9g,"
                 "\"drag_pressure_proxy\":%.9g,"
+                "\"object_drag_available\":%s,"
+                "\"object_solid_cells\":%zu,"
+                "\"object_projected_area\":%.9g,"
+                "\"object_upstream_pressure_avg\":%.9g,"
+                "\"object_downstream_pressure_avg\":%.9g,"
+                "\"object_pressure_delta\":%.9g,"
+                "\"object_drag_pressure_proxy\":%.9g,"
                 "\"vorticity_avg\":%.9g,"
                 "\"vorticity_max\":%.9g",
                 backend_report->wind_analysis_sampled_cells,
@@ -584,6 +648,13 @@ static void wind_analysis_frame_callback(void *user_data,
                 backend_report->wind_analysis_outlet_throughput,
                 backend_report->wind_analysis_throughput_delta,
                 backend_report->wind_analysis_drag_pressure_proxy,
+                backend_report->wind_analysis_object_drag_available ? "true" : "false",
+                backend_report->wind_analysis_object_solid_cells,
+                backend_report->wind_analysis_object_projected_area,
+                backend_report->wind_analysis_object_upstream_pressure_avg,
+                backend_report->wind_analysis_object_downstream_pressure_avg,
+                backend_report->wind_analysis_object_pressure_delta,
+                backend_report->wind_analysis_object_drag_pressure_proxy,
                 backend_report->wind_analysis_vorticity_avg,
                 backend_report->wind_analysis_vorticity_max);
     }
@@ -670,6 +741,8 @@ static bool write_run_summary(const char *summary_path,
             output_policy_label(opts->output_policy),
             result_code,
             result_code == 0 ? "passed" : (result_code == 2 ? "canceled" : "failed"));
+    fputs(",\n  \"wind_visual_mode\": ", f);
+    json_write_escaped(f, wind_visual_mode_label(opts->wind_visual_mode));
     if (backend_report && backend_report->wind_analysis_available) {
         fprintf(f,
                 ",\n  \"wind_analysis\": {\n"
@@ -682,6 +755,13 @@ static bool write_run_summary(const char *summary_path,
                 "    \"outlet_throughput\": %.9g,\n"
                 "    \"throughput_delta\": %.9g,\n"
                 "    \"drag_pressure_proxy\": %.9g,\n"
+                "    \"object_drag_available\": %s,\n"
+                "    \"object_solid_cells\": %zu,\n"
+                "    \"object_projected_area\": %.9g,\n"
+                "    \"object_upstream_pressure_avg\": %.9g,\n"
+                "    \"object_downstream_pressure_avg\": %.9g,\n"
+                "    \"object_pressure_delta\": %.9g,\n"
+                "    \"object_drag_pressure_proxy\": %.9g,\n"
                 "    \"vorticity_avg\": %.9g,\n"
                 "    \"vorticity_max\": %.9g\n"
                 "  }\n",
@@ -693,6 +773,13 @@ static bool write_run_summary(const char *summary_path,
                 backend_report->wind_analysis_outlet_throughput,
                 backend_report->wind_analysis_throughput_delta,
                 backend_report->wind_analysis_drag_pressure_proxy,
+                backend_report->wind_analysis_object_drag_available ? "true" : "false",
+                backend_report->wind_analysis_object_solid_cells,
+                backend_report->wind_analysis_object_projected_area,
+                backend_report->wind_analysis_object_upstream_pressure_avg,
+                backend_report->wind_analysis_object_downstream_pressure_avg,
+                backend_report->wind_analysis_object_pressure_delta,
+                backend_report->wind_analysis_object_drag_pressure_proxy,
                 backend_report->wind_analysis_vorticity_avg,
                 backend_report->wind_analysis_vorticity_max);
     } else {
@@ -818,6 +905,7 @@ int main(int argc, char **argv) {
     cfg.headless_skip_present = opts.skip_present;
     cfg.save_volume_frames = opts.save_volume_frames;
     cfg.save_render_frames = opts.save_render_frames;
+    cfg.wind_visual_mode = opts.wind_visual_mode;
     if (opts.grid_override) {
         cfg.grid_w = opts.grid_w;
         cfg.grid_h = opts.grid_h;

@@ -446,11 +446,14 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     if (hud->sim_mode == SIM_MODE_WIND_TUNNEL && hud->backend_wind_analysis_available) {
         snprintf(wind_analysis_line,
                  sizeof(wind_analysis_line),
-                 "Wind analysis: dp=%+.3f Qin=%.3f Qout=%.3f drag_proxy=%+.3f vort(avg/max)=%.3f/%.3f",
+                 "Wind analysis: dp=%+.3f Qin=%.3f Qout=%.3f drag=%+.3f obj=%+.3f vort=%.3f/%.3f",
                  hud->backend_wind_analysis_pressure_delta,
                  hud->backend_wind_analysis_inlet_throughput,
                  hud->backend_wind_analysis_outlet_throughput,
                  hud->backend_wind_analysis_drag_pressure_proxy,
+                 hud->backend_wind_analysis_object_drag_available
+                     ? hud->backend_wind_analysis_object_drag_pressure_proxy
+                     : 0.0f,
                  hud->backend_wind_analysis_vorticity_avg,
                  hud->backend_wind_analysis_vorticity_max);
     } else {

@@ -43,6 +43,7 @@ AppConfig app_config_default(void) {
 
     cfg.save_volume_frames = false;
     cfg.save_render_frames = false;
+    cfg.wind_visual_mode = WIND_VISUAL_MODE_FLOW;
     cfg.enable_render_blur = true;
     cfg.render_black_level = 0;
 

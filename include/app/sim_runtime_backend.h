@@ -185,6 +185,13 @@ typedef struct SimRuntimeBackendReport {
     float wind_analysis_outlet_throughput;
     float wind_analysis_throughput_delta;
     float wind_analysis_drag_pressure_proxy;
+    bool wind_analysis_object_drag_available;
+    size_t wind_analysis_object_solid_cells;
+    float wind_analysis_object_projected_area;
+    float wind_analysis_object_upstream_pressure_avg;
+    float wind_analysis_object_downstream_pressure_avg;
+    float wind_analysis_object_pressure_delta;
+    float wind_analysis_object_drag_pressure_proxy;
     float wind_analysis_vorticity_avg;
     float wind_analysis_vorticity_max;
 } SimRuntimeBackendReport;

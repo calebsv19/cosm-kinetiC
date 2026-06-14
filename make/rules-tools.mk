@@ -56,6 +56,12 @@ test-physics-sim-headless-wind-analysis: physics_sim_headless
 test-physics-sim-headless-wind-long-tunnel-visual: physics_sim_headless
 	tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh
 
+test-physics-sim-headless-wind-long-tunnel-video: physics_sim_headless
+	bash tests/integration/run_physics_sim_headless_wind_long_tunnel_video.sh
+
+test-physics-sim-headless-wind-object-comparison: physics_sim_headless
+	bash tests/integration/run_physics_sim_headless_wind_object_comparison.sh
+
 test-physics-sim-job-runner-smoke: physics-sim-job-runner physics_sim_headless
 	tests/integration/run_physics_sim_job_runner_smoke.sh
 

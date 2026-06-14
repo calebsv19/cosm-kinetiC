@@ -234,6 +234,23 @@ static bool test_wind_tunnel_corridor_solve_reaches_outlet(void) {
                 report.runtime_solver_velocity_clamp_cell_count);
         return false;
     }
+    if (!sim_runtime_backend_3d_test_view_refresh(backend, &view)) return false;
+    {
+        const int probe_x = 10;
+        const int probe_y = view.volume.desc.grid_h / 2;
+        const int probe_z = view.volume.desc.grid_d / 2;
+        const size_t probe_idx = sim_runtime_3d_volume_index(&view.volume.desc, probe_x, probe_y, probe_z);
+        if (!(view.volume.density[probe_idx] > 0.001f)) {
+            fprintf(stderr,
+                    "corridor density transport failed: probe=(%d,%d,%d) density=%g\n",
+                    probe_x,
+                    probe_y,
+                    probe_z,
+                    view.volume.density[probe_idx]);
+            sim_runtime_backend_destroy(backend);
+            return false;
+        }
+    }
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -341,11 +358,15 @@ static bool test_wind_tunnel_static_object_creates_wake_response(void) {
         !empty_report.wind_analysis_available || !obstacle_report.wind_analysis_available ||
         !(obstacle_report.wind_analysis_outlet_throughput > 0.0f) ||
         !(obstacle_report.runtime_solver_solved_cluster_count > 0u) ||
-        obstacle_report.runtime_solver_skipped_cluster_count != 0u) {
+        obstacle_report.runtime_solver_skipped_cluster_count != 0u ||
+        !obstacle_report.wind_analysis_object_drag_available ||
+        obstacle_report.wind_analysis_object_solid_cells == 0u ||
+        !(obstacle_report.wind_analysis_object_projected_area > 0.0f)) {
         fprintf(stderr,
                 "wake setup report: empty_solid=%zu obstacle_solid=%zu "
                 "empty_available=%d obstacle_available=%d obstacle_outlet=%g "
-                "solved=%zu skipped=%zu solver_cells=%zu\n",
+                "solved=%zu skipped=%zu solver_cells=%zu "
+                "object_drag_available=%d object_solid=%zu object_area=%g\n",
                 empty_solid_cells,
                 obstacle_solid_cells,
                 empty_report.wind_analysis_available ? 1 : 0,
@@ -353,7 +374,32 @@ static bool test_wind_tunnel_static_object_creates_wake_response(void) {
                 obstacle_report.wind_analysis_outlet_throughput,
                 obstacle_report.runtime_solver_solved_cluster_count,
                 obstacle_report.runtime_solver_skipped_cluster_count,
-                obstacle_report.runtime_solver_region_cell_count);
+                obstacle_report.runtime_solver_region_cell_count,
+                obstacle_report.wind_analysis_object_drag_available ? 1 : 0,
+                obstacle_report.wind_analysis_object_solid_cells,
+                obstacle_report.wind_analysis_object_projected_area);
+        return false;
+    }
+    if (!(fabsf(obstacle_report.wind_analysis_object_drag_pressure_proxy) > 0.0001f)) {
+        fprintf(stderr,
+                "object drag report: upstream=%g downstream=%g delta=%g drag=%g area=%g solid=%zu\n",
+                obstacle_report.wind_analysis_object_upstream_pressure_avg,
+                obstacle_report.wind_analysis_object_downstream_pressure_avg,
+                obstacle_report.wind_analysis_object_pressure_delta,
+                obstacle_report.wind_analysis_object_drag_pressure_proxy,
+                obstacle_report.wind_analysis_object_projected_area,
+                obstacle_report.wind_analysis_object_solid_cells);
+        return false;
+    }
+    if (!(obstacle_report.wind_analysis_object_pressure_delta > 0.0001f)) {
+        fprintf(stderr,
+                "object pressure sign report: upstream=%g downstream=%g delta=%g drag=%g area=%g solid=%zu\n",
+                obstacle_report.wind_analysis_object_upstream_pressure_avg,
+                obstacle_report.wind_analysis_object_downstream_pressure_avg,
+                obstacle_report.wind_analysis_object_pressure_delta,
+                obstacle_report.wind_analysis_object_drag_pressure_proxy,
+                obstacle_report.wind_analysis_object_projected_area,
+                obstacle_report.wind_analysis_object_solid_cells);
         return false;
     }
     if (!(obstacle_report.wind_analysis_vorticity_avg >

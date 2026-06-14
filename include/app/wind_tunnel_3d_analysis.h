@@ -17,6 +17,13 @@ typedef struct WindTunnel3DAnalysisReport {
     float outlet_throughput;
     float throughput_delta;
     float drag_pressure_proxy;
+    bool object_drag_available;
+    size_t object_solid_cells;
+    float object_projected_area;
+    float object_upstream_pressure_avg;
+    float object_downstream_pressure_avg;
+    float object_pressure_delta;
+    float object_drag_pressure_proxy;
     float vorticity_avg;
     float vorticity_max;
 } WindTunnel3DAnalysisReport;

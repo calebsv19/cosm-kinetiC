@@ -51,6 +51,25 @@ static void apply_normalized_position(double x,
                                                                        mapping->max_y);
 }
 
+static void apply_normalized_size(double size_x,
+                                  double size_y,
+                                  double size_z,
+                                  const SolverProjectionXYDomainMapping *mapping,
+                                  PresetObject *dst) {
+    if (!mapping || !mapping->valid || !dst) return;
+    dst->size_x = (float)sim_runtime_3d_space_normalize_half_extent(size_x,
+                                                                    mapping->span_x,
+                                                                    0.04);
+    dst->size_y = (float)sim_runtime_3d_space_normalize_half_extent(size_y,
+                                                                    mapping->span_y,
+                                                                    0.04);
+    if (mapping->span_z > 0.0) {
+        dst->size_z = (float)sim_runtime_3d_space_normalize_half_extent(size_z,
+                                                                        mapping->span_z,
+                                                                        0.04);
+    }
+}
+
 static void apply_frame_orientation(const CoreSceneFrame3 *frame, PresetObject *dst) {
     if (!frame || !dst) return;
     dst->orientation_basis_valid = true;
@@ -67,6 +86,7 @@ static void apply_frame_orientation(const CoreSceneFrame3 *frame, PresetObject *
 
 static void runtime_scene_solver_projection_apply_json_object(json_object *src,
                                                               json_object *runtime_root,
+                                                              const SolverProjectionXYDomainMapping *mapping,
                                                               double world_scale,
                                                               PresetObject *dst) {
     json_object *object_type = NULL;
@@ -114,7 +134,11 @@ static void runtime_scene_solver_projection_apply_json_object(json_object *src,
         (void)runtime_scene_solver_projection_parse_bool(flags, "locked", &locked);
     }
 
-    {
+    if (mapping && mapping->valid) {
+        apply_normalized_position(px, py, mapping, dst);
+        apply_normalized_size(sx, sy, sz, mapping, dst);
+        dst->position_z = runtime_scene_solver_projection_scaled_position(pz, world_scale);
+    } else {
         double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = px;
         double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = py;
         double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = pz;
@@ -217,12 +241,16 @@ static void runtime_scene_solver_projection_apply_object(
             double scene_size_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = scale.z;
             float fallback_object_size [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.08f;
 
-            dst->size_x = runtime_scene_solver_projection_scaled_size(
-                scene_size_x, world_scale, fallback_object_size);
-            dst->size_y = runtime_scene_solver_projection_scaled_size(
-                scene_size_y, world_scale, fallback_object_size);
-            dst->size_z = runtime_scene_solver_projection_scaled_size(
-                scene_size_z, world_scale, fallback_object_size);
+            if (mapping && mapping->valid) {
+                apply_normalized_size(scene_size_x, scene_size_y, scene_size_z, mapping, dst);
+            } else {
+                dst->size_x = runtime_scene_solver_projection_scaled_size(
+                    scene_size_x, world_scale, fallback_object_size);
+                dst->size_y = runtime_scene_solver_projection_scaled_size(
+                    scene_size_y, world_scale, fallback_object_size);
+                dst->size_z = runtime_scene_solver_projection_scaled_size(
+                    scene_size_z, world_scale, fallback_object_size);
+            }
         }
     }
 
@@ -282,6 +310,7 @@ void runtime_scene_solver_projection_apply_runtime_root_objects(json_object *run
     json_object *objects = NULL;
     size_t src_count = 0;
     size_t i = 0;
+    SolverProjectionXYDomainMapping mapping = {0};
     if (!runtime_root || !in_out_preset) return;
 
     in_out_preset->object_count = 0;
@@ -293,11 +322,12 @@ void runtime_scene_solver_projection_apply_runtime_root_objects(json_object *run
 
     src_count = json_object_array_length(objects);
     if (src_count > MAX_PRESET_OBJECTS) src_count = MAX_PRESET_OBJECTS;
+    runtime_scene_solver_projection_resolve_xy_domain_mapping(NULL, runtime_root, &mapping);
     for (i = 0; i < src_count; ++i) {
         json_object *src = json_object_array_get_idx(objects, i);
         PresetObject *dst = &in_out_preset->objects[in_out_preset->object_count];
         if (!src || !json_object_is_type(src, json_type_object)) continue;
-        runtime_scene_solver_projection_apply_json_object(src, runtime_root, world_scale, dst);
+        runtime_scene_solver_projection_apply_json_object(src, runtime_root, &mapping, world_scale, dst);
         in_out_preset->object_count++;
     }
 

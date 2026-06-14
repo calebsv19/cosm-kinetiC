@@ -49,6 +49,22 @@ Useful flags:
   profile for Wind shot render captures and manifest metadata. Supported
   profiles are `three_quarter` (default), `side`, `top`, `downstream`, and
   `runtime_default`.
+- `--wind-visual-mode <mode>`: choose the renderer-free Wind fallback coloring
+  used by skip-present `--save-render-frames`. Supported modes are `flow`
+  (default oblique scalar blend), `speed`, `speed_deficit`, `vorticity`,
+  `object_mask`, `slice_speed_deficit`, `slice_vorticity`,
+  `volume_speed_deficit`, and `volume_vorticity`. The slice modes use a
+  mid-depth `X/Y` diagnostic view with inlet/outlet cues, object overlays,
+  moving inlet dye bands, and deterministic particle streaks keyed to frame
+  index. The volume modes use the oblique tunnel projection, project moving
+  inlet dye and particle streaks through depth, and draw the solid mask on top
+  so the obstacle remains visible. Volume streaks are seeded across the tunnel
+  and around the detected solid object, then integrated through the exported
+  velocity field with a small visual cross-flow gain for readability. `flow`
+  mode uses the volume overlay treatment too, so persistent inlet density/dye
+  transport, object overlays, and tracer lanes can be inspected together.
+  `object_mask` is the quickest way to confirm where authored static obstacles
+  landed in the solver mask.
 - `--overwrite`: clear an existing output root before running. Without this,
   the CLI refuses to run when the output root already exists and is not empty.
 - `--resume`: reserved and currently rejected; resume needs frame-continuation
@@ -59,7 +75,14 @@ Useful flags:
   BMP frames under `wind_projection_frames/`. These do not require SDL/Vulkan
   renderer capture; red is max velocity magnitude, green is max density, and
   blue is max pressure magnitude through the 3D volume depth.
-- `--save-render-frames`: capture rendered frames through the existing renderer.
+- `--save-render-frames`: capture rendered frames. Presented runs use the
+  existing renderer. Skip-present headless Wind runs can write renderer-free
+  fallback BMPs under `render_frames/` as an oblique diagnostic Wind view with
+  tunnel bounds, inlet/outlet cues, selectable scalar/diagnostic Wind visual
+  modes, and authored-object overlays, so they do not require SDL video
+  initialization. These fallback frames are diagnostic artifacts; the planned
+  user-facing direction is an in-app Wind Tunnel Inspector sourced from actual
+  solver/analyzer fields.
 - `--skip-present`: default. Suppresses presentation.
 - `--present`: use the existing presented renderer path.
 
@@ -74,10 +97,37 @@ Long-tunnel Wind visual proof:
   frames, validates the initial and final projection BMPs are nonblank and
   different, checks final Wind metrics, attempts renderer frame capture, and writes
   `tmp/headless_wind_long_tunnel_visual/long_tunnel_visual_summary.txt`.
-- Renderer-frame capture in that smoke is reported separately from analyzer
-  projection output. If the environment cannot initialize the SDL/Vulkan video
-  path, the smoke records `renderer_blocker.txt` and keeps the deterministic
-  analyzer/projection proof as the hard requirement.
+- Renderer-frame capture is now a hard requirement in that smoke. In
+  skip-present headless Wind runs it is satisfied by the renderer-free fallback
+  path, which writes an oblique `render_frames/frame_%06d.bmp` without
+  initializing the SDL/Vulkan video path. The smoke also checks the render BMP
+  uses the larger oblique fallback dimensions instead of silently collapsing to
+  the flat analyzer projection size.
+- `make -C physics_sim test-physics-sim-headless-wind-long-tunnel-video`
+  runs the same fixture as a longer MP4 proof. The default `high` profile
+  renders `144` `volume_vorticity` diagnostic frames at `144x36x36`, encodes
+  them at `18` fps to
+  `tmp/headless_wind_long_tunnel_video/wind_long_tunnel_oblique.mp4`, verifies
+  that the first and final render BMP frames differ, verifies the H.264 stream
+  with `ffprobe`, writes
+  `tmp/headless_wind_long_tunnel_video/wind_long_tunnel_video_summary.txt`, and
+  removes the transient `render_frames/` BMP directory after a successful
+  encode. Set `WIND_VIDEO_KEEP_BMPS=1` to keep the intermediate BMP sequence,
+  set `WIND_VIDEO_QUALITY=smoke` for a shorter `120x32x32` / `36` frame check,
+  or set `WIND_VIDEO_MODE=<mode>` to compare object-mask, speed-deficit, and
+  vorticity views from the same fixture.
+- `make -C physics_sim test-physics-sim-headless-wind-object-comparison`
+  runs three single-object long-tunnel fixtures through the renderer-free
+  `volume_speed_deficit` view: blunt box, sphere (`object_type: "circle"`), and
+  slim box. The default smoke profile uses `96x24x24`, `24` frames, and `2`
+  solver steps per frame, then writes
+  `tmp/headless_wind_object_comparison/object_comparison_summary.txt` plus
+  `object_comparison_summary.json`. Set `WIND_OBJECT_COMPARISON_GRID`,
+  `WIND_OBJECT_COMPARISON_FRAMES`, `WIND_OBJECT_COMPARISON_SIM_STEPS_PER_FRAME`,
+  or `WIND_OBJECT_COMPARISON_MODE` to run a higher-quality comparison. The
+  target validates object drag availability, positive projected area, nonblank
+  changing render frames, and distinct projected-area/drag-pressure proxy
+  values across the supported shapes.
 
 Wind shot outputs:
 
@@ -89,20 +139,49 @@ Wind shot outputs:
   active `3D` Wind tunnel scenes, each completed output frame appends one
   `physics_sim_wind_analysis_frame_v1` JSON object with sampled-cell count,
   inlet/outlet pressure averages, pressure delta, inlet/outlet throughput,
-  throughput delta, pressure-delta drag proxy, average vorticity, and max
-  vorticity.
+  throughput delta, pressure-delta drag proxy, aggregate solid-object
+  stagnation-pressure/drag proxy fields, average vorticity, and max vorticity.
 - Wind tunnel throughput uses role-aware signs: inlet flow is positive into the
   tunnel, outlet flow is positive out of the tunnel. Outlet throughput samples
   the configured outlet band, matching the inlet slab width, so coarse grids can
   report near-exit transport without relying on a single terminal voxel.
 - Static authored 3D objects are included in the Wind tunnel solid mask. The
-  carrier pass now applies a deterministic downstream wake response around
-  solid cells, so headless stats can distinguish an empty tunnel from a tunnel
-  with an object through pressure delta, throughput delta, and vorticity.
+  carrier pass now applies a deterministic downstream wake response around an
+  aggregate solid-object bounds volume, so headless stats can distinguish an
+  empty tunnel from a tunnel with an object through pressure delta, throughput
+  delta, and vorticity. The current left/right tunnel wake pass adds a bounded
+  downstream velocity deficit and capped cross-flow swirl behind static solid
+  objects; the volume diagnostic particles sample that exported cross-flow so
+  object interaction is visible in MP4 output. The backend also carries inlet
+  density downstream as a persistent dye/smoke scalar for left/right tunnels,
+  with solid obstacles naturally creating a dye shadow. Wake velocity and
+  pressure perturbations also advect downstream with decay for left/right
+  tunnels, while the obstacle wake injector adds fresh perturbation near the
+  object face. `volume_speed_deficit` is the clearest MP4 mode for inspecting
+  this relaxation path. The analyzer now also reports an aggregate
+  solid-object pressure readout for the current one-object proof lane:
+  `object_drag_available`, solid-cell count, projected area,
+  upstream/downstream stagnation-pressure proxy averages, signed positive
+  `object_pressure_delta`, and a positive `object_drag_pressure_proxy`
+  magnitude. The current left/right wake source includes an upstream
+  stagnation region, downstream suction core, and time-phased lateral shedding
+  lobes instead of only adding a positive pressure pocket behind the object.
+  `volume_speed_deficit` now uses a wake-corridor-focused boost for the
+  renderer-free volume fallback: the actual source extends farther downstream,
+  and the diagnostic opacity/mark size is driven by deficit strength only in
+  the detected downstream object corridor so the wake reads strongly without
+  saturating the whole tunnel.
+  This remains an approximate diagnostic wake model rather than full
+  multidirectional scalar transport, per-object-id tables, or final
+  object-surface force integration.
   `tests/fixtures/runtime_scene_wind_tunnel_3d_obstacle.json` is the current
   no-frame analyzer fixture for this path.
 - `tests/fixtures/runtime_scene_wind_tunnel_3d_long_box.json` is the current
   visual proof fixture for the same path.
+- `tests/fixtures/runtime_scene_wind_tunnel_3d_long_sphere.json` and
+  `tests/fixtures/runtime_scene_wind_tunnel_3d_long_slim_box.json` are the
+  comparison fixtures for sphere and low-blockage box behavior. A true
+  arrowhead/wedge is not yet a native single-object primitive in this lane.
 - non-Wind scenes may emit frame rows with `"available": false`; consumers
   should key off that field before reading Wind metrics.
 
@@ -149,6 +228,7 @@ Wind shot manifest schema:
   "output_policy": "overwrite",
   "camera_source": "wind_shot_profile",
   "camera_profile": "side",
+  "wind_visual_mode": "slice_vorticity",
   "camera_yaw_deg": 0,
   "camera_pitch_deg": 12,
   "camera_distance_scale": 1.08,
@@ -172,6 +252,13 @@ Wind analysis time-series row schema:
   "outlet_throughput": 0,
   "throughput_delta": 0.782050848,
   "drag_pressure_proxy": -0.001385713,
+  "object_drag_available": true,
+  "object_solid_cells": 1815,
+  "object_projected_area": 0.30250001,
+  "object_upstream_pressure_avg": 72.4530563,
+  "object_downstream_pressure_avg": 9.61196518,
+  "object_pressure_delta": 62.8410912,
+  "object_drag_pressure_proxy": 19.0094299,
   "vorticity_avg": 0.070993669,
   "vorticity_max": 145.33876
 }

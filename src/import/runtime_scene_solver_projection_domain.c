@@ -303,8 +303,10 @@ void runtime_scene_solver_projection_resolve_xy_domain_mapping(
         out_mapping->valid = true;
         out_mapping->min_x = authored.min_x;
         out_mapping->min_y = authored.min_y;
+        out_mapping->min_z = authored.min_z;
         out_mapping->max_x = authored.max_x;
         out_mapping->max_y = authored.max_y;
+        out_mapping->max_z = authored.max_z;
     } else if (retained_scene &&
                retained_scene->has_line_drawing_scene3d &&
                retained_scene->bounds.enabled &&
@@ -313,13 +315,16 @@ void runtime_scene_solver_projection_resolve_xy_domain_mapping(
         out_mapping->valid = true;
         out_mapping->min_x = retained_scene->bounds.min.x;
         out_mapping->min_y = retained_scene->bounds.min.y;
+        out_mapping->min_z = retained_scene->bounds.min.z;
         out_mapping->max_x = retained_scene->bounds.max.x;
         out_mapping->max_y = retained_scene->bounds.max.y;
+        out_mapping->max_z = retained_scene->bounds.max.z;
     }
 
     if (!out_mapping->valid) return;
     out_mapping->span_x = out_mapping->max_x - out_mapping->min_x;
     out_mapping->span_y = out_mapping->max_y - out_mapping->min_y;
+    out_mapping->span_z = out_mapping->max_z - out_mapping->min_z;
     if (out_mapping->span_x <= 0.0 || out_mapping->span_y <= 0.0) {
         memset(out_mapping, 0, sizeof(*out_mapping));
     }

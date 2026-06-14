@@ -207,6 +207,181 @@ static float wind_tunnel_cross_section_area(const SceneFluidVolumeExportView3D *
     }
 }
 
+static int wind_tunnel_axis_for_faces(WindTunnel3DFace inlet_face,
+                                      WindTunnel3DFace outlet_face,
+                                      int *out_direction) {
+    if (out_direction) *out_direction = 0;
+    if (inlet_face == WIND_TUNNEL_3D_FACE_LEFT &&
+        outlet_face == WIND_TUNNEL_3D_FACE_RIGHT) {
+        if (out_direction) *out_direction = 1;
+        return 0;
+    }
+    if (inlet_face == WIND_TUNNEL_3D_FACE_RIGHT &&
+        outlet_face == WIND_TUNNEL_3D_FACE_LEFT) {
+        if (out_direction) *out_direction = -1;
+        return 0;
+    }
+    if (inlet_face == WIND_TUNNEL_3D_FACE_BOTTOM &&
+        outlet_face == WIND_TUNNEL_3D_FACE_TOP) {
+        if (out_direction) *out_direction = 1;
+        return 1;
+    }
+    if (inlet_face == WIND_TUNNEL_3D_FACE_TOP &&
+        outlet_face == WIND_TUNNEL_3D_FACE_BOTTOM) {
+        if (out_direction) *out_direction = -1;
+        return 1;
+    }
+    if (inlet_face == WIND_TUNNEL_3D_FACE_FRONT &&
+        outlet_face == WIND_TUNNEL_3D_FACE_BACK) {
+        if (out_direction) *out_direction = 1;
+        return 2;
+    }
+    if (inlet_face == WIND_TUNNEL_3D_FACE_BACK &&
+        outlet_face == WIND_TUNNEL_3D_FACE_FRONT) {
+        if (out_direction) *out_direction = -1;
+        return 2;
+    }
+    return -1;
+}
+
+static bool wind_object_pressure_drag_stats(const SceneFluidVolumeExportView3D *volume,
+                                            const WindTunnel3DConfig *config,
+                                            WindTunnel3DAnalysisReport *report) {
+    int axis = -1;
+    int direction = 0;
+    int min_x = 0;
+    int max_x = 0;
+    int min_y = 0;
+    int max_y = 0;
+    int min_z = 0;
+    int max_z = 0;
+    bool found = false;
+    size_t solid_cells = 0u;
+    double upstream_sum = 0.0;
+    double downstream_sum = 0.0;
+    size_t upstream_count = 0u;
+    size_t downstream_count = 0u;
+    float projected_area = 0.0f;
+    float cell_area = 1.0f;
+    if (!volume || !config || !report || !volume->solid_mask || !volume->pressure) return false;
+    axis = wind_tunnel_axis_for_faces(config->inlet_face, config->outlet_face, &direction);
+    if (axis < 0 || direction == 0) return false;
+    for (int z = 1; z < volume->depth - 1; ++z) {
+        for (int y = 1; y < volume->height - 1; ++y) {
+            for (int x = 1; x < volume->width - 1; ++x) {
+                const size_t idx = wind_volume_index(volume, x, y, z);
+                if (volume->solid_mask[idx] == 0u) continue;
+                if (!found) {
+                    min_x = max_x = x;
+                    min_y = max_y = y;
+                    min_z = max_z = z;
+                    found = true;
+                } else {
+                    if (x < min_x) min_x = x;
+                    if (x > max_x) max_x = x;
+                    if (y < min_y) min_y = y;
+                    if (y > max_y) max_y = y;
+                    if (z < min_z) min_z = z;
+                    if (z > max_z) max_z = z;
+                }
+                solid_cells++;
+            }
+        }
+    }
+    if (!found || solid_cells == 0u) return false;
+    cell_area = volume->voxel_size > 0.0f ? volume->voxel_size * volume->voxel_size : 1.0f;
+    if (axis == 0) {
+        const int upstream_x = direction > 0 ? min_x - 1 : max_x + 1;
+        const int downstream_x = direction > 0 ? max_x + 1 : min_x - 1;
+        if (upstream_x < 0 || upstream_x >= volume->width ||
+            downstream_x < 0 || downstream_x >= volume->width) {
+            return false;
+        }
+        projected_area = (float)((max_y - min_y + 1) * (max_z - min_z + 1)) * cell_area;
+        for (int z = min_z; z <= max_z; ++z) {
+            for (int y = min_y; y <= max_y; ++y) {
+                size_t up_idx = wind_volume_index(volume, upstream_x, y, z);
+                size_t down_idx = wind_volume_index(volume, downstream_x, y, z);
+                if (!volume->solid_mask[up_idx]) {
+                    upstream_sum += volume->pressure[up_idx] +
+                                    0.5 * (double)(volume->velocity_x[up_idx] *
+                                                   volume->velocity_x[up_idx]);
+                    upstream_count++;
+                }
+                if (!volume->solid_mask[down_idx]) {
+                    downstream_sum += volume->pressure[down_idx] +
+                                      0.5 * (double)(volume->velocity_x[down_idx] *
+                                                     volume->velocity_x[down_idx]);
+                    downstream_count++;
+                }
+            }
+        }
+    } else if (axis == 1) {
+        const int upstream_y = direction > 0 ? min_y - 1 : max_y + 1;
+        const int downstream_y = direction > 0 ? max_y + 1 : min_y - 1;
+        if (upstream_y < 0 || upstream_y >= volume->height ||
+            downstream_y < 0 || downstream_y >= volume->height) {
+            return false;
+        }
+        projected_area = (float)((max_x - min_x + 1) * (max_z - min_z + 1)) * cell_area;
+        for (int z = min_z; z <= max_z; ++z) {
+            for (int x = min_x; x <= max_x; ++x) {
+                size_t up_idx = wind_volume_index(volume, x, upstream_y, z);
+                size_t down_idx = wind_volume_index(volume, x, downstream_y, z);
+                if (!volume->solid_mask[up_idx]) {
+                    upstream_sum += volume->pressure[up_idx] +
+                                    0.5 * (double)(volume->velocity_y[up_idx] *
+                                                   volume->velocity_y[up_idx]);
+                    upstream_count++;
+                }
+                if (!volume->solid_mask[down_idx]) {
+                    downstream_sum += volume->pressure[down_idx] +
+                                      0.5 * (double)(volume->velocity_y[down_idx] *
+                                                     volume->velocity_y[down_idx]);
+                    downstream_count++;
+                }
+            }
+        }
+    } else {
+        const int upstream_z = direction > 0 ? min_z - 1 : max_z + 1;
+        const int downstream_z = direction > 0 ? max_z + 1 : min_z - 1;
+        if (upstream_z < 0 || upstream_z >= volume->depth ||
+            downstream_z < 0 || downstream_z >= volume->depth) {
+            return false;
+        }
+        projected_area = (float)((max_x - min_x + 1) * (max_y - min_y + 1)) * cell_area;
+        for (int y = min_y; y <= max_y; ++y) {
+            for (int x = min_x; x <= max_x; ++x) {
+                size_t up_idx = wind_volume_index(volume, x, y, upstream_z);
+                size_t down_idx = wind_volume_index(volume, x, y, downstream_z);
+                if (!volume->solid_mask[up_idx]) {
+                    upstream_sum += volume->pressure[up_idx] +
+                                    0.5 * (double)(volume->velocity_z[up_idx] *
+                                                   volume->velocity_z[up_idx]);
+                    upstream_count++;
+                }
+                if (!volume->solid_mask[down_idx]) {
+                    downstream_sum += volume->pressure[down_idx] +
+                                      0.5 * (double)(volume->velocity_z[down_idx] *
+                                                     volume->velocity_z[down_idx]);
+                    downstream_count++;
+                }
+            }
+        }
+    }
+    if (upstream_count == 0u || downstream_count == 0u || !(projected_area > 0.0f)) return false;
+    report->object_drag_available = true;
+    report->object_solid_cells = solid_cells;
+    report->object_projected_area = projected_area;
+    report->object_upstream_pressure_avg = (float)(upstream_sum / (double)upstream_count);
+    report->object_downstream_pressure_avg = (float)(downstream_sum / (double)downstream_count);
+    report->object_pressure_delta =
+        report->object_upstream_pressure_avg - report->object_downstream_pressure_avg;
+    report->object_drag_pressure_proxy = fabsf(report->object_pressure_delta) * projected_area;
+    report->sampled_cells += upstream_count + downstream_count;
+    return true;
+}
+
 bool wind_tunnel_3d_analyze_volume(const SceneFluidVolumeExportView3D *volume,
                                    const WindTunnel3DConfig *config,
                                    WindTunnel3DAnalysisReport *out_report) {
@@ -245,6 +420,7 @@ bool wind_tunnel_3d_analyze_volume(const SceneFluidVolumeExportView3D *volume,
     report.drag_pressure_proxy =
         report.pressure_delta * wind_tunnel_cross_section_area(volume, config->inlet_face);
     report.sampled_cells = inlet_cells + outlet_cells;
+    (void)wind_object_pressure_drag_stats(volume, config, &report);
     wind_vorticity_stats(volume, &report.vorticity_avg, &report.vorticity_max, &report.sampled_cells);
     report.valid = true;
     *out_report = report;

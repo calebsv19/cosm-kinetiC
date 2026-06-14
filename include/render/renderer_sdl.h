@@ -97,6 +97,8 @@ typedef struct RendererHudInfo {
     float       backend_wind_analysis_inlet_throughput;
     float       backend_wind_analysis_outlet_throughput;
     float       backend_wind_analysis_drag_pressure_proxy;
+    bool        backend_wind_analysis_object_drag_available;
+    float       backend_wind_analysis_object_drag_pressure_proxy;
     float       backend_wind_analysis_vorticity_avg;
     float       backend_wind_analysis_vorticity_max;
     float       tunnel_inflow_speed;

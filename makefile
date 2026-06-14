@@ -8,6 +8,7 @@ include make/sources-shared.mk
 include make/sources-tools.mk
 include make/objects.mk
 include make/rules-build.mk
+include make/rules-memory-check.mk
 include make/rules-runtime.mk
 include make/rules-tools.mk
 include make/rules-shims.mk

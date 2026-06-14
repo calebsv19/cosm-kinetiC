@@ -156,7 +156,7 @@ $(TARGET): $(CLANG_TARGET)
 
 $(FISICS_TARGET): $(FISICS_OBJS) | $(FISICS_BUILD_DIR)
 	@mkdir -p $(dir $@)
-	$(CLANG) $(LDFLAGS) -o $@ $(FISICS_OBJS) $(LIBS)
+	$(CLANG) $(LDFLAGS) -o $@ $(FISICS_OBJS) $(LIBS) $(FISICS_MEMCHECK_LINK_LIBS)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)

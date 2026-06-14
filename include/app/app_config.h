@@ -20,6 +20,18 @@ typedef enum SpaceMode {
 
 #define SPACE_MODE_COUNT 2
 
+typedef enum WindVisualMode {
+    WIND_VISUAL_MODE_FLOW = 0,
+    WIND_VISUAL_MODE_SPEED,
+    WIND_VISUAL_MODE_SPEED_DEFICIT,
+    WIND_VISUAL_MODE_VORTICITY,
+    WIND_VISUAL_MODE_OBJECT_MASK,
+    WIND_VISUAL_MODE_SLICE_SPEED_DEFICIT,
+    WIND_VISUAL_MODE_SLICE_VORTICITY,
+    WIND_VISUAL_MODE_VOLUME_SPEED_DEFICIT,
+    WIND_VISUAL_MODE_VOLUME_VORTICITY
+} WindVisualMode;
+
 typedef struct AppConfig {
     int window_w;
     int window_h;
@@ -53,6 +65,7 @@ typedef struct AppConfig {
 
     bool   save_volume_frames;
     bool   save_render_frames;
+    WindVisualMode wind_visual_mode;
     bool   enable_render_blur;
     int    render_black_level; // 0-255 base luminance for empty space
 

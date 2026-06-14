@@ -614,6 +614,10 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
         .backend_wind_analysis_inlet_throughput = backend_report.wind_analysis_inlet_throughput,
         .backend_wind_analysis_outlet_throughput = backend_report.wind_analysis_outlet_throughput,
         .backend_wind_analysis_drag_pressure_proxy = backend_report.wind_analysis_drag_pressure_proxy,
+        .backend_wind_analysis_object_drag_available =
+            backend_report.wind_analysis_object_drag_available,
+        .backend_wind_analysis_object_drag_pressure_proxy =
+            backend_report.wind_analysis_object_drag_pressure_proxy,
         .backend_wind_analysis_vorticity_avg = backend_report.wind_analysis_vorticity_avg,
         .backend_wind_analysis_vorticity_max = backend_report.wind_analysis_vorticity_max,
         .tunnel_inflow_speed = cfg->tunnel_inflow_speed,

@@ -1,0 +1,45 @@
+{
+  "schema_family": "codework_scene",
+  "schema_variant": "scene_runtime_v1",
+  "schema_version": 1,
+  "scene_id": "physics_sim_wind_tunnel_3d_long_sphere",
+  "space_mode_default": "3d",
+  "unit_system": "meters",
+  "world_scale": 1.0,
+  "objects": [
+    {
+      "object_id": "long_tunnel_test_sphere",
+      "object_type": "circle",
+      "transform": {
+        "position": {"x": 1.85, "y": 0.75, "z": 0.75},
+        "scale": {"x": 0.24, "y": 0.24, "z": 0.24},
+        "rotation": {"x": 0.0, "y": 0.0, "z": 0.0}
+      },
+      "flags": {"locked": true}
+    }
+  ],
+  "materials": [],
+  "lights": [],
+  "cameras": [],
+  "constraints": [],
+  "extensions": {
+    "physics_sim": {
+      "scene_domain": {
+        "active": true,
+        "shape": "box",
+        "min": {"x": 0.0, "y": 0.0, "z": 0.0},
+        "max": {"x": 6.0, "y": 1.5, "z": 1.5}
+      },
+      "wind_tunnel": {
+        "active": true,
+        "inlet_face": "left",
+        "outlet_face": "right",
+        "inflow_speed": 12.0,
+        "inflow_density": 0.75,
+        "inlet_slab_cells": 2,
+        "outlet_policy": "receive",
+        "wall_policy": "no_slip"
+      }
+    }
+  }
+}

@@ -151,13 +151,17 @@ if len(data) < 54 or data[:2] != b"BM":
     raise SystemExit(f"invalid render BMP: {frame}")
 offset = struct.unpack_from("<I", data, 10)[0]
 payload = data[offset:]
+width = struct.unpack_from("<i", data, 18)[0]
+height = abs(struct.unpack_from("<i", data, 22)[0])
 nonzero = sum(1 for byte in payload if byte)
 unique = len(set(payload))
 if nonzero == 0 or unique < 2:
     raise SystemExit(f"blank render BMP: {frame}")
+if width <= 96 or height <= 24:
+    raise SystemExit(f"render BMP did not use the oblique software visualizer size: {width}x{height}")
 with report.open("a", encoding="utf-8") as f:
     f.write(f"render_frame: {frame}\n")
-    f.write(f"render_bmp: nonzero_bytes={nonzero} unique_bytes={unique}\n")
+    f.write(f"render_bmp: {width}x{height} nonzero_bytes={nonzero} unique_bytes={unique}\n")
 PY
 else
   {

@@ -39,6 +39,7 @@ Public identity:
   - `make -C physics_sim test-sim-runtime-emitter-contract`
   - `make -C physics_sim test-sim-runtime-obstacle-contract`
   - `make -C physics_sim test-soft-body-contract`
+  - `make -C physics_sim memory-check-audit`
   - `make -C physics_sim toolchain-contract`
   - `make -C physics_sim test-stable`
   - `make -C physics_sim run-headless-smoke`
@@ -54,6 +55,8 @@ Public identity:
   retained runtime-scene volume runs, detached runner usage, progress
   reporting, and agent-owned output-directory policy.
 - `docs/desktop_packaging.md`: desktop app bundle workflow, launcher contract, and verification commands.
+- `docs/memory_check_audit.md`: default-off fisiCs memory-check audit target,
+  report paths, and current clean soft-body harness evidence.
 
 ## Current Published State
 - `physics_sim` is now a truthful `3D` producer on the export side:
@@ -83,12 +86,23 @@ Public identity:
   - `run_progress.json` now exposes solver-step progress inside a frame
   - non-empty output roots are rejected unless `--overwrite` is provided
   - skip-present volume-only runs avoid SDL video/renderer initialization
-  - `--save-render-frames` and `--present` still require the existing renderer path
+  - `--present` still requires the existing renderer path
+  - skip-present Wind `--save-render-frames` runs can write nonblank
+    `render_frames/` BMPs through a renderer-free diagnostic fallback with
+    selectable `--wind-visual-mode` views
   - Wind long-tunnel visual proof:
     `make -C physics_sim test-physics-sim-headless-wind-long-tunnel-visual`
     validates the authored long-box tunnel fixture, nonblank and changing
-    analyzer projection frames, final Wind metrics, and records any
-    display/Vulkan blocker for renderer-frame capture
+    analyzer projection frames, final Wind metrics, and nonblank headless
+    oblique render-frame fallback output
+  - Wind long-tunnel MP4 proof:
+    `make -C physics_sim test-physics-sim-headless-wind-long-tunnel-video`
+    defaults to the `high` `volume_vorticity` profile, encodes fallback frames to
+    `tmp/headless_wind_long_tunnel_video/wind_long_tunnel_oblique.mp4` and
+    removes transient BMP frames after successful encode; the volume diagnostic
+    view includes depth-projected moving inlet dye bands, particle streaks, and
+    visible solid-mask obstacle overlays, and the smoke verifies first/final
+    render frames differ
 - detached supervision is now current for the same lane:
   - `make -C physics_sim physics-sim-job-runner`
   - `physics_sim/physics_sim_job_runner submit --request <request.json>`

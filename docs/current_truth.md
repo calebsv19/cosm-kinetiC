@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-05-23
+Last updated: 2026-06-13
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -61,6 +61,10 @@ Last updated: 2026-05-23
 
 ## Runtime and Editor Snapshot
 - Runtime/editor retained-scene lanes are active and structurally separated from legacy compatibility mapping.
+- Menu/editor shell buttons now use bounded shared `kit_ui` button
+  spec/state/style semantics through app-local `physics_sim_ui_button.*`
+  wrappers, while SDL drawing, palette tuning, and button placement remain
+  app-local.
 - Agent/headless retained-scene runs can now bypass menu interaction:
   - build with `make -C physics_sim physics_sim_headless`
   - run `physics_sim/physics_sim_headless --runtime-scene <scene_runtime.json> --frames <n> --output-root <dir> --progress-interval <n> --save-volume-frames`
@@ -69,12 +73,81 @@ Last updated: 2026-05-23
   - volume exports keep the existing `volume_frames/<Preset>/` layout with
     `.vf3d`, `.pack`, `manifest.json`, and `scene_bundle.json`
   - skip-present volume-only runs avoid SDL video and renderer initialization
-  - render-frame capture and presented runs still use the existing window/Vulkan renderer path
+  - presented runs still use the existing window/Vulkan renderer path
+  - skip-present Wind `--save-render-frames` runs can write nonblank
+    `render_frames/` BMPs through a renderer-free diagnostic fallback. The
+    fallback supports `--wind-visual-mode` views for oblique flow/speed,
+    speed deficit, vorticity, object mask, mid-depth speed deficit, and
+    mid-depth vorticity, plus oblique volume speed-deficit/vorticity views
+    with depth-projected inlet dye, particle streaks, and visible solid-mask
+    obstacle overlays. These fallback views are diagnostic artifacts; the
+    product direction is an in-app Wind Tunnel Inspector sourced from actual
+    solver/analyzer fields.
   - Wind long-tunnel visual proof is available with
     `make -C physics_sim test-physics-sim-headless-wind-long-tunnel-visual`;
     it validates the long-box tunnel fixture, nonblank and changing analyzer
-    projection BMPs, final Wind metrics, and records a renderer blocker when
-    SDL/Vulkan video capture is unavailable
+    projection BMPs, final Wind metrics, and nonblank headless render-frame
+    fallback output without SDL video initialization
+  - Wind long-tunnel MP4 proof is available with
+    `make -C physics_sim test-physics-sim-headless-wind-long-tunnel-video`;
+    it defaults to the `volume_vorticity` diagnostic view in the `high`
+    quality profile, encodes fallback frames to
+    `tmp/headless_wind_long_tunnel_video/wind_long_tunnel_oblique.mp4` and
+    removes transient BMP frames after successful encode. The volume diagnostic
+    view is still a renderer-free software visualization, but it now reads as a
+    3D tunnel: the obstacle is visible in depth, and the moving tracer/dye cues
+    are distributed through the inlet volume. The tracer population now includes
+    object-adjacent seeds, and volume streaks integrate backward through the
+    exported `velocity_x/y/z` field with modest cross-flow visual gain so the
+    wake is easier to inspect in low-resolution smoke videos. The video smoke
+    fails if the first and final render BMPs are identical. The Wind backend
+    now advects inlet density as a persistent dye/smoke scalar along left/right
+    tunnels, so `flow` mode can show a solver-owned plume and obstacle shadow
+    rather than only cosmetic inlet bands. The current scalar transport is still
+    an axis-aligned first pass, and the solver state still reaches a mostly
+    steady field rather than a long, turbulent wake trail, so multidirectional
+    scalar advection and true wake relaxation/advection remain the next solver
+    boundary. Wake velocity/pressure perturbations now also advect downstream
+    with decay in left/right tunnels instead of being erased by each baseline
+    corridor write. The obstacle wake injector is now a near-object source, so
+    downstream deficit structure is carried by the solver state rather than
+    repainted across the full tunnel every frame. `volume_speed_deficit` is the
+    clearer visual proof for this behavior; aggregate vorticity metrics are
+    still dominated by the near-object source region. The Wind analyzer now
+    reports a one-object proof readout derived from the aggregate solid-mask
+    bounds: object drag availability, solid-cell count, projected area,
+    upstream/downstream stagnation-pressure proxy averages, signed positive
+    object pressure delta, and positive object drag-pressure proxy magnitude.
+    The left/right wake source now uses an upstream stagnation region, a
+    downstream suction core, and time-phased lateral vortex-shedding lobes
+    instead of only adding positive downstream pressure. This is intentionally
+    still an aggregate one-obstacle proxy, not a per-object-id table or final
+    surface-force integration. The `volume_speed_deficit` fallback now also
+    boosts only the detected downstream object wake corridor, using
+    deficit-driven opacity/mark size and a longer backend source so the wake
+    shading is visibly stronger without saturating the whole tunnel.
+  - Wind object comparison proof is available with
+    `make -C physics_sim test-physics-sim-headless-wind-object-comparison`.
+    It runs the long-tunnel box, sphere (`object_type: "circle"`), and slim-box
+    fixtures through the same renderer-free `volume_speed_deficit` view, writes
+    `tmp/headless_wind_object_comparison/object_comparison_summary.txt`, and
+    validates nonblank/changing render frames plus distinct projected-area and
+    drag-pressure proxy values. This is still a supported-primitive comparison:
+    true arrowhead/wedge behavior requires a native single-object primitive or
+    per-object force/readout IDs before it can be reported cleanly.
+  - The next `3D` Wind product boundary is not more MP4 tuning. It is a
+    user-facing Wind Tunnel Inspector with field slices, streamlines/pathlines,
+    inlet/outlet labels, object readout, and metrics sampled from the live
+    solver/analyzer state.
+  - The Wind backend now applies a bounded obstacle wake pass after the uniform
+    corridor throughflow. For left/right tunnels, the pass derives one aggregate
+    solid-object bounds volume, then applies a downstream velocity deficit,
+    capped cross-flow swirl, and pressure variation in the exported velocity
+    field behind that object. The volume particle diagnostic
+    samples those cross-flow components, so tracers visibly bend around the
+    obstacle instead of only moving straight through the tunnel. This is still
+    an approximate wake model, not full CFD turbulence or object-surface force
+    integration.
 - Detached agent supervision can now bypass a live terminal:
   - build with `make -C physics_sim physics-sim-job-runner`
   - submit `physics_sim/physics_sim_job_runner submit --request <request.json>`
