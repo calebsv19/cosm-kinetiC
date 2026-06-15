@@ -507,6 +507,12 @@ Gaps:
   workspace-shared fallback until the vendored subtree includes
   `core_mesh_asset`; keep native `3D` triangle generation and BVH out of this
   shared contract.
+- `Partial`: first `core_mesh_preview >= 0.4.0` cutover is now in place for
+  runtime mesh preview diagnostics. The runtime mesh asset loader records
+  derived preview sidecar paths, probe state, and metadata for loaded assets
+  plus preview-limited skipped instances, allowing editor/digest/UI follow-up
+  without loading full preview arrays. Keep final render geometry, material
+  semantics, native `3D` triangle expansion, and BVH construction app-local.
 - `Partial`: TimerHUD host adoption is now on the explicit `TimerHUDSession` path for `ray_tracing`: the app owns session creation/config, frame and per-pass timer hooks now route through session APIs, and the packaged launcher exports runtime-owned TimerHUD settings/output defaults with the overlay forced on for proof. The remaining follow-up is vendored `third_party/codework_shared/timer_hud` subtree refresh in a clean worktree so the default subtree-backed build matches the live shared-root verification path.
 - `Partial`: native `3D` tile scheduling now uses shared `core_queue` and
   `core_workers` for bounded completion handoff plus worker-pool dispatch; keep
@@ -520,14 +526,14 @@ Current shared profile:
 - first `kit_render` adoption slice is now in place for the font migration: Makefile wiring, shared role/tier/zoom bridge policy, active Vulkan UTF-8 draw/measure runtime, and packaged launcher/runtime default alignment to the shared `ide` font baseline.
 - first pane-host interaction slice is now in place for layout resizing: shared `core_pane` owns pane solve and shared `kit_pane` owns splitter hover/drag state while pane purpose stays app-local.
 - first `core_mesh_asset >= 0.3.1` adoption slice is now in place for the object-workspace asset lane: primitive-seed authored object assets save/load through shared `mesh_asset_authoring_v1` documents while `ObjectAuthoring` evaluation, app-local extensions, and asset-browser UX remain local.
-- first `core_mesh_preview >= 0.1.0` adoption slice is now in place for the imported STL/runtime mesh viewport lane: shared `core_mesh_preview_runtime_v1` sidecars own bounded feature-edge preview payloads, source counts, and local bounds while `line_drawing` keeps renderer colors, selection, hitboxes, auto-scale placement, scene-bounds preservation, and pane readouts local.
+- first `core_mesh_preview >= 0.4.0` adoption slice is now in place for the imported STL/runtime mesh viewport lane: shared `core_mesh_preview_runtime_v1` sidecars own bounded feature-edge preview payloads, explicit source/preview counts, budget/coverage metadata, source feature-edge counts, local bounds/span/sphere metadata, the shared sampled-triangle, point-cloud, and bounds-proxy preview-mode contract, runtime-file build/save helpers, metadata-only sidecar reads, and preview-file probes. `line_drawing` consumes the feature-edge path for viewport drawing, reads metadata-only sidecars for degraded previews, uses shared preview bounds/span metadata for mesh hitboxes, and surfaces preview mode/count/bounds readouts while keeping renderer colors, projection, auto-scale placement, scene-bounds preservation, and pane layout local.
 - first Workspace Authoring host slices are now in place: `kit_workspace_authoring >= 0.5.0` owns the entry chord, reserved trigger semantics, overlay button layout/hit testing, and full-screen font/theme panel layout/hit/action semantics while `line_drawing` owns SDL routing, host state, app-local pane readout drawing, runtime font/theme preview, and accepted-only preference persistence.
 
 Gaps:
 - `Stabilize`: first font-runtime unification slice is complete; active Vulkan text and the former scattered fallback UI text paths now route through the centralized bridge/helper layer over shared `kit_render`, while remaining drift is bounded to centralized non-Vulkan fallback behavior and thin local fallback font-path ownership.
 - `Stabilize`: first shared pane-resize slice is complete; keep future resizing/persistence/layout-authoring work additive on top of the shared `core_pane` + `kit_pane` seam instead of reopening app-local splitter math.
 - `Stabilize`: keep the object-asset primitive-seed save/load lane on shared `core_mesh_asset` documents while `ObjectAuthoring` evaluation, line-drawing extension payloads, mesh generation, and asset browser/UI semantics remain app-local.
-- `Stabilize`: keep runtime mesh viewport previews on shared `core_mesh_preview` sidecars so high-triangle imported STL assets do not require full triangle rendering in UI paths; defer retopo/LOD/GPU-buffer/collision-proxy ownership until RayTracing and PhysicsSim adoption needs are concrete.
+- `Stabilize`: keep runtime mesh viewport previews on shared `core_mesh_preview` sidecars so high-triangle imported STL assets do not require full triangle rendering in UI paths; LineDrawing now proves bounds-only degraded-preview selection through shared preview metadata, so RayTracing and PhysicsSim can adopt preview sidecars for editor/diagnostic display while retopo/LOD/GPU-buffer/collision-proxy ownership remains separate.
 - `Stabilize`: `LDWA1` host attach is complete through S5; active-only pane overlay, shared full-screen font/theme panel adoption, accepted-only preference persistence, and closeout are done, with module content placement still deferred.
 - `Missing`: decide later whether the centralized non-Vulkan fallback in `text_draw.c` should also move fully into shared runtime, or whether it should remain intentionally local because the Vulkan path is the authoritative host mode.
 - `Missing`: execution-core adoption beyond `core_time` only if future loop/dispatch behavior warrants standardization.
