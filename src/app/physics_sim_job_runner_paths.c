@@ -1,158 +1,51 @@
 #include "app/physics_sim_job_runner_internal.h"
 
-#include <dirent.h>
-#include <errno.h>
+#include "app/physics_sim_diagnostic_helpers.h"
+#include "app/physics_sim_file_helpers.h"
+#include "app/physics_sim_json_helpers.h"
+
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 
 void diag_set(char *out, size_t out_size, const char *message) {
-    if (!out || out_size == 0u || !message) return;
-    snprintf(out, out_size, "%s", message);
+    physics_sim_diag_set(out, out_size, message);
 }
 
 bool copy_string(char *dst, size_t dst_size, const char *src) {
-    if (!dst || dst_size == 0u || !src) return false;
-    if (snprintf(dst, dst_size, "%s", src) >= (int)dst_size) {
-        dst[0] = '\0';
-        return false;
-    }
-    return true;
+    return physics_sim_copy_string(dst, dst_size, src);
 }
 
 bool file_exists(const char *path) {
-    return path && path[0] && access(path, F_OK) == 0;
+    return physics_sim_file_exists(path);
 }
 
 bool dir_is_empty(const char *path) {
-    DIR *dir = NULL;
-    struct dirent *entry = NULL;
-    if (!path || !path[0]) return false;
-    dir = opendir(path);
-    if (!dir) return false;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        closedir(dir);
-        return false;
-    }
-    closedir(dir);
-    return true;
+    return physics_sim_dir_is_empty(path);
 }
 
 bool parent_dir_of(const char *path, char *out_dir, size_t out_dir_size) {
-    const char *slash = NULL;
-    size_t len = 0u;
-    if (!path || !path[0] || !out_dir || out_dir_size == 0u) return false;
-    slash = strrchr(path, '/');
-    if (!slash) return copy_string(out_dir, out_dir_size, ".");
-    len = (size_t)(slash - path);
-    if (len == 0u) return copy_string(out_dir, out_dir_size, "/");
-    if (len >= out_dir_size) len = out_dir_size - 1u;
-    memcpy(out_dir, path, len);
-    out_dir[len] = '\0';
-    return true;
+    return physics_sim_parent_dir_of(path, out_dir, out_dir_size);
 }
 
 bool ensure_directory_exists(const char *path) {
-    char tmp[PATH_MAX];
-    size_t len = 0u;
-    if (!path || !path[0]) return false;
-    len = strlen(path);
-    if (len >= sizeof(tmp)) return false;
-    memcpy(tmp, path, len + 1u);
-    for (size_t i = 1u; i < len; ++i) {
-        if (tmp[i] != '/') continue;
-        tmp[i] = '\0';
-        if (tmp[0] != '\0' && mkdir(tmp, 0700) != 0 && errno != EEXIST) return false;
-        tmp[i] = '/';
-    }
-    if (mkdir(tmp, 0700) != 0 && errno != EEXIST) return false;
-    return true;
+    return physics_sim_ensure_directory_exists(path);
 }
 
 bool ensure_parent_directory_exists(const char *path) {
-    char dir[PATH_MAX];
-    if (!parent_dir_of(path, dir, sizeof(dir))) return false;
-    return ensure_directory_exists(dir);
+    return physics_sim_ensure_parent_directory_exists(path);
 }
 
 bool read_text_file(const char *path, char **out_text) {
-    FILE *file = NULL;
-    long size = 0;
-    char *text = NULL;
-    size_t read_count = 0u;
-    if (!path || !path[0] || !out_text) return false;
-    *out_text = NULL;
-    file = fopen(path, "rb");
-    if (!file) return false;
-    if (fseek(file, 0, SEEK_END) != 0) {
-        fclose(file);
-        return false;
-    }
-    size = ftell(file);
-    if (size < 0) {
-        fclose(file);
-        return false;
-    }
-    if (fseek(file, 0, SEEK_SET) != 0) {
-        fclose(file);
-        return false;
-    }
-    text = (char *)malloc((size_t)size + 1u);
-    if (!text) {
-        fclose(file);
-        return false;
-    }
-    read_count = fread(text, 1u, (size_t)size, file);
-    fclose(file);
-    if (read_count != (size_t)size) {
-        free(text);
-        return false;
-    }
-    text[size] = '\0';
-    *out_text = text;
-    return true;
+    return physics_sim_read_text_file(path, out_text);
 }
 
 bool write_text_file(const char *path, const char *text) {
-    FILE *file = NULL;
-    if (!path || !path[0] || !text) return false;
-    if (!ensure_parent_directory_exists(path)) return false;
-    file = fopen(path, "wb");
-    if (!file) return false;
-    if (fputs(text, file) < 0) {
-        fclose(file);
-        return false;
-    }
-    fclose(file);
-    return true;
+    return physics_sim_write_text_file(path, text);
 }
 
 void json_write_string(FILE *file, const char *value) {
-    const unsigned char *cursor = (const unsigned char *)(value ? value : "");
-    fputc('"', file);
-    while (*cursor) {
-        switch (*cursor) {
-            case '\\': fputs("\\\\", file); break;
-            case '"': fputs("\\\"", file); break;
-            case '\n': fputs("\\n", file); break;
-            case '\r': fputs("\\r", file); break;
-            case '\t': fputs("\\t", file); break;
-            default:
-                if (*cursor < 0x20u) {
-                    fprintf(file, "\\u%04x", (unsigned int)*cursor);
-                } else {
-                    fputc((int)*cursor, file);
-                }
-                break;
-        }
-        cursor++;
-    }
-    fputc('"', file);
+    physics_sim_json_write_string(file, value);
 }
 
 bool utc_now_string(char *out, size_t out_size) {
@@ -175,10 +68,7 @@ bool utc_now_string(char *out, size_t out_size) {
 }
 
 bool resolve_real_path(const char *path, char *out, size_t out_size) {
-    char resolved[PATH_MAX];
-    if (!path || !path[0] || !out || out_size == 0u) return false;
-    if (!realpath(path, resolved)) return false;
-    return copy_string(out, out_size, resolved);
+    return physics_sim_resolve_real_path(path, out, out_size);
 }
 
 bool derive_repo_root_from_argv0(const char *argv0, char *out_root, size_t out_root_size) {

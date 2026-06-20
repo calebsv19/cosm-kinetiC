@@ -1,62 +1,27 @@
 #include "app/physics_sim_headless_job_bundle.h"
 
+#include "app/physics_sim_diagnostic_helpers.h"
+#include "app/physics_sim_file_helpers.h"
+#include "app/physics_sim_json_helpers.h"
+
 #include <json-c/json.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
 
 static void diag_set(char *out, size_t out_size, const char *message) {
-    if (!out || out_size == 0u || !message) return;
-    snprintf(out, out_size, "%s", message);
+    physics_sim_diag_set(out, out_size, message);
 }
 
 static bool copy_string(char *dst, size_t dst_size, const char *src) {
-    if (!dst || dst_size == 0u || !src) return false;
-    if (snprintf(dst, dst_size, "%s", src) >= (int)dst_size) {
-        dst[0] = '\0';
-        return false;
-    }
-    return true;
+    return physics_sim_copy_string(dst, dst_size, src);
 }
 
 static bool parent_dir_of(const char *path, char *out_dir, size_t out_dir_size) {
-    const char *slash = NULL;
-    size_t len = 0u;
-    if (!path || !path[0] || !out_dir || out_dir_size == 0u) return false;
-    slash = strrchr(path, '/');
-    if (!slash) return copy_string(out_dir, out_dir_size, ".");
-    len = (size_t)(slash - path);
-    if (len == 0u) return copy_string(out_dir, out_dir_size, "/");
-    if (len >= out_dir_size) len = out_dir_size - 1u;
-    memcpy(out_dir, path, len);
-    out_dir[len] = '\0';
-    return true;
+    return physics_sim_parent_dir_of(path, out_dir, out_dir_size);
 }
 
 static bool ensure_directory_exists(const char *path) {
-    char tmp[PATH_MAX];
-    size_t len = 0u;
-
-    if (!path || !path[0]) return false;
-    len = strlen(path);
-    if (len >= sizeof(tmp)) return false;
-    memcpy(tmp, path, len + 1u);
-
-    for (size_t i = 1u; i < len; ++i) {
-        if (tmp[i] != '/') continue;
-        tmp[i] = '\0';
-        if (tmp[0] != '\0' && mkdir(tmp, 0700) != 0 && access(tmp, F_OK) != 0) {
-            return false;
-        }
-        tmp[i] = '/';
-    }
-
-    if (mkdir(tmp, 0700) != 0 && access(tmp, F_OK) != 0) {
-        return false;
-    }
-    return true;
+    return physics_sim_ensure_directory_exists(path);
 }
 
 static bool ensure_parent_directory_exists(const char *path) {
@@ -66,36 +31,7 @@ static bool ensure_parent_directory_exists(const char *path) {
 }
 
 static void json_write_string(FILE *file, const char *value) {
-    const unsigned char *cursor = (const unsigned char *)(value ? value : "");
-    fputc('"', file);
-    while (*cursor) {
-        switch (*cursor) {
-            case '\\':
-                fputs("\\\\", file);
-                break;
-            case '"':
-                fputs("\\\"", file);
-                break;
-            case '\n':
-                fputs("\\n", file);
-                break;
-            case '\r':
-                fputs("\\r", file);
-                break;
-            case '\t':
-                fputs("\\t", file);
-                break;
-            default:
-                if (*cursor < 0x20u) {
-                    fprintf(file, "\\u%04x", (unsigned int)*cursor);
-                } else {
-                    fputc((int)*cursor, file);
-                }
-                break;
-        }
-        cursor++;
-    }
-    fputc('"', file);
+    physics_sim_json_write_string(file, value);
 }
 
 static bool json_get_object(json_object *owner, const char *key, json_object **out_obj) {

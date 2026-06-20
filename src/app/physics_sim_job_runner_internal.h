@@ -121,6 +121,9 @@ bool write_pid_file(const char *path, pid_t pid);
 bool print_file_to_stream(FILE *out, const char *path);
 bool load_job_status_record(const PhysicsSimDetachedJobPaths *paths,
                             PhysicsSimDetachedJobRecord *out_record);
+bool detached_job_state_for_headless_progress_status(const char *progress_status,
+                                                     char *out_state,
+                                                     size_t out_state_size);
 bool merge_progress_into_record(const char *progress_path,
                                 PhysicsSimDetachedJobRecord *record);
 bool parse_summary_status(const char *summary_path,

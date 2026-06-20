@@ -4,6 +4,10 @@ Interfaces that describe global configuration and scene orchestration.
 
 - `app_config.h` – declares the `AppConfig` struct plus `app_config_default()`. Values here tune the entire simulation (window size, grid resolution, timestep clamps, solver constants) and are read by the renderer, physics solvers, and timing helpers.
 - `data_paths.h` – declares path-resolution helpers for input/output/runtime storage. It now also exposes `physics_sim_runtime_scene_catalog_roots(...)` so menu/editor scene-library discovery can stay centralized.
+- `physics_sim_file_helpers.h` – declares app-local non-destructive path/text helpers for support surfaces such as detached jobs and headless bundle IO. Destructive cleanup and overwrite policy are intentionally not part of this contract.
+- `physics_sim_json_helpers.h` – declares app-local JSON string escaping for manual artifact/status writers without centralizing artifact schemas.
+- `physics_sim_cli_helpers.h` – declares app-local CLI value/scalar parsing helpers for support tools without introducing a generic option parser.
+- `physics_sim_diagnostic_helpers.h` – declares app-local diagnostic string helpers for detached-job/headless support surfaces without merging UI status, stderr logging, or structured status schemas.
 - `scene_menu.h` – describes the SDL-based scene editor UI that lets the user pick presets and tweak grid resolution before the simulation boots.
 - `scene_presets.h` – declares the emitter structs and accessors for built-in fluid presets (hotspots, jets, sinks).
 - `scene_state.h` – defines the `SceneState` struct and its lifecycle helpers. It exposes functions to create/destroy the scene, apply `InputCommands`, respond to queued commands, manage brush samples/emitters, and export `.ps2d` snapshots.

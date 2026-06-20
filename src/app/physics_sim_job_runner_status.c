@@ -267,6 +267,30 @@ bool load_job_status_record(const PhysicsSimDetachedJobPaths *paths,
     return true;
 }
 
+bool detached_job_state_for_headless_progress_status(const char *progress_status,
+                                                     char *out_state,
+                                                     size_t out_state_size) {
+    const char *state = NULL;
+    if (!progress_status || !progress_status[0] || !out_state || out_state_size == 0u) {
+        return false;
+    }
+    if (strcmp(progress_status, "pending") == 0) {
+        state = "starting";
+    } else if (strcmp(progress_status, "running") == 0 ||
+               strcmp(progress_status, "finishing") == 0) {
+        state = "running";
+    } else if (strcmp(progress_status, "canceled") == 0) {
+        state = "cancelled";
+    } else if (strcmp(progress_status, "passed") == 0) {
+        state = "completed";
+    } else if (strcmp(progress_status, "failed") == 0) {
+        state = "failed";
+    } else {
+        return false;
+    }
+    return copy_string(out_state, out_state_size, state);
+}
+
 bool merge_progress_into_record(const char *progress_path,
                                 PhysicsSimDetachedJobRecord *record) {
     json_object *root = NULL;
@@ -289,17 +313,9 @@ bool merge_progress_into_record(const char *progress_path,
         }
     }
     if (json_get_string(root, "status", &text_value)) {
-        if (strcmp(text_value, "pending") == 0) {
-            snprintf(record->state, sizeof(record->state), "starting");
-        } else if (strcmp(text_value, "running") == 0 || strcmp(text_value, "finishing") == 0) {
-            snprintf(record->state, sizeof(record->state), "running");
-        } else if (strcmp(text_value, "canceled") == 0) {
-            snprintf(record->state, sizeof(record->state), "cancelled");
-        } else if (strcmp(text_value, "passed") == 0) {
-            snprintf(record->state, sizeof(record->state), "completed");
-        } else if (strcmp(text_value, "failed") == 0) {
-            snprintf(record->state, sizeof(record->state), "failed");
-        }
+        (void)detached_job_state_for_headless_progress_status(text_value,
+                                                              record->state,
+                                                              sizeof(record->state));
     }
     if (json_get_int(root, "frame_index", &int_value)) record->frame_index = int_value;
     if (json_get_int(root, "frames_completed", &int_value)) record->frames_completed = int_value;
