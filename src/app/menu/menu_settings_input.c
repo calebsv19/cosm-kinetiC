@@ -9,6 +9,25 @@
 #include "app/menu/menu_settings_schema.h"
 #include "app/menu/menu_state.h"
 
+typedef struct MenuSettingsRuntimeBinding {
+    AppConfig *cfg;
+    SceneMenuSelection *selection;
+    FluidScenePreset *active_preset;
+    SimulationMode active_mode;
+    SpaceMode space_mode;
+} MenuSettingsRuntimeBinding;
+
+static bool menu_settings_runtime_binding(const SceneMenuInteraction *ctx,
+                                          MenuSettingsRuntimeBinding *out) {
+    if (!ctx || !ctx->cfg || !out) return false;
+    out->cfg = ctx->cfg;
+    out->selection = ctx->selection;
+    out->active_preset = ctx->active_preset;
+    out->active_mode = ctx->active_mode;
+    out->space_mode = ctx->cfg->space_mode;
+    return true;
+}
+
 static void sync_quality_index(SceneMenuInteraction *ctx) {
     if (!ctx) return;
     ctx->quality_index = ctx->settings_shell.draft.quality_index;
@@ -24,82 +43,97 @@ static void persist_runtime_config(const AppConfig *cfg) {
 }
 
 bool menu_settings_has_pending_changes(const SceneMenuInteraction *ctx) {
+    MenuSettingsRuntimeBinding binding = {0};
     if (!ctx || !ctx->cfg) return false;
+    (void)menu_settings_runtime_binding(ctx, &binding);
     return menu_settings_shell_is_dirty(&ctx->settings_shell,
-                                        ctx->cfg,
-                                        ctx->selection,
-                                        ctx->active_preset);
+                                        binding.cfg,
+                                        binding.selection,
+                                        binding.active_preset);
 }
 
 bool menu_settings_saved_differs_from_current(const SceneMenuInteraction *ctx) {
+    MenuSettingsRuntimeBinding binding = {0};
     if (!ctx || !ctx->cfg) return false;
+    (void)menu_settings_runtime_binding(ctx, &binding);
     return menu_settings_shell_saved_differs_from_runtime(&ctx->settings_shell,
-                                                          ctx->cfg,
-                                                          ctx->selection,
-                                                          ctx->active_preset);
+                                                          binding.cfg,
+                                                          binding.selection,
+                                                          binding.active_preset);
 }
 
 void menu_settings_commit(SceneMenuInteraction *ctx, bool persist) {
+    MenuSettingsRuntimeBinding binding = {0};
     if (!ctx || !ctx->cfg) return;
+    if (!menu_settings_runtime_binding(ctx, &binding)) return;
     menu_settings_shell_apply_to_runtime(&ctx->settings_shell,
-                                         ctx->cfg,
-                                         ctx->selection,
-                                         ctx->active_preset);
+                                         binding.cfg,
+                                         binding.selection,
+                                         binding.active_preset);
     sync_quality_index(ctx);
     if (persist) {
-        persist_runtime_config(ctx->cfg);
+        persist_runtime_config(binding.cfg);
         menu_settings_shell_capture_saved_from_runtime(&ctx->settings_shell,
-                                                       ctx->cfg,
-                                                       ctx->selection,
-                                                       ctx->active_preset,
-                                                       ctx->active_mode,
-                                                       ctx->cfg->space_mode);
+                                                       binding.cfg,
+                                                       binding.selection,
+                                                       binding.active_preset,
+                                                       binding.active_mode,
+                                                       binding.space_mode);
     }
 }
 
 void menu_settings_save_current(SceneMenuInteraction *ctx) {
+    MenuSettingsRuntimeBinding binding = {0};
     if (!ctx || !ctx->cfg) return;
+    if (!menu_settings_runtime_binding(ctx, &binding)) return;
     if (menu_settings_has_pending_changes(ctx)) {
         menu_settings_commit(ctx, false);
+        if (!menu_settings_runtime_binding(ctx, &binding)) return;
     }
-    persist_runtime_config(ctx->cfg);
+    persist_runtime_config(binding.cfg);
     menu_settings_shell_capture_saved_from_runtime(&ctx->settings_shell,
-                                                   ctx->cfg,
-                                                   ctx->selection,
-                                                   ctx->active_preset,
-                                                   ctx->active_mode,
-                                                   ctx->cfg->space_mode);
+                                                   binding.cfg,
+                                                   binding.selection,
+                                                   binding.active_preset,
+                                                   binding.active_mode,
+                                                   binding.space_mode);
     sync_quality_index(ctx);
 }
 
 void menu_settings_restore_saved(SceneMenuInteraction *ctx) {
+    MenuSettingsRuntimeBinding binding = {0};
     if (!ctx || !ctx->cfg) return;
+    if (!menu_settings_runtime_binding(ctx, &binding)) return;
     menu_settings_shell_apply_saved_to_runtime(&ctx->settings_shell,
-                                               ctx->cfg,
-                                               ctx->selection,
-                                               ctx->active_preset);
+                                               binding.cfg,
+                                               binding.selection,
+                                               binding.active_preset);
     menu_settings_shell_restore_saved_to_draft(&ctx->settings_shell,
-                                               ctx->active_mode,
-                                               ctx->cfg->space_mode);
+                                               binding.active_mode,
+                                               binding.space_mode);
     sync_quality_index(ctx);
 }
 
 void menu_settings_reset_to_runtime(SceneMenuInteraction *ctx) {
+    MenuSettingsRuntimeBinding binding = {0};
     if (!ctx || !ctx->cfg) return;
+    if (!menu_settings_runtime_binding(ctx, &binding)) return;
     menu_settings_shell_reload_from_runtime(&ctx->settings_shell,
-                                            ctx->cfg,
-                                            ctx->selection,
-                                            ctx->active_preset,
-                                            ctx->active_mode,
-                                            ctx->cfg->space_mode);
+                                            binding.cfg,
+                                            binding.selection,
+                                            binding.active_preset,
+                                            binding.active_mode,
+                                            binding.space_mode);
     sync_quality_index(ctx);
 }
 
 void menu_settings_reset_to_defaults(SceneMenuInteraction *ctx) {
+    MenuSettingsRuntimeBinding binding = {0};
     if (!ctx || !ctx->cfg) return;
+    if (!menu_settings_runtime_binding(ctx, &binding)) return;
     menu_settings_shell_load_defaults(&ctx->settings_shell,
-                                      ctx->active_mode,
-                                      ctx->cfg->space_mode);
+                                      binding.active_mode,
+                                      binding.space_mode);
     sync_quality_index(ctx);
 }
 
