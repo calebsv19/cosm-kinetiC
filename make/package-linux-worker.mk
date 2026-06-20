@@ -24,6 +24,9 @@ LINUX_WORKER_DOCS_DIR := $(LINUX_WORKER_DIR)/docs
 LINUX_WORKER_MANIFEST_JSON := $(LINUX_WORKER_DIR)/manifest.json
 LINUX_WORKER_MANIFEST := $(LINUX_WORKER_DIR)/package_manifest.json
 LINUX_WORKER_ARCHIVE := $(RELEASE_DIR)/$(LINUX_WORKER_BASENAME).tar.gz
+LINUX_WORKER_PACKAGE_VALIDATOR := tools/packaging/validate_linux_worker_package.py
+
+.PHONY: package-linux-worker-contract package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run
 
 package-linux-worker-contract:
 	@echo "Linux worker package contract"
@@ -79,7 +82,7 @@ package-linux-worker: physics_sim_headless physics-sim-job-runner
 	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm"],\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "self_test": {\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '    "type": "command",\n' >> "$(LINUX_WORKER_MANIFEST)"
-	@printf '    "argv": ["bin/physics_sim_job_runner", "--help"]\n' >> "$(LINUX_WORKER_MANIFEST)"
+	@printf '    "argv": ["bin/physics_sim_job_runner", "submit", "--help"]\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  }\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '}\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@mkdir -p "$(RELEASE_DIR)"
@@ -96,3 +99,12 @@ package-linux-worker-self-test: package-linux-worker
 	@test -f "$(LINUX_WORKER_CONFIG_DIR)/app.json" || (echo "Missing config/app.json"; exit 1)
 	@test -f "$(LINUX_WORKER_ARCHIVE)" || (echo "Missing worker archive"; exit 1)
 	@echo "package-linux-worker-self-test passed."
+
+package-linux-worker-dry-run: package-linux-worker-self-test
+	@python3 "$(LINUX_WORKER_PACKAGE_VALIDATOR)" \
+		--stage-dir "$(LINUX_WORKER_DIR)" \
+		--archive "$(LINUX_WORKER_ARCHIVE)" \
+		--program "$(RELEASE_PROGRAM_KEY)" \
+		--version "$(RELEASE_VERSION)" \
+		--platform "$(LINUX_WORKER_PLATFORM)" \
+		--worker-slug "$(LINUX_WORKER_SLUG)"
