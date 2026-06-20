@@ -1,33 +1,9 @@
 #include "app/editor/scene_editor_retained_document.h"
+#include "physics_sim_test_support.h"
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
-
-static bool write_text_file(const char *path, const char *text) {
-    FILE *f = fopen(path, "wb");
-    if (!f) return false;
-    if (fwrite(text, 1, strlen(text), f) != strlen(text)) {
-        fclose(f);
-        return false;
-    }
-    fclose(f);
-    return true;
-}
-
-static bool read_text_file(const char *path, char *out, size_t out_size) {
-    FILE *f = NULL;
-    size_t size = 0;
-    if (!path || !out || out_size == 0) return false;
-    f = fopen(path, "rb");
-    if (!f) return false;
-    size = fread(out, 1, out_size - 1u, f);
-    fclose(f);
-    out[size] = '\0';
-    return true;
-}
 
 static bool test_document_name_prefers_path_stem_over_scene_id(void) {
     char name[128];
@@ -89,9 +65,9 @@ static bool test_save_path_reuses_existing_runtime_scene_id_file(void) {
     char resolved_path[320];
     int pid = (int)getpid();
     snprintf(temp_dir, sizeof(temp_dir), "/tmp/physics_sim_retained_doc_%d", pid);
-    (void)mkdir(temp_dir, 0755);
+    (void)physics_sim_test_make_dir(temp_dir, 0755);
     snprintf(existing_path, sizeof(existing_path), "%s/%s", temp_dir, "older_scene_name.json");
-    if (!write_text_file(existing_path, "{\n  \"scene_id\": \"scene_ps4d_visual_test\"\n}\n")) {
+    if (!physics_sim_test_write_text_file(existing_path, "{\n  \"scene_id\": \"scene_ps4d_visual_test\"\n}\n")) {
         return false;
     }
     if (!scene_editor_retained_document_resolve_save_path(temp_dir,
@@ -100,12 +76,12 @@ static bool test_save_path_reuses_existing_runtime_scene_id_file(void) {
                                                           "scene_ps4d_visual_test",
                                                           resolved_path,
                                                           sizeof(resolved_path))) {
-        remove(existing_path);
-        rmdir(temp_dir);
+        physics_sim_test_remove_file_if_exists(existing_path);
+        physics_sim_test_remove_dir_if_exists(temp_dir);
         return false;
     }
-    remove(existing_path);
-    rmdir(temp_dir);
+    physics_sim_test_remove_file_if_exists(existing_path);
+    physics_sim_test_remove_dir_if_exists(temp_dir);
     return strcmp(resolved_path, existing_path) == 0;
 }
 
@@ -122,17 +98,19 @@ static bool test_duplicate_scene_file_creates_scene_directory_copy_with_new_scen
     char diagnostics[256];
     int pid = (int)getpid();
     snprintf(temp_dir, sizeof(temp_dir), "/tmp/physics_sim_retained_doc_dup_%d", pid);
-    (void)mkdir(temp_dir, 0755);
+    (void)physics_sim_test_make_dir(temp_dir, 0755);
     snprintf(source_dir, sizeof(source_dir), "%s/%s", temp_dir, "scene_ps4d_visual_test");
     snprintf(source_runtime_path, sizeof(source_runtime_path), "%s/%s", source_dir, "scene_runtime.json");
     snprintf(source_authoring_path, sizeof(source_authoring_path), "%s/%s", source_dir, "scene_authoring.json");
-    (void)mkdir(source_dir, 0755);
-    if (!write_text_file(source_runtime_path, "{\n  \"scene_id\": \"scene_ps4d_visual_test\",\n  \"objects\": []\n}\n") ||
-        !write_text_file(source_authoring_path, "{\n  \"scene_name\": \"Scene PS4D Visual Test\"\n}\n")) {
-        remove(source_runtime_path);
-        remove(source_authoring_path);
-        rmdir(source_dir);
-        rmdir(temp_dir);
+    (void)physics_sim_test_make_dir(source_dir, 0755);
+    if (!physics_sim_test_write_text_file(source_runtime_path,
+                                          "{\n  \"scene_id\": \"scene_ps4d_visual_test\",\n  \"objects\": []\n}\n") ||
+        !physics_sim_test_write_text_file(source_authoring_path,
+                                          "{\n  \"scene_name\": \"Scene PS4D Visual Test\"\n}\n")) {
+        physics_sim_test_remove_file_if_exists(source_runtime_path);
+        physics_sim_test_remove_file_if_exists(source_authoring_path);
+        physics_sim_test_remove_dir_if_exists(source_dir);
+        physics_sim_test_remove_dir_if_exists(temp_dir);
         return false;
     }
     if (!scene_editor_retained_document_duplicate_scene_file(source_runtime_path,
@@ -141,10 +119,10 @@ static bool test_duplicate_scene_file_creates_scene_directory_copy_with_new_scen
                                                              sizeof(duplicate_runtime_path),
                                                              diagnostics,
                                                              sizeof(diagnostics))) {
-        remove(source_runtime_path);
-        remove(source_authoring_path);
-        rmdir(source_dir);
-        rmdir(temp_dir);
+        physics_sim_test_remove_file_if_exists(source_runtime_path);
+        physics_sim_test_remove_file_if_exists(source_authoring_path);
+        physics_sim_test_remove_dir_if_exists(source_dir);
+        physics_sim_test_remove_dir_if_exists(temp_dir);
         return false;
     }
 
@@ -152,10 +130,10 @@ static bool test_duplicate_scene_file_creates_scene_directory_copy_with_new_scen
     {
         char *slash = strrchr(duplicate_scene_dir, '/');
         if (!slash) {
-            remove(source_runtime_path);
-            remove(source_authoring_path);
-            rmdir(source_dir);
-            rmdir(temp_dir);
+            physics_sim_test_remove_file_if_exists(source_runtime_path);
+            physics_sim_test_remove_file_if_exists(source_authoring_path);
+            physics_sim_test_remove_dir_if_exists(source_dir);
+            physics_sim_test_remove_dir_if_exists(temp_dir);
             return false;
         }
         *slash = '\0';
@@ -165,31 +143,35 @@ static bool test_duplicate_scene_file_creates_scene_directory_copy_with_new_scen
                                                                sizeof(duplicate_runtime_path),
                                                                duplicate_authoring_path,
                                                                sizeof(duplicate_authoring_path))) {
-        remove(source_runtime_path);
-        remove(source_authoring_path);
-        rmdir(source_dir);
-        rmdir(temp_dir);
+        physics_sim_test_remove_file_if_exists(source_runtime_path);
+        physics_sim_test_remove_file_if_exists(source_authoring_path);
+        physics_sim_test_remove_dir_if_exists(source_dir);
+        physics_sim_test_remove_dir_if_exists(temp_dir);
         return false;
     }
-    if (!read_text_file(duplicate_runtime_path, duplicate_runtime_text, sizeof(duplicate_runtime_text)) ||
-        !read_text_file(duplicate_authoring_path, duplicate_authoring_text, sizeof(duplicate_authoring_text))) {
-        remove(duplicate_runtime_path);
-        remove(duplicate_authoring_path);
-        rmdir(duplicate_scene_dir);
-        remove(source_runtime_path);
-        remove(source_authoring_path);
-        rmdir(source_dir);
-        rmdir(temp_dir);
+    if (!physics_sim_test_read_text_file(duplicate_runtime_path,
+                                         duplicate_runtime_text,
+                                         sizeof(duplicate_runtime_text)) ||
+        !physics_sim_test_read_text_file(duplicate_authoring_path,
+                                         duplicate_authoring_text,
+                                         sizeof(duplicate_authoring_text))) {
+        physics_sim_test_remove_file_if_exists(duplicate_runtime_path);
+        physics_sim_test_remove_file_if_exists(duplicate_authoring_path);
+        physics_sim_test_remove_dir_if_exists(duplicate_scene_dir);
+        physics_sim_test_remove_file_if_exists(source_runtime_path);
+        physics_sim_test_remove_file_if_exists(source_authoring_path);
+        physics_sim_test_remove_dir_if_exists(source_dir);
+        physics_sim_test_remove_dir_if_exists(temp_dir);
         return false;
     }
 
-    remove(duplicate_runtime_path);
-    remove(duplicate_authoring_path);
-    rmdir(duplicate_scene_dir);
-    remove(source_runtime_path);
-    remove(source_authoring_path);
-    rmdir(source_dir);
-    rmdir(temp_dir);
+    physics_sim_test_remove_file_if_exists(duplicate_runtime_path);
+    physics_sim_test_remove_file_if_exists(duplicate_authoring_path);
+    physics_sim_test_remove_dir_if_exists(duplicate_scene_dir);
+    physics_sim_test_remove_file_if_exists(source_runtime_path);
+    physics_sim_test_remove_file_if_exists(source_authoring_path);
+    physics_sim_test_remove_dir_if_exists(source_dir);
+    physics_sim_test_remove_dir_if_exists(temp_dir);
 
     return strstr(duplicate_runtime_path, "scene_ps4d_visual_test_copy/scene_runtime.json") != NULL &&
            strstr(duplicate_runtime_text, "\"scene_id\": \"scene_ps4d_visual_test_copy\"") != NULL &&
