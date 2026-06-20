@@ -1,10 +1,11 @@
 .DS_Store
 **/.DS_Store
 build/
-export/
+/export/
 ide_files/
 timerhud/
 tmp/
+visual_artifacts/
 data/runtime/
 data/snapshots/
 vk_frame.ppm

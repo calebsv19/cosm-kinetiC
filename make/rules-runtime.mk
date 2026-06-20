@@ -16,6 +16,9 @@ run-headless-smoke: clang-build test-stable test-physics-sim-headless-cli
 visual-harness: clang-build
 	@echo "visual harness binary ready: $(CLANG_TARGET)"
 
+visual-artifact: physics_sim_headless
+	bash tests/integration/run_physics_sim_visual_artifact.sh
+
 VIDEO_FPS ?= 30
 video:
 	ffmpeg -y -framerate $(VIDEO_FPS) -i export/render_frames/frame_%06d.bmp -pix_fmt yuv420p export/render_vid/output.mp4
