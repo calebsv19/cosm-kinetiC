@@ -3,6 +3,7 @@
 #include "app/scene_state.h"
 #include "export/export_paths.h"
 #include "export/volume_frames_vf3d.h"
+#include "export/water_surface_artifacts.h"
 #include "core_data.h"
 #include "core_io.h"
 #include "core_pack.h"
@@ -701,6 +702,7 @@ bool volume_frames_write(const SceneState *scene,
 
     if (export_vf3d) {
         VolumeFrameHeaderVf3dV1 header = {0};
+        WaterSurfaceArtifactStatsV1 water_stats = {0};
         char path[512];
         char pack_path[512];
         char manifest_path[512];
@@ -714,6 +716,11 @@ bool volume_frames_write(const SceneState *scene,
         }
 
         manifest_ok = volume_frame_manifest_append_vf3d(scene, &header, path, dir);
+        if (water_surface_artifacts_should_export(scene) &&
+            !water_surface_artifacts_write_frame(scene, &header, dir, &water_stats)) {
+            fprintf(stderr, "[export] Failed to write water surface artifacts in %s\n", dir);
+            return false;
+        }
         snprintf(manifest_path, sizeof(manifest_path), "%s/manifest.json", dir);
         if (build_pack_path(path, pack_path, sizeof(pack_path))) {
             const char *manifest_arg = manifest_ok ? manifest_path : NULL;

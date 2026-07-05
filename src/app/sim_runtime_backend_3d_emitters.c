@@ -3,8 +3,10 @@
 
 #include "app/scene_state.h"
 #include "app/sim_runtime_emitter.h"
+#include "app/sim_runtime_mesh_obstacle_proxy.h"
 
 #include <math.h>
+#include <stdlib.h>
 
 static const float SCAFFOLD_EMITTER_POWER_BOOST = 40.0f;
 static const float SCAFFOLD_REF_FOOTPRINT_CELLS = 128.0f;
@@ -15,6 +17,39 @@ static const float SCAFFOLD_THERMAL_BUOYANCY_EMIT_SCALE = 0.12f;
 static const float SCAFFOLD_HEATED_OBSTACLE_DENSITY_SCALE = 0.10f;
 static const float SCAFFOLD_HEATED_OBSTACLE_DIRECTIONAL_SCALE = 0.15f;
 static const float SCAFFOLD_HEATED_OBSTACLE_THERMAL_SCALE = 2.5f;
+
+__attribute__((weak)) bool physics_sim_runtime_mesh_obstacle_voxelize_instance_mode(
+    const PhysicsSimRuntimeMeshPreviewInstance *instance,
+    const SimRuntime3DDomainDesc *domain,
+    uint8_t *solid_mask,
+    size_t solid_mask_count,
+    PhysicsSimRuntimeMeshVoxelizeMode mode,
+    PhysicsSimRuntimeMeshObstacleReport *out_report) {
+    (void)instance;
+    (void)domain;
+    (void)solid_mask;
+    (void)solid_mask_count;
+    (void)mode;
+    if (out_report) *out_report = (PhysicsSimRuntimeMeshObstacleReport){0};
+    return false;
+}
+
+__attribute__((weak)) bool physics_sim_runtime_mesh_obstacle_voxelize_instance_mode_cached(
+    PhysicsSimRuntimeMeshObstacleCache *cache,
+    const PhysicsSimRuntimeMeshPreviewInstance *instance,
+    const SimRuntime3DDomainDesc *domain,
+    uint8_t *solid_mask,
+    size_t solid_mask_count,
+    PhysicsSimRuntimeMeshVoxelizeMode mode,
+    PhysicsSimRuntimeMeshObstacleReport *out_report) {
+    (void)cache;
+    return physics_sim_runtime_mesh_obstacle_voxelize_instance_mode(instance,
+                                                                   domain,
+                                                                   solid_mask,
+                                                                   solid_mask_count,
+                                                                   mode,
+                                                                   out_report);
+}
 
 static double backend_3d_scaffold_axis_span(double world_min, double world_max) {
     double span = world_max - world_min;
@@ -846,6 +881,127 @@ static void backend_3d_scaffold_apply_attached_import_emitter(SimRuntimeBackend3
         state, scene, &rotated, &box, backend_3d_scaffold_box_world_volume(half_x, half_y, half_z), dt);
 }
 
+static bool backend_3d_scaffold_runtime_mesh_cell_matches_surface(
+    const PhysicsSimRuntimeMeshObstacleReport *report,
+    FluidEmitter3DSurface surface,
+    int x,
+    int y,
+    int z) {
+    if (!report) return false;
+    switch (backend_3d_scaffold_resolve_surface_3d(surface)) {
+    case EMITTER_3D_SURFACE_TOP:
+        return z == report->max_z;
+    case EMITTER_3D_SURFACE_BOTTOM:
+        return z == report->min_z;
+    case EMITTER_3D_SURFACE_LEFT:
+        return x == report->min_x;
+    case EMITTER_3D_SURFACE_RIGHT:
+        return x == report->max_x;
+    case EMITTER_3D_SURFACE_FRONT:
+        return y == report->max_y;
+    case EMITTER_3D_SURFACE_BACK:
+        return y == report->min_y;
+    case EMITTER_3D_SURFACE_AUTO:
+    case EMITTER_3D_SURFACE_ALL_FACES:
+    default:
+        break;
+    }
+    return true;
+}
+
+static void backend_3d_scaffold_apply_attached_runtime_mesh_emitter(
+    SimRuntimeBackend3DScaffold *state,
+    const SceneState *scene,
+    const SimRuntimeEmitterResolved *emitter,
+    double dt) {
+    const PhysicsSimRuntimeMeshPreviewSet *set = NULL;
+    const PhysicsSimRuntimeMeshPreviewInstance *instance = NULL;
+    PhysicsSimRuntimeMeshObstacleReport report;
+    PhysicsSimRuntimeMeshVoxelizeMode mode = PHYSICS_SIM_RUNTIME_MESH_VOXELIZE_SURFACE_SHELL;
+    uint8_t *mask = NULL;
+    size_t cells = 0u;
+    float total_strength = 0.0f;
+    float per_cell = 0.0f;
+    int index = -1;
+    if (!state || !scene || !emitter || state->volume.desc.cell_count == 0u) return;
+    set = &scene->runtime_visual.mesh_previews;
+    index = emitter->attached_runtime_mesh;
+    if (!set->valid_contract || index < 0 || index >= set->instance_count) {
+        backend_3d_scaffold_apply_free_emitter(state, scene, emitter, dt);
+        return;
+    }
+    instance = &set->instances[index];
+    if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_VOLUME_FILL ||
+        emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT) {
+        mode = PHYSICS_SIM_RUNTIME_MESH_VOXELIZE_SOLID_VOLUME;
+    }
+    mask = (uint8_t *)calloc(state->volume.desc.cell_count, sizeof(uint8_t));
+    if (!mask) return;
+    if (!physics_sim_runtime_mesh_obstacle_voxelize_instance_mode_cached(
+            state->runtime_mesh_obstacle_cache,
+            instance,
+            &state->volume.desc,
+            mask,
+            state->volume.desc.cell_count,
+            mode,
+            &report)) {
+        free(mask);
+        backend_3d_scaffold_apply_free_emitter(state, scene, emitter, dt);
+        return;
+    }
+    for (int z = report.min_z; z <= report.max_z; ++z) {
+        for (int y = report.min_y; y <= report.max_y; ++y) {
+            for (int x = report.min_x; x <= report.max_x; ++x) {
+                size_t idx = sim_runtime_3d_volume_index(&state->volume.desc, x, y, z);
+                if (!mask[idx]) continue;
+                if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_SURFACE_PATCH &&
+                    !backend_3d_scaffold_runtime_mesh_cell_matches_surface(&report,
+                                                                           emitter->surface_3d,
+                                                                           x,
+                                                                           y,
+                                                                           z)) {
+                    continue;
+                }
+                cells += 1u;
+            }
+        }
+    }
+    if (cells == 0u) {
+        free(mask);
+        return;
+    }
+    total_strength = backend_3d_scaffold_emitter_total_strength(scene,
+                                                                &state->volume.desc,
+                                                                emitter,
+                                                                (float)dt,
+                                                                cells,
+                                                                0.0);
+    per_cell = total_strength / (float)cells;
+    if (per_cell <= 0.0f) {
+        free(mask);
+        return;
+    }
+    backend_3d_scaffold_accumulate_emitter_step_stats(state, emitter, cells, total_strength);
+    for (int z = report.min_z; z <= report.max_z; ++z) {
+        for (int y = report.min_y; y <= report.max_y; ++y) {
+            for (int x = report.min_x; x <= report.max_x; ++x) {
+                size_t idx = sim_runtime_3d_volume_index(&state->volume.desc, x, y, z);
+                if (!mask[idx]) continue;
+                if (emitter->source_mode_3d == EMITTER_3D_SOURCE_MODE_SURFACE_PATCH &&
+                    !backend_3d_scaffold_runtime_mesh_cell_matches_surface(&report,
+                                                                           emitter->surface_3d,
+                                                                           x,
+                                                                           y,
+                                                                           z)) {
+                    continue;
+                }
+                backend_3d_scaffold_apply_cell(state, emitter, x, y, z, per_cell);
+            }
+        }
+    }
+    free(mask);
+}
+
 void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
                                         SceneState *scene,
                                         double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
@@ -869,6 +1025,9 @@ void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
             break;
         case SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_IMPORT:
             backend_3d_scaffold_apply_attached_import_emitter(state, scene, &emitter, dt);
+            break;
+        case SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_RUNTIME_MESH:
+            backend_3d_scaffold_apply_attached_runtime_mesh_emitter(state, scene, &emitter, dt);
             break;
         default:
             break;

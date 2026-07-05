@@ -1,0 +1,10 @@
+{
+  "schema": "codework_scene_project_v1",
+  "scene_id": "physics_scene_project_cache_output_minimal",
+  "display_name": "Physics Scene Project Cache Output Minimal",
+  "active": {
+    "scene_authoring": "scene_authoring.json",
+    "scene_runtime": "scene_runtime.json",
+    "physics_cache": "physics_sim/active_cache_manifest.json"
+  }
+}

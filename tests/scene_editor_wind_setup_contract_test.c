@@ -30,6 +30,11 @@ const char *physics_sim_editor_session_emitter_obstacle_mode_3d_label(FluidEmitt
     return "attached";
 }
 
+const char *physics_sim_editor_session_runtime_mesh_role_label(PhysicsSimRuntimeMeshEditorRole role) {
+    (void)role;
+    return "mesh";
+}
+
 static AppConfig wind_3d_config(void) {
     AppConfig cfg;
     memset(&cfg, 0, sizeof(cfg));
@@ -111,10 +116,32 @@ static void test_wind_setup_falls_back_to_menu_defaults_without_authored_extensi
     assert(fabsf(summary.config.inflow_density - 12.0f) < 0.0001f);
 }
 
+static void test_wind_setup_pairs_inlet_with_opposite_outlet(void) {
+    AppConfig cfg = wind_3d_config();
+    PhysicsSimEditorSession session = retained_session_with_wind(false);
+    SceneEditorWindSetupSummary summary;
+    assert(scene_editor_wind_setup_opposite_face(WIND_TUNNEL_3D_FACE_LEFT) ==
+           WIND_TUNNEL_3D_FACE_RIGHT);
+    assert(scene_editor_wind_setup_opposite_face(WIND_TUNNEL_3D_FACE_TOP) ==
+           WIND_TUNNEL_3D_FACE_BOTTOM);
+    assert(scene_editor_wind_setup_opposite_face(WIND_TUNNEL_3D_FACE_FRONT) ==
+           WIND_TUNNEL_3D_FACE_BACK);
+    assert(physics_sim_editor_session_set_wind_tunnel_faces(
+        &session,
+        &cfg,
+        WIND_TUNNEL_3D_FACE_TOP,
+        scene_editor_wind_setup_opposite_face(WIND_TUNNEL_3D_FACE_TOP)));
+    summary = scene_editor_wind_setup_summary(&cfg, &session);
+    assert(summary.config.inlet_face == WIND_TUNNEL_3D_FACE_TOP);
+    assert(summary.config.outlet_face == WIND_TUNNEL_3D_FACE_BOTTOM);
+    assert(strcmp(summary.source_label, "session config") == 0);
+}
+
 int main(void) {
     test_wind_setup_requires_wind_3d_retained_context();
     test_wind_setup_uses_authored_scene_extension_when_present();
     test_wind_setup_falls_back_to_menu_defaults_without_authored_extension();
+    test_wind_setup_pairs_inlet_with_opposite_outlet();
     fprintf(stdout, "scene_editor_wind_setup_contract_test: success\n");
     return 0;
 }

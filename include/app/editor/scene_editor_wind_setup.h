@@ -22,5 +22,6 @@ typedef struct SceneEditorWindSetupSummary {
 
 SceneEditorWindSetupSummary scene_editor_wind_setup_summary(const AppConfig *cfg,
                                                             const PhysicsSimEditorSession *session);
+WindTunnel3DFace scene_editor_wind_setup_opposite_face(WindTunnel3DFace face);
 
 #endif

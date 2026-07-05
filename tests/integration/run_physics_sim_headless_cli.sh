@@ -2,16 +2,16 @@
 set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-CODEWORK_ROOT="$(cd "$PHYSICS_DIR/.." && pwd)"
-RUNTIME_SCENE="$CODEWORK_ROOT/_private_workspace_artifacts/agent_runs/physics_trio/gallery_room_blocks_v2/line_drawing/scene_runtime.json"
-OUT_DIR="$PHYSICS_DIR/tmp/headless_cli_gallery_room_blocks_v2"
+DEFAULT_RUNTIME_SCENE="$PHYSICS_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
+RUNTIME_SCENE="${PHYSICS_SIM_HEADLESS_RUNTIME_SCENE:-$DEFAULT_RUNTIME_SCENE}"
+OUT_DIR="$PHYSICS_DIR/tmp/headless_cli_portable_retained_scene"
 SUMMARY="$OUT_DIR/run_summary.json"
 PROGRESS="$OUT_DIR/run_progress.json"
 STEP_LOG="/private/tmp/physics_sim_headless_step_progress.out"
 
 if [ ! -f "$RUNTIME_SCENE" ]; then
   echo "missing runtime scene fixture: $RUNTIME_SCENE" >&2
-  echo "run the LineDrawing gallery_room_blocks_v2 agent scene flow first" >&2
+  echo "set PHYSICS_SIM_HEADLESS_RUNTIME_SCENE=/path/to/scene_runtime.json to override the portable fixture" >&2
   exit 1
 fi
 
@@ -49,6 +49,9 @@ test -d "$OUT_DIR/volume_frames"
     exit 1
   }
 rg -q 'output root already exists and is not empty' /tmp/physics_sim_headless_existing.out
+rg -q 'stage=prepare_output' /tmp/physics_sim_headless_existing.out
+rg -q "output_root=$OUT_DIR" /tmp/physics_sim_headless_existing.out
+rg -q 'action=choose a new output root or pass --overwrite' /tmp/physics_sim_headless_existing.out
 
 rm -f "$STEP_LOG"
 "$PHYSICS_DIR/physics_sim_headless" \

@@ -112,6 +112,33 @@ static bool test_tiny3d_debug_profile_derivation(void) {
     return true;
 }
 
+static bool test_water_basin_legacy_derivation_uses_square_xz_footprint(void) {
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    SimRuntime3DDomainDesc desc = {0};
+
+    cfg.grid_w = 64;
+    cfg.grid_h = 32;
+    cfg.grid_d = 0;
+    preset.domain = SCENE_DOMAIN_WATER;
+    preset.domain_width = 4.0f;
+    preset.domain_height = 1.0f;
+
+    if (!sim_runtime_3d_domain_desc_from_legacy(&cfg, &preset, &desc)) return false;
+    if (desc.requested_major_axis_cells != 64) return false;
+    if (desc.applied_major_axis_cells != 64) return false;
+    if (desc.requested_depth_cells != 0) return false;
+    if (desc.depth_policy != SIM_RUNTIME_3D_DEPTH_POLICY_WATER_BASIN_SQUARE_XZ) return false;
+    if (!nearly_equal(desc.world_max_x, 4.0f)) return false;
+    if (!nearly_equal(desc.world_max_y, 1.0f)) return false;
+    if (!nearly_equal(desc.world_max_z, 4.0f)) return false;
+    if (desc.grid_w != 64) return false;
+    if (desc.grid_h != 16) return false;
+    if (desc.grid_d != 64) return false;
+    if (!nearly_equal(desc.voxel_size, 4.0f / 64.0f)) return false;
+    return true;
+}
+
 static bool test_runtime_visual_precedence(void) {
     AppConfig cfg = {0};
     FluidScenePreset preset = {0};
@@ -312,6 +339,10 @@ int main(void) {
     }
     if (!test_tiny3d_debug_profile_derivation()) {
         fprintf(stderr, "sim_runtime_3d_domain_contract_test: tiny3d derivation failed\n");
+        return 1;
+    }
+    if (!test_water_basin_legacy_derivation_uses_square_xz_footprint()) {
+        fprintf(stderr, "sim_runtime_3d_domain_contract_test: water basin derivation failed\n");
         return 1;
     }
     if (!test_runtime_visual_precedence()) {

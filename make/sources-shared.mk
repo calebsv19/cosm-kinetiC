@@ -7,6 +7,11 @@ CORE_DATA_SRCS := $(CORE_DATA_DIR)/src/core_data.c
 CORE_PACK_SRCS := $(CORE_PACK_DIR)/src/core_pack.c $(CORE_PACK_DIR)/src/core_pack_vf2d.c $(CORE_PACK_DIR)/src/core_pack_vf3d.c
 CORE_SCENE_SRCS := $(CORE_SCENE_DIR)/src/core_scene.c
 CORE_SCENE_COMPILE_SRCS := $(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c
+CORE_MESH_ASSET_SRCS := \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_authoring_document.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_runtime_document.c
+CORE_MESH_PREVIEW_SRCS := $(CORE_MESH_PREVIEW_DIR)/src/core_mesh_preview.c
 CORE_OBJECT_SRCS := $(CORE_OBJECT_DIR)/src/core_object.c
 CORE_UNITS_SRCS := $(CORE_UNITS_DIR)/src/core_units.c
 CORE_VIEWPORT2D_SRCS := $(CORE_VIEWPORT2D_DIR)/src/core_viewport2d.c

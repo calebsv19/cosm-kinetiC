@@ -40,6 +40,28 @@ static bool scene_controller_retained_runtime_view_active(const SceneState *scen
     return retained_runtime_scene_overlay_active(scene);
 }
 
+static bool scene_controller_should_export_volume_frame(const AppConfig *cfg,
+                                                        uint64_t frame_index) {
+    uint64_t start = 0u;
+    uint64_t stride = 1u;
+    uint64_t selected_index = 0u;
+    if (!cfg || !cfg->save_volume_frames) return false;
+    if (cfg->volume_export_start_frame > 0) {
+        start = (uint64_t)cfg->volume_export_start_frame;
+    }
+    if (cfg->volume_export_stride > 0) {
+        stride = (uint64_t)cfg->volume_export_stride;
+    }
+    if (frame_index < start) return false;
+    selected_index = (frame_index - start) / stride;
+    if (((frame_index - start) % stride) != 0u) return false;
+    if (cfg->volume_export_max_frames > 0 &&
+        selected_index >= (uint64_t)cfg->volume_export_max_frames) {
+        return false;
+    }
+    return true;
+}
+
 static bool scene_controller_wind_shot_camera_profile(
     HeadlessWindShotCameraProfile profile,
     float *out_yaw_deg,
@@ -85,13 +107,13 @@ static bool scene_controller_apply_wind_shot_camera(SceneState *scene,
                                                    &distance_scale)) {
         return false;
     }
-    scene->runtime_viewport.orbit_yaw_deg = yaw_deg;
-    scene->runtime_viewport.orbit_pitch_deg = pitch_deg;
+    scene->runtime_view.viewport.orbit_yaw_deg = yaw_deg;
+    scene->runtime_view.viewport.orbit_pitch_deg = pitch_deg;
     if (distance_scale > 0.0f && isfinite(distance_scale)) {
-        scene->runtime_viewport.orbit_distance *= distance_scale;
+        scene->runtime_view.viewport.orbit_distance *= distance_scale;
     }
-    scene->runtime_viewport.navigation_active = false;
-    scene->runtime_viewport.navigation_mode = SCENE_EDITOR_VIEWPORT_NAV_NONE;
+    scene->runtime_view.viewport.navigation_active = false;
+    scene->runtime_view.viewport.navigation_mode = SCENE_EDITOR_VIEWPORT_NAV_NONE;
     return true;
 }
 
@@ -101,12 +123,12 @@ static void scene_controller_runtime_pointer_down(void *user,
     if (!scene || !state || !scene_controller_retained_runtime_view_active(scene)) return;
 
     if (state->button == SDL_BUTTON_MIDDLE) {
-        (void)scene_editor_viewport_begin_navigation(&scene->runtime_viewport,
+        (void)scene_editor_viewport_begin_navigation(&scene->runtime_view.viewport,
                                                      SCENE_EDITOR_VIEWPORT_NAV_PAN,
                                                      state->x,
                                                      state->y);
-    } else if (state->button == SDL_BUTTON_LEFT && scene->runtime_viewport.alt_modifier_down) {
-        (void)scene_editor_viewport_begin_navigation(&scene->runtime_viewport,
+    } else if (state->button == SDL_BUTTON_LEFT && scene->runtime_view.viewport.alt_modifier_down) {
+        (void)scene_editor_viewport_begin_navigation(&scene->runtime_view.viewport,
                                                      SCENE_EDITOR_VIEWPORT_NAV_ORBIT,
                                                      state->x,
                                                      state->y);
@@ -117,9 +139,9 @@ static void scene_controller_runtime_pointer_up(void *user,
                                                 const InputPointerState *state) {
     SceneState *scene = (SceneState *)user;
     if (!scene || !state || !scene_controller_retained_runtime_view_active(scene)) return;
-    if (!scene->runtime_viewport.navigation_active) return;
+    if (!scene->runtime_view.viewport.navigation_active) return;
     if (state->button == SDL_BUTTON_LEFT || state->button == SDL_BUTTON_MIDDLE) {
-        scene_editor_viewport_end_navigation(&scene->runtime_viewport);
+        scene_editor_viewport_end_navigation(&scene->runtime_view.viewport);
     }
 }
 
@@ -127,8 +149,8 @@ static void scene_controller_runtime_pointer_move(void *user,
                                                   const InputPointerState *state) {
     SceneState *scene = (SceneState *)user;
     if (!scene || !state || !scene_controller_retained_runtime_view_active(scene)) return;
-    if (!scene->runtime_viewport.navigation_active) return;
-    (void)scene_editor_viewport_update_navigation(&scene->runtime_viewport,
+    if (!scene->runtime_view.viewport.navigation_active) return;
+    (void)scene_editor_viewport_update_navigation(&scene->runtime_view.viewport,
                                                   state->x,
                                                   state->y,
                                                   scene->config ? scene->config->window_w : 1,
@@ -139,7 +161,7 @@ static void scene_controller_runtime_wheel(void *user,
                                            const InputWheelState *wheel) {
     SceneState *scene = (SceneState *)user;
     if (!scene || !wheel || !scene_controller_retained_runtime_view_active(scene)) return;
-    (void)scene_editor_viewport_apply_wheel(&scene->runtime_viewport, wheel->y, 0, 0, 0, 0, 0, 0);
+    (void)scene_editor_viewport_apply_wheel(&scene->runtime_view.viewport, wheel->y, 0, 0, 0, 0, 0, 0);
 }
 
 static void scene_controller_runtime_key_down(void *user,
@@ -147,7 +169,7 @@ static void scene_controller_runtime_key_down(void *user,
                                               SDL_Keymod mod) {
     SceneState *scene = (SceneState *)user;
     if (!scene || !scene_controller_retained_runtime_view_active(scene)) return;
-    scene->runtime_viewport.alt_modifier_down = (mod & KMOD_ALT) != 0;
+    scene->runtime_view.viewport.alt_modifier_down = (mod & KMOD_ALT) != 0;
     if (key == SDLK_f) {
         (void)retained_runtime_scene_overlay_frame_view(scene,
                                                         scene->config ? scene->config->window_w : 1,
@@ -167,11 +189,11 @@ static void scene_controller_runtime_key_up(void *user,
     SceneState *scene = (SceneState *)user;
     (void)key;
     if (!scene || !scene_controller_retained_runtime_view_active(scene)) return;
-    scene->runtime_viewport.alt_modifier_down = (mod & KMOD_ALT) != 0;
-    if (!scene->runtime_viewport.alt_modifier_down &&
-        scene->runtime_viewport.navigation_active &&
-        scene->runtime_viewport.navigation_mode == SCENE_EDITOR_VIEWPORT_NAV_ORBIT) {
-        scene_editor_viewport_end_navigation(&scene->runtime_viewport);
+    scene->runtime_view.viewport.alt_modifier_down = (mod & KMOD_ALT) != 0;
+    if (!scene->runtime_view.viewport.alt_modifier_down &&
+        scene->runtime_view.viewport.navigation_active &&
+        scene->runtime_view.viewport.navigation_mode == SCENE_EDITOR_VIEWPORT_NAV_ORBIT) {
+        scene_editor_viewport_end_navigation(&scene->runtime_view.viewport);
     }
 }
 
@@ -510,7 +532,8 @@ static SceneControllerRenderDeriveFrame scene_controller_render_derive_phase(
     frame.frame_index = update_frame->frame_index;
     frame.invalidation_reason_bits = update_frame->invalidation_reason_bits;
     frame.backend_report = backend_report;
-    frame.should_save_volume_frames = cfg->save_volume_frames;
+    frame.should_save_volume_frames =
+        scene_controller_should_export_volume_frame(cfg, update_frame->frame_index);
     frame.should_save_render_frames = cfg->save_render_frames;
     frame.should_save_wind_projection_frames = save_wind_projection_frames;
     frame.should_present = !headless_mode || !skip_present;
@@ -763,6 +786,9 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                                  : "unknown projection failure");
             return 1;
         }
+    }
+    if (cfg.sim_mode == SIM_MODE_WATER) {
+        cfg.space_mode = SPACE_MODE_3D;
     }
     mode_route = sim_mode_resolve_route(cfg.sim_mode, cfg.space_mode);
     mode_hooks = mode_route.hooks;

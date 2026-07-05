@@ -138,13 +138,17 @@ static void editor_layout_controls(SceneEditorState *state) {
     int overlay_top = 0;
     int overlay_gap = 6;
     int overlay_row_button_w = 0;
+    int mesh_role_button_w = 0;
+    int mesh_role_second_w = 0;
     int velocity_button_w = 0;
     int overlay_button_h = 0;
     int velocity_button_h = 0;
     int summary_top = 0;
     int summary_min_h = 0;
     int info_line_step = 0;
+    bool retained_scene_active = false;
     if (!state) return;
+    retained_scene_active = physics_sim_editor_session_has_retained_scene(&state->session);
 
     left_x = state->panel_rect.x + 12;
     right_x = state->right_panel_rect.x + 12;
@@ -165,19 +169,42 @@ static void editor_layout_controls(SceneEditorState *state) {
     velocity_button_h = small_h + 6;
     if (velocity_button_h < 26) velocity_button_h = 26;
 
-    inspector_top = physics_sim_editor_session_has_retained_scene(&state->session)
+    inspector_top = retained_scene_active
                         ? (state->depth_rect.y + state->depth_rect.h + 20)
                         : (state->height_rect.y + state->height_rect.h + 20);
     state->radius_field.rect = (SDL_Rect){right_x, inspector_top + 24, right_field_w, field_h};
     state->radius_field.label = "Radius";
     state->radius_field.target = FIELD_RADIUS;
-    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
+    if (retained_scene_active) {
         int compact_field_h = small_h + 10;
         int compact_gap = 8;
         int compact_w = (right_field_w - compact_gap * 2) / 3;
+        int source_button_w = 0;
+        int source_button_y = inspector_top + 8;
+        source_button_w = (right_field_w - overlay_gap * 2) / 3;
         if (compact_field_h < 28) compact_field_h = 28;
         if (compact_w < 48) compact_w = 48;
-        state->radius_field.rect = (SDL_Rect){right_x, inspector_top + 8, compact_w, compact_field_h};
+        if (source_button_w < 52) source_button_w = 52;
+        state->btn_add_source.rect = (SDL_Rect){right_x, source_button_y, source_button_w, overlay_button_h};
+        state->btn_add_source.label = "Source";
+        state->btn_add_source.enabled = false;
+        state->btn_add_jet.rect = (SDL_Rect){right_x + source_button_w + overlay_gap,
+                                             source_button_y,
+                                             source_button_w,
+                                             overlay_button_h};
+        state->btn_add_jet.label = "Jet";
+        state->btn_add_jet.enabled = false;
+        state->btn_add_sink.rect = (SDL_Rect){right_x + (source_button_w + overlay_gap) * 2,
+                                              source_button_y,
+                                              right_field_w - (source_button_w + overlay_gap) * 2,
+                                              overlay_button_h};
+        state->btn_add_sink.label = "Sink";
+        state->btn_add_sink.enabled = false;
+
+        state->radius_field.rect = (SDL_Rect){right_x,
+                                              source_button_y + overlay_button_h + 26,
+                                              compact_w,
+                                              compact_field_h};
         state->strength_field.rect = (SDL_Rect){right_x + compact_w + compact_gap,
                                                 state->radius_field.rect.y,
                                                 compact_w,
@@ -200,13 +227,57 @@ static void editor_layout_controls(SceneEditorState *state) {
     state->strength_field.target = FIELD_STRENGTH;
     state->thermal_buoyancy_field.target = FIELD_THERMAL_BUOYANCY_3D;
 
-    overlay_top = physics_sim_editor_session_has_retained_scene(&state->session)
+    overlay_top = retained_scene_active
                       ? (state->radius_field.rect.y + state->radius_field.rect.h + 18)
                       : (state->strength_field.rect.y + state->strength_field.rect.h + 18);
     overlay_row_button_w = (right_field_w - overlay_gap * 2) / 3;
     if (overlay_row_button_w < 52) overlay_row_button_w = 52;
+    mesh_role_button_w = overlay_row_button_w;
+    mesh_role_second_w = (right_field_w - overlay_gap) / 2;
+    if (mesh_role_second_w < 52) mesh_role_second_w = 52;
     velocity_button_w = (right_field_w - overlay_gap * 5) / 6;
     if (velocity_button_w < 24) velocity_button_w = 24;
+
+    if (retained_scene_active) {
+        state->btn_mesh_role_solid.rect = (SDL_Rect){right_x, overlay_top, mesh_role_button_w, overlay_button_h};
+        state->btn_mesh_role_solid.label = "Solid";
+        state->btn_mesh_role_solid.enabled = false;
+        state->btn_mesh_role_visual.rect = (SDL_Rect){right_x + mesh_role_button_w + overlay_gap,
+                                                      overlay_top,
+                                                      mesh_role_button_w,
+                                                      overlay_button_h};
+        state->btn_mesh_role_visual.label = "Visual";
+        state->btn_mesh_role_visual.enabled = false;
+        state->btn_mesh_role_surface.rect = (SDL_Rect){right_x + (mesh_role_button_w + overlay_gap) * 2,
+                                                       overlay_top,
+                                                       mesh_role_button_w,
+                                                       overlay_button_h};
+        state->btn_mesh_role_surface.label = "Surface";
+        state->btn_mesh_role_surface.enabled = false;
+
+        overlay_top += overlay_button_h + overlay_gap;
+        state->btn_mesh_role_heat.rect = (SDL_Rect){right_x, overlay_top, mesh_role_second_w, overlay_button_h};
+        state->btn_mesh_role_heat.label = "Heat";
+        state->btn_mesh_role_heat.enabled = false;
+        state->btn_mesh_role_flow.rect = (SDL_Rect){right_x + mesh_role_second_w + overlay_gap,
+                                                    overlay_top,
+                                                    right_field_w - mesh_role_second_w - overlay_gap,
+                                                    overlay_button_h};
+        state->btn_mesh_role_flow.label = "Flow";
+        state->btn_mesh_role_flow.enabled = false;
+        overlay_top += overlay_button_h + overlay_gap + 8;
+    } else {
+        state->btn_mesh_role_solid.rect = (SDL_Rect){0};
+        state->btn_mesh_role_visual.rect = (SDL_Rect){0};
+        state->btn_mesh_role_surface.rect = (SDL_Rect){0};
+        state->btn_mesh_role_heat.rect = (SDL_Rect){0};
+        state->btn_mesh_role_flow.rect = (SDL_Rect){0};
+        state->btn_mesh_role_solid.enabled = false;
+        state->btn_mesh_role_visual.enabled = false;
+        state->btn_mesh_role_surface.enabled = false;
+        state->btn_mesh_role_heat.enabled = false;
+        state->btn_mesh_role_flow.enabled = false;
+    }
 
     state->btn_overlay_dynamic.rect = (SDL_Rect){right_x, overlay_top, overlay_row_button_w, overlay_button_h};
     state->btn_overlay_dynamic.label = "Dynamic";
@@ -281,15 +352,17 @@ static void editor_layout_controls(SceneEditorState *state) {
     button_row_y = state->panel_rect.y + 12 + main_h + small_h + 20;
     button_w = (left_field_w - 24) / 3;
     if (button_w < 60) button_w = 60;
-    state->btn_add_source.rect = (SDL_Rect){left_x, button_row_y, button_w, button_h};
-    state->btn_add_source.label = "Source";
-    state->btn_add_source.enabled = true;
-    state->btn_add_jet.rect = (SDL_Rect){left_x + button_w + 12, button_row_y, button_w, button_h};
-    state->btn_add_jet.label = "Jet";
-    state->btn_add_jet.enabled = true;
-    state->btn_add_sink.rect = (SDL_Rect){left_x + (button_w + 12) * 2, button_row_y, button_w, button_h};
-    state->btn_add_sink.label = "Sink";
-    state->btn_add_sink.enabled = true;
+    if (!retained_scene_active) {
+        state->btn_add_source.rect = (SDL_Rect){left_x, button_row_y, button_w, button_h};
+        state->btn_add_source.label = "Source";
+        state->btn_add_source.enabled = true;
+        state->btn_add_jet.rect = (SDL_Rect){left_x + button_w + 12, button_row_y, button_w, button_h};
+        state->btn_add_jet.label = "Jet";
+        state->btn_add_jet.enabled = true;
+        state->btn_add_sink.rect = (SDL_Rect){left_x + (button_w + 12) * 2, button_row_y, button_w, button_h};
+        state->btn_add_sink.label = "Sink";
+        state->btn_add_sink.enabled = true;
+    }
 
     import_y = button_row_y + button_h + 12;
     state->btn_add_import.rect = (SDL_Rect){left_x, import_y, left_field_w, button_h};
@@ -348,7 +421,7 @@ static void editor_layout_controls(SceneEditorState *state) {
     state->btn_menu.label = "Menu";
     state->btn_menu.enabled = true;
 
-    list_top = boundary_y + button_h + 18;
+    list_top = retained_scene_active ? button_row_y : (boundary_y + button_h + 18);
     info_line_step = small_h + 6;
     if (info_line_step < 18) info_line_step = 18;
     info_card_h = physics_sim_editor_session_has_retained_scene(&state->session)
@@ -478,6 +551,7 @@ bool scene_editor_run(SDL_Window *window,
         .boundary_mode = false,
         .boundary_hover_edge = -1,
         .boundary_selected_edge = -1,
+        .wind_face_hover = WIND_TUNNEL_3D_FACE_NONE,
         .pointer_x = -1,
         .pointer_y = -1,
         .running = true,
@@ -610,8 +684,14 @@ bool scene_editor_run(SDL_Window *window,
         SimModeRoute editor_route = sim_mode_resolve_route(state.cfg.sim_mode, state.cfg.space_mode);
         bool retained_scene_active = physics_sim_editor_session_has_retained_scene(&state.session);
         bool overlay_object_active = physics_sim_editor_session_selected_object_overlay(&state.session) != NULL;
-        const PhysicsSimEmitterOverlay *selected_retained_emitter =
+        const PhysicsSimEmitterOverlay *selected_object_emitter =
             physics_sim_editor_session_selected_object_emitter(&state.session);
+        const PhysicsSimRuntimeMeshOverlay *selected_mesh_overlay =
+            physics_sim_editor_session_selected_runtime_mesh_overlay(&state.session);
+        const PhysicsSimEmitterOverlay *selected_mesh_emitter =
+            physics_sim_editor_session_selected_runtime_mesh_emitter(&state.session);
+        const PhysicsSimEmitterOverlay *selected_retained_emitter =
+            selected_object_emitter ? selected_object_emitter : selected_mesh_emitter;
         scene_editor_viewport_set_modes(&state.viewport,
                                         editor_route.requested_space_mode,
                                         editor_route.projection_space_mode);
@@ -637,29 +717,59 @@ bool scene_editor_run(SDL_Window *window,
         (void)editor_apply_text_zoom_shortcut(&state, &cmds);
 
         state.btn_add_source.enabled = retained_scene_active
-                                           ? overlay_object_active
+                                           ? (overlay_object_active && selected_mesh_overlay == NULL)
                                            : (state.working.emitter_count < MAX_FLUID_EMITTERS);
         state.btn_add_jet.enabled = retained_scene_active
-                                        ? overlay_object_active
+                                        ? (overlay_object_active && selected_mesh_overlay == NULL)
                                         : (state.working.emitter_count < MAX_FLUID_EMITTERS);
         state.btn_add_sink.enabled = retained_scene_active
-                                         ? overlay_object_active
+                                         ? (overlay_object_active && selected_mesh_overlay == NULL)
                                          : (state.working.emitter_count < MAX_FLUID_EMITTERS);
         state.btn_add_source.label = (retained_scene_active &&
-                                      selected_retained_emitter &&
-                                      selected_retained_emitter->type == EMITTER_DENSITY_SOURCE)
+                                      selected_object_emitter &&
+                                      selected_object_emitter->type == EMITTER_DENSITY_SOURCE)
                                          ? "Source*"
                                          : "Source";
         state.btn_add_jet.label = (retained_scene_active &&
-                                   selected_retained_emitter &&
-                                   selected_retained_emitter->type == EMITTER_VELOCITY_JET)
+                                   selected_object_emitter &&
+                                   selected_object_emitter->type == EMITTER_VELOCITY_JET)
                                       ? "Jet*"
                                       : "Jet";
         state.btn_add_sink.label = (retained_scene_active &&
-                                    selected_retained_emitter &&
-                                    selected_retained_emitter->type == EMITTER_SINK)
+                                    selected_object_emitter &&
+                                    selected_object_emitter->type == EMITTER_SINK)
                                        ? "Sink*"
                                        : "Sink";
+        state.btn_mesh_role_solid.enabled = retained_scene_active && selected_mesh_overlay != NULL;
+        state.btn_mesh_role_visual.enabled = retained_scene_active && selected_mesh_overlay != NULL;
+        state.btn_mesh_role_surface.enabled = retained_scene_active && selected_mesh_overlay != NULL;
+        state.btn_mesh_role_heat.enabled = retained_scene_active && selected_mesh_overlay != NULL;
+        state.btn_mesh_role_flow.enabled = retained_scene_active && selected_mesh_overlay != NULL;
+        state.btn_mesh_role_solid.label =
+            (selected_mesh_overlay &&
+             selected_mesh_overlay->role == PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SOLID)
+                ? "Solid*"
+                : "Solid";
+        state.btn_mesh_role_visual.label =
+            (selected_mesh_overlay &&
+             selected_mesh_overlay->role == PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_VISUAL_ONLY)
+                ? "Visual*"
+                : "Visual";
+        state.btn_mesh_role_surface.label =
+            (selected_mesh_overlay &&
+             selected_mesh_overlay->role == PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_EMITTER)
+                ? "Surface*"
+                : "Surface";
+        state.btn_mesh_role_heat.label =
+            (selected_mesh_overlay &&
+             selected_mesh_overlay->role == PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_HEAT_EMITTER)
+                ? "Heat*"
+                : "Heat";
+        state.btn_mesh_role_flow.label =
+            (selected_mesh_overlay &&
+             selected_mesh_overlay->role == PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_BOUNDARY_FLOW_EMITTER)
+                ? "Flow*"
+                : "Flow";
         state.btn_add_import.enabled = !retained_scene_active;
         state.btn_import_back.enabled = !retained_scene_active;
         state.btn_import_delete.enabled = !retained_scene_active &&
@@ -714,6 +824,7 @@ bool scene_editor_run(SDL_Window *window,
             state.boundary_hover_edge = -1;
             state.boundary_selected_edge = -1;
         }
+        editor_update_selected_mesh_diagnostic(&state);
 
         int win_w = 0;
         int win_h = 0;

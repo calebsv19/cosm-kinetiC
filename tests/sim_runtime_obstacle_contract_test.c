@@ -19,6 +19,7 @@ static bool test_default_contract_freezes_first_pass_policy(void) {
     if (!contract.backend_generated_occupancy_supported) return false;
     if (!contract.retained_object_occupancy_supported) return false;
     if (!contract.retained_import_occupancy_supported) return false;
+    if (!contract.runtime_mesh_asset_occupancy_supported) return false;
     if (contract.obstacle_velocity_support) return false;
     if (contract.obstacle_normal_support) return false;
     if (strcmp(sim_runtime_obstacle_storage_kind_label(contract.storage_kind),
@@ -62,6 +63,26 @@ static bool test_source_policy_freezes_supported_obstacle_sources(void) {
     }
     if (strcmp(sim_runtime_obstacle_footprint_kind_label(policy.primary_footprint),
                "retained-import-occupancy") != 0) {
+        return false;
+    }
+
+    if (!sim_runtime_obstacle_source_policy(SIM_RUNTIME_OBSTACLE_SOURCE_RUNTIME_MESH_ASSET,
+                                            &policy)) {
+        return false;
+    }
+    if (policy.primary_footprint != SIM_RUNTIME_OBSTACLE_FOOTPRINT_RUNTIME_MESH_ASSET_OCCUPANCY) {
+        return false;
+    }
+    if (policy.fallback_footprint != SIM_RUNTIME_OBSTACLE_FOOTPRINT_BACKEND_GENERATED_OCCUPANCY) {
+        return false;
+    }
+    if (!policy.contributes_occupancy) return false;
+    if (strcmp(sim_runtime_obstacle_source_kind_label(policy.source_kind),
+               "runtime-mesh-asset") != 0) {
+        return false;
+    }
+    if (strcmp(sim_runtime_obstacle_footprint_kind_label(policy.primary_footprint),
+               "runtime-mesh-asset-occupancy") != 0) {
         return false;
     }
     return true;

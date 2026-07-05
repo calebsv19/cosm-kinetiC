@@ -8,6 +8,7 @@
 #include "app/scene_presets.h"
 #include "app/wind_tunnel_3d.h"
 #include "core_scene.h"
+#include "import/runtime_mesh_preview_bridge.h"
 
 typedef struct RuntimeSceneBridgePreflight {
     bool valid_contract;
@@ -39,7 +40,8 @@ typedef enum PhysicsSimRuntimeSceneUpSource {
     PHYSICS_SIM_RUNTIME_SCENE_UP_NONE = 0,
     PHYSICS_SIM_RUNTIME_SCENE_UP_CONSTRUCTION_PLANE_FRAME = 1,
     PHYSICS_SIM_RUNTIME_SCENE_UP_CONSTRUCTION_PLANE_AXIS = 2,
-    PHYSICS_SIM_RUNTIME_SCENE_UP_FALLBACK_POSITIVE_Z = 3
+    PHYSICS_SIM_RUNTIME_SCENE_UP_FALLBACK_POSITIVE_Z = 3,
+    PHYSICS_SIM_RUNTIME_SCENE_UP_STANDALONE_WATER = 4
 } PhysicsSimRuntimeSceneUpSource;
 
 typedef struct PhysicsSimRuntimeSceneUpVector {
@@ -75,6 +77,7 @@ typedef struct PhysicsSimRuntimeVisualBootstrap {
     WindTunnel3DConfig wind_tunnel;
     bool wind_tunnel_authored;
     PhysicsSimRuntimeSceneUpVector scene_up;
+    PhysicsSimRuntimeMeshPreviewSet mesh_previews;
 } PhysicsSimRuntimeVisualBootstrap;
 
 bool runtime_scene_bridge_preflight_json(const char *runtime_scene_json,
@@ -106,6 +109,11 @@ bool runtime_scene_bridge_writeback_physics_overlay_json(const char *runtime_sce
                                                          char **out_runtime_scene_json,
                                                          char *out_diagnostics,
                                                          size_t out_diagnostics_size);
+bool runtime_scene_bridge_writeback_runtime_mesh_overlays_json(const char *runtime_scene_json,
+                                                               const char *overlay_json,
+                                                               char **out_runtime_scene_json,
+                                                               char *out_diagnostics,
+                                                               size_t out_diagnostics_size);
 
 const char *physics_sim_runtime_scene_up_source_label(PhysicsSimRuntimeSceneUpSource source);
 

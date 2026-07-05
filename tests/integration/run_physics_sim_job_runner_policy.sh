@@ -11,8 +11,8 @@ if [[ ! -x "$RUNNER" ]]; then
   RUNNER="$ROOT_DIR/physics_sim_job_runner"
 fi
 
-CODEWORK_ROOT="$(cd "$ROOT_DIR/.." && pwd)"
-RUNTIME_SCENE="$CODEWORK_ROOT/_private_workspace_artifacts/agent_runs/physics_trio/gallery_room_blocks_v2/line_drawing/scene_runtime.json"
+DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
+RUNTIME_SCENE="${PHYSICS_SIM_HEADLESS_RUNTIME_SCENE:-$DEFAULT_RUNTIME_SCENE}"
 JOBS_ROOT="$ROOT_DIR/build/agent_runs/jobs"
 RUN_ROOT="$ROOT_DIR/build/agent_runs/physics_sim/job_runner_policy"
 REQUEST="$RUN_ROOT/request.json"
@@ -21,7 +21,7 @@ ERR_DIR="/private/tmp/physics_sim_job_runner_policy"
 
 if [[ ! -f "$RUNTIME_SCENE" ]]; then
   echo "missing runtime scene fixture: $RUNTIME_SCENE" >&2
-  echo "run the LineDrawing gallery_room_blocks_v2 agent scene flow first" >&2
+  echo "set PHYSICS_SIM_HEADLESS_RUNTIME_SCENE=/path/to/scene_runtime.json to override the portable fixture" >&2
   exit 1
 fi
 
@@ -79,6 +79,31 @@ if "$RUNNER" submit --request "$REQUEST" --jobs-root "$JOBS_ROOT" >"$ERR_DIR/sub
   exit 1
 fi
 grep -q 'output root already exists and is not empty; use --overwrite' "$ERR_DIR/submit.err"
+grep -q 'mode=submit stage=submit_request' "$ERR_DIR/submit.err"
+grep -q "request_path=$REQUEST" "$ERR_DIR/submit.err"
+grep -q "jobs_root=$JOBS_ROOT" "$ERR_DIR/submit.err"
+grep -q 'action=check the request JSON, output root, and overwrite policy' "$ERR_DIR/submit.err"
+
+MISSING_JOB_ID="psjob_missing_for_r3"
+if "$RUNNER" status --job-id "$MISSING_JOB_ID" --jobs-root "$JOBS_ROOT" >"$ERR_DIR/status.out" 2>"$ERR_DIR/status.err"; then
+  echo "expected status for missing job to fail" >&2
+  exit 1
+fi
+grep -q 'mode=status stage=status_lookup' "$ERR_DIR/status.err"
+grep -q 'reason=job status file not found' "$ERR_DIR/status.err"
+grep -q "job_id=$MISSING_JOB_ID" "$ERR_DIR/status.err"
+grep -q "jobs_root=$JOBS_ROOT" "$ERR_DIR/status.err"
+grep -q 'action=check the job id and job_status.json under the jobs root' "$ERR_DIR/status.err"
+
+if "$RUNNER" cancel --job-id "$MISSING_JOB_ID" --jobs-root "$JOBS_ROOT" >"$ERR_DIR/cancel.out" 2>"$ERR_DIR/cancel.err"; then
+  echo "expected cancel for missing job to fail" >&2
+  exit 1
+fi
+grep -q 'mode=cancel stage=cancel_request' "$ERR_DIR/cancel.err"
+grep -q 'reason=failed to load job status' "$ERR_DIR/cancel.err"
+grep -q "job_id=$MISSING_JOB_ID" "$ERR_DIR/cancel.err"
+grep -q "jobs_root=$JOBS_ROOT" "$ERR_DIR/cancel.err"
+grep -q 'action=check job status and cancel_requested.flag write access' "$ERR_DIR/cancel.err"
 
 JOB_ID="$(submit_job --overwrite)"
 [[ -n "$JOB_ID" ]]

@@ -13,6 +13,8 @@
 #include "app/wind_tunnel_3d.h"
 #include "core_sim.h"
 
+struct PhysicsSimRuntimeMeshObstacleCache;
+
 typedef struct SimRuntimeBackend3DScaffold {
     SimRuntime3DVolume volume;
     SimRuntime3DBrickStore brick_store;
@@ -24,6 +26,7 @@ typedef struct SimRuntimeBackend3DScaffold {
     CoreSimLoopState solver_loop;
     SimRuntimeObstacleContract obstacle_contract;
     const struct SceneState *scene_ref;
+    struct PhysicsSimRuntimeMeshObstacleCache *runtime_mesh_obstacle_cache;
     int compatibility_slice_z;
     bool fluid_slice_dirty;
     bool obstacle_volume_dirty;
@@ -65,6 +68,8 @@ typedef struct SimRuntimeBackend3DScaffold {
     bool debug_volume_scene_up_velocity_valid;
     float debug_volume_scene_up_velocity_avg;
     float debug_volume_scene_up_velocity_peak;
+    bool atmospheric_settings_available;
+    AtmosphericPresetSettings atmospheric_settings;
     SimRuntimeInitialStateSource initial_state_source;
     bool atmospheric_seeded;
     uint32_t atmospheric_seed;
@@ -121,6 +126,9 @@ void backend_3d_scaffold_rasterize_retained_object_obstacles(
 void backend_3d_scaffold_rasterize_retained_import_obstacles(
     SimRuntimeBackend3DScaffold *state,
     const struct SceneState *scene);
+void backend_3d_scaffold_rasterize_runtime_mesh_asset_obstacles(
+    SimRuntimeBackend3DScaffold *state,
+    const struct SceneState *scene);
 void backend_3d_scaffold_reset_obstacles(SimRuntimeBackend3DScaffold *state);
 void backend_3d_scaffold_build_static_obstacles(SimRuntimeBackend *backend,
                                                 struct SceneState *scene);
@@ -148,6 +156,10 @@ bool backend_3d_scaffold_obstacle_fill_slice_xy(const SimRuntimeBackend3DScaffol
                                                 uint8_t *out_solid_mask,
                                                 size_t out_cell_count);
 size_t backend_3d_scaffold_obstacle_solid_cell_count(const SimRuntimeBackend3DScaffold *state);
+void backend_3d_scaffold_mark_obstacle_cell_cache_dirty(SimRuntimeBackend3DScaffold *state);
+void backend_3d_scaffold_mark_obstacle_volume_rebuild_needed(
+    SimRuntimeBackend3DScaffold *state);
+void backend_3d_scaffold_mark_obstacle_volume_rebuilt(SimRuntimeBackend3DScaffold *state);
 bool backend_3d_scaffold_ensure_export_cache(SimRuntimeBackend3DScaffold *state);
 void backend_3d_scaffold_mark_fluid_dirty(SimRuntimeBackend3DScaffold *state);
 void backend_3d_scaffold_update_debug_volume_stats(SimRuntimeBackend3DScaffold *state);

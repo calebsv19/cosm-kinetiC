@@ -34,7 +34,7 @@ bool scene_controller_runtime_interaction_active(const SceneState *scene) {
     bool pointer_buttons_active =
         (buttons & (SDL_BUTTON_LMASK | SDL_BUTTON_MMASK | SDL_BUTTON_RMASK)) != 0u;
     return pointer_buttons_active ||
-           (scene && scene->runtime_viewport.navigation_active);
+           (scene && scene->runtime_view.viewport.navigation_active);
 }
 
 uint32_t scene_controller_count_bool(bool value) {

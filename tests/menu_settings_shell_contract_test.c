@@ -46,7 +46,11 @@ static bool test_provider_selection(void) {
            menu_settings_schema_provider_for_modes(SIM_MODE_ATMOSPHERIC, SPACE_MODE_2D) ==
                MENU_SETTINGS_PROVIDER_ATMOSPHERIC_2D &&
            menu_settings_schema_provider_for_modes(SIM_MODE_ATMOSPHERIC, SPACE_MODE_3D) ==
-               MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D;
+               MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D &&
+           menu_settings_schema_provider_for_modes(SIM_MODE_WATER, SPACE_MODE_2D) ==
+               MENU_SETTINGS_PROVIDER_WATER &&
+           menu_settings_schema_provider_for_modes(SIM_MODE_WATER, SPACE_MODE_3D) ==
+               MENU_SETTINGS_PROVIDER_WATER;
 }
 
 static bool test_provider_field_sets(void) {
@@ -98,9 +102,18 @@ static bool test_provider_field_sets(void) {
     }
 
     count = menu_settings_schema_provider_fields(MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D, &fields);
-    return field_list_contains(fields, count, MENU_SETTINGS_FIELD_ATMOSPHERIC_SEED) &&
-           field_list_contains(fields, count, MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Z) &&
-           field_list_contains(fields, count, MENU_SETTINGS_FIELD_GRID_Z);
+    if (!(field_list_contains(fields, count, MENU_SETTINGS_FIELD_ATMOSPHERIC_SEED) &&
+          field_list_contains(fields, count, MENU_SETTINGS_FIELD_ATMOSPHERIC_BASE_WIND_Z) &&
+          field_list_contains(fields, count, MENU_SETTINGS_FIELD_GRID_Z))) {
+        return false;
+    }
+
+    count = menu_settings_schema_provider_fields(MENU_SETTINGS_PROVIDER_WATER, &fields);
+    return field_list_contains(fields, count, MENU_SETTINGS_FIELD_WATER_LEVEL) &&
+           field_list_contains(fields, count, MENU_SETTINGS_FIELD_GRID_X) &&
+           field_list_contains(fields, count, MENU_SETTINGS_FIELD_GRID_Y) &&
+           field_list_contains(fields, count, MENU_SETTINGS_FIELD_GRID_Z) &&
+           !field_list_contains(fields, count, MENU_SETTINGS_FIELD_ATMOSPHERIC_INITIAL_STATE);
 }
 
 static bool test_space_specific_quality_context(void) {
@@ -302,6 +315,54 @@ static bool test_3d_atmospheric_initial_state_toggle_roundtrip(void) {
     return !menu_settings_shell_is_dirty(&state, &cfg, &selection, &preset);
 }
 
+static bool test_water_draft_roundtrip(void) {
+    AppConfig cfg = app_config_default();
+    SceneMenuSelection selection = {0};
+    FluidScenePreset preset = {0};
+    MenuSettingsShellState state = {0};
+    const MenuSettingsDraft *draft = NULL;
+
+    cfg.space_mode = SPACE_MODE_3D;
+    cfg.grid_w = 96;
+    cfg.grid_h = 128;
+    cfg.grid_d = 32;
+    cfg.water_level = 0.40f;
+    preset.domain = SCENE_DOMAIN_BOX;
+    preset.dimension_mode = SCENE_DIMENSION_MODE_2D;
+    preset.object_count = 1;
+
+    menu_settings_shell_init(&state,
+                             &cfg,
+                             &selection,
+                             &preset,
+                             SIM_MODE_WATER,
+                             SPACE_MODE_3D);
+    if (state.provider != MENU_SETTINGS_PROVIDER_WATER) {
+        return false;
+    }
+    draft = menu_settings_shell_draft(&state);
+    if (!draft || draft->water_level < 0.399f || draft->water_level > 0.401f) {
+        return false;
+    }
+
+    menu_settings_shell_nudge_field(&state, MENU_SETTINGS_FIELD_WATER_LEVEL, 1);
+    if (!menu_settings_shell_is_dirty(&state, &cfg, &selection, &preset)) {
+        return false;
+    }
+    menu_settings_shell_apply_to_runtime(&state, &cfg, &selection, &preset);
+    if (cfg.water_level < 0.449f || cfg.water_level > 0.451f) return false;
+    if (preset.domain != SCENE_DOMAIN_WATER ||
+        preset.dimension_mode != SCENE_DIMENSION_MODE_3D ||
+        preset.object_count != 1 ||
+        preset.domain_width < 3.999f ||
+        preset.domain_width > 4.001f ||
+        preset.domain_height < 0.999f ||
+        preset.domain_height > 1.001f) {
+        return false;
+    }
+    return !menu_settings_shell_is_dirty(&state, &cfg, &selection, &preset);
+}
+
 int main(void) {
     if (!test_provider_selection()) {
         fprintf(stderr, "menu_settings_shell_contract_test: provider selection failed\n");
@@ -329,6 +390,10 @@ int main(void) {
     }
     if (!test_3d_atmospheric_initial_state_toggle_roundtrip()) {
         fprintf(stderr, "menu_settings_shell_contract_test: atmospheric init toggle failed\n");
+        return 1;
+    }
+    if (!test_water_draft_roundtrip()) {
+        fprintf(stderr, "menu_settings_shell_contract_test: water draft roundtrip failed\n");
         return 1;
     }
     fprintf(stdout, "menu_settings_shell_contract_test: success\n");

@@ -8,6 +8,7 @@
 
 #include "app/quality_profiles.h"
 #include "app/scene_controller.h"
+#include "app/scene_project_cache_output.h"
 #include "app/data_paths.h"
 #include "app/menu/menu_settings_draft.h"
 #include "app/menu/menu_settings_render.h"
@@ -128,10 +129,57 @@ void menu_clear_retained_scene_selection(SceneMenuInteraction *ctx) {
         ctx->selection->retained_scene_index = -1;
         ctx->selection->retained_runtime_scene_path[0] = '\0';
     }
+    if (ctx->cfg) {
+        ctx->cfg->retained_runtime_scene_path[0] = '\0';
+    }
     memset(&ctx->editor_bootstrap.retained_scene, 0, sizeof(ctx->editor_bootstrap.retained_scene));
     ctx->editor_bootstrap.has_retained_scene = false;
     ctx->editor_bootstrap.retained_runtime_scene_path[0] = '\0';
     ctx->retained_runtime_scene_path[0] = '\0';
+    memset(&ctx->scene_project_cache_status, 0, sizeof(ctx->scene_project_cache_status));
+}
+
+void menu_update_scene_project_cache_status(SceneMenuInteraction *ctx) {
+    char error[160];
+    if (!ctx) return;
+    memset(&ctx->scene_project_cache_status, 0, sizeof(ctx->scene_project_cache_status));
+    if (!menu_showing_retained_catalog(ctx) || !ctx->retained_runtime_scene_path[0]) {
+        return;
+    }
+    if (!scene_project_cache_output_status_from_runtime_scene(ctx->retained_runtime_scene_path,
+                                                              &ctx->scene_project_cache_status,
+                                                              error,
+                                                              sizeof(error))) {
+        return;
+    }
+    if (ctx->cfg) {
+        (void)scene_project_cache_output_make_update_command(
+            ctx->scene_project_cache_status.project_root,
+            ctx->cfg->headless_frame_count,
+            ctx->cfg->grid_w,
+            ctx->cfg->grid_h,
+            ctx->cfg->grid_d,
+            ctx->scene_project_cache_status.update_command,
+            sizeof(ctx->scene_project_cache_status.update_command));
+    }
+}
+
+bool menu_has_scene_project_cache_status(const SceneMenuInteraction *ctx) {
+    return ctx && ctx->scene_project_cache_status.is_scene_project;
+}
+
+bool menu_copy_scene_project_cache_command(SceneMenuInteraction *ctx) {
+    if (!menu_has_scene_project_cache_status(ctx) ||
+        !ctx->scene_project_cache_status.update_command[0]) {
+        if (ctx) menu_set_status(ctx, "No scene-project cache command for this selection.", false);
+        return false;
+    }
+    if (SDL_SetClipboardText(ctx->scene_project_cache_status.update_command) != 0) {
+        menu_set_status(ctx, "Failed to copy scene-project cache command.", false);
+        return false;
+    }
+    menu_set_status(ctx, "Scene-project cache update command copied.", false);
+    return true;
 }
 
 bool menu_point_in_rect(int x, int y, const SDL_Rect *rect) {
@@ -150,6 +198,8 @@ static FluidSceneDomainType domain_for_mode(SimulationMode mode) {
     switch (mode) {
     case SIM_MODE_ATMOSPHERIC:
         return SCENE_DOMAIN_ATMOSPHERIC;
+    case SIM_MODE_WATER:
+        return SCENE_DOMAIN_WATER;
     case SIM_MODE_WIND_TUNNEL:
         return SCENE_DOMAIN_WIND_TUNNEL;
     case SIM_MODE_STRUCTURAL:
@@ -177,6 +227,7 @@ void menu_reload_settings_from_active_preset(SceneMenuInteraction *ctx) {
 
 bool menu_showing_retained_catalog(const SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return false;
+    if (ctx->active_mode == SIM_MODE_WATER) return false;
     return menu_normalize_space_mode(ctx->cfg->space_mode) == SPACE_MODE_3D;
 }
 
@@ -216,10 +267,13 @@ void menu_refresh_scene_library(SceneMenuInteraction *ctx) {
             }
         }
     }
+    menu_update_scene_project_cache_status(ctx);
 }
 
 const char *menu_mode_label(SimulationMode mode) {
     switch (mode) {
+    case SIM_MODE_WATER:
+        return "Water";
     case SIM_MODE_ATMOSPHERIC:
         return "Atmospheric";
     case SIM_MODE_WIND_TUNNEL:
@@ -365,7 +419,12 @@ void menu_switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode) {
         menu_finish_rename(ctx, false);
     }
     ctx->active_mode = normalized;
-    if (ctx->cfg) ctx->cfg->sim_mode = normalized;
+    if (ctx->cfg) {
+        ctx->cfg->sim_mode = normalized;
+        if (normalized == SIM_MODE_WATER) {
+            ctx->cfg->space_mode = SPACE_MODE_3D;
+        }
+    }
     if (ctx->selection) ctx->selection->sim_mode = normalized;
     menu_settings_shell_sync_provider(&ctx->settings_shell,
                                       normalized,
@@ -402,6 +461,9 @@ void menu_switch_mode(SceneMenuInteraction *ctx, SimulationMode new_mode) {
 void menu_switch_space_mode(SceneMenuInteraction *ctx, SpaceMode new_mode) {
     SpaceMode normalized = menu_normalize_space_mode(new_mode);
     if (!ctx || !ctx->cfg) return;
+    if (ctx->active_mode == SIM_MODE_WATER) {
+        normalized = SPACE_MODE_3D;
+    }
     if (menu_normalize_space_mode(ctx->cfg->space_mode) == normalized) return;
     ctx->cfg->space_mode = normalized;
     menu_settings_shell_sync_provider(&ctx->settings_shell,

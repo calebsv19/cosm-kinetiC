@@ -4,15 +4,15 @@
 
 enum {
     MENU_SETTINGS_PANEL_PAD = 10,
-    MENU_SETTINGS_PANEL_TOP_OFFSET = 34,
+    MENU_SETTINGS_PANEL_TOP_OFFSET = 26,
     MENU_SETTINGS_PANEL_COL_GAP = 8,
-    MENU_SETTINGS_PANEL_ROW_GAP = 5,
-    MENU_SETTINGS_PANEL_CELL_H = 30,
+    MENU_SETTINGS_PANEL_ROW_GAP = 3,
+    MENU_SETTINGS_PANEL_CELL_H = 26,
     MENU_SETTINGS_PANEL_TOGGLE_H = 24,
-    MENU_SETTINGS_PANEL_ACTION_H = 24,
-    MENU_SETTINGS_PANEL_SECTION_GAP = 6,
-    MENU_SETTINGS_PANEL_STATUS_H = 16,
-    MENU_SETTINGS_PANEL_BOTTOM_PAD = 8,
+    MENU_SETTINGS_PANEL_ACTION_H = 22,
+    MENU_SETTINGS_PANEL_SECTION_GAP = 5,
+    MENU_SETTINGS_PANEL_STATUS_H = 12,
+    MENU_SETTINGS_PANEL_BOTTOM_PAD = 6,
     MENU_SETTINGS_PANEL_ICON_W = 24
 };
 
@@ -34,6 +34,7 @@ static bool is_primary_grid_field(MenuSettingsFieldId field) {
     case MENU_SETTINGS_FIELD_TUNNEL_INFLOW_SPEED:
     case MENU_SETTINGS_FIELD_TUNNEL_INFLOW_DENSITY:
     case MENU_SETTINGS_FIELD_TUNNEL_VISCOSITY_SCALE:
+    case MENU_SETTINGS_FIELD_WATER_LEVEL:
     case MENU_SETTINGS_FIELD_ATMOSPHERIC_SEED:
     case MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_SCALE:
     case MENU_SETTINGS_FIELD_ATMOSPHERIC_DENSITY_THRESHOLD:
@@ -129,12 +130,15 @@ void menu_settings_layout_toggle_rects(const SceneMenuInteraction *ctx,
     SDL_Rect panel = {0, 0, 0, 0};
     int rows = 0;
     int cell_w = 0;
+    int toggle_w = 0;
     int y = 0;
     if (!ctx) return;
     panel = ctx->config_panel_rect;
     rows = primary_row_count(ctx);
     cell_w = (panel.w - MENU_SETTINGS_PANEL_PAD * 2 - MENU_SETTINGS_PANEL_COL_GAP) / 2;
     if (cell_w < 140) cell_w = 140;
+    toggle_w = (panel.w - MENU_SETTINGS_PANEL_PAD * 2 - MENU_SETTINGS_PANEL_COL_GAP * 2) / 3;
+    if (toggle_w < 120) toggle_w = 120;
     y = panel.y + MENU_SETTINGS_PANEL_TOP_OFFSET +
         rows * (MENU_SETTINGS_PANEL_CELL_H + MENU_SETTINGS_PANEL_ROW_GAP) +
         MENU_SETTINGS_PANEL_SECTION_GAP;
@@ -156,23 +160,24 @@ void menu_settings_layout_toggle_rects(const SceneMenuInteraction *ctx,
         *volume_rect = (SDL_Rect){
             panel.x + MENU_SETTINGS_PANEL_PAD,
             y,
-            cell_w,
+            toggle_w,
             MENU_SETTINGS_PANEL_TOGGLE_H
         };
     }
     if (render_rect) {
         *render_rect = (SDL_Rect){
-            panel.x + MENU_SETTINGS_PANEL_PAD + cell_w + MENU_SETTINGS_PANEL_COL_GAP,
+            panel.x + MENU_SETTINGS_PANEL_PAD + toggle_w + MENU_SETTINGS_PANEL_COL_GAP,
             y,
-            cell_w,
+            toggle_w,
             MENU_SETTINGS_PANEL_TOGGLE_H
         };
     }
     if (blur_rect) {
         *blur_rect = (SDL_Rect){
-            panel.x + MENU_SETTINGS_PANEL_PAD,
-            y + MENU_SETTINGS_PANEL_TOGGLE_H + MENU_SETTINGS_PANEL_ROW_GAP,
-            panel.w - MENU_SETTINGS_PANEL_PAD * 2,
+            panel.x + MENU_SETTINGS_PANEL_PAD + (toggle_w + MENU_SETTINGS_PANEL_COL_GAP) * 2,
+            y,
+            panel.x + panel.w - MENU_SETTINGS_PANEL_PAD -
+                (panel.x + MENU_SETTINGS_PANEL_PAD + (toggle_w + MENU_SETTINGS_PANEL_COL_GAP) * 2),
             MENU_SETTINGS_PANEL_TOGGLE_H
         };
     }
@@ -266,8 +271,6 @@ int menu_settings_layout_panel_height(const SceneMenuInteraction *ctx) {
               primary_h +
               MENU_SETTINGS_PANEL_SECTION_GAP +
               optional_toggle_h +
-              MENU_SETTINGS_PANEL_TOGGLE_H +
-              MENU_SETTINGS_PANEL_ROW_GAP +
               MENU_SETTINGS_PANEL_TOGGLE_H +
               MENU_SETTINGS_PANEL_SECTION_GAP +
               MENU_SETTINGS_PANEL_ACTION_H +

@@ -27,14 +27,16 @@ typedef enum SimRuntimeObstacleSourceKind {
     SIM_RUNTIME_OBSTACLE_SOURCE_DOMAIN_WALL = 0,
     SIM_RUNTIME_OBSTACLE_SOURCE_BACKEND_GENERATED = 1,
     SIM_RUNTIME_OBSTACLE_SOURCE_RETAINED_OBJECT = 2,
-    SIM_RUNTIME_OBSTACLE_SOURCE_RETAINED_IMPORT = 3
+    SIM_RUNTIME_OBSTACLE_SOURCE_RETAINED_IMPORT = 3,
+    SIM_RUNTIME_OBSTACLE_SOURCE_RUNTIME_MESH_ASSET = 4
 } SimRuntimeObstacleSourceKind;
 
 typedef enum SimRuntimeObstacleFootprintKind {
     SIM_RUNTIME_OBSTACLE_FOOTPRINT_DOMAIN_FACE_SLAB = 0,
     SIM_RUNTIME_OBSTACLE_FOOTPRINT_BACKEND_GENERATED_OCCUPANCY = 1,
     SIM_RUNTIME_OBSTACLE_FOOTPRINT_RETAINED_OBJECT_OCCUPANCY = 2,
-    SIM_RUNTIME_OBSTACLE_FOOTPRINT_RETAINED_IMPORT_OCCUPANCY = 3
+    SIM_RUNTIME_OBSTACLE_FOOTPRINT_RETAINED_IMPORT_OCCUPANCY = 3,
+    SIM_RUNTIME_OBSTACLE_FOOTPRINT_RUNTIME_MESH_ASSET_OCCUPANCY = 4
 } SimRuntimeObstacleFootprintKind;
 
 typedef struct SimRuntimeObstacleContract {
@@ -44,6 +46,7 @@ typedef struct SimRuntimeObstacleContract {
     bool backend_generated_occupancy_supported;
     bool retained_object_occupancy_supported;
     bool retained_import_occupancy_supported;
+    bool runtime_mesh_asset_occupancy_supported;
     bool obstacle_velocity_support;
     bool obstacle_normal_support;
 } SimRuntimeObstacleContract;

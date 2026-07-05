@@ -1,5 +1,7 @@
 #include "app/editor/scene_editor_session.h"
 
+#include <string.h>
+
 static float session_clamp_emitter_strength(float strength) {
     if (strength < 0.1f) strength = 0.1f;
     if (strength > 5000.0f) strength = 5000.0f;
@@ -85,6 +87,78 @@ static PhysicsSimObjectOverlay *physics_sim_editor_session_selected_overlay_mut(
         return NULL;
     }
     return &session->physics_overlay.object_overlays[session->selection.retained_object_index];
+}
+
+static PhysicsSimRuntimeMeshOverlay *physics_sim_editor_session_selected_mesh_overlay_mut(
+    PhysicsSimEditorSession *session) {
+    const CoreSceneObjectContract *object = NULL;
+    if (!session || !session->has_physics_overlay) return NULL;
+    object = physics_sim_editor_session_selected_object(session);
+    if (!object || object->kind != CORE_SCENE_OBJECT_KIND_MESH_ASSET_INSTANCE ||
+        !object->object.object_id[0]) {
+        return NULL;
+    }
+    for (int i = 0; i < session->physics_overlay.mesh_overlay_count; ++i) {
+        PhysicsSimRuntimeMeshOverlay *overlay = &session->physics_overlay.mesh_overlays[i];
+        if (!overlay->active) continue;
+        if (strcmp(overlay->object_id, object->object.object_id) == 0) {
+            return overlay;
+        }
+    }
+    return NULL;
+}
+
+static void session_runtime_mesh_overlay_set_role_defaults(PhysicsSimRuntimeMeshOverlay *overlay,
+                                                           PhysicsSimRuntimeMeshEditorRole role) {
+    float existing_radius = 0.0f;
+    if (!overlay) return;
+    existing_radius = overlay->emitter.radius;
+    overlay->role = role;
+    overlay->emitter.active = false;
+    if (overlay->emitter.direction.x == 0.0 &&
+        overlay->emitter.direction.y == 0.0 &&
+        overlay->emitter.direction.z == 0.0) {
+        overlay->emitter.direction = (CoreObjectVec3){0.0, 0.0, 1.0};
+    }
+    if (existing_radius <= 0.0f) existing_radius = 0.08f;
+    overlay->emitter.radius = session_clamp_emitter_radius(existing_radius);
+
+    switch (role) {
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_EMITTER:
+        overlay->emitter.active = true;
+        overlay->emitter.type = EMITTER_DENSITY_SOURCE;
+        overlay->emitter.strength = session_clamp_emitter_strength(
+            session_emitter_default_strength(EMITTER_DENSITY_SOURCE));
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_SHELL;
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_ALL_FACES;
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED;
+        overlay->emitter.thermal_buoyancy_3d = 0.0f;
+        break;
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_HEAT_EMITTER:
+        overlay->emitter.active = true;
+        overlay->emitter.type = EMITTER_DENSITY_SOURCE;
+        overlay->emitter.strength = session_clamp_emitter_strength(
+            session_emitter_default_strength(EMITTER_DENSITY_SOURCE));
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE;
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_ALL_FACES;
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED;
+        overlay->emitter.thermal_buoyancy_3d = 6.0f;
+        break;
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_BOUNDARY_FLOW_EMITTER:
+        overlay->emitter.active = true;
+        overlay->emitter.type = EMITTER_VELOCITY_JET;
+        overlay->emitter.strength = session_clamp_emitter_strength(
+            session_emitter_default_strength(EMITTER_VELOCITY_JET));
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_SHELL;
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_ALL_FACES;
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED;
+        overlay->emitter.thermal_buoyancy_3d = 0.0f;
+        break;
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SOLID:
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_VISUAL_ONLY:
+    default:
+        break;
+    }
 }
 
 bool physics_sim_editor_session_set_selected_motion_mode(PhysicsSimEditorSession *session,
@@ -219,6 +293,124 @@ bool physics_sim_editor_session_cycle_selected_emitter_surface_3d(PhysicsSimEdit
 
 bool physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(PhysicsSimEditorSession *session) {
     PhysicsSimObjectOverlay *overlay = physics_sim_editor_session_selected_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    switch (overlay->emitter.obstacle_mode_3d) {
+    case EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED:
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED;
+        break;
+    case EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED:
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
+        break;
+    case EMITTER_3D_OBSTACLE_MODE_AUTO:
+    default:
+        overlay->emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED;
+        break;
+    }
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_set_selected_runtime_mesh_role(PhysicsSimEditorSession *session,
+                                                               PhysicsSimRuntimeMeshEditorRole role) {
+    PhysicsSimRuntimeMeshOverlay *overlay = physics_sim_editor_session_selected_mesh_overlay_mut(session);
+    if (!overlay) return false;
+    session_runtime_mesh_overlay_set_role_defaults(overlay, role);
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_set_selected_runtime_mesh_emitter_radius(PhysicsSimEditorSession *session,
+                                                                         float radius) {
+    PhysicsSimRuntimeMeshOverlay *overlay = physics_sim_editor_session_selected_mesh_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    overlay->emitter.radius = session_clamp_emitter_radius(radius);
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_set_selected_runtime_mesh_emitter_strength(PhysicsSimEditorSession *session,
+                                                                           float strength) {
+    PhysicsSimRuntimeMeshOverlay *overlay = physics_sim_editor_session_selected_mesh_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    overlay->emitter.strength = session_clamp_emitter_strength(strength);
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_set_selected_runtime_mesh_emitter_thermal_buoyancy_3d(
+    PhysicsSimEditorSession *session,
+    float thermal_buoyancy) {
+    PhysicsSimRuntimeMeshOverlay *overlay = physics_sim_editor_session_selected_mesh_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    overlay->emitter.thermal_buoyancy_3d = session_clamp_emitter_thermal_buoyancy(thermal_buoyancy);
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_source_mode_3d(
+    PhysicsSimEditorSession *session) {
+    PhysicsSimRuntimeMeshOverlay *overlay = physics_sim_editor_session_selected_mesh_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    switch (overlay->emitter.source_mode_3d) {
+    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_SHELL;
+        break;
+    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE;
+        break;
+    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_VOLUME_FILL;
+        break;
+    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT;
+        break;
+    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
+    default:
+        overlay->emitter.source_mode_3d = EMITTER_3D_SOURCE_MODE_SURFACE_PATCH;
+        break;
+    }
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_surface_3d(
+    PhysicsSimEditorSession *session) {
+    PhysicsSimRuntimeMeshOverlay *overlay = physics_sim_editor_session_selected_mesh_overlay_mut(session);
+    if (!overlay || !overlay->emitter.active) return false;
+    switch (overlay->emitter.surface_3d) {
+    case EMITTER_3D_SURFACE_TOP:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_BOTTOM;
+        break;
+    case EMITTER_3D_SURFACE_BOTTOM:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_LEFT;
+        break;
+    case EMITTER_3D_SURFACE_LEFT:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_RIGHT;
+        break;
+    case EMITTER_3D_SURFACE_RIGHT:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_FRONT;
+        break;
+    case EMITTER_3D_SURFACE_FRONT:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_BACK;
+        break;
+    case EMITTER_3D_SURFACE_BACK:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_ALL_FACES;
+        break;
+    case EMITTER_3D_SURFACE_ALL_FACES:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_AUTO;
+        break;
+    case EMITTER_3D_SURFACE_AUTO:
+    default:
+        overlay->emitter.surface_3d = EMITTER_3D_SURFACE_TOP;
+        break;
+    }
+    session->physics_overlay.derived_defaults = false;
+    return true;
+}
+
+bool physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_obstacle_mode_3d(
+    PhysicsSimEditorSession *session) {
+    PhysicsSimRuntimeMeshOverlay *overlay = physics_sim_editor_session_selected_mesh_overlay_mut(session);
     if (!overlay || !overlay->emitter.active) return false;
     switch (overlay->emitter.obstacle_mode_3d) {
     case EMITTER_3D_OBSTACLE_MODE_RETAIN_ATTACHED:

@@ -1,0 +1,15 @@
+{
+  "schema_family": "codework_scene",
+  "schema_variant": "scene_authoring_v1",
+  "schema_version": 1,
+  "scene_id": "physics_scene_project_cache_output_minimal",
+  "objects": [],
+  "materials": [],
+  "lights": [],
+  "cameras": [],
+  "extensions": {
+    "line_drawing": {
+      "source": "minimal checked-in PhysicsSim project-cache fixture"
+    }
+  }
+}

@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #include "app/scene_menu.h"
+#include "app/scene_project_cache_output.h"
 #include "app/editor/scene_editor_scene_library.h"
 #include "app/menu/menu_settings_types.h"
 #include "app/menu/workspace_authoring/physics_sim_workspace_authoring_host.h"
@@ -57,6 +58,7 @@ typedef struct SceneMenuInteraction {
     bool use_shared_device;
     MenuButton start_button;
     MenuButton duplicate_button;
+    MenuButton cache_command_button;
     MenuButton edit_button;
     MenuButton quit_button;
     MenuButton grid_dec_button;
@@ -106,6 +108,7 @@ typedef struct SceneMenuInteraction {
     char status_text[128];
     bool status_visible;
     bool status_wait_ack;
+    SceneProjectCacheOutputStatus scene_project_cache_status;
     bool headless_run_requested;
     TextInputField headless_frames_input;
     bool editing_headless_frames;
@@ -122,6 +125,10 @@ typedef struct SceneMenuInteraction {
     TextInputField output_root_input;
     bool editing_output_root;
     SDL_Rect output_root_rect;
+    SDL_Rect scene_project_root_rect;
+    SDL_Rect scene_project_cache_target_rect;
+    SDL_Rect scene_project_cache_status_rect;
+    SDL_Rect data_io_panel_rect;
     TextInputField warm_start_input;
     bool editing_warm_start;
     SDL_Rect warm_start_rect;

@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "app/app_config.h"
+#include "app/scene_presets.h"
 #include "app/sim_mode.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/wind_tunnel_3d.h"
@@ -147,6 +148,8 @@ typedef struct SimRuntimeBackendReport {
     float runtime_solver_max_velocity_displacement_cells_post_clamp;
     float runtime_solver_max_abs_divergence_after_project;
     bool debug_volume_view_3d_available;
+    bool atmospheric_settings_available;
+    AtmosphericPresetSettings atmospheric_settings;
     SimRuntimeInitialStateSource initial_state_source;
     bool atmospheric_seeded;
     uint32_t atmospheric_seed;

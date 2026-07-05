@@ -38,13 +38,6 @@ static SDL_Rect scene_editor_splitter_rect_to_sdl(CorePaneRect rect) {
     return out;
 }
 
-static const char *editor_space_mode_label(SpaceMode mode) {
-    if (mode == SPACE_MODE_3D) {
-        return "3D (Scaffold)";
-    }
-    return "2D";
-}
-
 SDL_Color lighten_color(SDL_Color color, float factor) {
     if (factor < 0.0f) factor = 0.0f;
     if (factor > 1.0f) factor = 1.0f;
@@ -346,108 +339,6 @@ static void draw_import_list(SceneEditorState *state) {
     editor_list_view_draw(state->renderer, &state->import_view, track, thumb);
 }
 
-static void draw_dimension_field(SceneEditorState *state,
-                                 const SDL_Rect *rect,
-                                 const char *label,
-                                 float value,
-                                 bool editing,
-                                 const TextInputField *input) {
-    if (!state || !rect) return;
-    SDL_Renderer *renderer = state->renderer;
-    TTF_Font *font = state->font_small ? state->font_small : state->font_main;
-    if (!renderer || !font) return;
-    SDL_Color bg = editing ? COLOR_FIELD_ACTIVE : COLOR_PANEL;
-    SDL_SetRenderDrawColor(renderer, bg.r, bg.g, bg.b, 255);
-    SDL_RenderFillRect(renderer, rect);
-    SDL_SetRenderDrawColor(renderer, COLOR_FIELD_BORDER.r, COLOR_FIELD_BORDER.g, COLOR_FIELD_BORDER.b,
-                           editing ? 255 : 140);
-    SDL_RenderDrawRect(renderer, rect);
-    int label_height = panel_font_height(renderer, font, 16);
-    int label_y = rect->y - label_height - 2;
-    char label_fit[64];
-    char value_fit[64];
-    const char *draw_label = label ? label : "";
-    const char *draw_value = NULL;
-    int max_text_w = rect->w - 8;
-    if (max_text_w < 8) max_text_w = 8;
-    if (label_y < 0) label_y = 0;
-    fit_text_to_width(renderer, font, draw_label, max_text_w, label_fit, sizeof(label_fit));
-    draw_text(renderer,
-              font,
-              label_fit[0] ? label_fit : draw_label,
-              rect->x + 2,
-              label_y,
-              COLOR_TEXT_DIM);
-    char value_buf[32];
-    const char *value_text = value_buf;
-    if (editing && input) {
-        value_text = text_input_value(input);
-        if (!value_text) value_text = "";
-    } else {
-        snprintf(value_buf, sizeof(value_buf), "%.2f", value);
-    }
-    fit_text_to_width(renderer, font, value_text, rect->w - 12, value_fit, sizeof(value_fit));
-    draw_value = value_fit[0] ? value_fit : value_text;
-    int text_w = 0;
-    int text_h = 0;
-    if (physics_sim_text_measure_utf8(renderer, font, draw_value, &text_w, &text_h)) {
-        int text_y = rect->y + rect->h / 2 - text_h / 2 + 2;
-        SDL_Rect dst = {rect->x + 6, text_y, text_w, text_h};
-        (void)physics_sim_text_draw_utf8(renderer, font, draw_value, COLOR_TEXT, &dst);
-    }
-    if (editing && input && input->caret_visible) {
-        int caret_x = rect->x + 6 + text_w + 2;
-        int caret_y0 = rect->y + 4;
-        int caret_y1 = rect->y + rect->h - 4;
-        SDL_SetRenderDrawColor(renderer, COLOR_FIELD_BORDER.r, COLOR_FIELD_BORDER.g, COLOR_FIELD_BORDER.b, 255);
-        SDL_RenderDrawLine(renderer, caret_x, caret_y0, caret_x, caret_y1);
-    }
-}
-
-static void draw_dimension_fields(SceneEditorState *state) {
-    double domain_width = 0.0;
-    double domain_height = 0.0;
-    double domain_depth = 0.0;
-    if (!state) return;
-    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
-        physics_sim_editor_session_scene_domain_dimensions(&state->session,
-                                                           &domain_width,
-                                                           &domain_height,
-                                                           &domain_depth);
-        draw_dimension_field(state,
-                             &state->width_rect,
-                             "Width",
-                             (float)domain_width,
-                             state->editing_width,
-                             &state->width_input);
-        draw_dimension_field(state,
-                             &state->height_rect,
-                             "Height",
-                             (float)domain_height,
-                             state->editing_height,
-                             &state->height_input);
-        draw_dimension_field(state,
-                             &state->depth_rect,
-                             "Depth",
-                             (float)domain_depth,
-                             state->editing_depth,
-                             &state->depth_input);
-        return;
-    }
-    draw_dimension_field(state,
-                         &state->width_rect,
-                         "Width",
-                         state->working.domain_width,
-                         state->editing_width,
-                         &state->width_input);
-    draw_dimension_field(state,
-                         &state->height_rect,
-                         "Height",
-                         state->working.domain_height,
-                         state->editing_height,
-                         &state->height_input);
-}
-
 void scene_editor_panel_draw(SceneEditorState *state) {
     if (!state || !state->renderer) return;
     refresh_panel_theme();
@@ -540,7 +431,6 @@ void scene_editor_panel_draw(SceneEditorState *state) {
     draw_pane_splitter_handle(state);
 
     draw_hover_tooltip(state);
-    draw_dimension_fields(state);
 
     draw_text(renderer, state->font_main,
               "Scene Controls",
@@ -554,73 +444,19 @@ void scene_editor_panel_draw(SceneEditorState *state) {
               state->center_title_rect.y,
               COLOR_TEXT);
     draw_center_pane_summary(state);
-    draw_text(renderer, state->font_main,
-              "Inspector",
-              state->right_panel_rect.x + 12,
-              state->right_panel_rect.y + 12,
-              COLOR_TEXT);
-    draw_text(renderer, state->font_small,
-              "Space Mode",
-              state->right_panel_rect.x + 12,
-              state->right_panel_rect.y + 40,
-              COLOR_TEXT_DIM);
-    draw_text(renderer, state->font_small,
-              editor_space_mode_label(state->cfg.space_mode),
-              state->right_panel_rect.x + 12,
-              state->right_panel_rect.y + 60,
-              COLOR_TEXT);
+    scene_editor_panel_draw_right_inspector(state);
 
-    const FluidEmitter *selected_em = NULL;
-    const PhysicsSimEmitterOverlay *selected_retained_em =
-        physics_sim_editor_session_selected_object_emitter(&state->session);
-    if (state->selected_emitter >= 0 &&
-        state->selected_emitter < (int)state->working.emitter_count) {
-        selected_em = &state->working.emitters[state->selected_emitter];
-    }
     if (!physics_sim_editor_session_has_retained_scene(&state->session)) {
-        scene_editor_draw_numeric_field(renderer, state->font_small,
-                                        &state->radius_field, selected_em, NULL);
-    } else {
-        scene_editor_draw_numeric_field(renderer, state->font_small,
-                                        &state->radius_field, NULL, selected_retained_em);
+        scene_editor_draw_button(renderer, &state->btn_add_source, state->font_small);
+        scene_editor_draw_button(renderer, &state->btn_add_jet, state->font_small);
+        scene_editor_draw_button(renderer, &state->btn_add_sink, state->font_small);
+        if (state->showing_import_picker) {
+            scene_editor_draw_button(renderer, &state->btn_import_back, state->font_small);
+        } else {
+            scene_editor_draw_button(renderer, &state->btn_add_import, state->font_small);
+        }
+        scene_editor_draw_button(renderer, &state->btn_boundary, state->font_small);
     }
-    scene_editor_draw_numeric_field(renderer, state->font_small,
-                                    &state->strength_field, selected_em, selected_retained_em);
-    if (physics_sim_editor_session_has_retained_scene(&state->session)) {
-        scene_editor_draw_numeric_field(renderer, state->font_small,
-                                        &state->thermal_buoyancy_field, NULL, selected_retained_em);
-    }
-    if (physics_sim_editor_session_has_physics_overlay(&state->session)) {
-        int label_h = panel_font_height(renderer, state->font_small, 16);
-        draw_text(renderer,
-                  state->font_small,
-                  "Physics Overlay",
-                  state->btn_overlay_dynamic.rect.x,
-                  state->btn_overlay_dynamic.rect.y - label_h - 6,
-                  COLOR_TEXT_DIM);
-        scene_editor_draw_button(renderer, &state->btn_overlay_dynamic, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_static, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_mode_3d, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_surface_3d, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_obstacle_3d, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_vel_x_neg, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_vel_x_pos, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_vel_y_neg, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_vel_y_pos, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_vel_z_neg, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_vel_z_pos, state->font_small);
-        scene_editor_draw_button(renderer, &state->btn_overlay_vel_reset, state->font_small);
-    }
-
-    scene_editor_draw_button(renderer, &state->btn_add_source, state->font_small);
-    scene_editor_draw_button(renderer, &state->btn_add_jet, state->font_small);
-    scene_editor_draw_button(renderer, &state->btn_add_sink, state->font_small);
-    if (state->showing_import_picker) {
-        scene_editor_draw_button(renderer, &state->btn_import_back, state->font_small);
-    } else {
-        scene_editor_draw_button(renderer, &state->btn_add_import, state->font_small);
-    }
-    scene_editor_draw_button(renderer, &state->btn_boundary, state->font_small);
 
     SDL_Rect list_rect = state->list_rect;
     SDL_Rect import_rect = state->import_rect;
@@ -659,7 +495,6 @@ void scene_editor_panel_draw(SceneEditorState *state) {
         }
     }
 
-    draw_right_panel_summary(state);
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
         scene_editor_draw_button(renderer, &state->btn_apply_overlay, state->font_small);
     }

@@ -10,7 +10,8 @@
 typedef enum SimRuntimeEmitterSourceKind {
     SIM_RUNTIME_EMITTER_SOURCE_FREE = 0,
     SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_OBJECT = 1,
-    SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_IMPORT = 2
+    SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_IMPORT = 2,
+    SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_RUNTIME_MESH = 3
 } SimRuntimeEmitterSourceKind;
 
 typedef enum SimRuntimeEmitterFootprintKind {
@@ -22,7 +23,11 @@ typedef enum SimRuntimeEmitterFootprintKind {
     SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_OBJECT_SURFACE_SHELL = 5,
     SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_SURFACE_SHELL = 6,
     SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_OBJECT_HEATED_OBSTACLE = 7,
-    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_HEATED_OBSTACLE = 8
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_HEATED_OBSTACLE = 8,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_OCCUPANCY = 9,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_SURFACE_PATCH = 10,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_SURFACE_SHELL = 11,
+    SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_HEATED_OBSTACLE = 12
 } SimRuntimeEmitterFootprintKind;
 
 typedef struct SimRuntimeEmitterResolved {
@@ -33,6 +38,8 @@ typedef struct SimRuntimeEmitterResolved {
     SimRuntimeEmitterFootprintKind fallback_footprint;
     int attached_object;
     int attached_import;
+    bool attached_runtime_mesh_enabled;
+    int attached_runtime_mesh;
     float position_x;
     float position_y;
     float position_z [[fisics::dim(length)]] [[fisics::unit(meter)]];

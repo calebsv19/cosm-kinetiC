@@ -1,0 +1,58 @@
+{
+  "schema_family": "codework_scene",
+  "schema_variant": "scene_runtime_v1",
+  "schema_version": 1,
+  "scene_id": "physics_scene_project_cache_output_minimal",
+  "space_mode_default": "3d",
+  "unit_system": "meters",
+  "world_scale": 1.0,
+  "objects": [
+    {
+      "object_id": "cache_box_1",
+      "object_type": "rect_prism_primitive",
+      "space_mode_intent": "3d",
+      "dimensional_mode": "full_3d",
+      "transform": {
+        "position": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+      },
+      "flags": {
+        "visible": true,
+        "locked": false,
+        "selectable": true
+      },
+      "primitive": {
+        "kind": "rect_prism_primitive",
+        "width": 1.0,
+        "height": 1.0,
+        "depth": 1.0,
+        "lock_to_construction_plane": false,
+        "lock_to_bounds": true,
+        "frame": {
+          "origin": { "x": 0.0, "y": 0.0, "z": 0.0 },
+          "axis_u": { "x": 1.0, "y": 0.0, "z": 0.0 },
+          "axis_v": { "x": 0.0, "y": 1.0, "z": 0.0 },
+          "normal": { "x": 0.0, "y": 0.0, "z": 1.0 }
+        }
+      }
+    }
+  ],
+  "materials": [],
+  "lights": [],
+  "cameras": [],
+  "constraints": [],
+  "hierarchy": [],
+  "extensions": {
+    "line_drawing": {
+      "scene3d": {
+        "bounds": {
+          "enabled": true,
+          "clamp_on_edit": true,
+          "min": { "x": -2.0, "y": -2.0, "z": -2.0 },
+          "max": { "x": 2.0, "y": 2.0, "z": 2.0 }
+        }
+      }
+    }
+  }
+}

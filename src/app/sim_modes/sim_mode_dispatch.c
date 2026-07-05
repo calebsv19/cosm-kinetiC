@@ -4,6 +4,7 @@
 extern const SimModeHooks g_sim_mode_box;
 extern const SimModeHooks g_sim_mode_wind;
 extern const SimModeHooks g_sim_mode_atmospheric;
+extern const SimModeHooks g_sim_mode_water;
 
 static SpaceMode normalize_space_mode(SpaceMode mode) {
     if (mode < SPACE_MODE_2D || mode >= SPACE_MODE_COUNT) {
@@ -14,6 +15,8 @@ static SpaceMode normalize_space_mode(SpaceMode mode) {
 
 static const SimModeHooks *sim_mode_hooks_for_simulation_mode(SimulationMode mode) {
     switch (mode) {
+    case SIM_MODE_WATER:
+        return &g_sim_mode_water;
     case SIM_MODE_ATMOSPHERIC:
         return &g_sim_mode_atmospheric;
     case SIM_MODE_WIND_TUNNEL:
@@ -36,6 +39,7 @@ SimModeRoute sim_mode_resolve_route(SimulationMode mode, SpaceMode space_mode) {
     route.fallback_to_2d_projection = false;
     route.constrained_3d_solver_scaffold = false;
     route.wind_tunnel_3d_active = false;
+    route.water_mode_active = false;
     route.constrained_3d_min_substeps = 1;
     route.constrained_3d_buoyancy_scale = 1.0f;
     route.hooks = sim_mode_hooks_for_simulation_mode(mode);
@@ -47,6 +51,7 @@ SimModeRoute sim_mode_resolve_route(SimulationMode mode, SpaceMode space_mode) {
         route.backend_uses_canonical_2d_solver = false;
         route.constrained_3d_solver_scaffold = false;
         route.wind_tunnel_3d_active = wind_tunnel_3d_route_active(mode, route.requested_space_mode);
+        route.water_mode_active = (mode == SIM_MODE_WATER);
         route.constrained_3d_min_substeps = 1;
         route.constrained_3d_buoyancy_scale = 1.0f;
     }

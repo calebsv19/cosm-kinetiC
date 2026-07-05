@@ -214,6 +214,9 @@ void begin_field_edit(SceneEditorState *state, NumericField *field) {
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
         const PhysicsSimEmitterOverlay *em =
             physics_sim_editor_session_selected_object_emitter(&state->session);
+        if (!em) {
+            em = physics_sim_editor_session_selected_runtime_mesh_emitter(&state->session);
+        }
         if (em) {
             float value = em->strength;
             if (field->target == FIELD_RADIUS) {
@@ -253,11 +256,16 @@ void commit_field_edit(SceneEditorState *state) {
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
         bool applied = false;
         if (field->target == FIELD_RADIUS) {
-            applied = physics_sim_editor_session_set_selected_emitter_radius(&state->session, value);
+            applied = physics_sim_editor_session_set_selected_runtime_mesh_emitter_radius(&state->session, value) ||
+                      physics_sim_editor_session_set_selected_emitter_radius(&state->session, value);
         } else if (field->target == FIELD_STRENGTH) {
-            applied = physics_sim_editor_session_set_selected_emitter_strength(&state->session, value);
+            applied = physics_sim_editor_session_set_selected_runtime_mesh_emitter_strength(&state->session, value) ||
+                      physics_sim_editor_session_set_selected_emitter_strength(&state->session, value);
         } else if (field->target == FIELD_THERMAL_BUOYANCY_3D) {
-            applied = physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(&state->session, value);
+            applied =
+                physics_sim_editor_session_set_selected_runtime_mesh_emitter_thermal_buoyancy_3d(&state->session,
+                                                                                                 value) ||
+                physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(&state->session, value);
         }
         if (applied) {
             set_dirty(state);

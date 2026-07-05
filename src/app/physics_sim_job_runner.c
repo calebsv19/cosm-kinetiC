@@ -24,6 +24,9 @@ static bool spawn_detached_headless(const char *headless_cli_path,
     char frames_arg[32];
     char sim_steps_arg[32];
     char progress_interval_arg[32];
+    char volume_export_start_arg[32];
+    char volume_export_stride_arg[32];
+    char volume_export_max_arg[32];
 
     if (out_pid) *out_pid = 0;
     if (!headless_cli_path || !paths || !request) return false;
@@ -32,11 +35,14 @@ static bool spawn_detached_headless(const char *headless_cli_path,
     snprintf(frames_arg, sizeof(frames_arg), "%d", request->frames);
     snprintf(sim_steps_arg, sizeof(sim_steps_arg), "%d", request->sim_steps_per_frame);
     snprintf(progress_interval_arg, sizeof(progress_interval_arg), "%d", request->progress_interval);
+    snprintf(volume_export_start_arg, sizeof(volume_export_start_arg), "%d", request->volume_export_start_frame);
+    snprintf(volume_export_stride_arg, sizeof(volume_export_stride_arg), "%d", request->volume_export_stride);
+    snprintf(volume_export_max_arg, sizeof(volume_export_max_arg), "%d", request->volume_export_max_frames);
 
     pid = fork();
     if (pid < 0) return false;
     if (pid == 0) {
-        char *argv[30];
+        char *argv[38];
         int argc = 0;
         int null_fd = -1;
         if (setsid() < 0) _exit(126);
@@ -77,6 +83,18 @@ static bool spawn_detached_headless(const char *headless_cli_path,
             argv[argc++] = (char *)request->wind_shot_camera_profile;
         }
         if (request->save_volume_frames) argv[argc++] = (char *)"--save-volume-frames";
+        if (request->save_volume_frames && request->volume_export_start_frame > 0) {
+            argv[argc++] = (char *)"--volume-export-start-frame";
+            argv[argc++] = volume_export_start_arg;
+        }
+        if (request->save_volume_frames && request->volume_export_stride > 1) {
+            argv[argc++] = (char *)"--volume-export-stride";
+            argv[argc++] = volume_export_stride_arg;
+        }
+        if (request->save_volume_frames && request->volume_export_max_frames > 0) {
+            argv[argc++] = (char *)"--volume-export-max-frames";
+            argv[argc++] = volume_export_max_arg;
+        }
         if (request->save_render_frames) argv[argc++] = (char *)"--save-render-frames";
         if (request->save_wind_projection_frames) {
             argv[argc++] = (char *)"--save-wind-projection-frames";
@@ -119,6 +137,7 @@ static bool load_request_file(const char *request_path,
                               size_t out_diagnostics_size) {
     json_object *root = NULL;
     const char *text_value = NULL;
+    int int_value = 0;
     if (!request_path || !request_path[0] || !out_request) {
         diag_set(out_diagnostics, out_diagnostics_size, "invalid request path");
         return false;
@@ -130,6 +149,9 @@ static bool load_request_file(const char *request_path,
     out_request->frames = 1;
     out_request->sim_steps_per_frame = 1;
     out_request->progress_interval = 1;
+    out_request->volume_export_start_frame = 0;
+    out_request->volume_export_stride = 1;
+    out_request->volume_export_max_frames = 0;
     copy_string(out_request->wind_shot_camera_profile,
                 sizeof(out_request->wind_shot_camera_profile),
                 "three_quarter");
@@ -183,6 +205,15 @@ static bool load_request_file(const char *request_path,
         }
     }
     (void)json_get_bool(root, "save_volume_frames", &out_request->save_volume_frames);
+    if (json_get_int(root, "volume_export_start_frame", &int_value)) {
+        out_request->volume_export_start_frame = int_value;
+    }
+    if (json_get_int(root, "volume_export_stride", &int_value)) {
+        out_request->volume_export_stride = int_value;
+    }
+    if (json_get_int(root, "volume_export_max_frames", &int_value)) {
+        out_request->volume_export_max_frames = int_value;
+    }
     (void)json_get_bool(root, "save_render_frames", &out_request->save_render_frames);
     (void)json_get_bool(root, "save_wind_projection_frames", &out_request->save_wind_projection_frames);
     (void)json_get_bool(root, "skip_present", &out_request->skip_present);
@@ -199,6 +230,18 @@ static bool load_request_file(const char *request_path,
     }
     if (out_request->progress_interval < 0) {
         diag_set(out_diagnostics, out_diagnostics_size, "request progress_interval must be non-negative");
+        return false;
+    }
+    if (out_request->volume_export_start_frame < 0) {
+        diag_set(out_diagnostics, out_diagnostics_size, "request volume_export_start_frame must be non-negative");
+        return false;
+    }
+    if (out_request->volume_export_stride <= 0) {
+        diag_set(out_diagnostics, out_diagnostics_size, "request volume_export_stride must be positive");
+        return false;
+    }
+    if (out_request->volume_export_max_frames < 0) {
+        diag_set(out_diagnostics, out_diagnostics_size, "request volume_export_max_frames must be non-negative");
         return false;
     }
     if (!file_exists(out_request->runtime_scene_path)) {
@@ -343,6 +386,9 @@ static bool write_canonical_request_file(const char *path,
                           : "three_quarter");
     fprintf(file, ",\n");
     fprintf(file, "  \"save_volume_frames\": %s,\n", request->save_volume_frames ? "true" : "false");
+    fprintf(file, "  \"volume_export_start_frame\": %d,\n", request->volume_export_start_frame);
+    fprintf(file, "  \"volume_export_stride\": %d,\n", request->volume_export_stride);
+    fprintf(file, "  \"volume_export_max_frames\": %d,\n", request->volume_export_max_frames);
     fprintf(file, "  \"save_render_frames\": %s,\n", request->save_render_frames ? "true" : "false");
     fprintf(file,
             "  \"save_wind_projection_frames\": %s,\n",

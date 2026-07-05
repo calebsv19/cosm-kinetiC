@@ -1,25 +1,94 @@
 # `src/app/`
 
-Scene orchestration lives here. These files wrap the physics primitives into something usable by the main loop.
+App shell and runtime orchestration live here. This lane adapts solver,
+renderer, editor, menu, headless, and retained-scene contracts into the
+interactive `kinetiC` program.
 
-- `app_config.c` – builds the default `AppConfig` struct (window size, grid size, timestep clamps, solver tuning constants, quality profile index, render blur flag, and headless defaults). Other systems treat this as read-only runtime configuration.
-- `data_paths.c` – centralizes runtime/input/output path resolution. It now also owns multi-root retained-scene catalog discovery for the configured `Input Root`, including root, `scenes/`, `samples/`, and the default shipped/user scene lanes.
-- `quality_profiles.c` – defines the built-in Preview/Balanced/High/Deep presets so menu selections can snap to known solver/grid configurations.
-- `scene_menu.c` – lightweight SDL menu focused on the editable custom slots. Each slot can be renamed, edited, and saved, and the right-hand panel now exposes grid controls, quality cycling, path pickers, and headless batch controls (toggle + inline frame editor). It talks to `scene_editor.c`, `preset_io.c`, and the menu helpers under `menu/` so edits and path changes persist across runs.
-- `preset_io.c` – serializer that saves/loads the custom slot library (`config/custom_preset.txt`) so your edits are restored the next time the app launches.
-- `scene_presets.c` – catalog of built-in emitter layouts (hotspots, jets, etc.) consumed by both the menu and runtime.
-- `scene_state.c` – owns the lifetime of the `SceneState`. It creates/destroys the `Fluid2D` grid, applies brush samples, drives preset emitters, builds/caches the solid obstacle mask plus its distance transform, and responds to queued commands (pause toggles, clears). The cached mask/distance data is fed to the solver and renderer overlays so we only rasterize obstacles when they actually change.
-- `scene_controller.c` – extracted main loop that initializes SDL/rendering, pumps input, drains the command bus, drains the stroke buffer, steps physics, handles snapshot exports, and draws each frame. IR1 seams are explicit with typed input frame contracts (`scene_controller_input_intake_phase`, `scene_controller_input_normalize_phase`, `scene_controller_input_route_phase`, `scene_controller_input_invalidate_phase`) and optional `PHYSICS_SIM_IR1_DIAG=1` logs. RS1 seams remain explicit with typed frame contracts: `scene_controller_update_phase(...)`, `scene_controller_render_derive_phase(...)`, and `scene_controller_render_submit_phase(...)`. Headless batches run through the same path but skip presentation/input while still showing TimeScope timers.
-- `scene_loop_policy.c` – mode-aware wait timeout policy shared by menu/runtime loops. Keeps full-ramp behavior while simulation/headless work is active and uses bounded idle waits in menu/editor-like states.
-- `scene_loop_diag.c` – emits schema-locked (`schema=1`) `LoopDiag` snapshots for blocked-vs-active calibration using `PHYSICS_SIM_LOOP_DIAG_*` env flags.
-- `editor/scene_editor.c` – the high-level scene editor logic: handles slot renaming, input routing, and ties the canvas/panel helpers together.
-- `editor/scene_editor_session.c` – app-local editor-session seam above retained runtime-scene intake. Keeps canonical retained-scene bootstrap plus mirrored legacy editor-selection state separate from the legacy preset compatibility lane.
-- `editor/scene_editor_scene_library.c` – retained-scene catalog discovery, selection state, active-scene tracking, and runtime-scene metadata loading for the 2D/3D split library.
-- `editor/scene_editor_viewport.c` – scene framing/orbit/zoom ownership for the editor. The `3D` path now derives far orbit distance and minimum zoom from live scene bounds instead of one fixed ceiling.
-- `editor/scene_editor_pane_host.c` – app-local pane-host wrapper that maps editor shell roles onto shared `core_pane` split geometry.
-- `editor/scene_editor_canvas.c` – render helper for the editor canvas (objects/imports/emitters, tooltips, preset title, boundary flows).
-- `editor/scene_editor_canvas_geom.c` – math helpers (projection, normalized ↔ pixel conversions, handle sizing/placement).
-- `editor/scene_editor_canvas_hit.c` – hit testing for emitters/objects/imports and boundary edges plus emitter-handle hit tests.
-- `editor/scene_editor_widgets.c` – UI primitives (buttons, numeric fields) shared across the editor panel.
+## Top-Level App Shell
 
-`scene_state.c` is the place to hook in new solvers: inject additional data into `SceneState`, update it inside `scene_apply_input`, respond to commands, and step it next to the fluid loop that already reads `AppConfig`.
+- `physics_sim_app_main.c` - lifecycle wrapper called by `src/main.c`.
+- `app_config.c` - default `AppConfig` values for window, grid, timestep,
+  solver tuning, quality profile, render blur, and headless defaults.
+- `data_paths.c` - runtime/input/output path resolution and retained-scene
+  catalog roots for the configured `Input Root`.
+- `physics_sim_file_helpers.c` - app-local non-destructive path/text helpers
+  used by detached jobs and headless bundle support. Destructive cleanup and
+  overwrite policy stay with the owning CLI/runtime surface.
+- `physics_sim_json_helpers.c` - app-local JSON string escaping helper for
+  manual artifact/status writers. Artifact schemas remain owned by their
+  writer modules.
+- `physics_sim_cli_helpers.c` - app-local CLI value/scalar parsing helpers for
+  support tools. It does not define a generic parser or own tool usage text.
+- `physics_sim_diagnostic_helpers.c` - app-local diagnostic string helpers for
+  detached-job/headless support surfaces. UI status, stderr logging, and
+  structured artifact status remain owned by their surfaces.
+- `physics_sim_job_runner_status.c` - detached job status projection. It may
+  read `run_progress.json`, but headless progress remains a separate
+  headless-owned output contract; use the named progress-status projection
+  helper rather than merging schemas.
+- `quality_profiles.c` - built-in Preview/Balanced/High/Deep profiles.
+- `scene_loop_policy.c` / `scene_loop_diag.c` - shared wait policy and
+  schema-locked loop diagnostics for menu/runtime/editor-like states.
+
+## Menu, Presets, And Persistence
+
+- `scene_menu.c` and `menu/` - menu shell, editable slots, quality/path
+  controls, headless batch controls, and mode-specific settings panels.
+- `preset_io.c` - custom preset persistence and compatibility loading.
+- `scene_presets.c` - built-in emitter/preset catalog.
+- `sim_modes/` - mode-specific routing helpers.
+- `ui/` - app-local UI adapters, including the `kit_ui` button bridge.
+
+## Runtime Controllers
+
+- `scene_controller.c` - SDL/runtime loop with explicit IR1 input phases and
+  RS1 update/render phases. It owns frame orchestration, not solver policy.
+- `scene_state.c` - legacy `2D` scene state host and compatibility bridge for
+  brush samples, preset emitters, obstacle masks, command responses, and
+  grouped retained-runtime view UI state.
+- `sim_runtime_backend*.c`, `sim_runtime_3d_*`, `sim_runtime_emitter.c`, and
+  `sim_runtime_obstacle.c` - extracted `2D` / sparse `3D` backend, runtime
+  mesh, emitter, obstacle, Wind, and reporting seams. New `3D` runtime work
+  should start in the narrow backend file that owns the selected behavior.
+  Obstacle cache/dirty state remains backend-owned; use the internal
+  `backend_3d_scaffold_mark_obstacle_*` helpers rather than open-coding dirty
+  flag bundles.
+- `sim_runtime_mesh_diagnostics.c` - selected runtime-mesh diagnostic collector
+  for path resolution, preview/runtime metadata, solver role, voxel footprint,
+  BVH/cache fallback, domain overlap, bounds volume, and Wind projected-area
+  readouts. Keep wording changes tied to this owner or the import bridge that
+  originates the diagnostic; do not adjust voxelization/cache behavior just to
+  rename a message.
+- Water mode currently uses app/headless runtime control plus export-side
+  sidecars under `src/export/`; do not treat it as ordinary smoke density.
+
+## Editor And Retained Scene Lanes
+
+- `editor/` - retained-scene editor, scene library, viewport, panel/inspector,
+  writeback, runtime mesh readouts, and Wind setup controls. See
+  `editor/README.md`.
+- `structural/` - dedicated structural mode controller, solver UI, editor, and
+  render helpers. It shares the top-level menu entry but not the fluid
+  headless/export runtime path.
+- `atmospheric/` - atmospheric procedural field initialization and warm-start
+  support used by standalone Atmospheric modes and optional `3D` presets.
+
+## Ownership Notes
+
+- Headless CLI entry points live under `src/tools/cli/`, but they call into app
+  runtime/headless contracts here.
+- Export artifacts, Water sidecars, Wind projection frames, and trio
+  `scene_bundle` handoffs live under `src/export/`.
+- Retained runtime-scene import/projection lives under `src/import/`; app code
+  consumes those projected runtime documents.
+- Menu settings draft apply/save/restore/reset flows route through
+  `menu_settings_input.c` and its runtime binding; direct path/headless toggle
+  config edits remain separate menu-shell mutations.
+- GUI status and detailed diagnostics stay separated by surface. Keep
+  `menu_set_status(...)` messages concise and user-facing; keep editor
+  Apply/Save summaries in editor status cards; route long selected-object,
+  runtime-mesh, and Wind detail through inspector/readout lanes; route
+  launcher, headless, detached-job, and renderer setup detail through their
+  owning logs, artifacts, or stderr contracts.
+- Detailed current state belongs in `physics_sim/docs/current_truth.md` and
+  private active plans. Keep this README focused on source ownership.

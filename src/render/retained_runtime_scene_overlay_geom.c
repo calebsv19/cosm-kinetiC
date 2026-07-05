@@ -10,6 +10,20 @@ static CoreObjectVec3 vec3_add_scaled(CoreObjectVec3 base,
     return result;
 }
 
+void retained_runtime_overlay_fill_aabb_corners(CoreObjectVec3 min,
+                                                CoreObjectVec3 max,
+                                                CoreObjectVec3 out_corners[8]) {
+    if (!out_corners) return;
+    out_corners[0] = (CoreObjectVec3){min.x, min.y, min.z};
+    out_corners[1] = (CoreObjectVec3){max.x, min.y, min.z};
+    out_corners[2] = (CoreObjectVec3){max.x, max.y, min.z};
+    out_corners[3] = (CoreObjectVec3){min.x, max.y, min.z};
+    out_corners[4] = (CoreObjectVec3){min.x, min.y, max.z};
+    out_corners[5] = (CoreObjectVec3){max.x, min.y, max.z};
+    out_corners[6] = (CoreObjectVec3){max.x, max.y, max.z};
+    out_corners[7] = (CoreObjectVec3){min.x, max.y, max.z};
+}
+
 void retained_runtime_overlay_fill_plane_corners(const CoreScenePlanePrimitive *plane,
                                                  CoreObjectVec3 out_corners[4]) {
     CoreObjectVec3 origin = {0};

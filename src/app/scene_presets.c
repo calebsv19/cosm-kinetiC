@@ -171,6 +171,14 @@ static const FluidScenePreset g_presets[] = {
             },
         },
     },
+    {
+        .name = "Water Basin",
+        .emitter_count = 0,
+        .domain = SCENE_DOMAIN_WATER,
+        .dimension_mode = SCENE_DIMENSION_MODE_3D,
+        .domain_width = 4.0f,
+        .domain_height = 1.0f,
+    },
 };
 
 static const FluidScenePreset g_structural_default = {

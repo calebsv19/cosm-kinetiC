@@ -6,6 +6,7 @@
 #include "app/menu/menu_settings_schema.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
+#include "app/water_mode.h"
 
 static int clamp_int_value(int value, int min_value, int max_value) {
     if (value < min_value) return min_value;
@@ -67,14 +68,16 @@ static void selection_set_quality_index_for_space(SceneMenuSelection *selection,
 
 static QualityProfileCatalogId catalog_for_provider(MenuSettingsProviderId provider) {
     return (provider == MENU_SETTINGS_PROVIDER_3D ||
-            provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D)
+            provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D ||
+            provider == MENU_SETTINGS_PROVIDER_WATER)
                ? QUALITY_PROFILE_CATALOG_3D
                : QUALITY_PROFILE_CATALOG_2D;
 }
 
 static bool provider_is_3d_like(MenuSettingsProviderId provider) {
     return provider == MENU_SETTINGS_PROVIDER_3D ||
-           provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D;
+           provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D ||
+           provider == MENU_SETTINGS_PROVIDER_WATER;
 }
 
 static bool provider_is_atmospheric(MenuSettingsProviderId provider) {
@@ -160,6 +163,7 @@ static void load_draft_values(MenuSettingsDraft *draft,
     draft->tunnel_inflow_speed = cfg->tunnel_inflow_speed;
     draft->tunnel_inflow_density = cfg->tunnel_inflow_density;
     draft->tunnel_viscosity_scale = cfg->tunnel_viscosity_scale;
+    draft->water_level = water_mode_level_clamp(cfg->water_level);
     draft->velocity_damping = cfg->velocity_damping;
     draft->save_volume_frames = cfg->save_volume_frames;
     draft->save_render_frames = cfg->save_render_frames;
@@ -195,6 +199,7 @@ static bool draft_matches_runtime(const MenuSettingsShellState *state,
              draft->tunnel_inflow_speed != cfg->tunnel_inflow_speed ||
              draft->tunnel_inflow_density != cfg->tunnel_inflow_density ||
              draft->tunnel_viscosity_scale != cfg->tunnel_viscosity_scale ||
+             draft->water_level != water_mode_level_clamp(cfg->water_level) ||
              draft->velocity_damping != cfg->velocity_damping ||
              draft->save_volume_frames != cfg->save_volume_frames ||
              draft->save_render_frames != cfg->save_render_frames ||
@@ -287,9 +292,14 @@ void menu_settings_shell_load_defaults(MenuSettingsShellState *state,
     selection.tunnel_inflow_speed = cfg.tunnel_inflow_speed;
     {
         FluidScenePreset preset = {0};
-        preset.domain = sim_mode == SIM_MODE_ATMOSPHERIC
-                            ? SCENE_DOMAIN_ATMOSPHERIC
-                            : SCENE_DOMAIN_BOX;
+        if (sim_mode == SIM_MODE_ATMOSPHERIC) {
+            preset.domain = SCENE_DOMAIN_ATMOSPHERIC;
+        } else if (sim_mode == SIM_MODE_WATER) {
+            preset.domain = SCENE_DOMAIN_WATER;
+            preset.dimension_mode = SCENE_DIMENSION_MODE_3D;
+        } else {
+            preset.domain = SCENE_DOMAIN_BOX;
+        }
         preset.atmosphere = atmospheric_preset_default_settings();
         load_draft_from_sources(state, &cfg, &selection, &preset, sim_mode, space_mode, false);
     }
@@ -317,6 +327,7 @@ void menu_settings_shell_apply_to_runtime(const MenuSettingsShellState *state,
     cfg->tunnel_inflow_speed = state->draft.tunnel_inflow_speed;
     cfg->tunnel_inflow_density = state->draft.tunnel_inflow_density;
     cfg->tunnel_viscosity_scale = state->draft.tunnel_viscosity_scale;
+    cfg->water_level = water_mode_level_clamp(state->draft.water_level);
     cfg->velocity_damping = state->draft.velocity_damping;
     cfg->save_volume_frames = state->draft.save_volume_frames;
     cfg->save_render_frames = state->draft.save_render_frames;
@@ -336,6 +347,9 @@ void menu_settings_shell_apply_to_runtime(const MenuSettingsShellState *state,
         preset->atmosphere = state->draft.atmosphere;
         preset->atmosphere.enabled = true;
         atmospheric_preset_sanitize(&preset->atmosphere);
+    } else if (state->provider == MENU_SETTINGS_PROVIDER_WATER && preset) {
+        WaterModeConfig water = water_mode_config_default(cfg);
+        water_mode_apply_preset(&water, preset);
     } else if (provider_supports_atmospheric_initial_state(state->provider) && preset) {
         preset->atmospheric_initial_state_enabled =
             state->draft.atmospheric_initial_state_enabled;
@@ -564,6 +578,13 @@ void menu_settings_shell_nudge_field(MenuSettingsShellState *state,
         state->draft.tunnel_viscosity_scale =
             schema_clamped_float(field,
                                  state->draft.tunnel_viscosity_scale +
+                                     (float)def->step * (float)direction);
+        mark_field_dirty(state, field);
+        return;
+    case MENU_SETTINGS_FIELD_WATER_LEVEL:
+        state->draft.water_level =
+            schema_clamped_float(field,
+                                 state->draft.water_level +
                                      (float)def->step * (float)direction);
         mark_field_dirty(state, field);
         return;

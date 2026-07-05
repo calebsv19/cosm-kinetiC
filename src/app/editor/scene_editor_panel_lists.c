@@ -168,6 +168,8 @@ void scene_editor_panel_draw_left_object_info_card(SceneEditorState *state) {
     const CoreSceneObjectContract *selected_retained = NULL;
     const PhysicsSimObjectOverlay *selected_overlay = NULL;
     const PhysicsSimEmitterOverlay *selected_emitter = NULL;
+    const PhysicsSimRuntimeMeshOverlay *selected_mesh_overlay = NULL;
+    const PhysicsSimEmitterOverlay *selected_mesh_emitter = NULL;
     SDL_Rect rect = {0};
     SDL_Color fill = {0};
     char line_a[160];
@@ -203,6 +205,8 @@ void scene_editor_panel_draw_left_object_info_card(SceneEditorState *state) {
     selected_retained = physics_sim_editor_session_selected_object(&state->session);
     selected_overlay = physics_sim_editor_session_selected_object_overlay(&state->session);
     selected_emitter = physics_sim_editor_session_selected_object_emitter(&state->session);
+    selected_mesh_overlay = physics_sim_editor_session_selected_runtime_mesh_overlay(&state->session);
+    selected_mesh_emitter = physics_sim_editor_session_selected_runtime_mesh_emitter(&state->session);
     x = rect.x + 8;
     y = rect.y + 8;
     line_step = panel_font_height(state->renderer, state->font_small, 15) + 6;
@@ -246,7 +250,33 @@ void scene_editor_panel_draw_left_object_info_card(SceneEditorState *state) {
         line_g[0] = '\0';
     }
 
-    if (selected_emitter) {
+    if (selected_mesh_overlay) {
+        snprintf(line_c,
+                 sizeof(line_c),
+                 "Physics Mesh %s",
+                 physics_sim_editor_session_runtime_mesh_role_label(selected_mesh_overlay->role));
+    }
+
+    if (selected_mesh_emitter) {
+        snprintf(line_d,
+                 sizeof(line_d),
+                 "Mesh Emitter %s  r=%.2f  s=%.1f",
+                 physics_sim_editor_session_emitter_type_label(selected_mesh_emitter->type),
+                 selected_mesh_emitter->radius,
+                 selected_mesh_emitter->strength);
+        snprintf(line_g,
+                 sizeof(line_g),
+                 "3D %s  %s  %s  Thermal %.1f",
+                 physics_sim_editor_session_emitter_source_mode_3d_label(selected_mesh_emitter->source_mode_3d),
+                 physics_sim_editor_session_emitter_surface_3d_label(selected_mesh_emitter->surface_3d),
+                 physics_sim_editor_session_emitter_obstacle_mode_3d_label(selected_mesh_emitter->obstacle_mode_3d),
+                 selected_mesh_emitter->thermal_buoyancy_3d);
+    } else if (selected_mesh_overlay) {
+        snprintf(line_d, sizeof(line_d), "Mesh Emitter none");
+        snprintf(line_g,
+                 sizeof(line_g),
+                 "Runtime mesh fluid role saved on Apply Overlay");
+    } else if (selected_emitter) {
         snprintf(line_d,
                  sizeof(line_d),
                  "Emitter %s  r=%.2f  s=%.1f",

@@ -19,6 +19,19 @@ static const char *scene_editor_wind_wall_policy_label(WindTunnel3DWallPolicy po
     }
 }
 
+WindTunnel3DFace scene_editor_wind_setup_opposite_face(WindTunnel3DFace face) {
+    switch (face) {
+        case WIND_TUNNEL_3D_FACE_LEFT: return WIND_TUNNEL_3D_FACE_RIGHT;
+        case WIND_TUNNEL_3D_FACE_RIGHT: return WIND_TUNNEL_3D_FACE_LEFT;
+        case WIND_TUNNEL_3D_FACE_TOP: return WIND_TUNNEL_3D_FACE_BOTTOM;
+        case WIND_TUNNEL_3D_FACE_BOTTOM: return WIND_TUNNEL_3D_FACE_TOP;
+        case WIND_TUNNEL_3D_FACE_FRONT: return WIND_TUNNEL_3D_FACE_BACK;
+        case WIND_TUNNEL_3D_FACE_BACK: return WIND_TUNNEL_3D_FACE_FRONT;
+        case WIND_TUNNEL_3D_FACE_NONE:
+        default: return WIND_TUNNEL_3D_FACE_NONE;
+    }
+}
+
 SceneEditorWindSetupSummary scene_editor_wind_setup_summary(const AppConfig *cfg,
                                                             const PhysicsSimEditorSession *session) {
     SceneEditorWindSetupSummary summary;

@@ -14,6 +14,8 @@ const char *physics_sim_editor_session_object_kind_label(CoreSceneObjectKind kin
             return "Point Set";
         case CORE_SCENE_OBJECT_KIND_EDGE_SET:
             return "Edge Set";
+        case CORE_SCENE_OBJECT_KIND_MESH_ASSET_INSTANCE:
+            return "Mesh Asset Instance";
         case CORE_SCENE_OBJECT_KIND_UNKNOWN:
         default:
             return "Unknown";
@@ -89,6 +91,22 @@ const char *physics_sim_editor_session_emitter_obstacle_mode_3d_label(FluidEmitt
     case EMITTER_3D_OBSTACLE_MODE_AUTO:
     default:
         return "Auto";
+    }
+}
+
+const char *physics_sim_editor_session_runtime_mesh_role_label(PhysicsSimRuntimeMeshEditorRole role) {
+    switch (role) {
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_VISUAL_ONLY:
+        return "VisualOnly";
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_EMITTER:
+        return "SurfaceEmitter";
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_HEAT_EMITTER:
+        return "SurfaceHeatEmitter";
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_BOUNDARY_FLOW_EMITTER:
+        return "BoundaryFlowEmitter";
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SOLID:
+    default:
+        return "Solid";
     }
 }
 

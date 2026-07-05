@@ -49,6 +49,8 @@ typedef struct FluidEmitter {
     float dir_z;        // additive dimensional field (defaults to 0 for 2D compatibility)
     int   attached_object; // -1 if free; otherwise index into preset objects
     int   attached_import; // -1 if free; otherwise index into imported shapes
+    bool  attached_runtime_mesh_enabled;
+    int   attached_runtime_mesh; // index into runtime mesh preview instances when enabled
     FluidEmitter3DSourceMode source_mode_3d;
     FluidEmitter3DSurface surface_3d;
     FluidEmitter3DObstacleMode obstacle_mode_3d;
@@ -136,7 +138,8 @@ typedef enum FluidSceneDomainType {
     SCENE_DOMAIN_BOX = 0,
     SCENE_DOMAIN_WIND_TUNNEL,
     SCENE_DOMAIN_STRUCTURAL,
-    SCENE_DOMAIN_ATMOSPHERIC
+    SCENE_DOMAIN_ATMOSPHERIC,
+    SCENE_DOMAIN_WATER
 } FluidSceneDomainType;
 
 typedef enum FluidSceneDimensionMode {

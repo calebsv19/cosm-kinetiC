@@ -389,6 +389,9 @@ void scene_editor_canvas_draw_retained_scene(SDL_Renderer *renderer,
     scene_editor_canvas_draw_retained_wind_faces(renderer,
                                                  state,
                                                  physics_sim_editor_session_scene_domain(&state->session));
+    scene_editor_canvas_draw_retained_mesh_previews(renderer,
+                                                    state,
+                                                    &state->session.mesh_previews);
     for (i = 0; i < retained->retained_object_count; ++i) {
         const PhysicsSimObjectOverlay *overlay =
             physics_sim_editor_session_object_overlay_at(&state->session, i);

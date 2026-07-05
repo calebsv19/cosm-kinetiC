@@ -1,0 +1,48 @@
+{
+  "schema_family": "codework_geometry",
+  "schema_variant": "mesh_asset_runtime_v1",
+  "schema_version": 1,
+  "asset_id": "wind_wedge_probe",
+  "source_asset_id": "wind_wedge_probe",
+  "asset_type": "solid_mesh",
+  "compile_meta": {
+    "profile": "runtime_default"
+  },
+  "local_bounds": {
+    "min": { "x": -0.5, "y": -0.5, "z": -0.5 },
+    "max": { "x": 0.5, "y": 0.5, "z": 0.5 }
+  },
+  "mesh": {
+    "vertex_count": 6,
+    "triangle_count": 8,
+    "vertices": [
+      { "x": -0.5, "y": -0.5, "z": -0.5 },
+      { "x": -0.5, "y": 0.5, "z": -0.5 },
+      { "x": -0.5, "y": -0.5, "z": 0.5 },
+      { "x": -0.5, "y": 0.5, "z": 0.5 },
+      { "x": 0.5, "y": -0.5, "z": 0.0 },
+      { "x": 0.5, "y": 0.5, "z": 0.0 }
+    ],
+    "triangles": [
+      { "a": 0, "b": 2, "c": 3, "surface_group_id": "wedge_shell" },
+      { "a": 0, "b": 3, "c": 1, "surface_group_id": "wedge_shell" },
+      { "a": 0, "b": 4, "c": 2, "surface_group_id": "wedge_shell" },
+      { "a": 1, "b": 3, "c": 5, "surface_group_id": "wedge_shell" },
+      { "a": 0, "b": 1, "c": 5, "surface_group_id": "wedge_shell" },
+      { "a": 0, "b": 5, "c": 4, "surface_group_id": "wedge_shell" },
+      { "a": 2, "b": 4, "c": 5, "surface_group_id": "wedge_shell" },
+      { "a": 2, "b": 5, "c": 3, "surface_group_id": "wedge_shell" }
+    ]
+  },
+  "surface_groups": [
+    {
+      "group_id": "wedge_shell",
+      "triangle_span": { "start": 0, "count": 8 }
+    }
+  ],
+  "topology_flags": {
+    "closed_volume": true,
+    "manifold_expected": true
+  },
+  "extensions": {}
+}

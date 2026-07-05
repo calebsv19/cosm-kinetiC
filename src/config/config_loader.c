@@ -407,6 +407,10 @@ static void apply_paths_settings(const char *json, AppConfig *cfg) {
                             "atmospheric_warm_start_path",
                             cfg->atmospheric_warm_start_path,
                             sizeof(cfg->atmospheric_warm_start_path));
+    (void)json_block_string(&block,
+                            "retained_runtime_scene_path",
+                            cfg->retained_runtime_scene_path,
+                            sizeof(cfg->retained_runtime_scene_path));
 }
 
 static void apply_simulation_settings(const char *json, AppConfig *cfg) {
@@ -437,6 +441,9 @@ static void apply_simulation_settings(const char *json, AppConfig *cfg) {
     }
     if (json_block_number(&block, "tunnel_viscosity_scale", &val)) {
         cfg->tunnel_viscosity_scale = (float)val;
+    }
+    if (json_block_number(&block, "water_level", &val)) {
+        cfg->water_level = (float)val;
     }
 }
 
@@ -509,7 +516,8 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "    \"space_mode\": %d,\n", cfg->space_mode);
     fprintf(f, "    \"tunnel_inflow_speed\": %.6f,\n", cfg->tunnel_inflow_speed);
     fprintf(f, "    \"tunnel_inflow_density\": %.6f,\n", cfg->tunnel_inflow_density);
-    fprintf(f, "    \"tunnel_viscosity_scale\": %.6f\n", cfg->tunnel_viscosity_scale);
+    fprintf(f, "    \"tunnel_viscosity_scale\": %.6f,\n", cfg->tunnel_viscosity_scale);
+    fprintf(f, "    \"water_level\": %.6f\n", cfg->water_level);
     fprintf(f, "  },\n");
     fprintf(f, "  \"timing\": {\n");
     fprintf(f, "    \"min_dt\": %.9f,\n", cfg->min_dt);
@@ -538,8 +546,10 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "  },\n");
     fprintf(f, "  \"paths\": {\n");
     fprintf(f, "    \"input_root\": \"%s\",\n", cfg->input_root);
-    fprintf(f, "    \"atmospheric_warm_start_path\": \"%s\"\n",
+    fprintf(f, "    \"atmospheric_warm_start_path\": \"%s\",\n",
             cfg->atmospheric_warm_start_path);
+    fprintf(f, "    \"retained_runtime_scene_path\": \"%s\"\n",
+            cfg->retained_runtime_scene_path);
     fprintf(f, "  },\n");
     fprintf(f, "  \"collider\": {\n");
     fprintf(f, "    \"max_loops\": %d,\n", cfg->collider_max_loops);

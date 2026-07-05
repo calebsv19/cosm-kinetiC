@@ -324,6 +324,8 @@ const char *sim_runtime_3d_depth_policy_label(SimRuntime3DDepthPolicy policy) {
         return "Retained bounds Z";
     case SIM_RUNTIME_3D_DEPTH_POLICY_LEGACY_MIN_XY:
         return "Legacy min(X,Y)";
+    case SIM_RUNTIME_3D_DEPTH_POLICY_WATER_BASIN_SQUARE_XZ:
+        return "Water basin square X/Z";
     case SIM_RUNTIME_3D_DEPTH_POLICY_NONE:
     default:
         return "Unspecified";
@@ -398,9 +400,13 @@ bool sim_runtime_3d_domain_desc_from_legacy(const AppConfig *cfg,
     if (preset) {
         extent_x = sanitize_extent(preset->domain_width);
         extent_y = sanitize_extent(preset->domain_height);
-        extent_z = sanitize_extent(preset->domain_width < preset->domain_height
-                                       ? preset->domain_width
-                                       : preset->domain_height);
+        if (preset->domain == SCENE_DOMAIN_WATER) {
+            extent_z = extent_x;
+        } else {
+            extent_z = sanitize_extent(preset->domain_width < preset->domain_height
+                                           ? preset->domain_width
+                                           : preset->domain_height);
+        }
     }
 
     requested_grid_x_cells =
@@ -419,7 +425,9 @@ bool sim_runtime_3d_domain_desc_from_legacy(const AppConfig *cfg,
                                        requested_depth_cells,
                                        requested_depth_cells > 0
                                            ? SIM_RUNTIME_3D_DEPTH_POLICY_CONFIGURED_DEPTH_CELLS
-                                           : SIM_RUNTIME_3D_DEPTH_POLICY_LEGACY_MIN_XY,
+                                           : (preset && preset->domain == SCENE_DOMAIN_WATER
+                                                  ? SIM_RUNTIME_3D_DEPTH_POLICY_WATER_BASIN_SQUARE_XZ
+                                                  : SIM_RUNTIME_3D_DEPTH_POLICY_LEGACY_MIN_XY),
                                        out_desc);
 }
 

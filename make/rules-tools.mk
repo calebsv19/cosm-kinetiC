@@ -32,6 +32,7 @@ physics-sim-job-runner: $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLES
 runtime_scene_emitter_diag_tool: $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS)
 	$(CC) $(CFLAGS) \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/../../shape/external -I$(CORE_IO_DIR)/include \
 		-I/opt/homebrew/Cellar/json-c/0.18/include -I/opt/homebrew/Cellar/json-c/0.18/include/json-c \
 		-o $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN) $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS) $(JSON_LIBS) -lm
 
@@ -50,8 +51,20 @@ test-trio-scene-contract-diff:
 test-physics-sim-headless-cli: physics_sim_headless
 	tests/integration/run_physics_sim_headless_cli.sh
 
+test-physics-sim-headless-scene-project-cache-output: physics_sim_headless
+	bash tests/integration/run_physics_sim_headless_scene_project_cache_output.sh
+
 test-physics-sim-headless-wind-analysis: physics_sim_headless
 	tests/integration/run_physics_sim_headless_wind_analysis.sh
+
+test-physics-sim-headless-water-mode: physics_sim_headless
+	tests/integration/run_physics_sim_headless_water_mode.sh
+
+test-physics-sim-headless-water-object-coupling: physics_sim_headless
+	bash tests/integration/run_physics_sim_headless_water_object_coupling.sh
+
+test-physics-sim-headless-water-object-quality-compare: physics_sim_headless
+	bash tests/integration/run_physics_sim_headless_water_object_quality_compare.sh
 
 test-physics-sim-headless-wind-long-tunnel-visual: physics_sim_headless
 	tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh
@@ -61,6 +74,15 @@ test-physics-sim-headless-wind-long-tunnel-video: physics_sim_headless
 
 test-physics-sim-headless-wind-object-comparison: physics_sim_headless
 	bash tests/integration/run_physics_sim_headless_wind_object_comparison.sh
+
+test-physics-sim-headless-wind-mesh-probe: physics_sim_headless
+	bash tests/integration/run_physics_sim_headless_wind_mesh_probe.sh
+
+test-physics-sim-headless-wind-orientation-probe: physics_sim_headless
+	bash tests/integration/run_physics_sim_headless_wind_orientation_probe.sh
+
+test-physics-sim-headless-dragonwind-orientation-probe: physics_sim_headless
+	bash tests/integration/run_physics_sim_headless_dragonwind_orientation_probe.sh
 
 test-physics-sim-job-runner-smoke: physics-sim-job-runner physics_sim_headless
 	tests/integration/run_physics_sim_job_runner_smoke.sh

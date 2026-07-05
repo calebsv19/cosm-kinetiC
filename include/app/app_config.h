@@ -8,10 +8,11 @@ typedef enum SimulationMode {
     SIM_MODE_BOX = 0,
     SIM_MODE_WIND_TUNNEL,
     SIM_MODE_STRUCTURAL,
-    SIM_MODE_ATMOSPHERIC
+    SIM_MODE_ATMOSPHERIC,
+    SIM_MODE_WATER
 } SimulationMode;
 
-#define SIMULATION_MODE_COUNT 4
+#define SIMULATION_MODE_COUNT 5
 
 typedef enum SpaceMode {
     SPACE_MODE_2D = 0,
@@ -64,6 +65,9 @@ typedef struct AppConfig {
     float  emitter_sink_multiplier;
 
     bool   save_volume_frames;
+    int    volume_export_start_frame; // first frame index eligible for volume export
+    int    volume_export_stride;      // export every Nth eligible frame; <=0 => 1
+    int    volume_export_max_frames;  // 0 = unlimited selected exports
     bool   save_render_frames;
     WindVisualMode wind_visual_mode;
     bool   enable_render_blur;
@@ -80,12 +84,17 @@ typedef struct AppConfig {
     char   input_root[256];
     char   headless_output_dir[256];
     char   atmospheric_warm_start_path[512];
+    char   retained_runtime_scene_path[512];
 
     SimulationMode sim_mode;
     SpaceMode space_mode;
     float  tunnel_inflow_speed;
     float  tunnel_inflow_density;
     float  tunnel_viscosity_scale;
+    float  water_level; // normalized 0..1 surface height from the bottom of the water domain
+    bool   water_review_ripples; // deterministic headless review disturbance on exported water surface
+    float  water_review_ripple_amplitude_m; // <=0 = exporter default
+    bool   water_object_fixture; // deterministic submerged-solid fixture for headless water coupling review
 
     // Collider generation / fidelity controls (authoring -> physics).
     int    collider_max_loops;           // max closed paths consumed per shape

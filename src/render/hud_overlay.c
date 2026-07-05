@@ -510,6 +510,81 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         wind_inspector_object_line[0] = '\0';
     }
 
+    char retained_domain_summary_line[192];
+    char retained_volume_summary_line[176];
+    char retained_slice_summary_line[128];
+    char retained_wind_summary_line[176];
+    if (hud->retained_runtime_visual_active) {
+        if (hud->backend_domain_d > 1) {
+            snprintf(retained_domain_summary_line,
+                     sizeof(retained_domain_summary_line),
+                     "3D: %dx%dx%d voxels (%zu cells), solver %s",
+                     hud->backend_domain_w,
+                     hud->backend_domain_h,
+                     hud->backend_domain_d,
+                     hud->backend_cell_count,
+                     hud->backend_full_3d_solver_live ? "live" : "compat");
+        } else {
+            snprintf(retained_domain_summary_line,
+                     sizeof(retained_domain_summary_line),
+                     "2D: %dx%d cells",
+                     hud->backend_domain_w,
+                     hud->backend_domain_h);
+        }
+
+        if (hud->backend_debug_volume_view_3d_available &&
+            hud->backend_kind == SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD) {
+            snprintf(retained_volume_summary_line,
+                     sizeof(retained_volume_summary_line),
+                     "Volume: active=%zu solid=%zu rho_max=%.2f |v|max=%.2f",
+                     hud->backend_debug_volume_active_density_cells,
+                     hud->backend_debug_volume_solid_cells,
+                     hud->backend_debug_volume_max_density,
+                     hud->backend_debug_volume_max_velocity_magnitude);
+        } else {
+            retained_volume_summary_line[0] = '\0';
+        }
+
+        if (hud->backend_compatibility_view_2d_derived && hud->backend_domain_d > 1) {
+            snprintf(retained_slice_summary_line,
+                     sizeof(retained_slice_summary_line),
+                     "Slice: XY z=%d/%d overlay %s",
+                     hud->backend_compatibility_slice_z,
+                     hud->backend_domain_d - 1,
+                     hud->retained_runtime_slice_overlay_enabled ? "on" : "off");
+        } else {
+            retained_slice_summary_line[0] = '\0';
+        }
+
+        if (hud->sim_mode == SIM_MODE_WIND_TUNNEL) {
+            if (hud->backend_wind_analysis_available) {
+                float drag = hud->backend_wind_analysis_object_drag_available
+                                 ? hud->backend_wind_analysis_object_drag_pressure_proxy
+                                 : hud->backend_wind_analysis_drag_pressure_proxy;
+                snprintf(retained_wind_summary_line,
+                         sizeof(retained_wind_summary_line),
+                         "Wind: inflow %.1f dp=%+.3f drag=%+.3f vort=%.2f/%.2f",
+                         hud->tunnel_inflow_speed,
+                         hud->backend_wind_analysis_pressure_delta,
+                         drag,
+                         hud->backend_wind_analysis_vorticity_avg,
+                         hud->backend_wind_analysis_vorticity_max);
+            } else {
+                snprintf(retained_wind_summary_line,
+                         sizeof(retained_wind_summary_line),
+                         "Wind: inflow %.1f",
+                         hud->tunnel_inflow_speed);
+            }
+        } else {
+            retained_wind_summary_line[0] = '\0';
+        }
+    } else {
+        retained_domain_summary_line[0] = '\0';
+        retained_volume_summary_line[0] = '\0';
+        retained_slice_summary_line[0] = '\0';
+        retained_wind_summary_line[0] = '\0';
+    }
+
     char quality_line[64];
     snprintf(quality_line, sizeof(quality_line), "Quality: %s",
              (hud->quality_name && hud->quality_name[0]) ? hud->quality_name : "Custom");
@@ -608,32 +683,44 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
     const char *lines[MAX_HUD_LINES];
     const char *draw_lines[MAX_HUD_LINES];
     size_t line_count = 0;
-    lines[line_count++] = status_line;
-    lines[line_count++] = frame_line;
-    lines[line_count++] = space_line;
-    lines[line_count++] = backend_line;
-    lines[line_count++] = backend_kind_line;
-    lines[line_count++] = domain_line;
-    if (resolution_line[0]) lines[line_count++] = resolution_line;
-    if (depth_policy_line[0]) lines[line_count++] = depth_policy_line;
-    if (solver_contract_line[0]) lines[line_count++] = solver_contract_line;
-    if (domain_extent_line[0]) lines[line_count++] = domain_extent_line;
-    if (compatibility_line[0]) lines[line_count++] = compatibility_line;
-    if (backend_status_line[0]) lines[line_count++] = backend_status_line;
-    if (emitter_step_line[0]) lines[line_count++] = emitter_step_line;
-    if (compatibility_activity_line[0]) lines[line_count++] = compatibility_activity_line;
-    if (scene_axis_line[0]) lines[line_count++] = scene_axis_line;
-    if (volume_truth_line[0]) lines[line_count++] = volume_truth_line;
-    if (atmosphere_line[0]) lines[line_count++] = atmosphere_line;
-    if (debug_cue_line[0]) lines[line_count++] = debug_cue_line;
-    lines[line_count++] = preset_line;
-    if (wind_line[0]) lines[line_count++] = wind_line;
-    if (wind_analysis_line[0]) lines[line_count++] = wind_analysis_line;
-    if (wind_inspector_line[0]) lines[line_count++] = wind_inspector_line;
-    if (wind_inspector_metrics_line[0]) lines[line_count++] = wind_inspector_metrics_line;
-    if (wind_inspector_object_line[0]) lines[line_count++] = wind_inspector_object_line;
-    lines[line_count++] = quality_line;
-    if (hud->paused) lines[line_count++] = solver_line;
+
+    if (hud->retained_runtime_visual_active) {
+        lines[line_count++] = status_line;
+        lines[line_count++] = frame_line;
+        lines[line_count++] = space_line;
+        if (retained_domain_summary_line[0]) lines[line_count++] = retained_domain_summary_line;
+        if (retained_volume_summary_line[0]) lines[line_count++] = retained_volume_summary_line;
+        if (retained_slice_summary_line[0]) lines[line_count++] = retained_slice_summary_line;
+        if (retained_wind_summary_line[0]) lines[line_count++] = retained_wind_summary_line;
+        lines[line_count++] = quality_line;
+    } else {
+        lines[line_count++] = status_line;
+        lines[line_count++] = frame_line;
+        lines[line_count++] = space_line;
+        lines[line_count++] = backend_line;
+        lines[line_count++] = backend_kind_line;
+        lines[line_count++] = domain_line;
+        if (resolution_line[0]) lines[line_count++] = resolution_line;
+        if (depth_policy_line[0]) lines[line_count++] = depth_policy_line;
+        if (solver_contract_line[0]) lines[line_count++] = solver_contract_line;
+        if (domain_extent_line[0]) lines[line_count++] = domain_extent_line;
+        if (compatibility_line[0]) lines[line_count++] = compatibility_line;
+        if (backend_status_line[0]) lines[line_count++] = backend_status_line;
+        if (emitter_step_line[0]) lines[line_count++] = emitter_step_line;
+        if (compatibility_activity_line[0]) lines[line_count++] = compatibility_activity_line;
+        if (scene_axis_line[0]) lines[line_count++] = scene_axis_line;
+        if (volume_truth_line[0]) lines[line_count++] = volume_truth_line;
+        if (atmosphere_line[0]) lines[line_count++] = atmosphere_line;
+        if (debug_cue_line[0]) lines[line_count++] = debug_cue_line;
+        lines[line_count++] = preset_line;
+        if (wind_line[0]) lines[line_count++] = wind_line;
+        if (wind_analysis_line[0]) lines[line_count++] = wind_analysis_line;
+        if (wind_inspector_line[0]) lines[line_count++] = wind_inspector_line;
+        if (wind_inspector_metrics_line[0]) lines[line_count++] = wind_inspector_metrics_line;
+        if (wind_inspector_object_line[0]) lines[line_count++] = wind_inspector_object_line;
+        lines[line_count++] = quality_line;
+        if (hud->paused) lines[line_count++] = solver_line;
+    }
     if (overlays_line[0]) {
         static char overlays_buf[176];
         snprintf(overlays_buf, sizeof(overlays_buf), "Overlays:%s", overlays_line);

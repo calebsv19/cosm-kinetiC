@@ -1,6 +1,8 @@
 #include "app/sim_runtime_backend_3d_scaffold_internal.h"
+#include "app/scene_state.h"
 
 #include <stdbool.h>
+#include <math.h>
 #include <string.h>
 
 static size_t backend_3d_scaffold_obstacle_brick_index(const SimRuntimeBackend3DScaffold *state,
@@ -112,6 +114,28 @@ void backend_3d_scaffold_clear_obstacle_bricks(SimRuntimeBackend3DScaffold *stat
     }
 }
 
+void backend_3d_scaffold_mark_obstacle_cell_cache_dirty(SimRuntimeBackend3DScaffold *state) {
+    if (!state) return;
+    state->obstacle_dense_cache_dirty = true;
+    state->obstacle_slice_dirty = true;
+}
+
+void backend_3d_scaffold_mark_obstacle_volume_rebuild_needed(
+    SimRuntimeBackend3DScaffold *state) {
+    if (!state) return;
+    state->obstacle_volume_dirty = true;
+    state->obstacle_slice_dirty = true;
+    state->export_volume_cache_dirty = true;
+}
+
+void backend_3d_scaffold_mark_obstacle_volume_rebuilt(SimRuntimeBackend3DScaffold *state) {
+    if (!state) return;
+    state->obstacle_volume_dirty = false;
+    state->obstacle_dense_cache_dirty = true;
+    state->obstacle_slice_dirty = true;
+    state->export_volume_cache_dirty = true;
+}
+
 static void backend_3d_scaffold_obstacle_brick_bounds(const SimRuntimeBackend3DScaffold *state,
                                                       int brick_x,
                                                       int brick_y,
@@ -203,8 +227,7 @@ void backend_3d_scaffold_set_obstacle_cell(SimRuntimeBackend3DScaffold *state,
         brick_mask[brick_cell_index] = 0u;
         backend_3d_scaffold_refresh_obstacle_brick_flag(state, brick_x, brick_y, brick_z);
     }
-    state->obstacle_dense_cache_dirty = true;
-    state->obstacle_slice_dirty = true;
+    backend_3d_scaffold_mark_obstacle_cell_cache_dirty(state);
 }
 
 bool backend_3d_scaffold_obstacle_cell_solid(const SimRuntimeBackend3DScaffold *state,
@@ -435,6 +458,66 @@ static void backend_3d_scaffold_mark_bounds_solid(SimRuntimeBackend3DScaffold *s
     }
 }
 
+static int backend_3d_scaffold_clamp_i(int value, int lo, int hi) {
+    if (value < lo) return lo;
+    if (value > hi) return hi;
+    return value;
+}
+
+static void backend_3d_scaffold_water_object_axis_bounds(int cells,
+                                                         float min_fraction,
+                                                         float max_fraction,
+                                                         int *out_min,
+                                                         int *out_max) {
+    int lo = 0;
+    int hi = 0;
+    int interior_min = cells > 2 ? 1 : 0;
+    int interior_max = cells > 2 ? cells - 2 : cells - 1;
+    if (!out_min || !out_max || cells <= 0) return;
+    lo = (int)floorf((float)cells * min_fraction);
+    hi = (int)ceilf((float)cells * max_fraction) - 1;
+    lo = backend_3d_scaffold_clamp_i(lo, interior_min, interior_max);
+    hi = backend_3d_scaffold_clamp_i(hi, interior_min, interior_max);
+    if (hi < lo) hi = lo;
+    if (hi == lo && hi < interior_max) hi += 1;
+    *out_min = lo;
+    *out_max = hi;
+}
+
+static void backend_3d_scaffold_stamp_water_object_fixture(
+    SimRuntimeBackend3DScaffold *state,
+    const struct SceneState *scene) {
+    int min_x = 0;
+    int max_x = 0;
+    int min_y = 0;
+    int max_y = 0;
+    int min_z = 0;
+    int max_z = 0;
+    if (!state || !scene || !scene->config || !scene->config->water_object_fixture) return;
+    backend_3d_scaffold_water_object_axis_bounds(state->volume.desc.grid_w,
+                                                 0.42f,
+                                                 0.58f,
+                                                 &min_x,
+                                                 &max_x);
+    backend_3d_scaffold_water_object_axis_bounds(state->volume.desc.grid_h,
+                                                 0.20f,
+                                                 0.70f,
+                                                 &min_y,
+                                                 &max_y);
+    backend_3d_scaffold_water_object_axis_bounds(state->volume.desc.grid_d,
+                                                 0.42f,
+                                                 0.58f,
+                                                 &min_z,
+                                                 &max_z);
+    for (int z = min_z; z <= max_z; ++z) {
+        for (int y = min_y; y <= max_y; ++y) {
+            for (int x = min_x; x <= max_x; ++x) {
+                backend_3d_scaffold_set_obstacle_cell(state, x, y, z, true);
+            }
+        }
+    }
+}
+
 static void backend_3d_scaffold_rebuild_obstacle_volume(SimRuntimeBackend3DScaffold *state,
                                                         const struct SceneState *scene) {
     SimRuntimeObstacleBounds3D bounds = {0};
@@ -464,13 +547,22 @@ static void backend_3d_scaffold_rebuild_obstacle_volume(SimRuntimeBackend3DScaff
         }
         backend_3d_scaffold_mark_bounds_solid(state, &bounds);
     }
+    backend_3d_scaffold_stamp_water_object_fixture(state, scene);
     backend_3d_scaffold_rasterize_retained_object_obstacles(state, scene);
     backend_3d_scaffold_rasterize_retained_import_obstacles(state, scene);
+    backend_3d_scaffold_rasterize_runtime_mesh_asset_obstacles(state, scene);
 
-    state->obstacle_volume_dirty = false;
-    state->obstacle_dense_cache_dirty = true;
-    state->obstacle_slice_dirty = true;
-    state->export_volume_cache_dirty = true;
+    backend_3d_scaffold_mark_obstacle_volume_rebuilt(state);
+}
+
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((weak))
+#endif
+void backend_3d_scaffold_rasterize_runtime_mesh_asset_obstacles(
+    SimRuntimeBackend3DScaffold *state,
+    const struct SceneState *scene) {
+    (void)state;
+    (void)scene;
 }
 
 static void backend_3d_scaffold_sync_obstacle_slice(SimRuntimeBackend3DScaffold *state) {
@@ -588,11 +680,8 @@ static void backend_3d_scaffold_apply_obstacle_enforcement(SimRuntimeBackend3DSc
         }
     }
 
-    state->debug_volume_stats_dirty = true;
-    state->obstacle_dense_cache_dirty = true;
-    state->export_volume_cache_dirty = true;
-    state->fluid_slice_dirty = true;
-    state->obstacle_slice_dirty = true;
+    backend_3d_scaffold_mark_obstacle_cell_cache_dirty(state);
+    backend_3d_scaffold_mark_fluid_dirty(state);
 }
 
 void backend_3d_scaffold_reset_obstacles(SimRuntimeBackend3DScaffold *state) {
@@ -605,10 +694,8 @@ void backend_3d_scaffold_reset_obstacles(SimRuntimeBackend3DScaffold *state) {
         memset(state->obstacle_brick_flags, 0, state->brick_store.brick_count * sizeof(uint8_t));
     }
     backend_3d_scaffold_zero_obstacle_slice(state);
-    state->obstacle_dense_cache_dirty = true;
-    state->obstacle_volume_dirty = true;
-    state->obstacle_slice_dirty = true;
-    state->export_volume_cache_dirty = true;
+    backend_3d_scaffold_mark_obstacle_cell_cache_dirty(state);
+    backend_3d_scaffold_mark_obstacle_volume_rebuild_needed(state);
 }
 
 void backend_3d_scaffold_build_static_obstacles(SimRuntimeBackend *backend,
@@ -630,9 +717,7 @@ void backend_3d_scaffold_build_obstacles(SimRuntimeBackend *backend,
 void backend_3d_scaffold_mark_obstacles_dirty(SimRuntimeBackend *backend) {
     SimRuntimeBackend3DScaffold *state = backend ? (SimRuntimeBackend3DScaffold *)backend->impl : NULL;
     if (!state) return;
-    state->obstacle_volume_dirty = true;
-    state->obstacle_slice_dirty = true;
-    state->export_volume_cache_dirty = true;
+    backend_3d_scaffold_mark_obstacle_volume_rebuild_needed(state);
 }
 
 void backend_3d_scaffold_rasterize_dynamic_obstacles(SimRuntimeBackend *backend,

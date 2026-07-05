@@ -46,5 +46,7 @@ void scene_editor_panel_draw_retained_object_list(SceneEditorState *state);
 void scene_editor_panel_draw_left_object_info_card(SceneEditorState *state);
 void draw_center_pane_summary(SceneEditorState *state);
 void draw_right_panel_summary(SceneEditorState *state);
+const char *scene_editor_inspector_view_label(SceneEditorInspectorView view);
+void scene_editor_panel_draw_right_inspector(SceneEditorState *state);
 
 #endif // SCENE_EDITOR_PANEL_INTERNAL_H

@@ -246,6 +246,22 @@ $(FISICS_BUILD_DIR)/core_scene_compile/%.o: $(CORE_SCENE_COMPILE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
+$(BUILD_DIR)/core_mesh_asset/%.o: $(CORE_MESH_ASSET_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(FISICS_BUILD_DIR)/core_mesh_asset/%.o: $(CORE_MESH_ASSET_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+
+$(BUILD_DIR)/core_mesh_preview/%.o: $(CORE_MESH_PREVIEW_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(FISICS_BUILD_DIR)/core_mesh_preview/%.o: $(CORE_MESH_PREVIEW_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+
 $(BUILD_DIR)/core_object/%.o: $(CORE_OBJECT_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@

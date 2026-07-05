@@ -1,4 +1,7 @@
 #include "app/app_config.h"
+#include "app/physics_sim_cli_helpers.h"
+#include "app/physics_sim_json_helpers.h"
+#include "app/scene_project_cache_output.h"
 #include "app/scene_controller.h"
 #include "app/scene_presets.h"
 #include "geo/shape_library.h"
@@ -24,6 +27,7 @@ typedef enum PhysicsSimHeadlessOutputPolicy {
 } PhysicsSimHeadlessOutputPolicy;
 
 typedef struct PhysicsSimHeadlessCliOptions {
+    const char *scene_project_root;
     const char *runtime_scene_path;
     const char *output_root;
     const char *summary_path;
@@ -36,7 +40,17 @@ typedef struct PhysicsSimHeadlessCliOptions {
     int grid_h;
     int grid_d;
     bool grid_override;
+    bool water_mode;
+    bool water_level_override;
+    float water_level;
+    bool water_review_ripples;
+    bool water_review_ripple_amplitude_override;
+    float water_review_ripple_amplitude_m;
+    bool water_object_fixture;
     bool save_volume_frames;
+    int volume_export_start_frame;
+    int volume_export_stride;
+    int volume_export_max_frames;
     bool save_render_frames;
     bool save_wind_projection_frames;
     bool skip_present;
@@ -66,30 +80,46 @@ static bool join_path(char *out, size_t out_size, const char *dir, const char *n
 
 static void print_usage(const char *argv0) {
     fprintf(stderr,
-            "usage: %s --runtime-scene <scene_runtime.json> --frames <n> "
-            "--output-root <dir> [--save-volume-frames] [--save-render-frames] "
+            "usage: %s (--scene-project <dir>|--runtime-scene <scene_runtime.json>|--water-mode) --frames <n> "
+            "[--output-root <dir>] [--save-volume-frames] [--save-render-frames] "
+            "[--volume-export-start-frame <n>] [--volume-export-stride <n>] "
+            "[--volume-export-max-frames <n>] "
             "[--save-wind-projection-frames] "
             "[--summary <run_summary.json>] [--progress <run_progress.json>] "
             "[--cancel-flag <cancel_requested.flag>] "
             "[--progress-interval <n>] [--sim-steps-per-frame <n>] "
             "[--grid <width>x<height>x<depth>] "
+            "[--water-level <0..1>] [--water-review-ripples] "
+            "[--water-review-ripple-amplitude <meters>] [--water-object-fixture] "
             "[--wind-shot-camera <three_quarter|side|top|downstream|runtime_default>] "
             "[--wind-visual-mode <flow|speed|speed_deficit|vorticity|object_mask|slice_speed_deficit|slice_vorticity|volume_speed_deficit|volume_vorticity>] "
             "[--overwrite] [--present]\n",
             argv0 ? argv0 : "physics_sim_headless");
 }
 
-static bool parse_int_arg(const char *text, int *out) {
-    char *end = NULL;
-    long value = 0;
-    if (!text || !text[0] || !out) return false;
-    errno = 0;
-    value = strtol(text, &end, 10);
-    if (errno != 0 || !end || *end != '\0' || value < 0 || value > 100000000L) {
-        return false;
+static void print_pre_run_error(const char *stage,
+                                const char *reason,
+                                const char *path_label,
+                                const char *path,
+                                const char *action) {
+    fprintf(stderr,
+            "[physics_sim_headless] ERROR stage=%s reason=%s\n",
+            stage ? stage : "pre_run",
+            reason ? reason : "unknown");
+    if (path_label && path_label[0] && path && path[0]) {
+        fprintf(stderr, "[physics_sim_headless]       %s=%s\n", path_label, path);
     }
-    *out = (int)value;
-    return true;
+    if (action && action[0]) {
+        fprintf(stderr, "[physics_sim_headless]       action=%s\n", action);
+    }
+}
+
+static bool parse_int_arg(const char *text, int *out) {
+    return physics_sim_cli_parse_int_range(text, 0, 100000000, out);
+}
+
+static bool parse_float_arg(const char *text, float *out) {
+    return physics_sim_cli_parse_float(text, out);
 }
 
 static bool parse_grid_arg(const char *text, int *out_w, int *out_h, int *out_d) {
@@ -158,70 +188,126 @@ static bool parse_wind_visual_mode_arg(const char *text, WindVisualMode *out_mod
 }
 
 static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out) {
+    const char *value = NULL;
     if (!out) return false;
     memset(out, 0, sizeof(*out));
     out->frames = 1;
     out->sim_steps_per_frame = 1;
     out->progress_interval = 60;
     out->skip_present = true;
+    out->water_level = 0.5f;
+    out->water_review_ripple_amplitude_m = 0.0f;
+    out->volume_export_start_frame = 0;
+    out->volume_export_stride = 1;
+    out->volume_export_max_frames = 0;
     out->wind_visual_mode = WIND_VISUAL_MODE_FLOW;
     out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER;
     out->output_policy = PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS;
 
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "--runtime-scene") == 0) {
-            if (++i >= argc || !argv[i][0]) return false;
-            out->runtime_scene_path = argv[i];
+        if (strcmp(argv[i], "--scene-project") == 0) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value)) return false;
+            out->scene_project_root = value;
+        } else if (strcmp(argv[i], "--runtime-scene") == 0) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value)) return false;
+            out->runtime_scene_path = value;
+        } else if (strcmp(argv[i], "--water-mode") == 0) {
+            out->water_mode = true;
         } else if (strcmp(argv[i], "--frames") == 0) {
-            if (++i >= argc || !parse_int_arg(argv[i], &out->frames)) return false;
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_int_arg(value, &out->frames)) {
+                return false;
+            }
         } else if (strcmp(argv[i], "--output-root") == 0) {
-            if (++i >= argc || !argv[i][0]) return false;
-            out->output_root = argv[i];
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value)) return false;
+            out->output_root = value;
         } else if (strcmp(argv[i], "--summary") == 0) {
-            if (++i >= argc || !argv[i][0]) return false;
-            out->summary_path = argv[i];
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value)) return false;
+            out->summary_path = value;
         } else if (strcmp(argv[i], "--progress") == 0) {
-            if (++i >= argc || !argv[i][0]) return false;
-            out->progress_path = argv[i];
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value)) return false;
+            out->progress_path = value;
         } else if (strcmp(argv[i], "--cancel-flag") == 0) {
-            if (++i >= argc || !argv[i][0]) return false;
-            out->cancel_flag_path = argv[i];
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value)) return false;
+            out->cancel_flag_path = value;
         } else if (strcmp(argv[i], "--progress-interval") == 0) {
-            if (++i >= argc || !parse_int_arg(argv[i], &out->progress_interval)) return false;
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_int_arg(value, &out->progress_interval)) {
+                return false;
+            }
         } else if (strcmp(argv[i], "--sim-steps-per-frame") == 0) {
-            if (++i >= argc || !parse_int_arg(argv[i], &out->sim_steps_per_frame) ||
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_int_arg(value, &out->sim_steps_per_frame) ||
                 out->sim_steps_per_frame <= 0) {
                 return false;
             }
         } else if (strcmp(argv[i], "--grid") == 0) {
-            if (++i >= argc || !parse_grid_arg(argv[i],
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_grid_arg(value,
                                                &out->grid_w,
                                                &out->grid_h,
                                                &out->grid_d)) {
                 return false;
             }
             out->grid_override = true;
+        } else if (strcmp(argv[i], "--water-level") == 0) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_float_arg(value, &out->water_level) ||
+                out->water_level < 0.0f || out->water_level > 1.0f) {
+                return false;
+            }
+            out->water_level_override = true;
+        } else if (strcmp(argv[i], "--water-review-ripples") == 0) {
+            out->water_review_ripples = true;
+        } else if (strcmp(argv[i], "--water-review-ripple-amplitude") == 0) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_float_arg(value, &out->water_review_ripple_amplitude_m) ||
+                out->water_review_ripple_amplitude_m < 0.0f) {
+                return false;
+            }
+            out->water_review_ripples = true;
+            out->water_review_ripple_amplitude_override = true;
+        } else if (strcmp(argv[i], "--water-object-fixture") == 0 ||
+                   strcmp(argv[i], "--water-pool-submerged-solid") == 0) {
+            out->water_object_fixture = true;
         } else if (strcmp(argv[i], "--wind-shot-camera") == 0) {
-            if (++i >= argc || !argv[i][0]) return false;
-            if (strcmp(argv[i], "three_quarter") == 0) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value)) return false;
+            if (strcmp(value, "three_quarter") == 0) {
                 out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_THREE_QUARTER;
-            } else if (strcmp(argv[i], "side") == 0) {
+            } else if (strcmp(value, "side") == 0) {
                 out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_SIDE;
-            } else if (strcmp(argv[i], "top") == 0) {
+            } else if (strcmp(value, "top") == 0) {
                 out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_TOP;
-            } else if (strcmp(argv[i], "downstream") == 0) {
+            } else if (strcmp(value, "downstream") == 0) {
                 out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_DOWNSTREAM;
-            } else if (strcmp(argv[i], "runtime_default") == 0) {
+            } else if (strcmp(value, "runtime_default") == 0) {
                 out->wind_shot_camera_profile = HEADLESS_WIND_SHOT_CAMERA_RUNTIME_DEFAULT;
             } else {
                 return false;
             }
         } else if (strcmp(argv[i], "--wind-visual-mode") == 0) {
-            if (++i >= argc || !parse_wind_visual_mode_arg(argv[i], &out->wind_visual_mode)) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_wind_visual_mode_arg(value, &out->wind_visual_mode)) {
                 return false;
             }
         } else if (strcmp(argv[i], "--save-volume-frames") == 0) {
             out->save_volume_frames = true;
+        } else if (strcmp(argv[i], "--volume-export-start-frame") == 0) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_int_arg(value, &out->volume_export_start_frame)) {
+                return false;
+            }
+        } else if (strcmp(argv[i], "--volume-export-stride") == 0) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_int_arg(value, &out->volume_export_stride) ||
+                out->volume_export_stride <= 0) {
+                return false;
+            }
+        } else if (strcmp(argv[i], "--volume-export-max-frames") == 0) {
+            if (!physics_sim_cli_take_value(argc, argv, &i, true, &value) ||
+                !parse_int_arg(value, &out->volume_export_max_frames)) {
+                return false;
+            }
         } else if (strcmp(argv[i], "--save-render-frames") == 0) {
             out->save_render_frames = true;
         } else if (strcmp(argv[i], "--save-wind-projection-frames") == 0) {
@@ -244,8 +330,11 @@ static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out)
         }
     }
 
-    return out->runtime_scene_path && out->runtime_scene_path[0] &&
-           out->output_root && out->output_root[0] &&
+    return ((out->scene_project_root && out->scene_project_root[0]) ||
+            (out->runtime_scene_path && out->runtime_scene_path[0]) ||
+            out->water_mode) &&
+           ((out->output_root && out->output_root[0]) ||
+            (out->scene_project_root && out->scene_project_root[0])) &&
            out->frames > 0;
 }
 
@@ -326,26 +415,7 @@ static bool join_path(char *out, size_t out_size, const char *dir, const char *n
 }
 
 static void json_write_escaped(FILE *f, const char *text) {
-    const unsigned char *p = (const unsigned char *)(text ? text : "");
-    fputc('"', f);
-    while (*p) {
-        switch (*p) {
-            case '\\': fputs("\\\\", f); break;
-            case '"': fputs("\\\"", f); break;
-            case '\n': fputs("\\n", f); break;
-            case '\r': fputs("\\r", f); break;
-            case '\t': fputs("\\t", f); break;
-            default:
-                if (*p < 0x20) {
-                    fprintf(f, "\\u%04x", (unsigned int)*p);
-                } else {
-                    fputc(*p, f);
-                }
-                break;
-        }
-        ++p;
-    }
-    fputc('"', f);
+    physics_sim_json_write_string(f, text);
 }
 
 static const char *output_policy_label(PhysicsSimHeadlessOutputPolicy policy) {
@@ -441,6 +511,21 @@ static double progress_ratio_for(const HeadlessProgressInfo *progress) {
     return 0.0;
 }
 
+static int volume_export_count_for_options(const PhysicsSimHeadlessCliOptions *opts) {
+    int count = 0;
+    int start = 0;
+    int stride = 1;
+    if (!opts || !opts->save_volume_frames || opts->frames <= 0) return 0;
+    start = opts->volume_export_start_frame > 0 ? opts->volume_export_start_frame : 0;
+    stride = opts->volume_export_stride > 0 ? opts->volume_export_stride : 1;
+    if (start >= opts->frames) return 0;
+    count = ((opts->frames - 1 - start) / stride) + 1;
+    if (opts->volume_export_max_frames > 0 && count > opts->volume_export_max_frames) {
+        count = opts->volume_export_max_frames;
+    }
+    return count;
+}
+
 static bool write_progress_json(const char *progress_path,
                                 const PhysicsSimHeadlessCliOptions *opts,
                                 const HeadlessProgressInfo *progress,
@@ -457,6 +542,18 @@ static bool write_progress_json(const char *progress_path,
     fputs("  \"schema\": \"physics_sim_headless_run_progress_v2\",\n", f);
     fputs("  \"runtime_scene\": ", f);
     json_write_escaped(f, opts->runtime_scene_path);
+    fputs(",\n  \"mode\": ", f);
+    json_write_escaped(f, opts->water_mode ? "water" : "runtime_scene");
+    if (opts->water_mode) {
+        fprintf(f, ",\n  \"water_level\": %.6f", opts->water_level);
+        fprintf(f,
+                ",\n  \"water_review_ripples\": %s,\n"
+                "  \"water_review_ripple_amplitude_m\": %.9g,\n"
+                "  \"water_object_fixture\": %s",
+                opts->water_review_ripples ? "true" : "false",
+                opts->water_review_ripple_amplitude_m,
+                opts->water_object_fixture ? "true" : "false");
+    }
     fputs(",\n  \"output_root\": ", f);
     json_write_escaped(f, opts->output_root);
     if (opts->grid_override) {
@@ -474,6 +571,11 @@ static bool write_progress_json(const char *progress_path,
             "  \"frames_completed\": %llu,\n"
             "  \"frame_index\": %llu,\n"
             "  \"sim_steps_per_frame\": %d,\n"
+            "  \"save_volume_frames\": %s,\n"
+            "  \"volume_export_start_frame\": %d,\n"
+            "  \"volume_export_stride\": %d,\n"
+            "  \"volume_export_max_frames\": %d,\n"
+            "  \"volume_frames_selected\": %d,\n"
             "  \"sim_steps_completed_in_frame\": %u,\n"
             "  \"sim_steps_total_in_frame\": %u,\n"
             "  \"progress_ratio\": %.6f,\n"
@@ -483,6 +585,11 @@ static bool write_progress_json(const char *progress_path,
             (unsigned long long)progress->frames_completed,
             (unsigned long long)progress->frame_index,
             opts->sim_steps_per_frame,
+            opts->save_volume_frames ? "true" : "false",
+            opts->volume_export_start_frame,
+            opts->volume_export_stride,
+            opts->volume_export_max_frames,
+            volume_export_count_for_options(opts),
             progress->sim_steps_completed_in_frame,
             progress->sim_steps_total_in_frame,
             progress_ratio,
@@ -521,6 +628,18 @@ static bool write_wind_shot_manifest(const char *manifest_path,
     fputs("  \"schema\": \"physics_sim_wind_shot_manifest_v1\",\n", f);
     fputs("  \"runtime_scene\": ", f);
     json_write_escaped(f, opts->runtime_scene_path);
+    fputs(",\n  \"mode\": ", f);
+    json_write_escaped(f, opts->water_mode ? "water" : "runtime_scene");
+    if (opts->water_mode) {
+        fprintf(f, ",\n  \"water_level\": %.6f", opts->water_level);
+        fprintf(f,
+                ",\n  \"water_review_ripples\": %s,\n"
+                "  \"water_review_ripple_amplitude_m\": %.9g,\n"
+                "  \"water_object_fixture\": %s",
+                opts->water_review_ripples ? "true" : "false",
+                opts->water_review_ripple_amplitude_m,
+                opts->water_object_fixture ? "true" : "false");
+    }
     fputs(",\n  \"output_root\": ", f);
     json_write_escaped(f, opts->output_root);
     fputs(",\n  \"summary\": ", f);
@@ -547,6 +666,10 @@ static bool write_wind_shot_manifest(const char *manifest_path,
             ",\n  \"frames_requested\": %d,\n"
             "  \"sim_steps_per_frame\": %d,\n"
             "  \"save_volume_frames\": %s,\n"
+            "  \"volume_export_start_frame\": %d,\n"
+            "  \"volume_export_stride\": %d,\n"
+            "  \"volume_export_max_frames\": %d,\n"
+            "  \"volume_frames_selected\": %d,\n"
             "  \"save_render_frames\": %s,\n"
             "  \"save_wind_projection_frames\": %s,\n"
             "  \"skip_present\": %s,\n"
@@ -554,6 +677,10 @@ static bool write_wind_shot_manifest(const char *manifest_path,
             opts->frames,
             opts->sim_steps_per_frame,
             opts->save_volume_frames ? "true" : "false",
+            opts->volume_export_start_frame,
+            opts->volume_export_stride,
+            opts->volume_export_max_frames,
+            volume_export_count_for_options(opts),
             opts->save_render_frames ? "true" : "false",
             opts->save_wind_projection_frames ? "true" : "false",
             opts->skip_present ? "true" : "false",
@@ -696,6 +823,178 @@ static bool cancel_requested_callback(void *user_data) {
            path_exists(probe->cancel_flag_path);
 }
 
+static const char *initial_state_source_label(SimRuntimeInitialStateSource source) {
+    switch (source) {
+    case SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_STANDALONE:
+        return "atmospheric_standalone";
+    case SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_OPTIONAL_LAYER:
+        return "atmospheric_optional_layer";
+    case SIM_RUNTIME_INITIAL_STATE_SOURCE_ATMOSPHERIC_WARM_START:
+        return "atmospheric_warm_start";
+    case SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK:
+    default:
+        return "blank";
+    }
+}
+
+static const char *atmospheric_region_shape_label(AtmosphericRegionShape shape) {
+    switch (shape) {
+    case ATMOSPHERIC_REGION_ELLIPSE:
+        return "ellipse";
+    case ATMOSPHERIC_REGION_RECT:
+    default:
+        return "rect";
+    }
+}
+
+static void write_atmosphere_region_json(FILE *f,
+                                         const AtmosphericDensityRegion *region) {
+    if (!f || !region) return;
+    fprintf(f,
+            "{"
+            "\"enabled\": %s, "
+            "\"shape\": \"%s\", "
+            "\"center_x\": %.9g, "
+            "\"center_y\": %.9g, "
+            "\"center_z\": %.9g, "
+            "\"size_x\": %.9g, "
+            "\"size_y\": %.9g, "
+            "\"size_z\": %.9g, "
+            "\"density\": %.9g, "
+            "\"falloff\": %.9g"
+            "}",
+            region->enabled ? "true" : "false",
+            atmospheric_region_shape_label(region->shape),
+            region->center_x,
+            region->center_y,
+            region->center_z,
+            region->size_x,
+            region->size_y,
+            region->size_z,
+            region->density,
+            region->falloff);
+}
+
+static void write_atmosphere_diagnostics_json(FILE *f,
+                                              const SimRuntimeBackendReport *report) {
+    const AtmosphericPresetSettings *settings = NULL;
+    size_t region_count = 0u;
+    if (!f) return;
+    fprintf(f,
+            ",\n  \"atmosphere\": {\n"
+            "    \"initial_state_source\": \"%s\",\n"
+            "    \"parsed_settings_available\": %s,\n",
+            report ? initial_state_source_label(report->initial_state_source) : "blank",
+            report && report->atmospheric_settings_available ? "true" : "false");
+    if (report && report->atmospheric_settings_available) {
+        settings = &report->atmospheric_settings;
+        region_count = settings->region_count;
+        if (region_count > MAX_ATMOSPHERIC_DENSITY_REGIONS) {
+            region_count = MAX_ATMOSPHERIC_DENSITY_REGIONS;
+        }
+        fprintf(f,
+                "    \"settings\": {\n"
+                "      \"enabled\": %s,\n"
+                "      \"seed\": %u,\n"
+                "      \"base_density\": %.9g,\n"
+                "      \"density_scale\": %.9g,\n"
+                "      \"density_threshold\": %.9g,\n"
+                "      \"base_wind_x\": %.9g,\n"
+                "      \"base_wind_y\": %.9g,\n"
+                "      \"base_wind_z\": %.9g,\n"
+                "      \"turbulence_strength\": %.9g,\n"
+                "      \"noise_scale\": %.9g,\n"
+                "      \"detail_scale\": %.9g,\n"
+                "      \"band_min_y\": %.9g,\n"
+                "      \"band_max_y\": %.9g,\n"
+                "      \"band_edge_falloff\": %.9g,\n"
+                "      \"region_count\": %zu,\n"
+                "      \"regions\": [",
+                settings->enabled ? "true" : "false",
+                settings->seed,
+                settings->base_density,
+                settings->density_scale,
+                settings->density_threshold,
+                settings->base_wind_x,
+                settings->base_wind_y,
+                settings->base_wind_z,
+                settings->turbulence_strength,
+                settings->noise_scale,
+                settings->detail_scale,
+                settings->band_min_y,
+                settings->band_max_y,
+                settings->band_edge_falloff,
+                region_count);
+        for (size_t i = 0; i < region_count; ++i) {
+            if (i > 0) fputs(", ", f);
+            write_atmosphere_region_json(f, &settings->regions[i]);
+        }
+        fputs("]\n    },\n", f);
+    } else {
+        fputs("    \"settings\": null,\n", f);
+    }
+    if (report) {
+        fprintf(f,
+                "    \"seed\": {\n"
+                "      \"seeded\": %s,\n"
+                "      \"seed\": %u,\n"
+                "      \"seeded_cell_count\": %zu,\n"
+                "      \"max_density\": %.9g,\n"
+                "      \"max_velocity_magnitude\": %.9g\n"
+                "    },\n"
+                "    \"warm_start\": {\n"
+                "      \"loaded\": %s,\n"
+                "      \"source_kind\": %d,\n"
+                "      \"grid_w\": %d,\n"
+                "      \"grid_h\": %d,\n"
+                "      \"grid_d\": %d,\n"
+                "      \"cell_count\": %zu,\n"
+                "      \"active_density_cells\": %zu,\n"
+                "      \"solid_cells\": %zu,\n"
+                "      \"max_density\": %.9g,\n"
+                "      \"max_velocity_magnitude\": %.9g\n"
+                "    },\n"
+                "    \"final_volume\": {\n"
+                "      \"debug_view_available\": %s,\n"
+                "      \"active_density_cells\": %zu,\n"
+                "      \"solid_cells\": %zu,\n"
+                "      \"max_density\": %.9g,\n"
+                "      \"max_velocity_magnitude\": %.9g,\n"
+                "      \"export_cache_materialization_count\": %zu,\n"
+                "      \"runtime_dense_mirror_live\": %s\n"
+                "    }\n"
+                "  }",
+                report->atmospheric_seeded ? "true" : "false",
+                report->atmospheric_seed,
+                report->atmospheric_seeded_cell_count,
+                report->atmospheric_seed_max_density,
+                report->atmospheric_seed_max_velocity_magnitude,
+                report->atmospheric_warm_start_loaded ? "true" : "false",
+                report->atmospheric_warm_start_source_kind,
+                report->atmospheric_warm_start_w,
+                report->atmospheric_warm_start_h,
+                report->atmospheric_warm_start_d,
+                report->atmospheric_warm_start_cell_count,
+                report->atmospheric_warm_start_active_density_cells,
+                report->atmospheric_warm_start_solid_cells,
+                report->atmospheric_warm_start_max_density,
+                report->atmospheric_warm_start_max_velocity_magnitude,
+                report->debug_volume_view_3d_available ? "true" : "false",
+                report->debug_volume_active_density_cells,
+                report->debug_volume_solid_cells,
+                report->debug_volume_max_density,
+                report->debug_volume_max_velocity_magnitude,
+                report->runtime_export_cache_materialization_count,
+                report->runtime_dense_mirror_live ? "true" : "false");
+    } else {
+        fputs("    \"seed\": null,\n"
+              "    \"warm_start\": null,\n"
+              "    \"final_volume\": null\n"
+              "  }",
+              f);
+    }
+}
+
 static bool write_run_summary(const char *summary_path,
                               const PhysicsSimHeadlessCliOptions *opts,
                               const SimRuntimeBackendReport *backend_report,
@@ -708,6 +1007,18 @@ static bool write_run_summary(const char *summary_path,
     fputs("  \"schema\": \"physics_sim_headless_run_summary_v1\",\n", f);
     fputs("  \"runtime_scene\": ", f);
     json_write_escaped(f, opts->runtime_scene_path);
+    fputs(",\n  \"mode\": ", f);
+    json_write_escaped(f, opts->water_mode ? "water" : "runtime_scene");
+    if (opts->water_mode) {
+        fprintf(f, ",\n  \"water_level\": %.6f", opts->water_level);
+        fprintf(f,
+                ",\n  \"water_review_ripples\": %s,\n"
+                "  \"water_review_ripple_amplitude_m\": %.9g,\n"
+                "  \"water_object_fixture\": %s",
+                opts->water_review_ripples ? "true" : "false",
+                opts->water_review_ripple_amplitude_m,
+                opts->water_object_fixture ? "true" : "false");
+    }
     fputs(",\n  \"output_root\": ", f);
     json_write_escaped(f, opts->output_root);
     if (opts->grid_override) {
@@ -725,6 +1036,11 @@ static bool write_run_summary(const char *summary_path,
             "  \"frames_completed\": %d,\n"
             "  \"sim_steps_per_frame\": %d,\n"
             "  \"save_volume_frames\": %s,\n"
+            "  \"volume_export_start_frame\": %d,\n"
+            "  \"volume_export_stride\": %d,\n"
+            "  \"volume_export_max_frames\": %d,\n"
+            "  \"volume_frames_selected\": %d,\n"
+            "  \"volume_frames_skipped\": %d,\n"
             "  \"save_render_frames\": %s,\n"
             "  \"save_wind_projection_frames\": %s,\n"
             "  \"skip_present\": %s,\n"
@@ -735,6 +1051,11 @@ static bool write_run_summary(const char *summary_path,
             result_code == 0 ? opts->frames : 0,
             opts->sim_steps_per_frame,
             opts->save_volume_frames ? "true" : "false",
+            opts->volume_export_start_frame,
+            opts->volume_export_stride,
+            opts->volume_export_max_frames,
+            volume_export_count_for_options(opts),
+            opts->save_volume_frames ? opts->frames - volume_export_count_for_options(opts) : 0,
             opts->save_render_frames ? "true" : "false",
             opts->save_wind_projection_frames ? "true" : "false",
             opts->skip_present ? "true" : "false",
@@ -743,6 +1064,7 @@ static bool write_run_summary(const char *summary_path,
             result_code == 0 ? "passed" : (result_code == 2 ? "canceled" : "failed"));
     fputs(",\n  \"wind_visual_mode\": ", f);
     json_write_escaped(f, wind_visual_mode_label(opts->wind_visual_mode));
+    write_atmosphere_diagnostics_json(f, backend_report);
     if (backend_report && backend_report->wind_analysis_available) {
         fprintf(f,
                 ",\n  \"wind_analysis\": {\n"
@@ -791,6 +1113,12 @@ static bool write_run_summary(const char *summary_path,
 
 int main(int argc, char **argv) {
     PhysicsSimHeadlessCliOptions opts;
+    SceneProjectCacheOutputResolved scene_project;
+    bool scene_project_mode = false;
+    char scene_project_error[256];
+    char scene_project_run_id[SCENE_PROJECT_CACHE_OUTPUT_RUN_ID_MAX];
+    char scene_project_created_at[32];
+    char scene_project_output_root[SCENE_PROJECT_CACHE_OUTPUT_PATH_MAX];
     char summary_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
     char progress_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
     char wind_shot_manifest_path[PHYSICS_SIM_HEADLESS_PATH_MAX];
@@ -804,13 +1132,73 @@ int main(int argc, char **argv) {
         print_usage(argv[0]);
         return 2;
     }
+    memset(&scene_project, 0, sizeof(scene_project));
+    scene_project_error[0] = '\0';
+    scene_project_run_id[0] = '\0';
+    scene_project_created_at[0] = '\0';
+    scene_project_output_root[0] = '\0';
+    scene_project_mode = opts.scene_project_root && opts.scene_project_root[0];
+    if (scene_project_mode) {
+        if (opts.water_mode) {
+            print_pre_run_error("resolve_scene_project",
+                                "--scene-project cannot be combined with --water-mode",
+                                "scene_project",
+                                opts.scene_project_root,
+                                "choose a scene project or standalone water mode");
+            return 2;
+        }
+        if (!scene_project_cache_output_resolve(opts.scene_project_root,
+                                                &scene_project,
+                                                scene_project_error,
+                                                sizeof(scene_project_error))) {
+            print_pre_run_error("resolve_scene_project",
+                                scene_project_error,
+                                "scene_project",
+                                opts.scene_project_root,
+                                "provide a project directory with scene_authoring.json and scene_runtime.json");
+            return 1;
+        }
+        if (!scene_project_cache_output_make_run_id(scene_project_run_id,
+                                                    sizeof(scene_project_run_id),
+                                                    scene_project_created_at,
+                                                    sizeof(scene_project_created_at))) {
+            print_pre_run_error("resolve_scene_project",
+                                "failed to create scene project cache run id",
+                                "scene_project",
+                                opts.scene_project_root,
+                                "check PHYSICS_SIM_PROJECT_CACHE_RUN_ID or system clock");
+            return 1;
+        }
+        opts.runtime_scene_path = scene_project.scene_runtime_path;
+        if (opts.output_root && opts.output_root[0]) {
+            print_pre_run_error("resolve_scene_project",
+                                "--scene-project writes into the project-local physics_sim/runs slot",
+                                "output_root",
+                                opts.output_root,
+                                "omit --output-root or use direct --runtime-scene mode");
+            return 2;
+        }
+        if (!scene_project_cache_output_default_run_root(scene_project.project_root,
+                                                         scene_project_run_id,
+                                                         scene_project_output_root,
+                                                         sizeof(scene_project_output_root))) {
+            print_pre_run_error("resolve_scene_project",
+                                "default project run output root path too long",
+                                "scene_project",
+                                opts.scene_project_root,
+                                "choose a shorter project path");
+            return 1;
+        }
+        opts.output_root = scene_project_output_root;
+    }
     if (path_exists(opts.output_root)) {
         if (opts.output_policy == PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS &&
             !dir_is_empty(opts.output_root)) {
-            fprintf(stderr,
-                    "[physics_sim_headless] ERROR: output root already exists and is not empty: %s\n"
-                    "[physics_sim_headless]        choose a new output root or pass --overwrite.\n",
-                    opts.output_root);
+            print_pre_run_error("prepare_output",
+                                "output root already exists and is not empty",
+                                "output_root",
+                                opts.output_root,
+                                "choose a new output root or pass --overwrite");
             return 1;
         }
         if (opts.output_policy == PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE &&
@@ -899,11 +1287,21 @@ int main(int argc, char **argv) {
 
     AppConfig cfg = app_config_default();
     cfg.space_mode = SPACE_MODE_3D;
-    cfg.sim_mode = SIM_MODE_BOX;
+    cfg.sim_mode = opts.water_mode ? SIM_MODE_WATER : SIM_MODE_BOX;
+    if (opts.water_mode || opts.water_level_override) {
+        cfg.water_level = opts.water_level;
+    }
+    cfg.water_review_ripples = opts.water_review_ripples;
+    cfg.water_review_ripple_amplitude_m =
+        opts.water_review_ripple_amplitude_override ? opts.water_review_ripple_amplitude_m : 0.0f;
+    cfg.water_object_fixture = opts.water_object_fixture;
     cfg.headless_enabled = true;
     cfg.headless_frame_count = opts.frames;
     cfg.headless_skip_present = opts.skip_present;
     cfg.save_volume_frames = opts.save_volume_frames;
+    cfg.volume_export_start_frame = opts.volume_export_start_frame;
+    cfg.volume_export_stride = opts.volume_export_stride;
+    cfg.volume_export_max_frames = opts.volume_export_max_frames;
     cfg.save_render_frames = opts.save_render_frames;
     cfg.wind_visual_mode = opts.wind_visual_mode;
     if (opts.grid_override) {
@@ -913,16 +1311,19 @@ int main(int argc, char **argv) {
     }
     snprintf(cfg.headless_output_dir, sizeof(cfg.headless_output_dir), "%s", opts.output_root);
 
-    const FluidScenePreset *base_preset = scene_presets_get_default();
+    const FluidScenePreset *base_preset =
+        scene_presets_get_default_for_domain(opts.water_mode ? SCENE_DOMAIN_WATER : SCENE_DOMAIN_BOX);
     FluidScenePreset preset = base_preset ? *base_preset : (FluidScenePreset){0};
     ShapeAssetLibrary shape_library;
     memset(&shape_library, 0, sizeof(shape_library));
     SceneRuntimeLaunch runtime_launch = {0};
-    runtime_launch.has_retained_scene = true;
-    snprintf(runtime_launch.retained_runtime_scene_path,
-             sizeof(runtime_launch.retained_runtime_scene_path),
-             "%s",
-             opts.runtime_scene_path);
+    if (opts.runtime_scene_path && opts.runtime_scene_path[0]) {
+        runtime_launch.has_retained_scene = true;
+        snprintf(runtime_launch.retained_runtime_scene_path,
+                 sizeof(runtime_launch.retained_runtime_scene_path),
+                 "%s",
+                 opts.runtime_scene_path);
+    }
     HeadlessOptions headless = {
         .enabled = true,
         .frame_limit = opts.frames,
@@ -945,10 +1346,31 @@ int main(int argc, char **argv) {
 
     int result = scene_controller_run(&cfg,
                                       &preset,
-                                      &runtime_launch,
+                                      runtime_launch.has_retained_scene ? &runtime_launch : NULL,
                                       &shape_library,
                                       opts.output_root,
                                       &headless);
+    if (result == 0 && scene_project_mode && opts.save_volume_frames) {
+        SceneProjectCacheOutputPublishRequest publish_request = {
+            .project = &scene_project,
+            .run_id = scene_project_run_id,
+            .run_output_root = opts.output_root,
+            .allow_overwrite = opts.output_policy == PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE,
+            .source_frame_count = opts.frames,
+            .frame_count = volume_export_count_for_options(&opts),
+            .export_start_frame = opts.volume_export_start_frame,
+            .export_stride = opts.volume_export_stride,
+            .export_max_frames = opts.volume_export_max_frames
+        };
+        if (!scene_project_cache_output_publish(&publish_request,
+                                                scene_project_error,
+                                                sizeof(scene_project_error))) {
+            fprintf(stderr,
+                    "[physics_sim_headless] ERROR: failed to publish scene project cache: %s\n",
+                    scene_project_error);
+            result = 1;
+        }
+    }
     if (!write_run_summary(summary_path, &opts, &final_backend_report, result)) {
         fprintf(stderr, "[physics_sim_headless] ERROR: failed to write summary: %s\n", summary_path);
         result = result == 0 ? 1 : result;
@@ -982,7 +1404,8 @@ int main(int argc, char **argv) {
     } else {
         printf("[physics_sim_headless] FAIL result=%d\n", result);
     }
-    printf("[physics_sim_headless] runtime: %s\n", opts.runtime_scene_path);
+    printf("[physics_sim_headless] runtime: %s\n",
+           opts.runtime_scene_path ? opts.runtime_scene_path : "");
     printf("[physics_sim_headless] output:  %s\n", opts.output_root);
     printf("[physics_sim_headless] summary: %s\n", summary_path);
     printf("[physics_sim_headless] progress: %s\n", progress_path);

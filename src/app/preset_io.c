@@ -17,6 +17,7 @@ FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain) {
     case SCENE_DOMAIN_WIND_TUNNEL:
     case SCENE_DOMAIN_STRUCTURAL:
     case SCENE_DOMAIN_ATMOSPHERIC:
+    case SCENE_DOMAIN_WATER:
         return domain;
     default:
         return SCENE_DOMAIN_BOX;

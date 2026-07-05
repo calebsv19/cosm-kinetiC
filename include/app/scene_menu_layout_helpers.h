@@ -20,4 +20,8 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
                                       int win_w,
                                       int win_h);
 
+bool scene_menu_layout_validate_no_overlap(const SceneMenuInteraction *ctx,
+                                           char *error,
+                                           size_t error_size);
+
 #endif // SCENE_MENU_LAYOUT_HELPERS_H

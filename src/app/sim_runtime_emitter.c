@@ -96,6 +96,23 @@ static SimRuntimeEmitterFootprintKind resolve_attached_import_footprint(FluidEmi
     return SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_OCCUPANCY;
 }
 
+static SimRuntimeEmitterFootprintKind resolve_attached_runtime_mesh_footprint(
+    FluidEmitter3DSourceMode mode) {
+    switch (mode) {
+    case EMITTER_3D_SOURCE_MODE_SURFACE_PATCH:
+        return SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_SURFACE_PATCH;
+    case EMITTER_3D_SOURCE_MODE_SURFACE_SHELL:
+        return SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_SURFACE_SHELL;
+    case EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE:
+        return SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_HEATED_OBSTACLE;
+    case EMITTER_3D_SOURCE_MODE_LEGACY_COMPAT:
+    case EMITTER_3D_SOURCE_MODE_VOLUME_FILL:
+    default:
+        break;
+    }
+    return SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_OCCUPANCY;
+}
+
 static void normalize_dir3(float *x, float *y, float *z, bool *out_has_magnitude) {
     float len = 0.0f;
     bool has_magnitude = false;
@@ -148,11 +165,16 @@ bool sim_runtime_emitter_resolve(const FluidScenePreset *preset,
 
     resolved.attached_object = emitter->attached_object;
     resolved.attached_import = emitter->attached_import;
+    resolved.attached_runtime_mesh_enabled = emitter->attached_runtime_mesh_enabled;
+    resolved.attached_runtime_mesh = emitter->attached_runtime_mesh;
     resolved.source_kind = SIM_RUNTIME_EMITTER_SOURCE_FREE;
     resolved.primary_footprint = SIM_RUNTIME_EMITTER_FOOTPRINT_RADIAL_SPHERE;
     resolved.fallback_footprint = SIM_RUNTIME_EMITTER_FOOTPRINT_RADIAL_SPHERE;
 
-    if (resolved.attached_import >= 0) {
+    if (resolved.attached_runtime_mesh_enabled && resolved.attached_runtime_mesh >= 0) {
+        resolved.source_kind = SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_RUNTIME_MESH;
+        resolved.primary_footprint = resolve_attached_runtime_mesh_footprint(resolved.source_mode_3d);
+    } else if (resolved.attached_import >= 0) {
         resolved.source_kind = SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_IMPORT;
         resolved.primary_footprint = resolve_attached_import_footprint(resolved.source_mode_3d);
     } else if (resolved.attached_object >= 0) {
@@ -210,6 +232,8 @@ const char *sim_runtime_emitter_source_kind_label(SimRuntimeEmitterSourceKind ki
         return "attached-object";
     case SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_IMPORT:
         return "attached-import";
+    case SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_RUNTIME_MESH:
+        return "attached-runtime-mesh";
     default:
         break;
     }
@@ -236,6 +260,14 @@ const char *sim_runtime_emitter_footprint_kind_label(SimRuntimeEmitterFootprintK
         return "attached-object-heated-obstacle";
     case SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_IMPORT_HEATED_OBSTACLE:
         return "attached-import-heated-obstacle";
+    case SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_OCCUPANCY:
+        return "attached-runtime-mesh-occupancy";
+    case SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_SURFACE_PATCH:
+        return "attached-runtime-mesh-surface-patch";
+    case SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_SURFACE_SHELL:
+        return "attached-runtime-mesh-surface-shell";
+    case SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_HEATED_OBSTACLE:
+        return "attached-runtime-mesh-heated-obstacle";
     default:
         break;
     }

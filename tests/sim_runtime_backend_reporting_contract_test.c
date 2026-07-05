@@ -170,6 +170,20 @@ static bool test_3d_backend_seeds_atmospheric_preset_sparse_truth(void) {
     if (report.atmospheric_seeded_cell_count == 0u) return false;
     if (report.atmospheric_seed_max_density <= 0.0f) return false;
     if (report.atmospheric_seed_max_velocity_magnitude <= 0.0f) return false;
+    if (!report.atmospheric_settings_available) return false;
+    if (!report.atmospheric_settings.enabled) return false;
+    if (report.atmospheric_settings.seed != preset.atmosphere.seed) return false;
+    if (!nearly_equal(report.atmospheric_settings.base_density,
+                      preset.atmosphere.base_density)) {
+        return false;
+    }
+    if (!nearly_equal(report.atmospheric_settings.density_scale,
+                      preset.atmosphere.density_scale)) {
+        return false;
+    }
+    if (report.atmospheric_settings.region_count != preset.atmosphere.region_count) {
+        return false;
+    }
     if (report.debug_volume_active_density_cells == 0u) return false;
     if (report.runtime_allocated_brick_count == 0u) return false;
     if (!sim_runtime_backend_get_debug_volume_view_3d(backend, &volume)) return false;
@@ -232,6 +246,11 @@ static bool test_3d_fluid_mode_can_opt_into_atmospheric_initial_state(void) {
     if (report.atmospheric_seed_max_density <= 0.0f) return false;
     if (report.atmospheric_seed_max_velocity_magnitude <= 0.0f) return false;
     if (report.atmospheric_warm_start_loaded) return false;
+    if (!report.atmospheric_settings_available) return false;
+    if (!nearly_equal(report.atmospheric_settings.base_density,
+                      preset.atmosphere.base_density)) {
+        return false;
+    }
 
     sim_runtime_backend_destroy(backend);
     return true;
@@ -276,6 +295,11 @@ static bool test_3d_fluid_mode_without_opt_in_stays_blank_initially(void) {
     if (report.initial_state_source != SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK) return false;
     if (report.atmospheric_seeded_cell_count != 0u) return false;
     if (report.debug_volume_active_density_cells != 0u) return false;
+    if (!report.atmospheric_settings_available) return false;
+    if (!nearly_equal(report.atmospheric_settings.base_density,
+                      preset.atmosphere.base_density)) {
+        return false;
+    }
 
     sim_runtime_backend_destroy(backend);
     return true;

@@ -451,6 +451,19 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                         } else if (entry->scene_id[0]) {
                             subtitle = entry->scene_id;
                         }
+                        if (selected && menu_has_scene_project_cache_status(ctx)) {
+                            const char *cache_summary = ctx->scene_project_cache_status.summary;
+                            if (subtitle && subtitle[0]) {
+                                snprintf(subtitle_buf,
+                                         sizeof(subtitle_buf),
+                                         "%s  |  %s",
+                                         subtitle,
+                                         cache_summary);
+                                subtitle = subtitle_buf;
+                            } else {
+                                subtitle = cache_summary;
+                            }
+                        }
                     }
                 } else {
                     const CustomPresetSlot *slot =
@@ -471,8 +484,8 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                                            small_font,
                                            subtitle,
                                            label_rect.w - 6,
-                                           subtitle_buf,
-                                           sizeof(subtitle_buf));
+                                           subtitle_text,
+                                           sizeof(subtitle_text));
                     menu_draw_text(renderer,
                                    ctx->font,
                                    label_buf,
@@ -481,7 +494,7 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                                    text_color);
                     menu_draw_text(renderer,
                                    small_font,
-                                   subtitle_buf,
+                                   subtitle_text,
                                    label_rect.x,
                                    label_rect.y + label_h + 6,
                                    subtitle_color);

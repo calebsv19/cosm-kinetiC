@@ -82,7 +82,7 @@ static bool test_emitter_actual_and_slice_points_follow_anchor_truth(void) {
 static bool test_slice_overlay_defaults_on_and_respects_runtime_toggle(void) {
     SceneState scene = {0};
 
-    scene.runtime_slice_overlay_enabled = true;
+    scene.runtime_view.slice_overlay_enabled = true;
 
     if (!scene_runtime_slice_overlay_enabled(&scene)) return false;
     if (scene_runtime_toggle_slice_overlay(&scene)) return false;

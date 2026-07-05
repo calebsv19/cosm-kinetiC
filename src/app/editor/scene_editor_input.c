@@ -1,6 +1,7 @@
 #include "app/editor/scene_editor_input.h"
 #include "app/editor/scene_editor_internal.h"
 #include "app/editor/scene_editor_canvas.h"
+#include "app/editor/scene_editor_canvas_retained.h"
 #include "app/editor/scene_editor_input_button_actions.h"
 #include "app/editor/scene_editor_input_common.h"
 #include "app/editor/scene_editor_input_hit_helpers.h"
@@ -8,6 +9,7 @@
 #include "app/editor/scene_editor_input_import_helpers.h"
 #include "app/editor/scene_editor_model.h"
 #include "app/editor/scene_editor_precision.h"
+#include "app/editor/scene_editor_wind_setup.h"
 #include "vk_renderer.h"
 #include <math.h>
 #include <stdbool.h>
@@ -16,11 +18,51 @@
 
 static const int DRAG_THRESHOLD_PX = 4;
 
+static bool editor_wind_face_modifier_down(void) {
+    SDL_Keymod mod = SDL_GetModState();
+    return (mod & KMOD_SHIFT) != 0 && (mod & (KMOD_CTRL | KMOD_GUI)) != 0;
+}
+
 static void editor_clear_viewport_hover_state(SceneEditorState *state) {
     if (!state) return;
     state->hover_emitter = -1;
     state->hover_object = -1;
     state->boundary_hover_edge = -1;
+    state->wind_face_hover = WIND_TUNNEL_3D_FACE_NONE;
+}
+
+static bool editor_update_wind_face_hover(SceneEditorState *state, int x, int y) {
+    WindTunnel3DFace face = WIND_TUNNEL_3D_FACE_NONE;
+    SceneEditorWindSetupSummary wind_setup;
+    if (!state) return false;
+    state->wind_face_hover = WIND_TUNNEL_3D_FACE_NONE;
+    wind_setup = scene_editor_wind_setup_summary(&state->cfg, &state->session);
+    if (!wind_setup.active || !editor_wind_face_modifier_down()) return false;
+    if (!scene_editor_input_point_in_editor_active_viewport(state, x, y)) return false;
+    if (!scene_editor_canvas_retained_wind_face_at(state,
+                                                   physics_sim_editor_session_scene_domain(&state->session),
+                                                   x,
+                                                   y,
+                                                   &face)) {
+        return false;
+    }
+    state->wind_face_hover = face;
+    return true;
+}
+
+static bool editor_commit_wind_face_hover(SceneEditorState *state) {
+    WindTunnel3DFace outlet_face = WIND_TUNNEL_3D_FACE_NONE;
+    if (!state || state->wind_face_hover == WIND_TUNNEL_3D_FACE_NONE) return false;
+    outlet_face = scene_editor_wind_setup_opposite_face(state->wind_face_hover);
+    if (outlet_face == WIND_TUNNEL_3D_FACE_NONE) return false;
+    if (!physics_sim_editor_session_set_wind_tunnel_faces(&state->session,
+                                                          &state->cfg,
+                                                          state->wind_face_hover,
+                                                          outlet_face)) {
+        return false;
+    }
+    set_dirty(state);
+    return true;
 }
 
 void editor_pointer_down(void *user, const InputPointerState *ptr) {
@@ -177,7 +219,8 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         };
         bool retained_scene_active = physics_sim_editor_session_has_retained_scene(&state->session);
         bool retained_emitter_active =
-            physics_sim_editor_session_selected_object_emitter(&state->session) != NULL;
+            physics_sim_editor_session_selected_object_emitter(&state->session) != NULL ||
+            physics_sim_editor_session_selected_runtime_mesh_emitter(&state->session) != NULL;
         bool legacy_emitter_active =
             state->selected_emitter >= 0 && state->selected_emitter < (int)state->working.emitter_count;
         for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); ++i) {
@@ -197,6 +240,16 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
                 return;
             }
         }
+    }
+
+    if (in_canvas && physics_sim_editor_session_has_retained_scene(&state->session) &&
+        editor_wind_face_modifier_down()) {
+        (void)editor_update_wind_face_hover(state, x, y);
+        (void)editor_commit_wind_face_hover(state);
+        scene_editor_input_clear_drag_flags(state);
+        state->hit_stack_count = 0;
+        state->hit_stack_base = 0;
+        return;
     }
 
     if (in_canvas && physics_sim_editor_session_has_retained_scene(&state->session)) {
@@ -466,6 +519,9 @@ void editor_pointer_move(void *user, const InputPointerState *ptr) {
     }
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
         editor_clear_viewport_hover_state(state);
+        if (editor_update_wind_face_hover(state, ptr->x, ptr->y)) {
+            return;
+        }
         if (scene_editor_input_point_in_editor_active_viewport(state, ptr->x, ptr->y)) {
             return;
         }

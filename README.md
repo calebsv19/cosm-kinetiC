@@ -18,6 +18,9 @@ Identity note:
 
 - `Box`: bounded fluid sandbox with smoke density, velocity brushes, preset emitters, particle overlays, and object-mask interaction.
 - `Wind`: flow-through variant of the fluid runtime tuned for obstacle and boundary experiments.
+- `Water`: first standalone Water Basin scaffold with a normalized water-level
+  setting, interior bottom-layer 3D volume seeding, standard VF3D/VF3H export,
+  and first-pass water heightfield sidecars.
 - `Structural`: beam/node structural visualization with its own runtime controller, editor flow, overlay system, and solver controls.
 
 Fluid-oriented modes share the scene menu, preset system, export pipeline, and scene-controller loop. Structural mode uses the same top-level menu entry point but switches into a dedicated structural controller/runtime path instead of the fluid headless/export path.
@@ -160,13 +163,30 @@ make vf2d_dataset_tool
 make physics_trace_tool
 make test-volume-frames-3d-export-contract
 make test-volume-frames-3d-tiny-parity-contract
+make test-water-mode-contract
+make test-water-surface-artifacts-contract
+make test-physics-sim-headless-water-mode
+make test-fast
+make package-linux-worker-dry-run
 make run-headless-smoke
 make visual-harness
+make visual-artifact
 make test-stable
 make test-legacy
 make test-manifest-to-trace-export
 make test-vf2d-pack-dataset-parity
 ```
+
+`test-fast` is the smallest deterministic non-GUI lane for common source
+changes. It uses checked-in fixtures only and excludes headless integration,
+package, local-system/private-path, long visual/video, and remote-worker probes.
+Use `test-stable` when a change crosses runtime-scene, editor, Water/Wind,
+runtime-mesh, export, or broader integration surfaces.
+
+`visual-harness` is build-only readiness. `visual-artifact` is the R6
+source-run image proof: it writes a validated Wind projection BMP under the
+ignored `visual_artifacts/` root and prints the final artifact path. See
+`docs/visual_artifact.md`.
 
 ## Directory guide
 - `src/` – runtime implementation files grouped by subsystem (app state/controllers, command bus, physics solvers, renderer, input, timing, config loader). Headless/quality helpers live under `src/app/quality_profiles.c` and hook into the menu.

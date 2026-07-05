@@ -14,6 +14,7 @@ VK_RENDERER_SDL_COMPAT_SRCS := \
 	$(SRC_DIR)/app/editor/scene_editor_canvas.c \
 	$(SRC_DIR)/app/editor/scene_editor_canvas_retained.c \
 	$(SRC_DIR)/app/editor/scene_editor_panel.c \
+	$(SRC_DIR)/app/editor/scene_editor_panel_inspector.c \
 	$(SRC_DIR)/app/editor/scene_editor_panel_lists.c \
 	$(SRC_DIR)/app/editor/scene_editor_panel_summary.c \
 	$(SRC_DIR)/app/editor/scene_editor_precision.c \

@@ -5,9 +5,11 @@
 #include "app/sim_runtime_backend.h"
 #include "app/sim_runtime_backend_3d_emitter_shapes.h"
 #include "app/sim_runtime_emitter.h"
+#include "app/sim_runtime_mesh_diagnostics.h"
 #include "import/runtime_scene_bridge.h"
 #include "render/retained_runtime_scene_overlay_geom.h"
 
+#include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -203,6 +205,111 @@ static void print_bounds(const char *label, const DiagWorldBounds *bounds) {
             bounds->max_y,
             bounds->min_z,
             bounds->max_z);
+}
+
+static void print_vec3_bounds(const char *label,
+                              bool valid,
+                              CoreObjectVec3 min,
+                              CoreObjectVec3 max) {
+    if (!label || !valid) {
+        fprintf(stdout, "%s: <none>\n", label ? label : "bounds");
+        return;
+    }
+    fprintf(stdout,
+            "%s: x=[%.6f, %.6f] y=[%.6f, %.6f] z=[%.6f, %.6f]\n",
+            label,
+            min.x,
+            max.x,
+            min.y,
+            max.y,
+            min.z,
+            max.z);
+}
+
+static void print_runtime_mesh_diagnostics(const PhysicsSimRuntimeMeshPreviewSet *set,
+                                           const SimRuntime3DDomainDesc *domain) {
+    if (!set || !set->valid_contract || set->instance_count <= 0) {
+        fprintf(stdout, "runtime mesh diagnostics: none\n");
+        return;
+    }
+    fprintf(stdout, "runtime mesh diagnostics: instances=%d\n", set->instance_count);
+    for (int i = 0; i < set->instance_count; ++i) {
+        PhysicsSimRuntimeMeshDiagnostic diag;
+        if (!physics_sim_runtime_mesh_diagnostic_collect(set, i, domain, &diag)) {
+            fprintf(stdout,
+                    "runtime mesh[%d]: unavailable diagnostics=%s\n",
+                    i,
+                    diag.diagnostics[0] ? diag.diagnostics : "unavailable");
+            continue;
+        }
+        fprintf(stdout,
+                "runtime mesh[%d]: object_id=%s asset_id=%s scene_object=%d role=%s runtime_path=%s%s preview_path=%s\n",
+                i,
+                diag.object_id[0] ? diag.object_id : "<none>",
+                diag.asset_id[0] ? diag.asset_id : "<none>",
+                diag.scene_object_index,
+                diag.role_label[0] ? diag.role_label : "<none>",
+                diag.runtime_mesh_path[0] ? diag.runtime_mesh_path : "<none>",
+                diag.runtime_path_recovered ? " (recovered)" : "",
+                diag.preview_path[0] ? diag.preview_path : "<none>");
+        if (!diag.runtime_path_resolved && diag.runtime_mesh_path_hint[0]) {
+            fprintf(stdout,
+                    "runtime mesh[%d] unresolved path hint: %s\n",
+                    i,
+                    diag.runtime_mesh_path_hint);
+        } else if (diag.runtime_path_recovered && diag.runtime_mesh_path_hint[0]) {
+            fprintf(stdout,
+                    "runtime mesh[%d] recovered from hint: %s\n",
+                    i,
+                    diag.runtime_mesh_path_hint);
+        }
+        fprintf(stdout,
+                "runtime mesh[%d] transform: pos=(%.6f, %.6f, %.6f) rot_deg=(%.6f, %.6f, %.6f) scale=(%.6f, %.6f, %.6f)\n",
+                i,
+                diag.transform_position.x,
+                diag.transform_position.y,
+                diag.transform_position.z,
+                diag.transform_rotation_deg.x,
+                diag.transform_rotation_deg.y,
+                diag.transform_rotation_deg.z,
+                diag.transform_scale.x,
+                diag.transform_scale.y,
+                diag.transform_scale.z);
+        print_vec3_bounds("runtime mesh local bounds",
+                          diag.has_local_bounds,
+                          diag.local_bounds_min,
+                          diag.local_bounds_max);
+        print_vec3_bounds("runtime mesh world bounds",
+                          diag.has_world_bounds,
+                          diag.world_bounds_min,
+                          diag.world_bounds_max);
+        fprintf(stdout,
+                "runtime mesh[%d] footprint: vertices=%zu triangles=%zu file_signature=%s file_mtime_ns=%" PRIu64 " file_size_bytes=%" PRIu64 " obstacle_voxels=%zu emitter_voxels=%zu domain_overlap=%s domain_inside=%s bounds_volume=%.6f wind_projected_area_yz=%.6f accel_used=%s accel_triangles=%zu accel_nodes=%zu accel_leaves=%zu accel_max_depth=%zu budget_limited=%s fallback=%s diagnostics=%s\n",
+                i,
+                diag.runtime_vertex_count,
+                diag.runtime_triangle_count,
+                diag.file_signature_valid ? "true" : "false",
+                diag.runtime_mesh_file_mtime_ns,
+                diag.runtime_mesh_file_size_bytes,
+                diag.obstacle_voxel_count,
+                diag.emitter_footprint_voxel_count,
+                diag.domain_overlap_tested
+                    ? (diag.world_bounds_intersect_domain ? "true" : "false")
+                    : "n/a",
+                diag.domain_overlap_tested
+                    ? (diag.world_bounds_inside_domain ? "true" : "false")
+                    : "n/a",
+                diag.bounds_volume,
+                diag.wind_projected_area_yz,
+                diag.used_triangle_accel ? "true" : "false",
+                diag.accel_triangle_count,
+                diag.accel_node_count,
+                diag.accel_leaf_count,
+                diag.accel_max_depth,
+                diag.budget_limited ? "true" : "false",
+                diag.fallback_reason[0] ? diag.fallback_reason : "<none>",
+                diag.diagnostics[0] ? diag.diagnostics : "ok");
+    }
 }
 
 static void print_object_world_footprint(const SimRuntime3DDomainDesc *desc,
@@ -429,6 +536,7 @@ int main(int argc, char **argv) {
         .world_max_z = report.world_max_z,
         .voxel_size = report.voxel_size,
     };
+    print_runtime_mesh_diagnostics(&visual.mesh_previews, &desc);
     if (!sim_runtime_3d_anchor_resolve_resolved_emitter_world_anchor(&scene,
                                                                      &desc,
                                                                      &resolved,

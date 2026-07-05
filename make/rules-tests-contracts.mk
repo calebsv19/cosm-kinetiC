@@ -17,6 +17,8 @@ collider-test: $(COLLIDER_TEST_SRC)
 collider-tests: collider-test
 	$(BUILD_DIR)/collider_test
 
+MESH_PREVIEW_BRIDGE_INCS := -I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/../../shape/external
+
 KIT_VIZ_FIELD_TEST_SRCS := \
 	tests/kit_viz_field_adapter_test.c \
 	$(SRC_DIR)/render/kit_viz_field_adapter.c \
@@ -102,6 +104,8 @@ ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_warm_start.c \
 	$(SRC_DIR)/export/volume_frames.c \
 	$(SRC_DIR)/export/volume_frames_vf3d.c \
+	$(SRC_DIR)/export/water_surface_artifacts.c \
+	$(SRC_DIR)/app/water_object_coupling.c \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
@@ -146,6 +150,52 @@ SIM_MODE_ROUTE_CONTRACT_TEST_SRCS := \
 WIND_TUNNEL_3D_CONTRACT_TEST_SRCS := \
 	tests/wind_tunnel_3d_contract_test.c \
 	$(SRC_DIR)/app/wind_tunnel_3d.c
+
+WATER_MODE_CONTRACT_TEST_SRCS := \
+	tests/water_mode_contract_test.c \
+	$(SRC_DIR)/app/water_mode.c
+
+WATER_SURFACE_ARTIFACTS_CONTRACT_TEST_SRCS := \
+	tests/water_surface_artifacts_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
+	$(SRC_DIR)/export/volume_frames.c \
+	$(SRC_DIR)/export/volume_frames_vf3d.c \
+	$(SRC_DIR)/export/water_surface_artifacts.c \
+	$(SRC_DIR)/app/water_object_coupling.c \
+	$(SRC_DIR)/export/export_paths.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
+	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c \
+	$(CORE_DATA_DIR)/src/core_data.c \
+	$(CORE_PACK_DIR)/src/core_pack.c \
+	$(CORE_PACK_DIR)/src/core_pack_vf2d.c \
+	$(CORE_PACK_DIR)/src/core_pack_vf3d.c \
+	$(CORE_IO_DIR)/src/core_io.c \
+	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
+	$(CORE_SCENE_DIR)/src/core_scene.c \
+	$(TIMER_HUD_DIR)/external/cJSON.c
 
 SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS := \
 	tests/sim_runtime_emitter_contract_test.c \
@@ -211,6 +261,45 @@ SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
 	$(SRC_DIR)/app/sim_runtime_obstacle.c \
 	$(CORE_SIM_DIR)/src/core_sim.c
+
+SIM_RUNTIME_BACKEND_3D_RUNTIME_MESH_EMITTER_TEST_SRCS := \
+	tests/sim_runtime_backend_3d_runtime_mesh_emitter_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
+	$(SRC_DIR)/app/sim_runtime_backend.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_inspector.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitter_shapes.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_emitters.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_mesh_obstacle_proxy.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_brick_store.c \
+	$(SRC_DIR)/app/sim_runtime_3d_footprint.c \
+	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
+	$(SRC_DIR)/app/sim_runtime_mesh_accel.c \
+	$(SRC_DIR)/app/sim_runtime_mesh_obstacle_proxy.c \
+	$(SRC_DIR)/app/sim_runtime_mesh_diagnostics.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
+	$(SRC_DIR)/app/sim_runtime_obstacle.c \
+	$(CORE_SIM_DIR)/src/core_sim.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_runtime_document.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
+	$(CORE_IO_DIR)/src/core_io.c \
+	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_MESH_PREVIEW_DIR)/../../shape/external/cjson/cJSON.c
 
 SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
 	tests/sim_runtime_backend_3d_obstacle_contract_test.c \
@@ -374,8 +463,33 @@ MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/menu/menu_settings_provider_wind.c \
 	$(SRC_DIR)/app/menu/menu_settings_provider_structural.c \
 	$(SRC_DIR)/app/menu/menu_settings_provider_atmospheric.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_water.c \
 	$(SRC_DIR)/app/menu/menu_settings_draft.c \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
+	$(SRC_DIR)/app/water_mode.c \
+	$(SRC_DIR)/app/quality_profiles.c \
+	$(SRC_DIR)/app/app_config.c \
+	$(SRC_DIR)/app/data_paths.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c
+
+SCENE_MENU_LAYOUT_CONTRACT_TEST_SRCS := \
+	tests/scene_menu_layout_contract_test.c \
+	$(SRC_DIR)/app/scene_menu_layout_helpers.c \
+	$(SRC_DIR)/app/menu/menu_settings_layout.c \
+	$(SRC_DIR)/app/menu/menu_settings_schema.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_common.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_2d.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_3d.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_wind.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_structural.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_atmospheric.c \
+	$(SRC_DIR)/app/menu/menu_settings_provider_water.c \
+	$(SRC_DIR)/app/menu/menu_settings_draft.c \
+	$(SRC_DIR)/render/text_upload_policy.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
+	$(SRC_DIR)/app/water_mode.c \
 	$(SRC_DIR)/app/quality_profiles.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
@@ -400,6 +514,7 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	tests/runtime_scene_bridge_contract_session_suite.c \
 	tests/runtime_scene_bridge_contract_writeback_suite.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
+	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
@@ -409,9 +524,11 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	$(SRC_DIR)/app/editor/scene_editor_session.c \
 	$(SRC_DIR)/app/editor/scene_editor_session_overlay_edit.c \
 	$(SRC_DIR)/app/editor/scene_editor_session_labels.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/app_config.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c \
+	$(SRC_DIR)/app/sim_runtime_emitter.c \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/physics/objects/object_manager.c \
@@ -419,13 +536,46 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
+	$(CORE_MESH_PREVIEW_DIR)/src/core_mesh_preview.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_runtime_document.c \
 	$(CORE_OBJECT_DIR)/src/core_object.c \
 	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_IO_DIR)/src/core_io.c \
-	$(CORE_BASE_DIR)/src/core_base.c
+	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_MESH_PREVIEW_DIR)/../../shape/external/cjson/cJSON.c
+
+RUNTIME_MESH_PREVIEW_BRIDGE_TEST_SRCS := \
+	tests/runtime_mesh_preview_bridge_contract_test.c \
+	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
+	$(CORE_MESH_PREVIEW_DIR)/src/core_mesh_preview.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_runtime_document.c \
+	$(CORE_SCENE_DIR)/src/core_scene.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
+	$(CORE_IO_DIR)/src/core_io.c \
+	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_MESH_PREVIEW_DIR)/../../shape/external/cjson/cJSON.c
+
+RUNTIME_MESH_OBSTACLE_PROXY_TEST_SRCS := \
+	tests/runtime_mesh_obstacle_proxy_contract_test.c \
+	$(SRC_DIR)/app/sim_runtime_mesh_accel.c \
+	$(SRC_DIR)/app/sim_runtime_mesh_obstacle_proxy.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_mesh_obstacle_proxy.c \
+	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
+	$(SRC_DIR)/app/sim_runtime_3d_space.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_runtime_document.c \
+	$(CORE_OBJECT_DIR)/src/core_object.c \
+	$(CORE_UNITS_DIR)/src/core_units.c \
+	$(CORE_IO_DIR)/src/core_io.c \
+	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_MESH_PREVIEW_DIR)/../../shape/external/cjson/cJSON.c
 
 RUNTIME_SCENE_SOLVER_PROJECTION_TEST_SRCS := \
 	tests/runtime_scene_solver_projection_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
@@ -475,8 +625,10 @@ RUNTIME_SCENE_3D_TRUTH_TEST_SRCS := \
 
 SCENE_RUNTIME_LAUNCH_PROJECTION_TEST_SRCS := \
 	tests/scene_runtime_launch_projection_contract_test.c \
+	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/app/scene_runtime_launch_projection.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
+	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
@@ -495,10 +647,14 @@ SCENE_RUNTIME_LAUNCH_PROJECTION_TEST_SRCS := \
 	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
+	$(CORE_MESH_PREVIEW_DIR)/src/core_mesh_preview.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_runtime_document.c \
 	$(CORE_OBJECT_DIR)/src/core_object.c \
 	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_IO_DIR)/src/core_io.c \
-	$(CORE_BASE_DIR)/src/core_base.c
+	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_MESH_PREVIEW_DIR)/../../shape/external/cjson/cJSON.c
 
 SCENE_OBJECTS_RUNTIME_TEST_SRCS := \
 	tests/scene_objects_runtime_contract_test.c \
@@ -523,6 +679,11 @@ SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS := \
 	$(SRC_DIR)/app/editor/scene_editor_scene_library.c \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/scene_presets.c
+
+SCENE_PROJECT_CACHE_OUTPUT_STATUS_TEST_SRCS := \
+	tests/scene_project_cache_output_status_contract_test.c \
+	$(SRC_DIR)/app/scene_project_cache_output.c \
+	$(SRC_DIR)/app/physics_sim_json_helpers.c
 
 SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS := \
 	tests/scene_editor_retained_document_contract_test.c \
@@ -613,6 +774,21 @@ test-wind-tunnel-3d-contract: $(WIND_TUNNEL_3D_CONTRACT_TEST_SRCS)
 		-o $(BUILD_DIR)/wind_tunnel_3d_contract_test $(WIND_TUNNEL_3D_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/wind_tunnel_3d_contract_test
 
+test-water-mode-contract: $(WATER_MODE_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) \
+		-o $(BUILD_DIR)/water_mode_contract_test $(WATER_MODE_CONTRACT_TEST_SRCS) -lm
+	$(BUILD_DIR)/water_mode_contract_test
+
+test-water-surface-artifacts-contract: $(WATER_SURFACE_ARTIFACTS_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_DATA_DIR)/include \
+		-I$(CORE_PACK_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/water_surface_artifacts_contract_test $(WATER_SURFACE_ARTIFACTS_CONTRACT_TEST_SRCS) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
+	$(BUILD_DIR)/water_surface_artifacts_contract_test
+
 test-sim-runtime-emitter-contract: $(SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
@@ -640,6 +816,15 @@ test-sim-runtime-backend-3d-attached-emitter-contract: $(SIM_RUNTIME_BACKEND_3D_
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_backend_3d_attached_emitter_contract_test $(SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_backend_3d_attached_emitter_contract_test
+
+test-sim-runtime-backend-3d-runtime-mesh-emitter-contract: $(SIM_RUNTIME_BACKEND_3D_RUNTIME_MESH_EMITTER_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include \
+		-I$(CORE_MESH_PREVIEW_DIR)/../../shape/external -I$(CORE_IO_DIR)/include \
+		-o $(BUILD_DIR)/sim_runtime_backend_3d_runtime_mesh_emitter_contract_test $(SIM_RUNTIME_BACKEND_3D_RUNTIME_MESH_EMITTER_TEST_SRCS) $(JSON_LIBS) -lm
+	$(BUILD_DIR)/sim_runtime_backend_3d_runtime_mesh_emitter_contract_test
 
 test-sim-runtime-backend-3d-obstacle-contract: $(SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
@@ -688,7 +873,7 @@ test-sim-runtime-3d-domain-contract: $(SIM_RUNTIME_3D_DOMAIN_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
 		-I$(INC_DIR) -I$(SRC_DIR) \
-		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_3d_domain_contract_test $(SIM_RUNTIME_3D_DOMAIN_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_3d_domain_contract_test
 
@@ -696,7 +881,7 @@ test-sim-runtime-3d-solver-contract: $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
 		-I$(INC_DIR) -I$(SRC_DIR) \
-		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_3d_solver_contract_test $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_3d_solver_contract_test
 
@@ -710,9 +895,17 @@ test-menu-settings-shell-contract: $(MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
 		-I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools \
-		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/menu_settings_shell_contract_test $(MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/menu_settings_shell_contract_test
+
+test-scene-menu-layout-contract: $(SCENE_MENU_LAYOUT_CONTRACT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(SRC_DIR)/tools \
+		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-o $(BUILD_DIR)/scene_menu_layout_contract_test $(SCENE_MENU_LAYOUT_CONTRACT_TEST_SRCS) $(LIBS) -lm
+	$(BUILD_DIR)/scene_menu_layout_contract_test
 
 test-quality-profiles-contract: $(QUALITY_PROFILES_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
@@ -763,16 +956,23 @@ test-rigid2d-collision-contract: $(RIGID2D_COLLISION_CONTRACT_TEST_SRCS)
 test-scene-editor-retained-document-contract: $(SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) $(MESH_PREVIEW_BRIDGE_INCS) \
 		-o $(BUILD_DIR)/scene_editor_retained_document_contract_test $(SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_retained_document_contract_test
 
 test-scene-editor-scene-library-contract: $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_scene_library_contract_test $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_scene_library_contract_test
+
+test-scene-project-cache-output-status-contract: $(SCENE_PROJECT_CACHE_OUTPUT_STATUS_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CSTD) $(WARN) $(DEBUG) \
+		-I$(INC_DIR) -I$(SRC_DIR) -Itests \
+		-o $(BUILD_DIR)/scene_project_cache_output_status_contract_test $(SCENE_PROJECT_CACHE_OUTPUT_STATUS_TEST_SRCS) -lm
+	$(BUILD_DIR)/scene_project_cache_output_status_contract_test
 
 test-physics-sim-workspace-authoring-host: $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOST_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
@@ -798,7 +998,7 @@ test-scene-editor-viewport-contract: $(SCENE_EDITOR_VIEWPORT_TEST_SRCS)
 test-scene-editor-wind-setup-contract: $(SCENE_EDITOR_WIND_SETUP_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		$(JSON_CFLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_BASE_DIR)/include \
+		$(JSON_CFLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_wind_setup_contract_test $(SCENE_EDITOR_WIND_SETUP_TEST_SRCS) $(JSON_LIBS) -lm
 	$(BUILD_DIR)/scene_editor_wind_setup_contract_test
 
@@ -853,6 +1053,26 @@ test-runtime-scene-bridge-contract: $(RUNTIME_SCENE_BRIDGE_TEST_SRCS)
 		-o $(BUILD_DIR)/runtime_scene_bridge_contract_test $(RUNTIME_SCENE_BRIDGE_TEST_SRCS) $(JSON_LIBS) -lm
 	$(BUILD_DIR)/runtime_scene_bridge_contract_test
 
+test-runtime-mesh-preview-bridge-contract: $(RUNTIME_MESH_PREVIEW_BRIDGE_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include \
+		-I$(CORE_MESH_PREVIEW_DIR)/../../shape/external \
+		-I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include \
+		-o $(BUILD_DIR)/runtime_mesh_preview_bridge_contract_test $(RUNTIME_MESH_PREVIEW_BRIDGE_TEST_SRCS) $(JSON_LIBS) -lm
+	$(BUILD_DIR)/runtime_mesh_preview_bridge_contract_test
+
+test-runtime-mesh-obstacle-proxy-contract: $(RUNTIME_MESH_OBSTACLE_PROXY_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include \
+		-I$(CORE_MESH_PREVIEW_DIR)/../../shape/external \
+		-I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include \
+		-o $(BUILD_DIR)/runtime_mesh_obstacle_proxy_contract_test $(RUNTIME_MESH_OBSTACLE_PROXY_TEST_SRCS) $(JSON_LIBS) -lm
+	$(BUILD_DIR)/runtime_mesh_obstacle_proxy_contract_test
+
 test-structural-runtime-split-contract: $(STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
@@ -868,6 +1088,8 @@ VOLUME_FRAMES_3D_EXPORT_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/export/volume_frames.c \
 	$(SRC_DIR)/export/volume_frames_vf3d.c \
+	$(SRC_DIR)/export/water_surface_artifacts.c \
+	$(SRC_DIR)/app/water_object_coupling.c \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
@@ -916,6 +1138,8 @@ VOLUME_FRAMES_3D_TINY_PARITY_TEST_SRCS := \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/export/volume_frames.c \
 	$(SRC_DIR)/export/volume_frames_vf3d.c \
+	$(SRC_DIR)/export/water_surface_artifacts.c \
+	$(SRC_DIR)/app/water_object_coupling.c \
 	$(SRC_DIR)/export/export_paths.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \

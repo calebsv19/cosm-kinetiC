@@ -14,6 +14,7 @@
 #include "app/editor/scene_editor_viewport.h"
 #include "app/editor/scene_editor_widgets.h"
 #include "app/editor/scene_editor_scroll.h"
+#include "app/sim_runtime_mesh_diagnostics.h"
 #include "app/preset_io.h"
 #include "app/scene_presets.h"
 #include "input/input_context.h"
@@ -24,6 +25,37 @@
 #define OBJECT_DELETE_MARGIN 0.15f
 #define DEFAULT_BOUNDARY_STRENGTH 25.0f
 #define MAX_IMPORT_FILES 256
+
+typedef enum SceneEditorInspectorView {
+    SCENE_EDITOR_INSPECTOR_SCENE_PHYSICS = 0,
+    SCENE_EDITOR_INSPECTOR_OBJECT_PHYSICS,
+    SCENE_EDITOR_INSPECTOR_SOURCE_EMITTER,
+    SCENE_EDITOR_INSPECTOR_DIAGNOSTICS
+} SceneEditorInspectorView;
+
+typedef struct SceneEditorSelectedMeshDiagnosticCache {
+    PhysicsSimRuntimeMeshDiagnostic diagnostic;
+    bool attempted;
+    bool valid;
+    int instance_index;
+    PhysicsSimRuntimeMeshEditorRole role;
+    char runtime_mesh_path[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX];
+    char preview_path[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX];
+    bool preview_metadata_valid;
+    size_t preview_source_vertex_count;
+    size_t preview_source_triangle_count;
+    size_t preview_edge_count;
+    FluidEmitterType emitter_type;
+    FluidEmitter3DSourceMode source_mode_3d;
+    FluidEmitter3DSurface surface_3d;
+    FluidEmitter3DObstacleMode obstacle_mode_3d;
+    float radius;
+    float strength;
+    float thermal_buoyancy_3d;
+    double domain_width;
+    double domain_height;
+    double domain_depth;
+} SceneEditorSelectedMeshDiagnosticCache;
 
 typedef struct SceneEditorState {
     SDL_Window   *window;
@@ -86,6 +118,8 @@ typedef struct SceneEditorState {
     SDL_Rect depth_rect;
     int layout_win_w;
     int layout_win_h;
+    SceneEditorInspectorView inspector_view;
+    SceneEditorSelectedMeshDiagnosticCache selected_mesh_diagnostic_cache;
 
     int  selected_emitter;
     int  hover_emitter;
@@ -119,6 +153,11 @@ typedef struct SceneEditorState {
     EditorButton btn_boundary;
     EditorButton btn_overlay_dynamic;
     EditorButton btn_overlay_static;
+    EditorButton btn_mesh_role_solid;
+    EditorButton btn_mesh_role_visual;
+    EditorButton btn_mesh_role_surface;
+    EditorButton btn_mesh_role_heat;
+    EditorButton btn_mesh_role_flow;
     EditorButton btn_overlay_mode_3d;
     EditorButton btn_overlay_surface_3d;
     EditorButton btn_overlay_obstacle_3d;
@@ -164,6 +203,7 @@ typedef struct SceneEditorState {
     bool boundary_mode;
     int  boundary_hover_edge;
     int  boundary_selected_edge;
+    WindTunnel3DFace wind_face_hover;
 
     int pointer_x;
     int pointer_y;
@@ -193,6 +233,7 @@ float sanitize_domain_dimension(float value);
 void editor_reflow_layout(SceneEditorState *state);
 void editor_update_dimension_rects(SceneEditorState *state);
 void editor_update_canvas_layout(SceneEditorState *state);
+void editor_update_selected_mesh_diagnostic(SceneEditorState *state);
 SDL_Rect editor_name_rect(const SceneEditorState *state);
 SDL_Rect editor_active_viewport_rect(const SceneEditorState *state);
 void editor_begin_name_edit(SceneEditorState *state);

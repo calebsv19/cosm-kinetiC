@@ -1,8 +1,8 @@
 # Physics Sim Headless CLI
 
-`physics_sim_headless` is the direct command path for running a retained
-`scene_runtime.json` without using the menu or mutating persistent runtime
-state.
+`physics_sim_headless` is the direct command path for running a scene project,
+a retained `scene_runtime.json`, or the standalone Water Basin mode without
+using the menu or mutating persistent runtime state.
 
 For long-running detached supervision, use `physics_sim_job_runner` on top of
 the same headless CLI.
@@ -26,10 +26,80 @@ physics_sim/physics_sim_headless \
   --save-volume-frames
 ```
 
+Run a scene project cache update:
+
+```bash
+physics_sim/physics_sim_headless \
+  --scene-project /path/to/scene_project_dir \
+  --frames 100 \
+  --sim-steps-per-frame 8 \
+  --grid 96x48x48 \
+  --save-volume-frames \
+  --overwrite
+```
+
+When a retained `3D` scene selected in the desktop menu is also a scene project
+root, the menu reports active-cache status from
+`physics_sim/active_cache_manifest.json` or `physics_sim/cache_manifest.json`.
+Use `Cache Cmd` to copy the equivalent headless update command; the menu does
+not execute scene-project cache updates directly.
+
+Project mode validates that the project root exists and contains
+`scene_authoring.json` plus `scene_runtime.json`; `scene_project.json` is
+accepted when present. It derives the runtime scene from
+`<project>/scene_runtime.json` and writes the run under
+`<project>/physics_sim/runs/<run_id>`. Do not combine `--scene-project` with
+`--output-root`; use direct `--runtime-scene` mode for explicit external output
+roots. The run id defaults to
+`physics-run-YYYYMMDDTHHMMSSZ`; set
+`PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-test-0001` for deterministic
+tests. After a successful `--save-volume-frames` run, PhysicsSim promotes the
+generated cache into `assets/vf3d/active`, `assets/physics/active`, retained
+`assets/*/runs/<run_id>` slots, and relative-path cache manifests under
+`physics_sim/`. It does not mutate `scene_authoring.json`.
+
+Run a standalone Water Basin simulation:
+
+```bash
+physics_sim/physics_sim_headless \
+  --water-mode \
+  --frames 100 \
+  --sim-steps-per-frame 4 \
+  --grid 64x32x32 \
+  --water-level 0.45 \
+  --output-root _private_workspace_artifacts/agent_runs/physics_trio/<scene_slug>/physics_sim_water \
+  --save-volume-frames
+```
+
 Useful flags:
 
+- `--scene-project <dir>`: project-local cache-output mode. The CLI reads
+  `<dir>/scene_runtime.json`, requires `<dir>/scene_authoring.json`, accepts
+  optional `<dir>/scene_project.json`, and writes/promotes cache output back
+  under the same project after a successful saved-volume run. This mode rejects
+  `--output-root` so cache runs do not drift into disconnected artifact roots.
 - `--runtime-scene <path>`: compiled retained runtime scene to project into
   PhysicsSim.
+- `--water-mode`: run the standalone app-local `Water Basin` scene instead of
+  requiring a retained runtime scene. This is the first Water mode scaffold:
+  it seeds the lower 3D volume from `--water-level`, exports normal
+  `.vf3d`/`.pack` volume frames, and writes the first render-facing water
+  heightfield sidecar contract.
+- `--water-level <0..1>`: normalized standalone Water Basin fill height.
+  Defaults to `0.5` and is clamped to the closed interval `[0, 1]`.
+- `--water-review-ripples`: apply a deterministic review disturbance to the
+  exported Water mode heightfield sidecars. This does not change the underlying
+  VF3D/VF3H volume state; it is a headless visual-review surface pass for
+  proving RayTracing water optics before the solver grows a real wave model.
+- `--water-review-ripple-amplitude <meters>`: optional metric amplitude for
+  `--water-review-ripples`. Values are clamped against the export voxel size.
+  Omit it to use the exporter default.
+- `--water-object-fixture`: enable the deterministic
+  `water_pool_submerged_solid` fixture in standalone Water mode. The fixture
+  stamps a simple submerged box into the Water Basin solid-mask path and writes
+  first-pass object coupling diagnostics plus export-side displacement into the
+  water surface sidecars.
+- `--water-pool-submerged-solid`: alias for `--water-object-fixture`.
 - `--frames <n>`: positive frame count.
 - `--sim-steps-per-frame <n>`: run the stable core sim step `n` times before
   exporting each saved frame. Defaults to `1`. Use this to increase visible
@@ -70,7 +140,11 @@ Useful flags:
 - `--resume`: reserved and currently rejected; resume needs frame-continuation
   semantics before it can be truthful.
 - `--save-volume-frames`: export `.vf3d`, `.pack`, `manifest.json`, and
-  `scene_bundle.json` under `volume_frames/<Preset>/`.
+  `scene_bundle.json` under `volume_frames/<Preset>/`. In Water mode this also
+  exports `water_manifest_v1.json` and per-frame
+  `water_surface_%06d.json` heightfield sidecars. `scene_bundle.json` links the
+  sidecar through `water_source` without changing the existing `fluid_source`
+  VF3D contract.
 - `--save-wind-projection-frames`: export deterministic headless Wind analyzer
   BMP frames under `wind_projection_frames/`. These do not require SDL/Vulkan
   renderer capture; red is max velocity magnitude, green is max density, and
@@ -85,6 +159,131 @@ Useful flags:
   solver/analyzer fields.
 - `--skip-present`: default. Suppresses presentation.
 - `--present`: use the existing presented renderer path.
+
+Path trust boundary:
+
+- `physics_sim_headless` and `physics_sim_job_runner` are trusted local
+  operator tools. They do not sandbox arbitrary paths and should not be exposed
+  as public upload, web, or untrusted worker request endpoints without a
+  separate wrapper policy.
+- `--runtime-scene` is a read-only local input path. It may contain authored
+  runtime scene references that are valid only on the authoring machine unless
+  a later worker bundle explicitly stages those assets.
+- `--scene-project` is a trusted local project directory. PhysicsSim reads
+  `scene_runtime.json`, validates `scene_authoring.json`, and only writes
+  PhysicsSim-owned cache/run directories and manifests under that project.
+  LineDrawing-owned authoring truth is not silently modified.
+- `--output-root` is the only direct run artifact root. The CLI rejects
+  non-empty output roots by default; `--overwrite` is an intentional local
+  operator action that recursively clears that root before writing new
+  artifacts.
+- `--summary` and `--progress` are sidecar write paths. Prefer leaving them
+  under `--output-root` unless a supervising tool, such as the detached job
+  runner, owns a separate job-status root.
+- `--cancel-flag` is read-only from the headless process. The detached job
+  runner owns writing `cancel_requested.flag` under the job root.
+- `--jobs-root` is detached-runner state, not solver output. It owns
+  `job_request.json`, `job_status.json`, `run_progress.json`, `stdout.log`,
+  `stderr.log`, `pid.txt`, `cancel_requested.flag`, and
+  `result_summary.json` for each job id.
+- Direct detached requests may still choose their own `runtime_scene_path` and
+  `output_root`. Shared job bundles rewrite artifacts under the generated job
+  root; do not treat direct requests as untrusted remote payloads.
+- Runtime scenes can reference runtime mesh assets by local absolute path,
+  scene-relative/default mesh asset path, or supported local recovery paths.
+  Those references are trusted local authoring conveniences. A portable worker
+  request must stage the runtime scene, runtime mesh documents, preview
+  sidecars, and run config together.
+- Private/generated lanes such as `build/agent_runs/`,
+  `_private_workspace_artifacts/`, `tmp/headless_*`, and detached job roots are
+  run artifacts. They are evidence for agents and operators, not public source
+  truth or package inputs unless a package target explicitly stages them.
+
+Standalone Water proof:
+
+- `make -C physics_sim test-physics-sim-headless-water-mode` runs
+  `--water-mode` with a small grid, `--water-level 0.42`, and
+  `--save-volume-frames`; it validates `run_summary.json`,
+  `run_progress.json`, `volume_frames/Water Basin/frame_*.vf3d`, matching
+  `.pack` files, `manifest.json`, `scene_bundle.json`, the Y-up space
+  contract, `water_manifest_v1.json`, and per-frame water heightfield sidecars
+  with finite normals.
+- `make -C physics_sim test-physics-sim-headless-water-object-coupling` runs
+  `--water-mode --water-object-fixture` and validates the
+  `water_pool_submerged_solid` footprint, wet overlap, nonzero displaced
+  volume, applied displacement delta range, and `scene_bundle.json.water_source`
+  continuity. The current fixture proof reports `64` object solid cells,
+  `32` wet-overlap cells, about `0.148148 m^3` displaced volume, nonzero
+  displacement sample/RMS diagnostics, and object-zone slope/height-variance
+  diagnostics on the smoke grid.
+- `make -C physics_sim test-physics-sim-headless-water-object-quality-compare`
+  runs a PhysicsSim-only WTR-6.5 comparison between a baseline
+  `24x16x24` / `6` frame / `2` substep object-water fixture and a quality
+  `36x18x36` / `8` frame / `3` substep fixture. It writes
+  `tmp/headless_water_object_quality_compare/wtr65_quality_compare_summary.json`
+  plus a text summary with sample-count, footprint, displacement RMS,
+  object-zone height-variance, object-zone slope, and capped-sample deltas.
+  The gate enforces bounded quality-profile object-zone roughness
+  (`WTR65_MAX_OBJECT_ZONE_STDDEV_M`, default `0.010`, and
+  `WTR65_MAX_OBJECT_ZONE_SLOPE`, default `0.050`) while keeping capped
+  displacement samples at zero. It validates the current smoothed export-side
+  displacement and deterministic wake response; it does not claim
+  solver-authored wake coupling.
+
+Water object-coupling sidecars add `summary.object_coupling` fields:
+
+- `enabled`
+- `fixture_active`
+- `fixture_id`
+- `object_solid_cells`
+- `object_footprint_columns`
+- `object_wet_overlap_cells`
+- `displaced_volume_m3`
+- `displacement_applied`
+- `displacement_delta_min_m`
+- `displacement_delta_max_m`
+- `displacement_delta_sum_m`
+- `displacement_delta_abs_sum_m`
+- `displacement_delta_rms_m`
+- `displacement_sample_count`
+- `displacement_capped_sample_count`
+- `displacement_weight_sum`
+- `displacement_weight_max`
+- `object_zone_height_min_y`
+- `object_zone_height_max_y`
+- `object_zone_height_avg_y`
+- `object_zone_height_stddev_m`
+- `object_zone_max_slope`
+- `affected_min_x`
+- `affected_max_x`
+- `affected_min_z`
+- `affected_max_z`
+
+Single-frame Water optics proof:
+
+- `make -C ray_tracing test-ray-tracing-render-headless-water-optics-review`
+  runs `physics_sim_headless --water-mode --water-review-ripples`, warms the
+  standalone basin for `18` frames at `4` solver steps per frame, selects the
+  final water sidecar frame, and renders one RayTracing transparent-water BMP
+  through the generated `scene_bundle.json.water_source` path.
+- `make -C ray_tracing test-ray-tracing-render-headless-water-basin-surface-review`
+  runs a lighter large-basin visual proof. Water mode now resolves its
+  standalone default basin as a square X/Z footprint, so the final
+  `water_surface_*.json` sidecar covers a broad basin surface instead of the
+  earlier narrow strip. The RayTracing fixture remaps the PhysicsSim Y-up
+  sidecar into its Z-up render frame, then uses deterministic review ripples
+  and plain basin/floor/wall geometry for one-frame optics review.
+- `make -C ray_tracing test-ray-tracing-render-headless-water-moving-light-review`
+  runs the WTR-5.4 sequence proof. PhysicsSim exports a warmed Water Basin with
+  deterministic review ripples, then RayTracing renders four consecutive water
+  sidecar frames with an authored moving light path and verifies both
+  heightfield evolution and frame-to-frame visual deltas.
+- `make -C ray_tracing test-ray-tracing-render-headless-water-long-motion-review`
+  runs the WTR-5.5 long-motion sparse-frame proof. PhysicsSim exports a
+  `201`-frame Water Basin with `4` simulation steps per exported frame; the
+  review samples frames `40, 80, 120, 160, 200` and renders full RayTracing
+  basin BMP frames/contact sheets from `scene_bundle.json.water_source` under
+  `ray_tracing/build/agent_runs/physics_trio/water_long_motion_review/`.
 
 Long-tunnel Wind visual proof:
 
@@ -191,6 +390,7 @@ Output summary schema:
 {
   "schema": "physics_sim_headless_run_summary_v1",
   "runtime_scene": "<input scene_runtime.json>",
+  "mode": "runtime_scene",
   "output_root": "<output root>",
   "grid_override": true,
   "grid": {"width": 96, "height": 48, "depth": 48},
@@ -198,13 +398,52 @@ Output summary schema:
   "frames_completed": 2,
   "sim_steps_per_frame": 8,
   "save_volume_frames": true,
+  "volume_export_start_frame": 0,
+  "volume_export_stride": 1,
+  "volume_export_max_frames": 0,
   "save_render_frames": false,
   "skip_present": true,
   "output_policy": "fail_if_exists",
   "result_code": 0,
-  "status": "passed"
+  "status": "passed",
+  "wind_visual_mode": "flow",
+  "atmosphere": {
+    "initial_state_source": "atmospheric_standalone",
+    "parsed_settings_available": true,
+    "settings": {
+      "enabled": true,
+      "seed": 240627,
+      "base_density": 0.015,
+      "density_scale": 15.0,
+      "density_threshold": 0.30,
+      "region_count": 3,
+      "regions": []
+    },
+    "seed": {
+      "seeded": true,
+      "seeded_cell_count": 2880,
+      "max_density": 14.56
+    },
+    "warm_start": {"loaded": false},
+    "final_volume": {
+      "debug_view_available": true,
+      "active_density_cells": 1764,
+      "max_density": 14.45,
+      "export_cache_materialization_count": 0
+    }
+  }
 }
 ```
+
+Standalone Water summaries set `"mode": "water"` and include
+`"water_level": <normalized fill height>`.
+
+Retained-scene atmospheric summaries always include an `"atmosphere"` block so
+operators can separate parse/seed/export problems without opening the VF3D by
+hand. `settings` is the sanitized atmosphere payload that reached the backend,
+`seed` reports the procedural initial-field result, `warm_start` reports any
+loaded VF3D warm-start source, and `final_volume` reports the final debug/export
+view density metrics seen by the backend report.
 
 Wind shot manifest schema:
 
@@ -293,6 +532,25 @@ The richer progress fields are additive and intended for long solver frames:
 - `stage`
 - `updated_at_utc`
 
+When `--save-volume-frames` is enabled, long warm-up runs can avoid writing
+every intermediate VF3D/PACK frame by selecting retained exports directly:
+
+```bash
+physics_sim/physics_sim_headless \
+  --water-mode \
+  --frames 1041 \
+  --save-volume-frames \
+  --volume-export-start-frame 150 \
+  --volume-export-stride 10 \
+  --volume-export-max-frames 90 \
+  --output-root <output-root>
+```
+
+The selected frames keep their original simulation frame indices in filenames
+and manifests. For example, start `2`, stride `2`, and max `2` writes
+`frame_000002.*`, `frame_000004.*`, `water_surface_000002.json`, and
+`water_surface_000004.json`; skipped frames are not emitted.
+
 Detached runner:
 
 ```bash
@@ -346,6 +604,36 @@ Detached request schema:
 }
 ```
 
+Detached request payload and resource boundary:
+
+- Detached requests are trusted-local operator requests unless they arrive
+  through a later worker-safe wrapper or bundle policy.
+- `runtime_scene_path` must exist before submit. Direct requests may point at a
+  local authored scene; portable/worker-safe requests need a bundle that stages
+  the scene payload and assets explicitly.
+- `output_root` is the direct artifact root for direct requests. Shared job
+  bundles rewrite artifacts under the generated job root so worker-style runs
+  do not write to an arbitrary direct-request output path.
+- `frames` and `sim_steps_per_frame` must be positive. The direct CLI parser
+  accepts broad local values for operator-run long proofs; remote or
+  unattended worker wrappers should impose their own profile caps before
+  submit.
+- `progress_interval` must be non-negative. `0` means initial/final progress
+  only.
+- `grid`, when present, must be `widthxheightxdepth` with each axis in
+  `4..512`.
+- `volume_export_start_frame`, `volume_export_stride`, and
+  `volume_export_max_frames` select which simulation frames are written when
+  `save_volume_frames` is true. Defaults are start `0`, stride `1`, and max
+  `0` for unlimited selected frames.
+- `wind_shot_camera` / `wind_shot_camera_profile` is restricted to the known
+  profiles: `three_quarter`, `side`, `top`, `downstream`, and
+  `runtime_default`.
+- `save_volume_frames`, `save_render_frames`, `save_wind_projection_frames`,
+  `skip_present`, and `overwrite` are boolean capability flags. `overwrite`
+  remains an explicit local deletion authority through the selected
+  `output_root`.
+
 Detached job status schema is `physics_sim_detached_job_status_v1` and lives
 under `build/agent_runs/jobs/<job_id>/job_status.json`. It carries:
 - lifecycle state: `queued`, `starting`, `running`, `stalled`, `completed`,
@@ -374,6 +662,8 @@ Output policy:
   frames with a new run.
 - Use `--overwrite` when rerunning the same output root intentionally. It
   recursively clears that root before writing new artifacts.
+- Keep intentional reruns under an agent/run-owned output root, not broad user
+  directories, because overwrite is a local deletion authority.
 - Resume is intentionally unsupported in this slice.
 
 Displayless behavior:
@@ -391,11 +681,17 @@ Validation:
 make -C physics_sim test-physics-sim-headless-cli
 make -C physics_sim test-physics-sim-job-runner-smoke
 make -C physics_sim test-physics-sim-job-runner-policy
+make -C physics_sim test-physics-sim-job-runner-bundle-smoke
 ```
 
-The smoke uses the Phase 2 `gallery_room_blocks_v2` LineDrawing runtime scene
-and checks that `run_summary.json` reports completed frames, `run_progress.json`
-reaches `passed`, the richer solver-step fields are present, default output
-reuse is rejected, `--overwrite` reruns, and `volume_frames/` exists. The
-detached runner smoke/policy lanes then validate submit/status/cancel,
-overwrite safety, and synthetic `stalled` classification.
+The default smoke path uses the checked-in
+`tests/fixtures/runtime_scene_primitive_retained.json` retained-scene fixture,
+so it can run without private machine artifacts. Set
+`PHYSICS_SIM_HEADLESS_RUNTIME_SCENE=/path/to/scene_runtime.json` to rerun the
+same smoke against a private local-system scene, such as a Physics Trio
+gallery-room output. The smoke checks that `run_summary.json` reports completed
+frames, `run_progress.json` reaches `passed`, the richer solver-step fields are
+present, default output reuse is rejected, `--overwrite` reruns, and
+`volume_frames/` exists. The detached runner smoke/policy/bundle lanes then
+validate submit/status/cancel, overwrite safety, shared bundle projection, and
+synthetic `stalled` classification.

@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-06-13
+Last updated: 2026-06-24
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -15,6 +15,22 @@ Last updated: 2026-06-13
 - Producer-side truthful `3D` export is complete (through `PSBU-11D`).
 - Direct retained-scene headless CLI volume runs are available through
   `physics_sim_headless`.
+- Headless scene-project cache output is now available through
+  `physics_sim_headless --scene-project <dir> --save-volume-frames`. Project
+  mode validates `scene_authoring.json` and `scene_runtime.json`, accepts
+  optional `scene_project.json`, derives the runtime scene from the project,
+  writes the default run under `physics_sim/runs/<physics-run-id>`, promotes
+  VF3D/physics artifacts into `assets/vf3d/active` and
+  `assets/physics/active`, and writes project-relative cache manifests without
+  mutating `scene_authoring.json`.
+- Standalone Water Basin headless runs are available through
+  `physics_sim_headless --water-mode`; the current scaffold seeds the interior
+  bottom 3D volume from a normalized `water_level`, resolves the default basin
+  as a square X/Z footprint, exports standard VF3D/VF3H frames, and writes
+  explicit water heightfield sidecars. The optional
+  `--water-object-fixture` path now stamps the deterministic
+  `water_pool_submerged_solid` fixture into the Water Basin solid mask and
+  writes object-coupling/displacement diagnostics into water sidecars.
 - Detached submit/status/cancel supervision is now available through
   `physics_sim_job_runner`.
 - The first trio detached chain adapter now routes through
@@ -26,6 +42,24 @@ Last updated: 2026-06-13
   `run_progress.json`, rejects non-empty output roots by default, and requires
   `--overwrite` for intentional reruns into the same root. `--resume` is
   reserved and currently rejected.
+- `run_summary.json` now includes an `atmosphere` diagnostics block for
+  retained-scene/headless runs. It records the backend initial-state source,
+  sanitized parsed atmosphere settings, procedural seed cell count/max density,
+  VF3D warm-start stats when applicable, and final debug/export-facing volume
+  density metrics.
+- Headless volume export can now select retained frames natively with
+  `--volume-export-start-frame`, `--volume-export-stride`, and
+  `--volume-export-max-frames`; summary/progress JSON report selected and
+  skipped volume frame counts, and detached job-runner requests preserve the
+  same fields.
+- Headless and detached job paths are trusted-local operator boundaries, not
+  public upload or untrusted worker request surfaces. `--runtime-scene` is a
+  read-only local input, `--output-root` is the direct run artifact root,
+  `--summary`/`--progress` are sidecar writes, `--cancel-flag` is read by
+  headless and written by the detached runner under the job root, and
+  `--jobs-root` owns detached job state. Direct detached requests may choose
+  local scene/output paths; shared job bundles rewrite artifacts under the job
+  root.
 - `run_progress.json` is now solver-step aware:
   - schema `physics_sim_headless_run_progress_v2`
   - per-frame `sim_steps_completed_in_frame`
@@ -42,6 +76,9 @@ Last updated: 2026-06-13
   - `pid.txt`
   - `result_summary.json`
   - output-root artifacts under the requested run directory
+- The packaged desktop launcher defaults the shared TimerHUD overlay off for
+  normal app use. Developers can still re-enable it with
+  `PHYSICS_SIM_TIMER_HUD=1` / `PHYSICS_SIM_TIMER_HUD_OVERLAY=1`.
 - Detached status schema is `physics_sim_detached_job_status_v1` and exposes
   `queued`, `starting`, `running`, `stalled`, `completed`, `failed`, and
   `cancelled` states without requiring a live PTY.
@@ -49,29 +86,179 @@ Last updated: 2026-06-13
   - raw `.vf3d`
   - additive `VF3H` `.pack`
   - truthful `manifest.json` / `scene_bundle.json` metadata (`frame_contract=vf3d`, `space_mode=3d`, `axis_authority=xyz`)
+- Water mode keeps the existing 3D density/velocity/pressure/solid-mask fields
+  for VF3D/VF3H debugging and now additionally emits
+  `water_manifest_v1.json` plus per-frame `water_surface_%06d.json`
+  heightfield sidecars. The sidecar uses X/Z row-major samples, Y heights,
+  finite normals, surface min/max/average diagnostics, wet/dry/solid column
+  counts, material defaults for later RayTracing water import, and optional
+  `summary.object_coupling` diagnostics for the `water_pool_submerged_solid`
+  fixture: object solid cells, footprint columns, wet-overlap cells,
+  approximate displaced volume, affected sample bounds, and applied
+  displacement delta range. WTR-6.5 adds object-local quality diagnostics to
+  the same sidecar contract: displacement sample count, kernel weight
+  sum/max, delta sum/absolute-sum/RMS, capped-sample count, object-zone height
+  min/max/average/stddev, and object-zone max slope. These are reporting
+  metrics over the current export-side response, not solver-authored wake
+  coupling yet. `test-physics-sim-headless-water-object-quality-compare` now
+  runs a PhysicsSim-only baseline-vs-quality comparison and writes
+  `wtr65_quality_compare_summary.json`. The current WTR-6.5 export-side
+  response uses broader/lower displacement support plus a bounded
+  deterministic ring/shear wake term; wet-stencil object-zone diagnostics now
+  show low roughness (`0.003482646 m` quality-profile height stddev and
+  `0.019251581` quality-profile max slope in the default comparison), with
+  zero capped displacement samples. This remains an export-side approximation,
+  not solver-authored two-phase water.
 - First-pass parity fixture is locked and deterministic (tiny-domain proof lane).
 - Downstream consumer work remains separate:
-  - `ray_tracing` ingest/render handoff is the next cross-program boundary.
+  - `ray_tracing` now ingests Water Basin `scene_bundle.json.water_source`
+    sidecars for backend/headless transparent-water review and remaps
+    PhysicsSim Y-up heights into RayTracing's Z-up render frame for horizontal
+    basin views; WTR-5.4 moving-light multi-frame review is landed, WTR-5.5
+    adds a long-motion sparse full-RayTracing basin review from frames
+    `40, 80, 120, 160, 200` of a `201`-frame Water Basin run, and WTR-6 now
+    has a first object-water proof with deterministic displacement diagnostics,
+    a full-RayTracing basin frame sequence/MP4 review under
+    `ray_tracing/build/agent_runs/physics_trio/water_object_coupling_review/`,
+    a WTR-6.5 direct-light smoothed-wake preview under
+    `ray_tracing/build/agent_runs/physics_trio/water_object_coupling_wtr65_direct_light_preview/`,
+    a matched short WTR-6.5 Disney-v2 temporal-2 comparison under
+    `ray_tracing/build/agent_runs/physics_trio/water_object_coupling_wtr65_disney_v2_t2_short_compare/`,
+    and a corrected local `100`-frame Disney-v2 slow-light review under
+    `ray_tracing/build/agent_runs/physics_trio/water_object_coupling_hq_local_64/ray_tracing_disney_v2_local_t2_100f_slowlight_corrected/`;
+    stronger solver-authored object coupling, smoother object-water boundary
+    behavior, and editor controls remain follow-up cross-program boundaries.
 - Atmospheric preset initialization is now available as an app-local current-state lane:
   - standalone Atmospheric `2D` and `3D` modes seed deterministic density and velocity fields from the atmospheric sampler instead of starting blank
   - normal `3D` fluid/box presets can opt into the same procedural initializer through the compact `Atmo Init` settings control while keeping their normal mode identity
   - custom preset persistence uses v14 for the optional `3D` atmospheric initial-state bit alongside embedded `ATMOS` settings; older v13 files load with that optional layer off
   - exported Atmospheric `3D` `.vf3d` / `VF3H` `.pack` frames can be selected as session-local warm starts for Atmospheric `3D`; warm-start file paths are runtime config, not portable preset-owned data
   - runtime reports and the HUD distinguish blank starts, standalone atmospheric procedural starts, optional atmospheric procedural starts, and loaded warm-start starts
+- Runtime mesh assets now have a first actual-geometry `3D` fluid integration:
+  - retained runtime-scene mesh instances can carry shared `core_mesh_preview`
+    sidecar path/probe/metadata for editor and runtime overlay display
+  - preview sidecars are visual and diagnostic payloads only; PhysicsSim solver
+    effects use authoritative `mesh_asset_runtime_v1` geometry
+  - imported/runtime mesh assets default to solid obstacles when a runtime mesh
+    path is available
+  - mesh instances can opt out with `visual_only`, `none`, or
+    `fluid_obstacle: false`
+  - mesh instances can opt into the existing emitter flow with
+    `extensions.physics_sim.fluid_behavior` values such as `surface_emitter`,
+    `surface_heat_emitter`, and `boundary_flow_emitter`, or the structured
+    `extensions.physics_sim.emitter` object
+  - mesh emitters clear solid obstacle occupancy and emit density, velocity,
+    sink, and heat through voxelized actual runtime mesh footprints
+  - closed-volume runtime mesh fills now use a first app-local triangle
+    acceleration path over transformed runtime mesh triangles, and high-triangle
+    generated contract coverage proves acceleration stats for imported-mesh-like
+    assets
+  - the `3D` scaffold backend keeps a prepared runtime mesh cache for loaded
+    documents, transformed vertices, bounds, and acceleration trees so static
+    mesh obstacles and mesh-attached emitters can reuse mesh work across backend
+    lifetime
+  - prepared runtime mesh entries also cache domain-specific voxel footprints,
+    allowing repeated static fixtures to stamp occupied cell indices without
+    rerunning triangle shell rasterization and closed-volume point tests on
+    every pass
+  - prepared runtime mesh cache entries include runtime file size/mtime
+    signatures, so edited mesh files trigger an in-place stale refresh on the
+    next cache lookup
+  - oversized mesh/grid intersections use a conservative actual-mesh
+    bounds-fill fallback instead of stalling the solver
+  - the scene editor exposes selected runtime mesh role controls for Solid,
+    Visual Only, Surface Emitter, Surface Heat Emitter, and Boundary Flow
+    Emitter
+  - selected runtime mesh objects now show a compact right-inspector readout
+    for solver role/effect, runtime file, preview metadata/probe state,
+    cached diagnostic footprint, runtime triangle and BVH stats, runtime file
+    signature availability, and Wind projected area; this readout is cached on
+    editor state and is not drawn through the always-on HUD
+  - runtime mesh/import diagnostics are split by owner: import bridges report
+    authored/runtime-scene input and path-resolution problems; runtime mesh
+    diagnostics report role, preview/runtime paths, voxel footprint, BVH/cache
+    fallback, bounds/domain overlap, and Wind projected area; wording-only
+    changes should not modify voxelization, prepared-cache behavior, live-watch
+    behavior, or Wind inspector UI
+  - runtime scene/runtime mesh paths are trusted local authored inputs unless a
+    worker-safe bundle stages the scene, runtime mesh documents, preview
+    sidecars, and run config together; absolute paths and `$HOME/Desktop/stls`
+    recovery are local-authoring conveniences, not portable payload guarantees
+  - Apply/Save persists per-mesh role and emitter parameters into each mesh
+    object's `extensions.physics_sim` block while preserving non-PhysicsSim
+    object extensions
+  - the runtime scene emitter diagnostics tool reports each mesh instance's
+    runtime path, preview path, transform, bounds, role, voxel footprints,
+    acceleration usage/tree stats, budget fallback state, bounds volume, and
+    Wind projected area
 
 ## Runtime and Editor Snapshot
 - Runtime/editor retained-scene lanes are active and structurally separated from legacy compatibility mapping.
+- Retained `3D` runtime views use a compact top-left HUD summary for run state,
+  domain, volume, slice, Wind metrics, and quality. Detailed backend, mesh,
+  cache, and Wind object diagnostics should route through inspector panels,
+  headless outputs, or diagnostic CLIs instead of the always-on HUD.
+- GUI status and detailed diagnostics remain separate surfaces. Menu status
+  text is for short user-facing confirmations or acknowledgement prompts;
+  editor status cards summarize Apply/Save state; inspectors own selected
+  object/runtime-mesh/Wind details; launcher setup detail belongs in
+  `launcher.log`, `--print-config`, and `--self-test`; direct headless detail
+  belongs in stderr plus `run_summary.json`, `run_progress.json`, and exported
+  artifacts; detached jobs own `job_status.json`, `stdout.log`, `stderr.log`,
+  and wrapper stderr diagnostics; renderer/Vulkan stderr remains developer
+  diagnostics unless a later selected workflow promotes it into a user-facing
+  inspector or artifact lane.
+- The retained-scene editor right pane now routes through an app-local
+  inspector module with explicit Scene Physics, Object Physics, and
+  Source/Emitter grouping. Retained `3D` Source/Jet/Sink controls now live in
+  that right Source/Emitter inspector context, while legacy non-retained scenes
+  keep the left-pane global source row. Selected runtime mesh objects also show
+  cached Object Physics readouts for mesh role/effect, preview metadata,
+  diagnostic voxel/BVH stats, file signature state, and Wind projected area.
+  Existing button actions and save/apply behavior are unchanged.
 - Menu/editor shell buttons now use bounded shared `kit_ui` button
   spec/state/style semantics through app-local `physics_sim_ui_button.*`
   wrappers, while SDL drawing, palette tuning, and button placement remain
   app-local.
 - Agent/headless retained-scene runs can now bypass menu interaction:
   - build with `make -C physics_sim physics_sim_headless`
+  - run `physics_sim/physics_sim_headless --scene-project <project_dir> --frames <n> --grid <w>x<h>x<d> --save-volume-frames --overwrite` to write a project-local cache run and active cache manifests
+- Retained `3D` menu selection now recognizes selected scene-project roots
+  that contain `scene_authoring.json` and `scene_runtime.json`, reports concise
+  project cache state from `physics_sim/active_cache_manifest.json` or the
+  compatibility `physics_sim/cache_manifest.json`, and exposes a
+  `Copy Cache Cmd` affordance that copies the matching
+  `physics_sim/physics_sim_headless --scene-project ... --save-volume-frames --overwrite`
+  update command. This is a read-only guidance surface; it does not run the
+  cache update from the GUI. The menu now renders contextual Data I/O:
+  legacy/direct selections keep editable `Output Root` and `Input Root` rows,
+  while scene-project selections show a `Scene Project Cache` panel with
+  read-only `Project Root`, artifact-aware `Cache Target`, and active-run
+  rows plus `Frames`, `Headless`, and `Copy Cache Cmd`. The cache target
+  readout now distinguishes no-cache, ready active VF3D/physics bundle, and
+  manifest-present-but-missing-artifact states by checking the manifest's
+  active VF3D directory, physics directory, and scene bundle path. In
+  scene-project mode, the selected project root is the input/output container;
+  legacy roots remain in config but are not shown as cache destinations. The
+  bottom action row remains only `Duplicate`, `Edit Preset`, and `Start`.
   - run `physics_sim/physics_sim_headless --runtime-scene <scene_runtime.json> --frames <n> --output-root <dir> --progress-interval <n> --save-volume-frames`
+  - or run the standalone basin with
+    `physics_sim/physics_sim_headless --water-mode --water-level <0..1> --frames <n> --output-root <dir> --save-volume-frames`
+  - pass `--volume-export-start-frame <n> --volume-export-stride <n>
+    --volume-export-max-frames <n>` to write only selected retained VF3D/PACK
+    and water-surface sidecar frames during long warm-up runs
   - output includes `run_summary.json` under the selected output root
   - `run_progress.json` now advances inside a frame instead of only at frame boundaries
   - volume exports keep the existing `volume_frames/<Preset>/` layout with
     `.vf3d`, `.pack`, `manifest.json`, and `scene_bundle.json`
+  - standalone Water mode also writes `water_manifest_v1.json` and
+    `water_surface_%06d.json`; `scene_bundle.json.water_source` points to the
+    water manifest while `scene_bundle.json.fluid_source` remains the VF3D
+    volume contract
+  - `--water-object-fixture` / `--water-pool-submerged-solid` enables the
+    deterministic object-in-water fixture for backend review; the first
+    response is an export-side displacement approximation over the existing
+    solid-mask path, not a full two-phase CFD solver
   - skip-present volume-only runs avoid SDL video and renderer initialization
   - presented runs still use the existing window/Vulkan renderer path
   - skip-present Wind `--save-render-frames` runs can write nonblank
@@ -250,6 +437,15 @@ Last updated: 2026-06-13
   - `make -C physics_sim test-sim-runtime-backend-3d-obstacle-contract`
   - `make -C physics_sim toolchain-contract`
 - Stable validation:
+  - `make -C physics_sim test-fast`
+  - small deterministic non-GUI lane for common source changes; excludes
+    headless integration, package, local-system/private-path, long
+    visual/video, and remote-worker probes
+  - includes `test-scene-menu-layout-contract`, which validates menu settings
+    toggles and both legacy `Data I/O + Batch` and scene-project
+    `Scene Project Cache` rectangles for normal and minimum window sizes so
+    cache/headless/bottom actions do not overlap and mode-specific controls do
+    not leak into the wrong panel
   - `make -C physics_sim test-stable`
   - includes 3D export contract/parity, retained-scene bridge coverage, and the shared-viewport-backed scene-editor viewport contract
 - Smoke wording note:
@@ -258,14 +454,29 @@ Last updated: 2026-06-13
 - Direct headless CLI:
   - `make -C physics_sim physics_sim_headless`
   - `make -C physics_sim test-physics-sim-headless-cli`
+  - `make -C physics_sim test-physics-sim-headless-scene-project-cache-output`
+  - `make -C physics_sim test-physics-sim-headless-water-mode`
+- Wind orientation probes:
+  - `make -C physics_sim test-physics-sim-headless-wind-orientation-probe`
+    is portable and uses a checked-in mesh-wedge fixture
+  - `make -C physics_sim test-physics-sim-headless-dragonwind-orientation-probe`
+    is a local-system probe because it defaults to a user-machine DragonWind
+    runtime scene unless `DRAGONWIND_ORIENTATION_PROBE_SCENE` is supplied
 - Detached runner:
   - `make -C physics_sim physics-sim-job-runner`
   - `make -C physics_sim test-physics-sim-job-runner-smoke`
   - `make -C physics_sim test-physics-sim-job-runner-policy`
 - Build-only readiness:
   - `make -C physics_sim visual-harness`
+- Source-run visual proof:
+  - `make -C physics_sim visual-artifact`
+  - writes a validated Wind projection BMP under ignored
+    `visual_artifacts/source_first_frame/` and prints the final artifact path
+  - uses `physics_sim_headless` with a checked-in fixture; does not require
+    package launch, desktop capture, remote workers, or private scene paths
 - Packaging verification:
   - `make -C physics_sim package-linux-worker-self-test`
+  - `make -C physics_sim package-linux-worker-dry-run`
   - `make -C physics_sim package-desktop`
   - `make -C physics_sim PACKAGE_TOOLCHAIN=fisics package-desktop`
   - `make -C physics_sim package-desktop-smoke`
@@ -277,11 +488,34 @@ Last updated: 2026-06-13
 ## Release and Packaging Snapshot
 - Release-readiness phases are complete through artifact flow (`RL0`-`RL3`).
 - Signed/notarized/stapled distribution flow is established for production release operations.
+- Package/release helper security boundary is local-operator only:
+  package/release targets quote configured paths and may destructively clean
+  their configured package/release/Desktop roots; app packaging stages only the
+  binary, launcher, `Info.plist`, bundled dylibs, config, shader resources,
+  optional icon, and optional shared fonts; Linux worker packaging stages only
+  headless/job-runner binaries, config, selected public docs, and manifests;
+  private/generated run lanes such as `build/agent_runs/`, `tmp/`,
+  `_private_workspace_artifacts/`, detached outputs, launcher logs, and local
+  icon source copies are not package inputs unless a future target explicitly
+  stages them.
 - Linux worker packaging now emits truthful host-architecture metadata for
   either `linux-x86_64` or `linux-aarch64` by default:
   - `make -C physics_sim package-linux-worker`
+  - `make -C physics_sim package-linux-worker-dry-run`
   - the package manifest platform follows the Linux build host architecture
   - `LINUX_WORKER_PLATFORM=<value>` remains available for explicit override
+- `package-linux-worker-dry-run` is local-only validation. It validates the
+  staged manifests, entrypoints, selected docs/config payload, archive contents,
+  and package-manifest self-test command without upload, install, registration,
+  raw SSH/SCP, or remote worker execution.
+- Worker package/cross-host handoff boundary is explicit: the local Linux
+  worker archive does not install, upload, run, or register itself; worker-safe
+  payloads must stage runtime scene, run config, runtime mesh documents,
+  preview sidecars, and output/report roots together; Linux PC package
+  upload/install/status/fetch routes through the Linux PC handoff lane, while
+  VPS worker-fleet visibility, worker-exchange requests, and VPS-side runtime
+  proofs route through the VPS handoff lane. Raw SSH/SCP or ad hoc remote shell
+  is outside the package boundary.
 - The first compiler-overlay dual-toolchain contract is now active for app-local validation:
   - `clang-build` writes the default app binary to `build/clang/physics_sim`
   - `make` still copies the Clang binary to the repo-root `physics_sim` path for compatibility
@@ -307,6 +541,15 @@ Last updated: 2026-06-13
   - `test-rigid2d-collision-contract` directly validates the deeper rigid-body collision manifold seam under `src/physics/rigid/`
   - `test-sim-runtime-backend-2d-runtime-fields-contract` directly validates the first bounded `2D` runtime-fields/emitter seam under `src/app/`
   - `test-sim-runtime-emitter-contract` directly validates the bounded emitter support seam under `src/app/`
+  - `test-runtime-mesh-preview-bridge-contract` validates runtime-scene mesh
+    preview metadata, sidecar probing, and PhysicsSim fluid-role metadata
+  - `test-runtime-mesh-obstacle-proxy-contract` validates default-solid runtime
+    mesh obstacle behavior, actual runtime mesh voxelization, and emitter
+    exclusion from solid occupancy
+  - `test-runtime-scene-bridge-contract` validates projection from runtime
+    scene mesh metadata into attached runtime-mesh emitters
+  - `test-sim-runtime-backend-3d-runtime-mesh-emitter-contract` validates that
+    mesh-attached emitters use actual runtime mesh footprints in the 3D backend
   - `test-sim-runtime-obstacle-contract` directly validates the bounded obstacle support seam under `src/app/`
   - `test-sim-runtime-backend-3d-emitter-contract` directly validates the bounded free-emitter `3D` scaffold seam under `src/app/`
   - `test-sim-runtime-backend-3d-attached-emitter-contract` directly validates the bounded attached-emitter `3D` scaffold seam under `src/app/`

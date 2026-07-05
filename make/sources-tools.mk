@@ -19,6 +19,7 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/tools/cli/runtime_scene_emitter_diag_tool.c \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
+	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
@@ -26,7 +27,12 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/render/retained_runtime_scene_overlay_geom.c \
 	$(SRC_DIR)/app/sim_runtime_backend.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_wind.c \
+	$(SRC_DIR)/app/wind_tunnel_3d.c \
+	$(SRC_DIR)/app/wind_tunnel_3d_analysis.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_scaffold_views.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_runtime.c \
+	$(SRC_DIR)/app/sim_runtime_backend_3d_mesh_obstacle_proxy.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacles.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_obstacle_sources.c \
 	$(SRC_DIR)/app/sim_runtime_backend_3d_oriented_box.c \
@@ -42,6 +48,10 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
+	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
+	$(SRC_DIR)/app/sim_runtime_mesh_diagnostics.c \
+	$(SRC_DIR)/app/sim_runtime_mesh_accel.c \
+	$(SRC_DIR)/app/sim_runtime_mesh_obstacle_proxy.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
 	$(SRC_DIR)/app/sim_runtime_obstacle.c \
 	$(SRC_DIR)/app/scene_objects.c \
@@ -52,10 +62,15 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
+	$(CORE_SIM_DIR)/src/core_sim.c \
+	$(CORE_MESH_PREVIEW_DIR)/src/core_mesh_preview.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
+	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_runtime_document.c \
 	$(CORE_OBJECT_DIR)/src/core_object.c \
 	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_IO_DIR)/src/core_io.c \
-	$(CORE_BASE_DIR)/src/core_base.c
+	$(CORE_BASE_DIR)/src/core_base.c \
+	$(CORE_MESH_PREVIEW_DIR)/../../shape/external/cjson/cJSON.c
 
 CORE_PACK_TOOL_SRCS := \
 	$(VF2D_PACK_TOOL_SRC) \
@@ -80,7 +95,7 @@ VF2D_DATASET_TOOL_SRCS := \
 	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(TIMER_HUD_DIR)/external/cJSON.c
-VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include -I$(TIMER_HUD_DIR)/external -DVOLUME_FRAMES_DATASET_TOOL_ONLY=1 $(SDL_CFLAGS)
+VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/../../shape/external -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include -I$(TIMER_HUD_DIR)/external -DVOLUME_FRAMES_DATASET_TOOL_ONLY=1 $(SDL_CFLAGS)
 ifeq ($(UNAME_S),Darwin)
 VF2D_DATASET_TOOL_INCS += -I/opt/homebrew/include -D_THREAD_SAFE
 endif

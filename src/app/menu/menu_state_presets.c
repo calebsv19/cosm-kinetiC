@@ -6,8 +6,19 @@
 #include "app/editor/scene_editor_retained_document.h"
 #include "app/data_paths.h"
 #include "app/menu/menu_settings_draft.h"
+#include "config/config_loader.h"
 #include "import/runtime_scene_bridge.h"
 #include "render/text_upload_policy.h"
+
+static void menu_persist_retained_scene_config(const SceneMenuInteraction *ctx) {
+    const char *runtime_config_path = physics_sim_runtime_config_path();
+    if (!ctx || !ctx->cfg) return;
+    if (!config_loader_save(ctx->cfg, runtime_config_path)) {
+        fprintf(stderr,
+                "[menu] Failed to persist retained scene selection to %s\n",
+                runtime_config_path);
+    }
+}
 
 static int find_first_slot_for_mode(const SceneMenuInteraction *ctx, FluidSceneDomainType domain) {
     if (!ctx || !ctx->library) return -1;
@@ -199,6 +210,10 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
              sizeof(ctx->selection->retained_runtime_scene_path),
              "%s",
              entry->source_path);
+    snprintf(ctx->cfg->retained_runtime_scene_path,
+             sizeof(ctx->cfg->retained_runtime_scene_path),
+             "%s",
+             entry->source_path);
     ctx->scene_library.retained_scenes.selected_index = retained_scene_index;
     ctx->preview_preset = projected;
     ctx->active_preset = &ctx->preview_preset;
@@ -223,6 +238,7 @@ bool menu_select_retained_scene(SceneMenuInteraction *ctx, int retained_scene_in
              entry->source_path);
     menu_refresh_scene_library(ctx);
     menu_reload_settings_from_active_preset(ctx);
+    menu_persist_retained_scene_config(ctx);
     return true;
 }
 

@@ -17,7 +17,8 @@ static const MenuSettingsDraft *draft_or_null(const MenuSettingsShellState *stat
 
 static bool provider_is_3d_like(MenuSettingsProviderId provider) {
     return provider == MENU_SETTINGS_PROVIDER_3D ||
-           provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D;
+           provider == MENU_SETTINGS_PROVIDER_ATMOSPHERIC_3D ||
+           provider == MENU_SETTINGS_PROVIDER_WATER;
 }
 
 static int font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
@@ -220,6 +221,9 @@ static void render_field_value_label(const SceneMenuInteraction *ctx,
         break;
     case MENU_SETTINGS_FIELD_TUNNEL_VISCOSITY_SCALE:
         snprintf(out, out_size, "%.2f", draft ? draft->tunnel_viscosity_scale : 0.0f);
+        break;
+    case MENU_SETTINGS_FIELD_WATER_LEVEL:
+        snprintf(out, out_size, "%.2f", draft ? draft->water_level : 0.0f);
         break;
     case MENU_SETTINGS_FIELD_VELOCITY_DAMPING:
         snprintf(out, out_size, "%.6g", draft ? draft->velocity_damping : 0.0f);

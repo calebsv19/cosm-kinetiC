@@ -6,6 +6,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #define EDITOR_SHELL_PAD_X 0
@@ -145,6 +146,178 @@ void set_dirty(SceneEditorState *state) {
                  sizeof(state->save_scene_diagnostics),
                  "Scene has unapplied overlay changes.");
     }
+}
+
+static void editor_clear_selected_mesh_diagnostic(SceneEditorState *state) {
+    SceneEditorSelectedMeshDiagnosticCache *cache = NULL;
+    if (!state) return;
+    cache = &state->selected_mesh_diagnostic_cache;
+    physics_sim_runtime_mesh_diagnostic_init(&cache->diagnostic);
+    cache->attempted = false;
+    cache->valid = false;
+    cache->instance_index = -1;
+    cache->runtime_mesh_path[0] = '\0';
+    cache->preview_path[0] = '\0';
+    cache->preview_metadata_valid = false;
+    cache->preview_source_vertex_count = 0u;
+    cache->preview_source_triangle_count = 0u;
+    cache->preview_edge_count = 0u;
+}
+
+static bool editor_diag_double_same(double a, double b) {
+    return fabs(a - b) < 1e-6;
+}
+
+static const char *editor_mesh_role_behavior(PhysicsSimRuntimeMeshEditorRole role) {
+    switch (role) {
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_VISUAL_ONLY:
+        return "visual_only";
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_EMITTER:
+        return "surface_emitter";
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_HEAT_EMITTER:
+        return "surface_heat_emitter";
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_BOUNDARY_FLOW_EMITTER:
+        return "boundary_flow_emitter";
+    case PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SOLID:
+    default:
+        return "solid_obstacle";
+    }
+}
+
+static void editor_apply_mesh_overlay_to_preview(
+    PhysicsSimRuntimeMeshPreviewInstance *instance,
+    const PhysicsSimRuntimeMeshOverlay *overlay) {
+    if (!instance || !overlay) return;
+    snprintf(instance->fluid_behavior,
+             sizeof(instance->fluid_behavior),
+             "%s",
+             editor_mesh_role_behavior(overlay->role));
+
+    instance->fluid_obstacle_enabled = false;
+    instance->fluid_emitter_enabled = false;
+    if (overlay->role == PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SOLID) {
+        instance->fluid_obstacle_enabled = true;
+    } else if (overlay->role != PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_VISUAL_ONLY) {
+        instance->fluid_emitter_enabled = true;
+        instance->emitter_type = overlay->emitter.type;
+        instance->emitter_source_mode_3d = overlay->emitter.source_mode_3d;
+        instance->emitter_surface_3d = overlay->emitter.surface_3d;
+        instance->emitter_obstacle_mode_3d = overlay->emitter.obstacle_mode_3d;
+        instance->emitter_strength = overlay->emitter.strength;
+        instance->emitter_radius = overlay->emitter.radius;
+        instance->emitter_direction = overlay->emitter.direction;
+        instance->emitter_thermal_buoyancy_3d = overlay->emitter.thermal_buoyancy_3d;
+    }
+}
+
+static bool editor_selected_mesh_diagnostic_cache_matches(
+    const SceneEditorState *state,
+    const PhysicsSimRuntimeMeshPreviewInstance *preview,
+    const PhysicsSimRuntimeMeshOverlay *overlay,
+    double width,
+    double height,
+    double depth) {
+    const SceneEditorSelectedMeshDiagnosticCache *cache =
+        state ? &state->selected_mesh_diagnostic_cache : NULL;
+    if (!cache || !preview || !overlay || !cache->attempted) return false;
+    if (cache->instance_index != overlay->mesh_instance_index) return false;
+    if (cache->role != overlay->role) return false;
+    if (strcmp(cache->runtime_mesh_path, preview->runtime_mesh_path) != 0) return false;
+    if (strcmp(cache->preview_path, preview->preview_path) != 0) return false;
+    if (cache->preview_metadata_valid != preview->preview_metadata_valid) return false;
+    if (cache->preview_source_vertex_count != preview->metadata.source_vertex_count) {
+        return false;
+    }
+    if (cache->preview_source_triangle_count != preview->metadata.source_triangle_count) {
+        return false;
+    }
+    if (cache->preview_edge_count != preview->metadata.preview_edge_count) {
+        return false;
+    }
+    if (cache->emitter_type != overlay->emitter.type) return false;
+    if (cache->source_mode_3d != overlay->emitter.source_mode_3d) return false;
+    if (cache->surface_3d != overlay->emitter.surface_3d) return false;
+    if (cache->obstacle_mode_3d != overlay->emitter.obstacle_mode_3d) return false;
+    if (!editor_diag_double_same(cache->radius, overlay->emitter.radius)) return false;
+    if (!editor_diag_double_same(cache->strength, overlay->emitter.strength)) return false;
+    if (!editor_diag_double_same(cache->thermal_buoyancy_3d, overlay->emitter.thermal_buoyancy_3d)) {
+        return false;
+    }
+    return editor_diag_double_same(cache->domain_width, width) &&
+           editor_diag_double_same(cache->domain_height, height) &&
+           editor_diag_double_same(cache->domain_depth, depth);
+}
+
+void editor_update_selected_mesh_diagnostic(SceneEditorState *state) {
+    SceneEditorSelectedMeshDiagnosticCache *cache = NULL;
+    const PhysicsSimRuntimeMeshPreviewInstance *preview = NULL;
+    const PhysicsSimRuntimeMeshOverlay *overlay = NULL;
+    PhysicsSimRuntimeMeshPreviewInstance effective_preview;
+    SimRuntime3DDomainDesc domain;
+    double width = 0.0;
+    double height = 0.0;
+    double depth = 0.0;
+    bool ok = false;
+    if (!state || !physics_sim_editor_session_has_retained_scene(&state->session)) {
+        editor_clear_selected_mesh_diagnostic(state);
+        return;
+    }
+
+    preview = physics_sim_editor_session_selected_runtime_mesh_preview(&state->session);
+    overlay = physics_sim_editor_session_selected_runtime_mesh_overlay(&state->session);
+    if (!preview || !overlay) {
+        editor_clear_selected_mesh_diagnostic(state);
+        return;
+    }
+
+    physics_sim_editor_session_scene_domain_dimensions(&state->session, &width, &height, &depth);
+    if (editor_selected_mesh_diagnostic_cache_matches(state, preview, overlay, width, height, depth)) {
+        return;
+    }
+
+    cache = &state->selected_mesh_diagnostic_cache;
+    cache->attempted = true;
+    cache->valid = false;
+    cache->instance_index = overlay->mesh_instance_index;
+    cache->role = overlay->role;
+    snprintf(cache->runtime_mesh_path,
+             sizeof(cache->runtime_mesh_path),
+             "%s",
+             preview->runtime_mesh_path);
+    snprintf(cache->preview_path,
+             sizeof(cache->preview_path),
+             "%s",
+             preview->preview_path);
+    cache->preview_metadata_valid = preview->preview_metadata_valid;
+    cache->preview_source_vertex_count = preview->metadata.source_vertex_count;
+    cache->preview_source_triangle_count = preview->metadata.source_triangle_count;
+    cache->preview_edge_count = preview->metadata.preview_edge_count;
+    cache->emitter_type = overlay->emitter.type;
+    cache->source_mode_3d = overlay->emitter.source_mode_3d;
+    cache->surface_3d = overlay->emitter.surface_3d;
+    cache->obstacle_mode_3d = overlay->emitter.obstacle_mode_3d;
+    cache->radius = overlay->emitter.radius;
+    cache->strength = overlay->emitter.strength;
+    cache->thermal_buoyancy_3d = overlay->emitter.thermal_buoyancy_3d;
+    cache->domain_width = width;
+    cache->domain_height = height;
+    cache->domain_depth = depth;
+    physics_sim_runtime_mesh_diagnostic_init(&cache->diagnostic);
+
+    if (!sim_runtime_3d_domain_desc_resolve(&state->cfg, &state->working, NULL, &domain)) {
+        snprintf(cache->diagnostic.diagnostics,
+                 sizeof(cache->diagnostic.diagnostics),
+                 "domain unavailable");
+        return;
+    }
+
+    effective_preview = *preview;
+    editor_apply_mesh_overlay_to_preview(&effective_preview, overlay);
+    ok = physics_sim_runtime_mesh_diagnostic_collect_instance(&effective_preview,
+                                                              overlay->mesh_instance_index,
+                                                              &domain,
+                                                              &cache->diagnostic);
+    cache->valid = ok && cache->diagnostic.valid;
 }
 
 float sanitize_domain_dimension(float value) {
@@ -697,10 +870,13 @@ bool editor_load_runtime_scene_fixture(SceneEditorState *state,
 
     bootstrap.has_retained_scene = true;
     bootstrap.retained_scene = retained;
-    if (runtime_scene_bridge_load_visual_bootstrap_json(state->retained_runtime_scene_json,
+    if (runtime_scene_bridge_load_visual_bootstrap_file(runtime_scene_path,
                                                         &visual_bootstrap,
                                                         NULL,
-                                                        0) &&
+                                                        0)) {
+        bootstrap.mesh_previews = visual_bootstrap.mesh_previews;
+    }
+    if (visual_bootstrap.valid &&
         visual_bootstrap.wind_tunnel_authored) {
         bootstrap.wind_tunnel_authored = true;
         bootstrap.wind_tunnel = visual_bootstrap.wind_tunnel;

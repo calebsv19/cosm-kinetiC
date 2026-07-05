@@ -208,6 +208,8 @@ bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
         .runtime_solver_max_abs_divergence_after_project =
             state->runtime_solver_max_abs_divergence_after_project,
         .debug_volume_view_3d_available = true,
+        .atmospheric_settings_available = state->atmospheric_settings_available,
+        .atmospheric_settings = state->atmospheric_settings,
         .debug_volume_active_density_cells = state->debug_volume_active_density_cells,
         .debug_volume_solid_cells = state->debug_volume_solid_cells,
         .debug_volume_max_density = state->debug_volume_max_density,

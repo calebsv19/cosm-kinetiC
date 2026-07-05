@@ -13,6 +13,7 @@ typedef struct SceneEditorBootstrap {
     PhysicsSimRetainedRuntimeScene retained_scene;
     bool wind_tunnel_authored;
     WindTunnel3DConfig wind_tunnel;
+    PhysicsSimRuntimeMeshPreviewSet mesh_previews;
     char retained_runtime_scene_path[512];
 } SceneEditorBootstrap;
 
@@ -75,6 +76,23 @@ typedef struct PhysicsSimObjectOverlay {
     PhysicsSimEmitterOverlay emitter;
 } PhysicsSimObjectOverlay;
 
+typedef enum PhysicsSimRuntimeMeshEditorRole {
+    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SOLID = 0,
+    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_VISUAL_ONLY,
+    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_EMITTER,
+    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_HEAT_EMITTER,
+    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_BOUNDARY_FLOW_EMITTER
+} PhysicsSimRuntimeMeshEditorRole;
+
+typedef struct PhysicsSimRuntimeMeshOverlay {
+    bool active;
+    int mesh_instance_index;
+    int scene_object_index;
+    char object_id[64];
+    PhysicsSimRuntimeMeshEditorRole role;
+    PhysicsSimEmitterOverlay emitter;
+} PhysicsSimRuntimeMeshOverlay;
+
 typedef struct PhysicsSimSceneOverlay {
     bool active;
     bool derived_defaults;
@@ -82,6 +100,8 @@ typedef struct PhysicsSimSceneOverlay {
     PhysicsSimDomainOverlay scene_domain;
     int object_overlay_count;
     PhysicsSimObjectOverlay object_overlays[PHYSICS_SIM_RUNTIME_SCENE_MAX_OBJECTS];
+    int mesh_overlay_count;
+    PhysicsSimRuntimeMeshOverlay mesh_overlays[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_MAX_INSTANCES];
 } PhysicsSimSceneOverlay;
 
 typedef struct PhysicsSimEditorSession {
@@ -93,6 +113,7 @@ typedef struct PhysicsSimEditorSession {
     bool has_wind_tunnel_config;
     bool wind_tunnel_authored;
     WindTunnel3DConfig wind_tunnel;
+    PhysicsSimRuntimeMeshPreviewSet mesh_previews;
     bool has_physics_overlay;
     PhysicsSimSceneOverlay physics_overlay;
 
@@ -113,6 +134,10 @@ bool physics_sim_editor_session_has_retained_scene(const PhysicsSimEditorSession
 bool physics_sim_editor_session_has_wind_tunnel_config(const PhysicsSimEditorSession *session);
 bool physics_sim_editor_session_wind_tunnel_authored(const PhysicsSimEditorSession *session);
 const WindTunnel3DConfig *physics_sim_editor_session_wind_tunnel_config(const PhysicsSimEditorSession *session);
+bool physics_sim_editor_session_set_wind_tunnel_faces(PhysicsSimEditorSession *session,
+                                                      const AppConfig *cfg,
+                                                      WindTunnel3DFace inlet_face,
+                                                      WindTunnel3DFace outlet_face);
 int physics_sim_editor_session_retained_object_count(const PhysicsSimEditorSession *session);
 const char *physics_sim_editor_session_scene_id(const PhysicsSimEditorSession *session);
 bool physics_sim_editor_session_has_physics_overlay(const PhysicsSimEditorSession *session);
@@ -125,6 +150,18 @@ const PhysicsSimObjectOverlay *physics_sim_editor_session_selected_object_overla
 const PhysicsSimEmitterOverlay *physics_sim_editor_session_object_emitter_at(const PhysicsSimEditorSession *session,
                                                                               int index);
 const PhysicsSimEmitterOverlay *physics_sim_editor_session_selected_object_emitter(const PhysicsSimEditorSession *session);
+const PhysicsSimRuntimeMeshPreviewInstance *physics_sim_editor_session_runtime_mesh_preview_at(
+    const PhysicsSimEditorSession *session,
+    int index);
+const PhysicsSimRuntimeMeshPreviewInstance *physics_sim_editor_session_selected_runtime_mesh_preview(
+    const PhysicsSimEditorSession *session);
+const PhysicsSimRuntimeMeshOverlay *physics_sim_editor_session_runtime_mesh_overlay_at(
+    const PhysicsSimEditorSession *session,
+    int index);
+const PhysicsSimRuntimeMeshOverlay *physics_sim_editor_session_selected_runtime_mesh_overlay(
+    const PhysicsSimEditorSession *session);
+const PhysicsSimEmitterOverlay *physics_sim_editor_session_selected_runtime_mesh_emitter(
+    const PhysicsSimEditorSession *session);
 const PhysicsSimDomainOverlay *physics_sim_editor_session_scene_domain(const PhysicsSimEditorSession *session);
 void physics_sim_editor_session_scene_domain_dimensions(const PhysicsSimEditorSession *session,
                                                         double *out_width,
@@ -144,6 +181,21 @@ bool physics_sim_editor_session_set_selected_emitter_thermal_buoyancy_3d(Physics
 bool physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(PhysicsSimEditorSession *session);
 bool physics_sim_editor_session_cycle_selected_emitter_surface_3d(PhysicsSimEditorSession *session);
 bool physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(PhysicsSimEditorSession *session);
+bool physics_sim_editor_session_set_selected_runtime_mesh_role(PhysicsSimEditorSession *session,
+                                                               PhysicsSimRuntimeMeshEditorRole role);
+bool physics_sim_editor_session_set_selected_runtime_mesh_emitter_radius(PhysicsSimEditorSession *session,
+                                                                         float radius);
+bool physics_sim_editor_session_set_selected_runtime_mesh_emitter_strength(PhysicsSimEditorSession *session,
+                                                                           float strength);
+bool physics_sim_editor_session_set_selected_runtime_mesh_emitter_thermal_buoyancy_3d(
+    PhysicsSimEditorSession *session,
+    float thermal_buoyancy);
+bool physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_source_mode_3d(
+    PhysicsSimEditorSession *session);
+bool physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_surface_3d(
+    PhysicsSimEditorSession *session);
+bool physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_obstacle_mode_3d(
+    PhysicsSimEditorSession *session);
 bool physics_sim_editor_session_set_scene_domain_size(PhysicsSimEditorSession *session,
                                                       double width,
                                                       double height,
@@ -168,6 +220,7 @@ const char *physics_sim_editor_session_emitter_type_label(FluidEmitterType type)
 const char *physics_sim_editor_session_emitter_source_mode_3d_label(FluidEmitter3DSourceMode mode);
 const char *physics_sim_editor_session_emitter_surface_3d_label(FluidEmitter3DSurface surface);
 const char *physics_sim_editor_session_emitter_obstacle_mode_3d_label(FluidEmitter3DObstacleMode mode);
+const char *physics_sim_editor_session_runtime_mesh_role_label(PhysicsSimRuntimeMeshEditorRole role);
 const char *physics_sim_editor_session_legacy_selection_summary(const PhysicsSimEditorSession *session,
                                                                 char *buffer,
                                                                 size_t buffer_size);

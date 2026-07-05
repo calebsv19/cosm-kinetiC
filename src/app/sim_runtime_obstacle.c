@@ -14,6 +14,7 @@ void sim_runtime_obstacle_contract_default(SimRuntimeObstacleContract *out_contr
     contract.backend_generated_occupancy_supported = true;
     contract.retained_object_occupancy_supported = true;
     contract.retained_import_occupancy_supported = true;
+    contract.runtime_mesh_asset_occupancy_supported = true;
     contract.obstacle_velocity_support = false;
     contract.obstacle_normal_support = false;
     *out_contract = contract;
@@ -42,6 +43,10 @@ bool sim_runtime_obstacle_source_policy(SimRuntimeObstacleSourceKind kind,
         break;
     case SIM_RUNTIME_OBSTACLE_SOURCE_RETAINED_IMPORT:
         policy.primary_footprint = SIM_RUNTIME_OBSTACLE_FOOTPRINT_RETAINED_IMPORT_OCCUPANCY;
+        policy.fallback_footprint = SIM_RUNTIME_OBSTACLE_FOOTPRINT_BACKEND_GENERATED_OCCUPANCY;
+        break;
+    case SIM_RUNTIME_OBSTACLE_SOURCE_RUNTIME_MESH_ASSET:
+        policy.primary_footprint = SIM_RUNTIME_OBSTACLE_FOOTPRINT_RUNTIME_MESH_ASSET_OCCUPANCY;
         policy.fallback_footprint = SIM_RUNTIME_OBSTACLE_FOOTPRINT_BACKEND_GENERATED_OCCUPANCY;
         break;
     default:
@@ -144,6 +149,8 @@ const char *sim_runtime_obstacle_source_kind_label(SimRuntimeObstacleSourceKind 
         return "retained-object";
     case SIM_RUNTIME_OBSTACLE_SOURCE_RETAINED_IMPORT:
         return "retained-import";
+    case SIM_RUNTIME_OBSTACLE_SOURCE_RUNTIME_MESH_ASSET:
+        return "runtime-mesh-asset";
     default:
         break;
     }
@@ -160,6 +167,8 @@ const char *sim_runtime_obstacle_footprint_kind_label(SimRuntimeObstacleFootprin
         return "retained-object-occupancy";
     case SIM_RUNTIME_OBSTACLE_FOOTPRINT_RETAINED_IMPORT_OCCUPANCY:
         return "retained-import-occupancy";
+    case SIM_RUNTIME_OBSTACLE_FOOTPRINT_RUNTIME_MESH_ASSET_OCCUPANCY:
+        return "runtime-mesh-asset-occupancy";
     default:
         break;
     }

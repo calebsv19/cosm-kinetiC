@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "app/atmospheric/atmospheric_field.h"
 #include "app/sim_runtime_3d_space.h"
 
 static const float SOLVER_POSITION_LIMIT = 1024.0f;
@@ -288,6 +289,139 @@ bool runtime_scene_solver_projection_overlay_wind_tunnel(json_object *runtime_ro
     return true;
 }
 
+static bool atmosphere_region_shape_from_label(const char *label,
+                                               AtmosphericRegionShape *out_shape) {
+    if (!label || !out_shape) return false;
+    if (strcmp(label, "rect") == 0 ||
+        strcmp(label, "rectangle") == 0 ||
+        strcmp(label, "box") == 0) {
+        *out_shape = ATMOSPHERIC_REGION_RECT;
+        return true;
+    }
+    if (strcmp(label, "ellipse") == 0 ||
+        strcmp(label, "ellipsoid") == 0 ||
+        strcmp(label, "sphere") == 0) {
+        *out_shape = ATMOSPHERIC_REGION_ELLIPSE;
+        return true;
+    }
+    return false;
+}
+
+bool runtime_scene_solver_projection_overlay_atmosphere(json_object *runtime_root,
+                                                        AtmosphericPresetSettings *out_settings) {
+    json_object *extensions = NULL;
+    json_object *physics_sim = NULL;
+    json_object *atmosphere = NULL;
+    json_object *regions = NULL;
+    json_object *node = NULL;
+    double number = 0.0;
+    AtmosphericPresetSettings settings = atmospheric_preset_default_settings();
+
+    if (out_settings) memset(out_settings, 0, sizeof(*out_settings));
+    if (!runtime_root || !out_settings) return false;
+    if (!json_object_object_get_ex(runtime_root, "extensions", &extensions) ||
+        !json_object_is_type(extensions, json_type_object)) {
+        return false;
+    }
+    if (!json_object_object_get_ex(extensions, "physics_sim", &physics_sim) ||
+        !json_object_is_type(physics_sim, json_type_object)) {
+        return false;
+    }
+    if (!json_object_object_get_ex(physics_sim, "atmosphere", &atmosphere) ||
+        !json_object_is_type(atmosphere, json_type_object)) {
+        return false;
+    }
+
+    (void)runtime_scene_solver_projection_parse_bool(atmosphere, "enabled", &settings.enabled);
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "seed", &number)) {
+        settings.seed = (uint32_t)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "base_density", &number)) {
+        settings.base_density = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "density_scale", &number)) {
+        settings.density_scale = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "density_threshold", &number)) {
+        settings.density_threshold = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "base_wind_x", &number)) {
+        settings.base_wind_x = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "base_wind_y", &number)) {
+        settings.base_wind_y = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "base_wind_z", &number)) {
+        settings.base_wind_z = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "turbulence_strength", &number)) {
+        settings.turbulence_strength = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "noise_scale", &number)) {
+        settings.noise_scale = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "detail_scale", &number)) {
+        settings.detail_scale = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "band_min_y", &number)) {
+        settings.band_min_y = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "band_max_y", &number)) {
+        settings.band_max_y = (float)number;
+    }
+    if (runtime_scene_solver_projection_parse_number(atmosphere, "band_edge_falloff", &number)) {
+        settings.band_edge_falloff = (float)number;
+    }
+
+    if (json_object_object_get_ex(atmosphere, "regions", &regions) &&
+        json_object_is_type(regions, json_type_array)) {
+        size_t count = json_object_array_length(regions);
+        if (count > MAX_ATMOSPHERIC_DENSITY_REGIONS) count = MAX_ATMOSPHERIC_DENSITY_REGIONS;
+        settings.region_count = count;
+        for (size_t i = 0; i < count; ++i) {
+            json_object *region = json_object_array_get_idx(regions, i);
+            AtmosphericDensityRegion *dst = &settings.regions[i];
+            if (!region || !json_object_is_type(region, json_type_object)) {
+                memset(dst, 0, sizeof(*dst));
+                continue;
+            }
+            (void)runtime_scene_solver_projection_parse_bool(region, "enabled", &dst->enabled);
+            if (json_object_object_get_ex(region, "shape", &node) &&
+                json_object_is_type(node, json_type_string)) {
+                (void)atmosphere_region_shape_from_label(json_object_get_string(node), &dst->shape);
+            }
+            if (runtime_scene_solver_projection_parse_number(region, "center_x", &number)) {
+                dst->center_x = (float)number;
+            }
+            if (runtime_scene_solver_projection_parse_number(region, "center_y", &number)) {
+                dst->center_y = (float)number;
+            }
+            if (runtime_scene_solver_projection_parse_number(region, "center_z", &number)) {
+                dst->center_z = (float)number;
+            }
+            if (runtime_scene_solver_projection_parse_number(region, "size_x", &number)) {
+                dst->size_x = (float)number;
+            }
+            if (runtime_scene_solver_projection_parse_number(region, "size_y", &number)) {
+                dst->size_y = (float)number;
+            }
+            if (runtime_scene_solver_projection_parse_number(region, "size_z", &number)) {
+                dst->size_z = (float)number;
+            }
+            if (runtime_scene_solver_projection_parse_number(region, "density", &number)) {
+                dst->density = (float)number;
+            }
+            if (runtime_scene_solver_projection_parse_number(region, "falloff", &number)) {
+                dst->falloff = (float)number;
+            }
+        }
+    }
+
+    atmospheric_preset_sanitize(&settings);
+    *out_settings = settings;
+    return true;
+}
+
 void runtime_scene_solver_projection_resolve_xy_domain_mapping(
     const PhysicsSimRetainedRuntimeScene *retained_scene,
     json_object *runtime_root,
@@ -531,6 +665,22 @@ void runtime_scene_solver_projection_apply_scene_domain(
         runtime_scene_solver_projection_domain_dimension(max_x - min_x, world_scale, 1.0f);
     in_out_preset->domain_height =
         runtime_scene_solver_projection_domain_dimension(max_y - min_y, world_scale, 1.0f);
+}
+
+void runtime_scene_solver_projection_apply_atmosphere(json_object *runtime_root,
+                                                      AppConfig *in_out_cfg,
+                                                      FluidScenePreset *in_out_preset) {
+    AtmosphericPresetSettings settings = {0};
+    if (!runtime_root || !in_out_cfg || !in_out_preset) return;
+    if (!runtime_scene_solver_projection_overlay_atmosphere(runtime_root, &settings)) return;
+    if (!settings.enabled) return;
+
+    in_out_cfg->sim_mode = SIM_MODE_ATMOSPHERIC;
+    in_out_cfg->space_mode = SPACE_MODE_3D;
+    in_out_preset->dimension_mode = SCENE_DIMENSION_MODE_3D;
+    in_out_preset->domain = SCENE_DOMAIN_ATMOSPHERIC;
+    in_out_preset->atmospheric_initial_state_enabled = true;
+    in_out_preset->atmosphere = settings;
 }
 
 void runtime_scene_solver_projection_apply_wind_tunnel(json_object *runtime_root,

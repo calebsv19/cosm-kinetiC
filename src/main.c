@@ -173,6 +173,10 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
         .sim_mode = cfg.sim_mode,
         .tunnel_inflow_speed = cfg.tunnel_inflow_speed
     };
+    snprintf(selection.retained_runtime_scene_path,
+             sizeof(selection.retained_runtime_scene_path),
+             "%s",
+             cfg.retained_runtime_scene_path);
     for (int i = 0; i < SIMULATION_MODE_COUNT; ++i) {
         selection.last_mode_slot[i] = -1;
     }
@@ -265,8 +269,16 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
         cfg.quality_index = selection.quality_index;
         cfg.headless_frame_count = selection.headless_frame_count;
         cfg.sim_mode = selection.sim_mode;
+        snprintf(cfg.retained_runtime_scene_path,
+                 sizeof(cfg.retained_runtime_scene_path),
+                 "%s",
+                 selection.retained_runtime_scene_path);
     }
 
+    snprintf(cfg.retained_runtime_scene_path,
+             sizeof(cfg.retained_runtime_scene_path),
+             "%s",
+             selection.retained_runtime_scene_path);
     preset_library_save(preset_save_path, &library);
     config_loader_save(&cfg, config_save_path);
     shape_library_free(&shape_lib);

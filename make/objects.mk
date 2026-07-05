@@ -15,6 +15,8 @@ CORE_DATA_OBJS := $(patsubst $(CORE_DATA_DIR)/src/%.c,$(BUILD_DIR)/core_data/%.o
 CORE_PACK_OBJS := $(patsubst $(CORE_PACK_DIR)/src/%.c,$(BUILD_DIR)/core_pack/%.o,$(CORE_PACK_SRCS))
 CORE_SCENE_OBJS := $(patsubst $(CORE_SCENE_DIR)/src/%.c,$(BUILD_DIR)/core_scene/%.o,$(CORE_SCENE_SRCS))
 CORE_SCENE_COMPILE_OBJS := $(patsubst $(CORE_SCENE_COMPILE_DIR)/src/%.c,$(BUILD_DIR)/core_scene_compile/%.o,$(CORE_SCENE_COMPILE_SRCS))
+CORE_MESH_ASSET_OBJS := $(patsubst $(CORE_MESH_ASSET_DIR)/src/%.c,$(BUILD_DIR)/core_mesh_asset/%.o,$(CORE_MESH_ASSET_SRCS))
+CORE_MESH_PREVIEW_OBJS := $(patsubst $(CORE_MESH_PREVIEW_DIR)/src/%.c,$(BUILD_DIR)/core_mesh_preview/%.o,$(CORE_MESH_PREVIEW_SRCS))
 CORE_OBJECT_OBJS := $(patsubst $(CORE_OBJECT_DIR)/src/%.c,$(BUILD_DIR)/core_object/%.o,$(CORE_OBJECT_SRCS))
 CORE_UNITS_OBJS := $(patsubst $(CORE_UNITS_DIR)/src/%.c,$(BUILD_DIR)/core_units/%.o,$(CORE_UNITS_SRCS))
 CORE_VIEWPORT2D_OBJS := $(patsubst $(CORE_VIEWPORT2D_DIR)/src/%.c,$(BUILD_DIR)/core_viewport2d/%.o,$(CORE_VIEWPORT2D_SRCS))
@@ -30,7 +32,7 @@ KIT_PANE_OBJS := $(patsubst $(KIT_PANE_DIR)/src/%.c,$(BUILD_DIR)/kit_pane/%.o,$(
 KIT_UI_OBJS := $(patsubst $(KIT_UI_DIR)/src/%.c,$(BUILD_DIR)/kit_ui/%.o,$(KIT_UI_SRCS))
 
 OBJS := $(OBJS) $(TIMER_HUD_OBJS) $(TIMER_HUD_EXTERNAL_OBJS)
-OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_OBJECT_OBJS) $(CORE_UNITS_OBJS) $(CORE_VIEWPORT2D_OBJS) $(CORE_PANE_OBJS) $(CORE_SIM_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(CORE_HEADLESS_JOB_OBJS) $(KIT_VIZ_OBJS) $(KIT_RENDER_OBJS) $(KIT_PANE_OBJS) $(KIT_UI_OBJS)
+OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_MESH_ASSET_OBJS) $(CORE_MESH_PREVIEW_OBJS) $(CORE_OBJECT_OBJS) $(CORE_UNITS_OBJS) $(CORE_VIEWPORT2D_OBJS) $(CORE_PANE_OBJS) $(CORE_SIM_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(CORE_HEADLESS_JOB_OBJS) $(KIT_VIZ_OBJS) $(KIT_RENDER_OBJS) $(KIT_PANE_OBJS) $(KIT_UI_OBJS)
 DEPS := $(OBJS:.o=.d)
 PHYSICS_SIM_APP_OBJS_NO_MAIN := $(filter-out $(BUILD_DIR)/main.o,$(OBJS))
 PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
@@ -82,6 +84,7 @@ PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/app/editor/scene_editor_model.c \
 	$(SRC_DIR)/app/editor/scene_editor_pane_host.c \
 	$(SRC_DIR)/app/editor/scene_editor_panel.c \
+	$(SRC_DIR)/app/editor/scene_editor_panel_inspector.c \
 	$(SRC_DIR)/app/editor/scene_editor_panel_lists.c \
 	$(SRC_DIR)/app/editor/scene_editor_panel_summary.c \
 	$(SRC_DIR)/app/editor/scene_editor_precision.c \

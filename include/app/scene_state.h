@@ -18,6 +18,11 @@
 #include "core_sim.h"
 #include "physics/objects/object_manager.h"
 
+typedef struct SceneRuntimeViewState {
+    SceneEditorViewportState viewport;
+    bool slice_overlay_enabled;
+} SceneRuntimeViewState;
+
 typedef struct SceneState {
     double time;
     double dt;
@@ -48,8 +53,7 @@ typedef struct SceneState {
     float import_start_rot_deg[MAX_IMPORTED_SHAPES];
 
     PhysicsSimRuntimeVisualBootstrap runtime_visual;
-    SceneEditorViewportState runtime_viewport;
-    bool runtime_slice_overlay_enabled;
+    SceneRuntimeViewState runtime_view;
     AtmosphericWarmStartRuntimeReport3D atmospheric_warm_start;
 } SceneState;
 
@@ -112,13 +116,13 @@ static inline bool scene_backend_step_compatibility_slice(SceneState *scene, int
 }
 
 static inline bool scene_runtime_slice_overlay_enabled(const SceneState *scene) {
-    return !scene || scene->runtime_slice_overlay_enabled;
+    return !scene || scene->runtime_view.slice_overlay_enabled;
 }
 
 static inline bool scene_runtime_toggle_slice_overlay(SceneState *scene) {
     if (!scene) return false;
-    scene->runtime_slice_overlay_enabled = !scene->runtime_slice_overlay_enabled;
-    return scene->runtime_slice_overlay_enabled;
+    scene->runtime_view.slice_overlay_enabled = !scene->runtime_view.slice_overlay_enabled;
+    return scene->runtime_view.slice_overlay_enabled;
 }
 
 static inline bool scene_backend_compatibility_slice_activity(const SceneState *scene,

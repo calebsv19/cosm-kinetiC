@@ -5,6 +5,7 @@
 #include "app/sim_runtime_backend_3d_scaffold_internal.h"
 #include "app/sim_runtime_3d_domain.h"
 #include "app/sim_runtime_3d_solver.h"
+#include "app/sim_runtime_mesh_obstacle_proxy.h"
 #include "app/sim_runtime_obstacle.h"
 #include "app/atmospheric/atmospheric_field.h"
 
@@ -17,6 +18,21 @@ static const float SCAFFOLD_BRUSH_VEL_SCALE = 35.0f;
 static const float SCAFFOLD_BRUSH_VELOCITY_DENSITY = 4.0f;
 static const int SCAFFOLD_BRICK_SIZE = 8;
 static const size_t SCAFFOLD_DENSE_MIRROR_MAX_CELLS = (size_t)5 * 1024 * 1024;
+
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((weak))
+#endif
+PhysicsSimRuntimeMeshObstacleCache *physics_sim_runtime_mesh_obstacle_cache_create(void) {
+    return NULL;
+}
+
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((weak))
+#endif
+void physics_sim_runtime_mesh_obstacle_cache_destroy(
+    PhysicsSimRuntimeMeshObstacleCache *cache) {
+    (void)cache;
+}
 
 static SimRuntimeBackend3DScaffold *backend_3d_scaffold_state(SimRuntimeBackend *backend) {
     return backend ? (SimRuntimeBackend3DScaffold *)backend->impl : NULL;
@@ -191,10 +207,10 @@ static bool backend_3d_scaffold_debug_reset_volume_truth_3d(SimRuntimeBackend *b
     if (state->export_solid_mask_cache) {
         memset(state->export_solid_mask_cache, 0, state->volume.desc.cell_count * sizeof(uint8_t));
     }
-    state->obstacle_volume_dirty = false;
-    state->obstacle_dense_cache_dirty = true;
-    state->obstacle_slice_dirty = true;
+    backend_3d_scaffold_mark_obstacle_volume_rebuilt(state);
     state->initial_state_source = SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK;
+    state->atmospheric_settings_available = false;
+    state->atmospheric_settings = (AtmosphericPresetSettings){0};
     state->atmospheric_seeded = false;
     state->atmospheric_seed = 0u;
     state->atmospheric_seeded_cell_count = 0u;
@@ -264,8 +280,7 @@ static bool backend_3d_scaffold_debug_zero_obstacle_dense_cache_3d(SimRuntimeBac
     if (state->export_solid_mask_cache) {
         memset(state->export_solid_mask_cache, 0, state->volume.desc.cell_count * sizeof(uint8_t));
     }
-    state->obstacle_dense_cache_dirty = true;
-    state->obstacle_slice_dirty = true;
+    backend_3d_scaffold_mark_obstacle_cell_cache_dirty(state);
     state->export_volume_cache_dirty = true;
     state->debug_volume_stats_dirty = true;
     return true;
@@ -298,6 +313,8 @@ static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
     state->debug_volume_scene_up_velocity_avg = 0.0f;
     state->debug_volume_scene_up_velocity_peak = 0.0f;
     state->initial_state_source = SIM_RUNTIME_INITIAL_STATE_SOURCE_BLANK;
+    state->atmospheric_settings_available = false;
+    state->atmospheric_settings = (AtmosphericPresetSettings){0};
     state->atmospheric_seeded = false;
     state->atmospheric_seed = 0u;
     state->atmospheric_seeded_cell_count = 0u;
@@ -320,7 +337,15 @@ static void backend_3d_scaffold_reset(SimRuntimeBackend3DScaffold *state) {
 static size_t backend_3d_scaffold_seed_atmosphere(SimRuntimeBackend3DScaffold *state,
                                                   const FluidScenePreset *preset) {
     AtmosphericInitialStateSource source = atmospheric_initial_state_source(preset);
-    if (!state || source == ATMOSPHERIC_INITIAL_STATE_NONE) return 0;
+    if (!state) return 0;
+    state->atmospheric_settings_available = false;
+    state->atmospheric_settings = (AtmosphericPresetSettings){0};
+    if (preset && preset->atmosphere.enabled) {
+        state->atmospheric_settings = preset->atmosphere;
+        atmospheric_preset_sanitize(&state->atmospheric_settings);
+        state->atmospheric_settings_available = true;
+    }
+    if (source == ATMOSPHERIC_INITIAL_STATE_NONE) return 0;
     const SimRuntime3DDomainDesc *desc = &state->volume.desc;
     const float density_threshold = 0.0001f;
     float inv_w = (desc->grid_w > 1) ? 1.0f / (float)(desc->grid_w - 1) : 0.0f;
@@ -561,6 +586,7 @@ static void backend_3d_scaffold_destroy(SimRuntimeBackend *backend) {
         sim_runtime_3d_volume_destroy(&state->solver_volume);
         sim_runtime_3d_volume_destroy(&state->export_volume_cache);
         sim_runtime_3d_solver_scratch_destroy(&state->solver_scratch);
+        physics_sim_runtime_mesh_obstacle_cache_destroy(state->runtime_mesh_obstacle_cache);
         free(state->solver_solid_mask);
         free(state->export_solid_mask_cache);
         free(state->obstacle_bricks);
@@ -866,6 +892,7 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
     }
 
     sim_runtime_obstacle_contract_default(&state->obstacle_contract);
+    state->runtime_mesh_obstacle_cache = physics_sim_runtime_mesh_obstacle_cache_create();
     if (mode_route && mode_route->wind_tunnel_3d_active) {
         state->wind_tunnel_active = true;
         state->wind_tunnel = (runtime_visual && runtime_visual->wind_tunnel_authored)
@@ -879,15 +906,19 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
         state->scene_up_y = (float)runtime_visual->scene_up.direction.y;
         state->scene_up_z = (float)runtime_visual->scene_up.direction.z;
         state->scene_up_source = runtime_visual->scene_up.source;
+    } else if (mode_route && mode_route->water_mode_active) {
+        state->scene_up_valid = true;
+        state->scene_up_x = 0.0f;
+        state->scene_up_y = 1.0f;
+        state->scene_up_z = 0.0f;
+        state->scene_up_source = PHYSICS_SIM_RUNTIME_SCENE_UP_STANDALONE_WATER;
     } else {
         state->scene_up_source = PHYSICS_SIM_RUNTIME_SCENE_UP_NONE;
     }
     slice_cells = desc.slice_cell_count;
     state->compatibility_slice_z = desc.grid_d / 2;
     state->fluid_slice_dirty = true;
-    state->obstacle_volume_dirty = true;
-    state->obstacle_slice_dirty = true;
-    state->export_volume_cache_dirty = true;
+    backend_3d_scaffold_mark_obstacle_volume_rebuild_needed(state);
     state->slice_density = (float *)calloc(slice_cells, sizeof(float));
     state->slice_velocity_x = (float *)calloc(slice_cells, sizeof(float));
     state->slice_velocity_y = (float *)calloc(slice_cells, sizeof(float));

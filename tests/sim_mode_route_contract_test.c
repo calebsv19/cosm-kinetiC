@@ -10,6 +10,7 @@
 const SimModeHooks g_sim_mode_box = {0};
 const SimModeHooks g_sim_mode_wind = {0};
 const SimModeHooks g_sim_mode_atmospheric = {0};
+const SimModeHooks g_sim_mode_water = {0};
 
 static bool test_route_2d_canonical_backend(void) {
     SimModeRoute route = sim_mode_resolve_route(SIM_MODE_BOX, SPACE_MODE_2D);
@@ -20,6 +21,7 @@ static bool test_route_2d_canonical_backend(void) {
     if (route.fallback_to_2d_projection) return false;
     if (route.constrained_3d_solver_scaffold) return false;
     if (route.wind_tunnel_3d_active) return false;
+    if (route.water_mode_active) return false;
     if (route.constrained_3d_min_substeps != 1) return false;
     if (route.constrained_3d_buoyancy_scale != 1.0f) return false;
     if (!route.hooks) return false;
@@ -35,6 +37,7 @@ static bool test_route_3d_controlled_lane(void) {
     if (!route.fallback_to_2d_projection) return false;
     if (route.constrained_3d_solver_scaffold) return false;
     if (route.wind_tunnel_3d_active) return false;
+    if (route.water_mode_active) return false;
     if (route.constrained_3d_min_substeps != 1) return false;
     if (route.constrained_3d_buoyancy_scale != 1.0f) return false;
     if (!route.hooks) return false;
@@ -51,6 +54,7 @@ static bool test_invalid_space_mode_clamps_to_2d(void) {
     if (route.fallback_to_2d_projection) return false;
     if (route.constrained_3d_solver_scaffold) return false;
     if (route.wind_tunnel_3d_active) return false;
+    if (route.water_mode_active) return false;
     return true;
 }
 
@@ -63,7 +67,22 @@ static bool test_wind_tunnel_route_promotes_3d_wind_lane_only(void) {
     if (wind3d.backend_lane != SIM_BACKEND_CONTROLLED_3D) return false;
     if (!wind3d.fallback_to_2d_projection) return false;
     if (!wind3d.wind_tunnel_3d_active) return false;
+    if (wind3d.water_mode_active) return false;
     if (wind3d.hooks != &g_sim_mode_wind) return false;
+    return true;
+}
+
+static bool test_water_route_promotes_water_3d_lane_only(void) {
+    SimModeRoute water2d = sim_mode_resolve_route(SIM_MODE_WATER, SPACE_MODE_2D);
+    SimModeRoute water3d = sim_mode_resolve_route(SIM_MODE_WATER, SPACE_MODE_3D);
+    if (water2d.backend_lane != SIM_BACKEND_CANONICAL_2D) return false;
+    if (water2d.water_mode_active) return false;
+    if (water2d.hooks != &g_sim_mode_water) return false;
+    if (water3d.backend_lane != SIM_BACKEND_CONTROLLED_3D) return false;
+    if (!water3d.fallback_to_2d_projection) return false;
+    if (water3d.wind_tunnel_3d_active) return false;
+    if (!water3d.water_mode_active) return false;
+    if (water3d.hooks != &g_sim_mode_water) return false;
     return true;
 }
 
@@ -117,6 +136,10 @@ int main(void) {
     }
     if (!test_wind_tunnel_route_promotes_3d_wind_lane_only()) {
         fprintf(stderr, "sim_mode_route_contract_test: wind 3D route contract failed\n");
+        return 1;
+    }
+    if (!test_water_route_promotes_water_3d_lane_only()) {
+        fprintf(stderr, "sim_mode_route_contract_test: water 3D route contract failed\n");
         return 1;
     }
     if (!test_step_policy_activation_rules()) {

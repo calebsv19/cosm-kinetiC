@@ -31,6 +31,11 @@ bool scene_editor_input_handle_button_actions(SceneEditorState *state, int x, in
         &state->btn_boundary,
         &state->btn_overlay_dynamic,
         &state->btn_overlay_static,
+        &state->btn_mesh_role_solid,
+        &state->btn_mesh_role_visual,
+        &state->btn_mesh_role_surface,
+        &state->btn_mesh_role_heat,
+        &state->btn_mesh_role_flow,
         &state->btn_overlay_mode_3d,
         &state->btn_overlay_surface_3d,
         &state->btn_overlay_obstacle_3d,
@@ -118,16 +123,49 @@ bool scene_editor_input_handle_button_actions(SceneEditorState *state, int x, in
                                                                     PHYSICS_SIM_OVERLAY_MOTION_STATIC)) {
                 set_dirty(state);
             }
+        } else if (btn == &state->btn_mesh_role_solid) {
+            if (physics_sim_editor_session_set_selected_runtime_mesh_role(
+                    &state->session,
+                    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SOLID)) {
+                set_dirty(state);
+            }
+        } else if (btn == &state->btn_mesh_role_visual) {
+            if (physics_sim_editor_session_set_selected_runtime_mesh_role(
+                    &state->session,
+                    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_VISUAL_ONLY)) {
+                set_dirty(state);
+            }
+        } else if (btn == &state->btn_mesh_role_surface) {
+            if (physics_sim_editor_session_set_selected_runtime_mesh_role(
+                    &state->session,
+                    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_EMITTER)) {
+                set_dirty(state);
+            }
+        } else if (btn == &state->btn_mesh_role_heat) {
+            if (physics_sim_editor_session_set_selected_runtime_mesh_role(
+                    &state->session,
+                    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_SURFACE_HEAT_EMITTER)) {
+                set_dirty(state);
+            }
+        } else if (btn == &state->btn_mesh_role_flow) {
+            if (physics_sim_editor_session_set_selected_runtime_mesh_role(
+                    &state->session,
+                    PHYSICS_SIM_RUNTIME_MESH_EDITOR_ROLE_BOUNDARY_FLOW_EMITTER)) {
+                set_dirty(state);
+            }
         } else if (btn == &state->btn_overlay_mode_3d) {
-            if (physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(&state->session)) {
+            if (physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_source_mode_3d(&state->session) ||
+                physics_sim_editor_session_cycle_selected_emitter_source_mode_3d(&state->session)) {
                 set_dirty(state);
             }
         } else if (btn == &state->btn_overlay_surface_3d) {
-            if (physics_sim_editor_session_cycle_selected_emitter_surface_3d(&state->session)) {
+            if (physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_surface_3d(&state->session) ||
+                physics_sim_editor_session_cycle_selected_emitter_surface_3d(&state->session)) {
                 set_dirty(state);
             }
         } else if (btn == &state->btn_overlay_obstacle_3d) {
-            if (physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(&state->session)) {
+            if (physics_sim_editor_session_cycle_selected_runtime_mesh_emitter_obstacle_mode_3d(&state->session) ||
+                physics_sim_editor_session_cycle_selected_emitter_obstacle_mode_3d(&state->session)) {
                 set_dirty(state);
             }
         } else if (btn == &state->btn_overlay_vel_x_neg) {

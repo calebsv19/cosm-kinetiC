@@ -42,6 +42,9 @@ AppConfig app_config_default(void) {
     cfg.emitter_sink_multiplier = 1.0f;
 
     cfg.save_volume_frames = false;
+    cfg.volume_export_start_frame = 0;
+    cfg.volume_export_stride = 1;
+    cfg.volume_export_max_frames = 0;
     cfg.save_render_frames = false;
     cfg.wind_visual_mode = WIND_VISUAL_MODE_FLOW;
     cfg.enable_render_blur = true;
@@ -64,12 +67,17 @@ AppConfig app_config_default(void) {
              "%s",
              physics_sim_default_snapshot_dir());
     cfg.atmospheric_warm_start_path[0] = '\0';
+    cfg.retained_runtime_scene_path[0] = '\0';
 
     cfg.sim_mode = SIM_MODE_BOX;
     cfg.space_mode = SPACE_MODE_2D;
     cfg.tunnel_inflow_speed = 40.0f;
     cfg.tunnel_inflow_density = 15.0f;
     cfg.tunnel_viscosity_scale = 0.5f;
+    cfg.water_level = 0.5f;
+    cfg.water_review_ripples = false;
+    cfg.water_review_ripple_amplitude_m = 0.0f;
+    cfg.water_object_fixture = false;
 
     // Collider fidelity defaults
     cfg.collider_max_loops = 16;

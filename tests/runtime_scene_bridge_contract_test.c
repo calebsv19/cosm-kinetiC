@@ -1,5 +1,7 @@
 #include "import/runtime_scene_bridge.h"
+#include "app/atmospheric/atmospheric_field.h"
 #include "app/scene_objects.h"
+#include "app/sim_runtime_emitter.h"
 #include "app/editor/scene_editor_session.h"
 #include "core_scene_compile.h"
 #include "runtime_scene_bridge_contract_session_suite.h"
@@ -159,6 +161,85 @@ static bool test_runtime_scene_bridge_bootstrap_hydrates_wind_tunnel_overlay(voi
     if (fabsf(bootstrap.wind_tunnel.inflow_speed - 22.0f) > 1e-6f) return false;
     if (fabsf(bootstrap.wind_tunnel.inflow_density - 0.5f) > 1e-6f) return false;
     if (bootstrap.wind_tunnel.inlet_slab_cells != 3) return false;
+    return true;
+}
+
+static bool test_runtime_scene_bridge_apply_atmosphere_overlay(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_bridge_atmosphere\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{"
+          "\"physics_sim\":{"
+            "\"scene_domain\":{"
+              "\"active\":true,"
+              "\"shape\":\"box\","
+              "\"min\":{\"x\":-2.0,\"y\":-1.0,\"z\":-2.0},"
+              "\"max\":{\"x\":2.0,\"y\":1.0,\"z\":2.0}"
+            "},"
+            "\"atmosphere\":{"
+              "\"enabled\":true,"
+              "\"seed\":424242,"
+              "\"base_density\":0.04,"
+              "\"density_scale\":3.5,"
+              "\"density_threshold\":0.42,"
+              "\"base_wind_x\":0.25,"
+              "\"base_wind_y\":0.5,"
+              "\"base_wind_z\":0.75,"
+              "\"turbulence_strength\":1.75,"
+              "\"noise_scale\":4.5,"
+              "\"detail_scale\":12.0,"
+              "\"band_min_y\":0.12,"
+              "\"band_max_y\":0.88,"
+              "\"band_edge_falloff\":0.09,"
+              "\"regions\":[{"
+                "\"enabled\":true,"
+                "\"shape\":\"ellipse\","
+                "\"center_x\":0.45,"
+                "\"center_y\":0.55,"
+                "\"center_z\":0.65,"
+                "\"size_x\":0.35,"
+                "\"size_y\":0.25,"
+                "\"size_z\":0.15,"
+                "\"density\":2.25,"
+                "\"falloff\":0.4"
+              "}]"
+            "}"
+          "}"
+        "}"
+        "}";
+    RuntimeSceneBridgePreflight summary;
+    AppConfig cfg = app_config_default();
+    const FluidScenePreset *base = scene_presets_get_default();
+    FluidScenePreset preset = base ? *base : (FluidScenePreset){0};
+    if (!runtime_scene_bridge_apply_json(runtime_json, &cfg, &preset, &summary)) return false;
+    if (!summary.valid_contract) return false;
+    if (cfg.sim_mode != SIM_MODE_ATMOSPHERIC) return false;
+    if (cfg.space_mode != SPACE_MODE_3D) return false;
+    if (preset.domain != SCENE_DOMAIN_ATMOSPHERIC) return false;
+    if (preset.dimension_mode != SCENE_DIMENSION_MODE_3D) return false;
+    if (!preset.atmospheric_initial_state_enabled) return false;
+    if (!preset.atmosphere.enabled) return false;
+    if (preset.atmosphere.seed != 424242u) return false;
+    if (fabsf(preset.atmosphere.base_density - 0.04f) > 1e-6f) return false;
+    if (fabsf(preset.atmosphere.density_scale - 3.5f) > 1e-6f) return false;
+    if (fabsf(preset.atmosphere.density_threshold - 0.42f) > 1e-6f) return false;
+    if (fabsf(preset.atmosphere.turbulence_strength - 1.75f) > 1e-6f) return false;
+    if (preset.atmosphere.region_count != 1u) return false;
+    if (!preset.atmosphere.regions[0].enabled) return false;
+    if (preset.atmosphere.regions[0].shape != ATMOSPHERIC_REGION_ELLIPSE) return false;
+    if (fabsf(preset.atmosphere.regions[0].density - 2.25f) > 1e-6f) return false;
+    if (fabsf(preset.atmosphere.regions[0].falloff - 0.4f) > 1e-6f) return false;
     return true;
 }
 
@@ -523,6 +604,53 @@ static bool test_runtime_scene_bridge_visual_bootstrap_uses_authored_scene_domai
     return true;
 }
 
+static bool test_runtime_scene_bridge_mesh_emitter_appends_preset_emitter(void) {
+    const char *runtime_json =
+        "{"
+        "\"schema_family\":\"codework_scene\","
+        "\"schema_variant\":\"scene_runtime_v1\","
+        "\"schema_version\":1,"
+        "\"scene_id\":\"scene_mesh_emitter_projection\","
+        "\"space_mode_default\":\"3d\","
+        "\"unit_system\":\"meters\","
+        "\"world_scale\":1.0,"
+        "\"objects\":[{"
+        "\"object_id\":\"obj_mesh_emitter\","
+        "\"object_type\":\"mesh_asset_instance\","
+        "\"geometry_ref\":{\"kind\":\"mesh_asset\",\"id\":\"asset_missing\"},"
+        "\"transform\":{"
+        "\"position\":{\"x\":0.25,\"y\":0.50,\"z\":0.75},"
+        "\"rotation\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},"
+        "\"scale\":{\"x\":1.0,\"y\":1.0,\"z\":1.0}},"
+        "\"extensions\":{\"physics_sim\":{"
+        "\"fluid_behavior\":\"boundary_flow_emitter\","
+        "\"emitter\":{\"active\":true,\"type\":\"Jet\",\"mode_3d\":\"SurfaceShell\","
+        "\"surface_3d\":\"AllFaces\",\"strength\":11.0,"
+        "\"direction\":{\"x\":0.0,\"y\":1.0,\"z\":0.0}}"
+        "}}"
+        "}],"
+        "\"materials\":[],"
+        "\"lights\":[],"
+        "\"cameras\":[],"
+        "\"constraints\":[],"
+        "\"extensions\":{}"
+        "}";
+    AppConfig cfg = {0};
+    FluidScenePreset preset = {0};
+    RuntimeSceneBridgePreflight summary = {0};
+    SimRuntimeEmitterResolved resolved = {0};
+    if (!runtime_scene_bridge_apply_json(runtime_json, &cfg, &preset, &summary)) return false;
+    if (preset.emitter_count != 1u) return false;
+    if (!sim_runtime_emitter_resolve(&preset, 0u, &resolved)) return false;
+    if (resolved.source_kind != SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_RUNTIME_MESH) return false;
+    if (!resolved.attached_runtime_mesh_enabled || resolved.attached_runtime_mesh != 0) return false;
+    if (resolved.type != EMITTER_VELOCITY_JET) return false;
+    if (resolved.primary_footprint != SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_SURFACE_SHELL) {
+        return false;
+    }
+    return resolved.strength > 10.99f && resolved.strength < 11.01f;
+}
+
 static bool test_runtime_scene_bridge_visual_bootstrap_falls_back_to_retained_bounds(void) {
     PhysicsSimRuntimeVisualBootstrap bootstrap = {0};
     char diagnostics[256];
@@ -729,6 +857,10 @@ int main(int argc, char **argv) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: wind tunnel bootstrap failed\n");
         return 1;
     }
+    if (!test_runtime_scene_bridge_apply_atmosphere_overlay()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: atmosphere overlay apply failed\n");
+        return 1;
+    }
     if (!test_runtime_scene_bridge_apply_fixture()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: fixture apply failed\n");
         return 1;
@@ -755,6 +887,10 @@ int main(int argc, char **argv) {
     }
     if (!test_runtime_scene_bridge_visual_bootstrap_uses_authored_scene_domain()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: visual bootstrap authored domain failed\n");
+        return 1;
+    }
+    if (!test_runtime_scene_bridge_mesh_emitter_appends_preset_emitter()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: mesh emitter append failed\n");
         return 1;
     }
     if (!test_runtime_scene_bridge_visual_bootstrap_falls_back_to_retained_bounds()) {
@@ -799,6 +935,18 @@ int main(int argc, char **argv) {
     }
     if (!test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay()) {
         fprintf(stderr, "runtime_scene_bridge_contract_test: roundtrip reopen hydrate failed\n");
+        return 1;
+    }
+    if (!test_scene_editor_session_wind_tunnel_face_writeback_roundtrips()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: wind tunnel face writeback failed\n");
+        return 1;
+    }
+    if (!test_scene_editor_session_wind_tunnel_writeback_creates_missing_extension()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: wind tunnel missing extension writeback failed\n");
+        return 1;
+    }
+    if (!test_scene_editor_session_runtime_mesh_role_writeback_updates_object_extension()) {
+        fprintf(stderr, "runtime_scene_bridge_contract_test: runtime mesh role writeback failed\n");
         return 1;
     }
     if (!test_scene_editor_session_tracks_legacy_selection()) {

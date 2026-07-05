@@ -99,6 +99,41 @@ static bool test_attached_object_surface_patch_contract_resolves_new_3d_fields(v
     return true;
 }
 
+static bool test_attached_runtime_mesh_surface_heat_contract(void) {
+    FluidScenePreset preset = {0};
+    SimRuntimeEmitterResolved resolved = {0};
+
+    preset.emitter_count = 1;
+    preset.emitters[0] = (FluidEmitter){
+        .type = EMITTER_DENSITY_SOURCE,
+        .position_x = 0.5f,
+        .position_y = 0.5f,
+        .position_z = 0.0f,
+        .radius = 0.05f,
+        .strength = 7.0f,
+        .dir_x = 0.0f,
+        .dir_y = 0.0f,
+        .dir_z = 1.0f,
+        .attached_object = -1,
+        .attached_import = -1,
+        .attached_runtime_mesh_enabled = true,
+        .attached_runtime_mesh = 4,
+        .source_mode_3d = EMITTER_3D_SOURCE_MODE_HEATED_OBSTACLE,
+        .surface_3d = EMITTER_3D_SURFACE_ALL_FACES,
+        .obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED,
+        .thermal_buoyancy_3d = 2.0f,
+    };
+
+    if (!sim_runtime_emitter_resolve(&preset, 0, &resolved)) return false;
+    if (resolved.source_kind != SIM_RUNTIME_EMITTER_SOURCE_ATTACHED_RUNTIME_MESH) return false;
+    if (resolved.primary_footprint !=
+        SIM_RUNTIME_EMITTER_FOOTPRINT_ATTACHED_RUNTIME_MESH_HEATED_OBSTACLE) return false;
+    if (!resolved.attached_runtime_mesh_enabled || resolved.attached_runtime_mesh != 4) return false;
+    if (resolved.obstacle_mode_3d != EMITTER_3D_OBSTACLE_MODE_CLEAR_ATTACHED) return false;
+    if (!nearly_equal(resolved.thermal_buoyancy_3d, 2.0f)) return false;
+    return true;
+}
+
 static bool test_3d_placement_maps_additive_world_z(void) {
     SimRuntime3DDomainDesc domain = {
         .grid_w = 96,
@@ -137,6 +172,10 @@ int main(void) {
     }
     if (!test_attached_object_surface_patch_contract_resolves_new_3d_fields()) {
         fprintf(stderr, "sim_runtime_emitter_contract_test: surface patch contract failed\n");
+        return 1;
+    }
+    if (!test_attached_runtime_mesh_surface_heat_contract()) {
+        fprintf(stderr, "sim_runtime_emitter_contract_test: runtime mesh emitter contract failed\n");
         return 1;
     }
     if (!test_3d_placement_maps_additive_world_z()) {

@@ -695,6 +695,45 @@ bool runtime_scene_bridge_preflight_file(const char *runtime_scene_path,
     return ok;
 }
 
+static void runtime_scene_bridge_append_runtime_mesh_emitters(
+    const char *runtime_scene_json,
+    FluidScenePreset *in_out_preset) {
+    PhysicsSimRuntimeMeshPreviewSet mesh_set;
+    if (!runtime_scene_json || !in_out_preset) return;
+    if (!physics_sim_runtime_mesh_preview_scan_scene_json(runtime_scene_json,
+                                                          NULL,
+                                                          &mesh_set,
+                                                          NULL,
+                                                          0)) {
+        return;
+    }
+    for (int i = 0; i < mesh_set.instance_count && in_out_preset->emitter_count < MAX_FLUID_EMITTERS; ++i) {
+        const PhysicsSimRuntimeMeshPreviewInstance *instance = &mesh_set.instances[i];
+        FluidEmitter *dst = NULL;
+        if (!instance->fluid_emitter_enabled) continue;
+        dst = &in_out_preset->emitters[in_out_preset->emitter_count];
+        memset(dst, 0, sizeof(*dst));
+        dst->type = instance->emitter_type;
+        dst->position_x = (float)instance->transform_position.x;
+        dst->position_y = (float)instance->transform_position.y;
+        dst->position_z = (float)instance->transform_position.z;
+        dst->radius = instance->emitter_radius > 0.0f ? instance->emitter_radius : 0.08f;
+        dst->strength = instance->emitter_strength;
+        dst->dir_x = (float)instance->emitter_direction.x;
+        dst->dir_y = (float)instance->emitter_direction.y;
+        dst->dir_z = (float)instance->emitter_direction.z;
+        dst->attached_object = -1;
+        dst->attached_import = -1;
+        dst->attached_runtime_mesh_enabled = true;
+        dst->attached_runtime_mesh = i;
+        dst->source_mode_3d = instance->emitter_source_mode_3d;
+        dst->surface_3d = instance->emitter_surface_3d;
+        dst->obstacle_mode_3d = instance->emitter_obstacle_mode_3d;
+        dst->thermal_buoyancy_3d = instance->emitter_thermal_buoyancy_3d;
+        in_out_preset->emitter_count += 1u;
+    }
+}
+
 bool runtime_scene_bridge_apply_json(const char *runtime_scene_json,
                                      AppConfig *in_out_cfg,
                                      FluidScenePreset *in_out_preset,
@@ -722,6 +761,7 @@ bool runtime_scene_bridge_apply_json(const char *runtime_scene_json,
                                                         in_out_cfg,
                                                         in_out_preset,
                                                         out_summary);
+    runtime_scene_bridge_append_runtime_mesh_emitters(runtime_scene_json, in_out_preset);
 
     preflight_diag(out_summary, "ok");
     json_object_put(root);
@@ -773,6 +813,11 @@ bool runtime_scene_bridge_load_visual_bootstrap_json(const char *runtime_scene_j
                                                             &out_bootstrap->wind_tunnel)) {
         out_bootstrap->wind_tunnel_authored = out_bootstrap->wind_tunnel.active;
     }
+    (void)physics_sim_runtime_mesh_preview_scan_scene_json(runtime_scene_json,
+                                                           NULL,
+                                                           &out_bootstrap->mesh_previews,
+                                                           NULL,
+                                                           0);
 
     bridge_diag(out_diagnostics, out_diagnostics_size, "ok");
     json_object_put(root);
@@ -813,6 +858,13 @@ bool runtime_scene_bridge_load_visual_bootstrap_file(const char *runtime_scene_p
                                                          out_bootstrap,
                                                          out_diagnostics,
                                                          out_diagnostics_size);
+    if (ok) {
+        (void)physics_sim_runtime_mesh_preview_scan_scene_json(json_text,
+                                                               runtime_scene_path,
+                                                               &out_bootstrap->mesh_previews,
+                                                               NULL,
+                                                               0);
+    }
     free(json_text);
     return ok;
 }
@@ -849,6 +901,313 @@ bool runtime_scene_bridge_apply_file(const char *runtime_scene_path,
     ok = runtime_scene_bridge_apply_json(json_text, in_out_cfg, in_out_preset, out_summary);
     free(json_text);
     return ok;
+}
+
+static const char *bridge_string_field(json_object *obj, const char *key) {
+    json_object *node = NULL;
+    if (!obj || !json_object_is_type(obj, json_type_object) || !key) return NULL;
+    if (!json_object_object_get_ex(obj, key, &node) || !json_object_is_type(node, json_type_string)) {
+        return NULL;
+    }
+    return json_object_get_string(node);
+}
+
+static bool bridge_number_field(json_object *obj, const char *key, double *out_value) {
+    json_object *node = NULL;
+    if (!obj || !key || !out_value) return false;
+    if (!json_object_object_get_ex(obj, key, &node) ||
+        (!json_object_is_type(node, json_type_double) &&
+         !json_object_is_type(node, json_type_int))) {
+        return false;
+    }
+    *out_value = json_object_get_double(node);
+    return true;
+}
+
+static bool bridge_vec3_field(json_object *obj, const char *key, CoreObjectVec3 *out_value) {
+    json_object *node = NULL;
+    if (!obj || !key || !out_value) return false;
+    if (!json_object_object_get_ex(obj, key, &node) || !json_object_is_type(node, json_type_object)) {
+        return false;
+    }
+    return bridge_number_field(node, "x", &out_value->x) &&
+           bridge_number_field(node, "y", &out_value->y) &&
+           bridge_number_field(node, "z", &out_value->z);
+}
+
+static bool bridge_text_is(const char *text, const char *a, const char *b) {
+    if (!text || !text[0]) return false;
+    if (a && strcmp(text, a) == 0) return true;
+    if (b && strcmp(text, b) == 0) return true;
+    return false;
+}
+
+static const char *bridge_runtime_mesh_behavior_from_overlay(json_object *overlay_obj) {
+    const char *text = bridge_string_field(overlay_obj, "fluid_behavior");
+    if (!text || !text[0]) {
+        text = bridge_string_field(overlay_obj, "role");
+    }
+    if (bridge_text_is(text, "visual_only", "none") ||
+        bridge_text_is(text, "Visual", "VisualOnly")) {
+        return "visual_only";
+    }
+    if (bridge_text_is(text, "surface_emitter", "emitter") ||
+        bridge_text_is(text, "Surface", "SurfaceEmitter")) {
+        return "surface_emitter";
+    }
+    if (bridge_text_is(text, "surface_heat_emitter", "heat_emitter") ||
+        bridge_text_is(text, "Heat", "SurfaceHeatEmitter")) {
+        return "surface_heat_emitter";
+    }
+    if (bridge_text_is(text, "boundary_flow_emitter", "velocity_emitter") ||
+        bridge_text_is(text, "Flow", "BoundaryFlowEmitter")) {
+        return "boundary_flow_emitter";
+    }
+    return "solid_obstacle";
+}
+
+static bool bridge_runtime_mesh_behavior_is_emitter(const char *behavior) {
+    return behavior &&
+           (strcmp(behavior, "surface_emitter") == 0 ||
+            strcmp(behavior, "surface_heat_emitter") == 0 ||
+            strcmp(behavior, "boundary_flow_emitter") == 0);
+}
+
+static bool bridge_ensure_object_child(json_object *parent,
+                                       const char *key,
+                                       json_object **out_child,
+                                       char *out_diagnostics,
+                                       size_t out_diagnostics_size) {
+    json_object *child = NULL;
+    if (out_child) *out_child = NULL;
+    if (!parent || !key || !out_child) return false;
+    if (json_object_object_get_ex(parent, key, &child) && json_object_is_type(child, json_type_object)) {
+        *out_child = child;
+        return true;
+    }
+    child = json_object_new_object();
+    if (!child) {
+        bridge_diag(out_diagnostics, out_diagnostics_size, "out of memory");
+        return false;
+    }
+    json_object_object_add(parent, key, child);
+    *out_child = child;
+    return true;
+}
+
+static json_object *bridge_find_runtime_mesh_object(json_object *runtime_root, const char *object_id) {
+    json_object *objects = NULL;
+    if (!runtime_root || !object_id || !object_id[0]) return NULL;
+    if (!json_object_object_get_ex(runtime_root, "objects", &objects) ||
+        !json_object_is_type(objects, json_type_array)) {
+        return NULL;
+    }
+    for (size_t i = 0; i < json_object_array_length(objects); ++i) {
+        json_object *object = json_object_array_get_idx(objects, i);
+        const char *candidate_id = bridge_string_field(object, "object_id");
+        const char *object_type = bridge_string_field(object, "object_type");
+        if (candidate_id && object_type &&
+            strcmp(candidate_id, object_id) == 0 &&
+            strcmp(object_type, "mesh_asset_instance") == 0) {
+            return object;
+        }
+    }
+    return NULL;
+}
+
+static void bridge_add_vec3(json_object *parent, const char *key, CoreObjectVec3 value) {
+    json_object *vec = json_object_new_object();
+    if (!parent || !key || !vec) return;
+    json_object_object_add(vec, "x", json_object_new_double(value.x));
+    json_object_object_add(vec, "y", json_object_new_double(value.y));
+    json_object_object_add(vec, "z", json_object_new_double(value.z));
+    json_object_object_add(parent, key, vec);
+}
+
+static void bridge_add_runtime_mesh_emitter(json_object *physics_sim,
+                                            json_object *overlay_emitter,
+                                            const char *behavior) {
+    json_object *emitter = json_object_new_object();
+    const char *type = NULL;
+    const char *mode_3d = NULL;
+    const char *surface_3d = NULL;
+    const char *obstacle_mode_3d = NULL;
+    double radius = 0.08;
+    double strength = 5.0;
+    double thermal_buoyancy_3d = 0.0;
+    CoreObjectVec3 direction = {0.0, 0.0, 1.0};
+    if (!physics_sim || !emitter) {
+        if (emitter) json_object_put(emitter);
+        return;
+    }
+
+    if (strcmp(behavior, "boundary_flow_emitter") == 0) {
+        type = "Jet";
+        strength = 40.0;
+        mode_3d = "SurfaceShell";
+        surface_3d = "AllFaces";
+        obstacle_mode_3d = "ClearAttached";
+    } else if (strcmp(behavior, "surface_heat_emitter") == 0) {
+        type = "Source";
+        strength = 8.0;
+        thermal_buoyancy_3d = 6.0;
+        mode_3d = "HeatedObstacle";
+        surface_3d = "AllFaces";
+        obstacle_mode_3d = "ClearAttached";
+    } else {
+        type = "Source";
+        strength = 8.0;
+        mode_3d = "SurfaceShell";
+        surface_3d = "AllFaces";
+        obstacle_mode_3d = "ClearAttached";
+    }
+
+    if (overlay_emitter && json_object_is_type(overlay_emitter, json_type_object)) {
+        const char *src_type = bridge_string_field(overlay_emitter, "type");
+        const char *src_mode = bridge_string_field(overlay_emitter, "mode_3d");
+        const char *src_surface = bridge_string_field(overlay_emitter, "surface_3d");
+        const char *src_obstacle = bridge_string_field(overlay_emitter, "obstacle_mode_3d");
+        if (src_type && src_type[0]) type = src_type;
+        if (src_mode && src_mode[0]) mode_3d = src_mode;
+        if (src_surface && src_surface[0]) surface_3d = src_surface;
+        if (src_obstacle && src_obstacle[0]) obstacle_mode_3d = src_obstacle;
+        (void)bridge_number_field(overlay_emitter, "radius", &radius);
+        (void)bridge_number_field(overlay_emitter, "strength", &strength);
+        (void)bridge_number_field(overlay_emitter, "thermal_buoyancy_3d", &thermal_buoyancy_3d);
+        (void)bridge_vec3_field(overlay_emitter, "direction", &direction);
+    }
+
+    json_object_object_add(emitter, "active", json_object_new_boolean(1));
+    json_object_object_add(emitter, "type", json_object_new_string(type));
+    json_object_object_add(emitter, "radius", json_object_new_double(radius));
+    json_object_object_add(emitter, "strength", json_object_new_double(strength));
+    json_object_object_add(emitter, "mode_3d", json_object_new_string(mode_3d));
+    json_object_object_add(emitter, "surface_3d", json_object_new_string(surface_3d));
+    json_object_object_add(emitter, "obstacle_mode_3d", json_object_new_string(obstacle_mode_3d));
+    json_object_object_add(emitter, "thermal_buoyancy_3d", json_object_new_double(thermal_buoyancy_3d));
+    bridge_add_vec3(emitter, "direction", direction);
+    json_object_object_add(physics_sim, "emitter", emitter);
+}
+
+static bool runtime_scene_bridge_apply_runtime_mesh_overlay_objects(json_object *runtime_root,
+                                                                    json_object *overlay_root,
+                                                                    char *out_diagnostics,
+                                                                    size_t out_diagnostics_size) {
+    json_object *extensions = NULL;
+    json_object *physics_ext = NULL;
+    json_object *mesh_overlays = NULL;
+    if (!runtime_root || !overlay_root) return false;
+    if (!json_object_object_get_ex(overlay_root, "extensions", &extensions) ||
+        !json_object_is_type(extensions, json_type_object) ||
+        !json_object_object_get_ex(extensions, "physics_sim", &physics_ext) ||
+        !json_object_is_type(physics_ext, json_type_object) ||
+        !json_object_object_get_ex(physics_ext, "mesh_overlays", &mesh_overlays)) {
+        return true;
+    }
+    if (!json_object_is_type(mesh_overlays, json_type_array)) {
+        bridge_diag(out_diagnostics, out_diagnostics_size, "mesh_overlays must be array");
+        return false;
+    }
+
+    for (size_t i = 0; i < json_object_array_length(mesh_overlays); ++i) {
+        json_object *overlay_obj = json_object_array_get_idx(mesh_overlays, i);
+        json_object *runtime_object = NULL;
+        json_object *object_extensions = NULL;
+        json_object *object_physics = NULL;
+        json_object *overlay_emitter = NULL;
+        const char *object_id = NULL;
+        const char *behavior = NULL;
+        if (!overlay_obj || !json_object_is_type(overlay_obj, json_type_object)) continue;
+        object_id = bridge_string_field(overlay_obj, "object_id");
+        if (!object_id || !object_id[0]) continue;
+        runtime_object = bridge_find_runtime_mesh_object(runtime_root, object_id);
+        if (!runtime_object) continue;
+
+        behavior = bridge_runtime_mesh_behavior_from_overlay(overlay_obj);
+        if (!bridge_ensure_object_child(runtime_object,
+                                        "extensions",
+                                        &object_extensions,
+                                        out_diagnostics,
+                                        out_diagnostics_size) ||
+            !bridge_ensure_object_child(object_extensions,
+                                        "physics_sim",
+                                        &object_physics,
+                                        out_diagnostics,
+                                        out_diagnostics_size)) {
+            return false;
+        }
+
+        json_object_object_add(object_physics, "fluid_behavior", json_object_new_string(behavior));
+        json_object_object_add(object_physics,
+                               "fluid_obstacle",
+                               json_object_new_boolean(strcmp(behavior, "solid_obstacle") == 0 ? 1 : 0));
+        if (bridge_runtime_mesh_behavior_is_emitter(behavior)) {
+            (void)json_object_object_get_ex(overlay_obj, "emitter", &overlay_emitter);
+            bridge_add_runtime_mesh_emitter(object_physics, overlay_emitter, behavior);
+        } else {
+            json_object_object_del(object_physics, "emitter");
+        }
+    }
+    bridge_diag(out_diagnostics, out_diagnostics_size, "ok");
+    return true;
+}
+
+bool runtime_scene_bridge_writeback_runtime_mesh_overlays_json(const char *runtime_scene_json,
+                                                               const char *overlay_json,
+                                                               char **out_runtime_scene_json,
+                                                               char *out_diagnostics,
+                                                               size_t out_diagnostics_size) {
+    json_object *runtime_root = NULL;
+    json_object *overlay_root = NULL;
+    const char *serialized = NULL;
+    char *out = NULL;
+    size_t out_len = 0;
+
+    if (out_runtime_scene_json) *out_runtime_scene_json = NULL;
+    bridge_diag(out_diagnostics, out_diagnostics_size, "invalid input");
+    if (!runtime_scene_json || !overlay_json || !out_runtime_scene_json) return false;
+
+    runtime_root = json_tokener_parse(runtime_scene_json);
+    overlay_root = json_tokener_parse(overlay_json);
+    if (!runtime_root || !json_object_is_type(runtime_root, json_type_object) ||
+        !overlay_root || !json_object_is_type(overlay_root, json_type_object)) {
+        bridge_diag(out_diagnostics, out_diagnostics_size, "invalid JSON object");
+        if (runtime_root) json_object_put(runtime_root);
+        if (overlay_root) json_object_put(overlay_root);
+        return false;
+    }
+    if (!validate_runtime_scene_root_diag(runtime_root, out_diagnostics, out_diagnostics_size) ||
+        !runtime_scene_bridge_apply_runtime_mesh_overlay_objects(runtime_root,
+                                                                 overlay_root,
+                                                                 out_diagnostics,
+                                                                 out_diagnostics_size)) {
+        json_object_put(runtime_root);
+        json_object_put(overlay_root);
+        return false;
+    }
+
+    serialized = json_object_to_json_string_ext(runtime_root,
+                                                JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_NOSLASHESCAPE);
+    if (!serialized) {
+        bridge_diag(out_diagnostics, out_diagnostics_size, "failed to serialize mesh overlay writeback");
+        json_object_put(runtime_root);
+        json_object_put(overlay_root);
+        return false;
+    }
+    out_len = strlen(serialized);
+    out = (char *)malloc(out_len + 1u);
+    if (!out) {
+        bridge_diag(out_diagnostics, out_diagnostics_size, "out of memory");
+        json_object_put(runtime_root);
+        json_object_put(overlay_root);
+        return false;
+    }
+    memcpy(out, serialized, out_len + 1u);
+    *out_runtime_scene_json = out;
+    bridge_diag(out_diagnostics, out_diagnostics_size, "ok");
+    json_object_put(runtime_root);
+    json_object_put(overlay_root);
+    return true;
 }
 
 bool runtime_scene_bridge_writeback_physics_overlay_json(const char *runtime_scene_json,
@@ -891,6 +1250,14 @@ bool runtime_scene_bridge_writeback_physics_overlay_json(const char *runtime_sce
         json_object_put(overlay_root);
         return false;
     }
+    if (!runtime_scene_bridge_apply_runtime_mesh_overlay_objects(runtime_root,
+                                                                 overlay_root,
+                                                                 out_diagnostics,
+                                                                 out_diagnostics_size)) {
+        json_object_put(runtime_root);
+        json_object_put(overlay_root);
+        return false;
+    }
 
     serialized = json_object_to_json_string_ext(runtime_root,
                                                 JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_NOSLASHESCAPE);
@@ -926,6 +1293,8 @@ const char *physics_sim_runtime_scene_up_source_label(PhysicsSimRuntimeSceneUpSo
         return "construction-plane-axis";
     case PHYSICS_SIM_RUNTIME_SCENE_UP_FALLBACK_POSITIVE_Z:
         return "fallback-+z";
+    case PHYSICS_SIM_RUNTIME_SCENE_UP_STANDALONE_WATER:
+        return "standalone-water";
     case PHYSICS_SIM_RUNTIME_SCENE_UP_NONE:
     default:
         return "none";

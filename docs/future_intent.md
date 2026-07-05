@@ -1,6 +1,6 @@
 # Physics Sim Future Intent
 
-Last updated: 2026-04-29
+Last updated: 2026-06-16
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).
@@ -15,6 +15,20 @@ Last updated: 2026-04-29
   - scene-library discovery/path clarity
   - menu/input-root ergonomics
   - large-scene editor viewport handling
+- The local runtime-mesh boundary has moved from first implementation to
+  scenario validation and product integration:
+  - turn the generated high-triangle contract fixture into persistent
+    runtime-scene/Wind examples for default-solid obstacles and mesh emitters
+  - decide whether backend-lifetime prepared mesh and voxel-footprint caching
+    needs selected-object refresh controls, live file watching, or persistent
+    on-disk acceleration/footprint artifacts for very large imported meshes
+  - integrate the per-mesh diagnostics into a user-facing selected-object
+    Wind/object readout when the Wind inspector lane reaches mesh-specific
+    object tables; do not add cache/watch detail to the always-on HUD
+  - decide whether runtime mesh emitters need surface normals or surface-group
+    tags for more precise directional flow and heat authoring
+  - keep solver truth sourced from `mesh_asset_runtime_v1`, not preview
+    sidecars
 - The deferred handoff is:
   - load raw `.vf3d` and additive `VF3H` `.pack`
   - resolve truthful `scene_bundle.json` / `manifest.json` metadata

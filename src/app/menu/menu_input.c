@@ -344,6 +344,13 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         return;
     }
 
+    if (menu_showing_retained_catalog(ctx) &&
+        menu_has_scene_project_cache_status(ctx) &&
+        menu_point_in_rect(x, y, &ctx->cache_command_button.rect)) {
+        (void)menu_copy_scene_project_cache_command(ctx);
+        return;
+    }
+
     if (menu_point_in_rect(x, y, &ctx->edit_button.rect)) {
         if (ctx->rename_input.active) {
             menu_finish_rename(ctx, true);
@@ -725,7 +732,8 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         return;
     }
 
-    if (ctrl_or_cmd && key == SDLK_i && !shift) {
+    if (!menu_has_scene_project_cache_status(ctx) &&
+        ctrl_or_cmd && key == SDLK_i && !shift) {
         char selected[512];
         if (menu_pick_input_root_macos(selected, sizeof(selected))) {
             if (menu_apply_input_root(ctx, selected)) {
@@ -737,12 +745,14 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         return;
     }
 
-    if (ctrl_or_cmd && shift && key == SDLK_i) {
+    if (!menu_has_scene_project_cache_status(ctx) &&
+        ctrl_or_cmd && shift && key == SDLK_i) {
         menu_begin_input_root_edit(ctx);
         return;
     }
 
-    if (ctrl_or_cmd && key == SDLK_o && !shift) {
+    if (!menu_has_scene_project_cache_status(ctx) &&
+        ctrl_or_cmd && key == SDLK_o && !shift) {
         char selected[512];
         if (menu_pick_output_root_macos(selected, sizeof(selected))) {
             if (menu_apply_output_root(ctx, selected)) {
@@ -754,8 +764,14 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         return;
     }
 
-    if (ctrl_or_cmd && shift && key == SDLK_o) {
+    if (!menu_has_scene_project_cache_status(ctx) &&
+        ctrl_or_cmd && shift && key == SDLK_o) {
         menu_begin_output_root_edit(ctx);
+        return;
+    }
+
+    if (ctrl_or_cmd && shift && key == SDLK_c) {
+        (void)menu_copy_scene_project_cache_command(ctx);
         return;
     }
 }

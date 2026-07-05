@@ -11,8 +11,8 @@ if [[ ! -x "$RUNNER" ]]; then
   RUNNER="$ROOT_DIR/physics_sim_job_runner"
 fi
 
-CODEWORK_ROOT="$(cd "$ROOT_DIR/.." && pwd)"
-RUNTIME_SCENE="$CODEWORK_ROOT/_private_workspace_artifacts/agent_runs/physics_trio/gallery_room_blocks_v2/line_drawing/scene_runtime.json"
+DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
+RUNTIME_SCENE="${PHYSICS_SIM_HEADLESS_RUNTIME_SCENE:-$DEFAULT_RUNTIME_SCENE}"
 JOBS_ROOT="$ROOT_DIR/build/agent_runs/jobs"
 RUN_ROOT="/private/tmp/physics_sim_job_runner_bundle_smoke"
 FIXTURE="$ROOT_DIR/tests/fixtures/physics_sim_job_runner_bundle_request.json"
@@ -22,7 +22,7 @@ JOB_ID="ps-bundle-smoke-001"
 
 if [[ ! -f "$RUNTIME_SCENE" ]]; then
   echo "missing runtime scene fixture: $RUNTIME_SCENE" >&2
-  echo "run the LineDrawing gallery_room_blocks_v2 agent scene flow first" >&2
+  echo "set PHYSICS_SIM_HEADLESS_RUNTIME_SCENE=/path/to/scene_runtime.json to override the portable fixture" >&2
   exit 1
 fi
 
