@@ -179,6 +179,9 @@ static bool test_scene_view_readout_does_not_own_physics_metadata(void) {
     expect_true("readout_valid", readout.valid);
     expect_true("readout_read_only", readout.read_only);
     expect_true("readout_face_group_is_not_metadata_authority", readout.first_face_group_index == 99);
+    expect_true("readout_core_summary_valid", readout.core_summary.valid);
+    expect_true("readout_core_summary_face_group_is_not_metadata_authority",
+                readout.core_summary.firstFaceGroupIndex == 99);
     expect_true("authored_scene_domain_before", before.scene_domain_authored);
     expect_true("authored_scene_domain_after", after.scene_domain_authored);
     expect_near("scene_domain_min_x_stable", after.scene_domain.min.x, before.scene_domain.min.x);

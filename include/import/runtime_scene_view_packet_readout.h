@@ -25,6 +25,7 @@ typedef struct PhysicsSimSceneViewPacketReadout {
     CoreSceneViewPreviewQuality preview_quality;
     CoreSceneViewDegradedReason degraded_reason;
     CoreSceneViewPacketReadback core_readback;
+    CoreSceneViewPacketSummary core_summary;
 } PhysicsSimSceneViewPacketReadout;
 
 void physics_sim_scene_view_packet_readout_init(PhysicsSimSceneViewPacketReadout *readout);

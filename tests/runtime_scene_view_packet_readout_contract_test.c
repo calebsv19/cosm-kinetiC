@@ -79,6 +79,10 @@ static bool test_readout_consumes_core_scene_view_packet(void) {
     expect_true("scene_view_readout_last_face_group", readout.last_face_group_index == 4);
     expect_true("scene_view_readout_alpha", readout.first_alpha == 128u);
     expect_true("scene_view_readout_core_valid", readout.core_readback.valid);
+    expect_true("scene_view_readout_core_summary_valid", readout.core_summary.valid);
+    expect_true("scene_view_readout_core_summary_read_only", readout.core_summary.readOnly);
+    expect_true("scene_view_readout_core_summary_face_group",
+                readout.core_summary.lastFaceGroupIndex == 4);
     expect_true("scene_view_readout_diagnostics",
                 strcmp(diagnostics, "scene-view packet read-only") == 0);
     return g_failures == 0;
@@ -104,6 +108,8 @@ static bool test_invalid_packet_does_not_leave_stale_readout(void) {
     expect_true("invalid_packet_clears_valid", !readout.valid);
     expect_true("invalid_packet_keeps_read_only", readout.read_only);
     expect_true("invalid_packet_clears_triangle_count", readout.triangle_count == 0);
+    expect_true("invalid_packet_clears_core_summary", !readout.core_summary.valid);
+    expect_true("invalid_packet_keeps_core_summary_read_only", readout.core_summary.readOnly);
     expect_true("invalid_packet_reports_schema",
                 strcmp(diagnostics, "unsupported scene-view packet schema") == 0);
     return g_failures == 0;
