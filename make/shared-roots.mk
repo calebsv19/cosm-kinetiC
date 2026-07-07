@@ -23,6 +23,7 @@ CORE_DATA_DIR := $(SHARED_ROOT)/core/core_data
 CORE_PACK_DIR := $(SHARED_ROOT)/core/core_pack
 CORE_SCENE_DIR := $(SHARED_ROOT)/core/core_scene
 CORE_SCENE_COMPILE_DIR := $(SHARED_ROOT)/core/core_scene_compile
+CORE_SCENE_VIEW_DIR := $(SHARED_ROOT)/core/core_scene_view
 CORE_MESH_ASSET_DIR := $(SHARED_ROOT)/core/core_mesh_asset
 CORE_MESH_PREVIEW_DIR := $(SHARED_ROOT)/core/core_mesh_preview
 CORE_OBJECT_DIR := $(SHARED_ROOT)/core/core_object
@@ -37,6 +38,10 @@ CORE_HEADLESS_JOB_DIR := $(SHARED_ROOT)/core/core_headless_job
 
 ifeq ($(wildcard $(CORE_HEADLESS_JOB_DIR)/include/core_headless_job.h),)
 CORE_HEADLESS_JOB_DIR := $(SHARED_WORKSPACE_DIR)/core/core_headless_job
+endif
+
+ifeq ($(wildcard $(CORE_SCENE_VIEW_DIR)/include/core_scene_view.h),)
+CORE_SCENE_VIEW_DIR := $(SHARED_WORKSPACE_DIR)/core/core_scene_view
 endif
 
 ifeq ($(wildcard $(CORE_MESH_ASSET_DIR)/include/core_mesh_asset.h),)

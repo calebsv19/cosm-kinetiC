@@ -545,6 +545,12 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	$(CORE_BASE_DIR)/src/core_base.c \
 	$(CORE_MESH_PREVIEW_DIR)/../../shape/external/cjson/cJSON.c
 
+RUNTIME_SCENE_VIEW_PACKET_READOUT_TEST_SRCS := \
+	tests/runtime_scene_view_packet_readout_contract_test.c \
+	$(SRC_DIR)/import/runtime_scene_view_packet_readout.c \
+	$(CORE_SCENE_VIEW_DIR)/src/core_scene_view.c \
+	$(filter-out tests/runtime_scene_bridge_contract_test.c tests/runtime_scene_bridge_contract_session_suite.c tests/runtime_scene_bridge_contract_writeback_suite.c,$(RUNTIME_SCENE_BRIDGE_TEST_SRCS))
+
 RUNTIME_MESH_PREVIEW_BRIDGE_TEST_SRCS := \
 	tests/runtime_mesh_preview_bridge_contract_test.c \
 	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
@@ -1052,6 +1058,15 @@ test-runtime-scene-bridge-contract: $(RUNTIME_SCENE_BRIDGE_TEST_SRCS)
 	$(CC) $(CFLAGS) \
 		-o $(BUILD_DIR)/runtime_scene_bridge_contract_test $(RUNTIME_SCENE_BRIDGE_TEST_SRCS) $(JSON_LIBS) -lm
 	$(BUILD_DIR)/runtime_scene_bridge_contract_test
+
+test-runtime-scene-view-packet-readout-contract: $(RUNTIME_SCENE_VIEW_PACKET_READOUT_TEST_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-I$(CORE_SCENE_VIEW_DIR)/include -I$(CORE_SCENE_VIEW_DIR)/../../shape/external \
+		-I$(CORE_SCENE_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_ASSET_DIR)/include \
+		-I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include \
+		-o $(BUILD_DIR)/runtime_scene_view_packet_readout_contract_test $(RUNTIME_SCENE_VIEW_PACKET_READOUT_TEST_SRCS) $(JSON_LIBS) -lm
+	$(BUILD_DIR)/runtime_scene_view_packet_readout_contract_test
 
 test-runtime-mesh-preview-bridge-contract: $(RUNTIME_MESH_PREVIEW_BRIDGE_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)

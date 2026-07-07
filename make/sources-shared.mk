@@ -7,6 +7,7 @@ CORE_DATA_SRCS := $(CORE_DATA_DIR)/src/core_data.c
 CORE_PACK_SRCS := $(CORE_PACK_DIR)/src/core_pack.c $(CORE_PACK_DIR)/src/core_pack_vf2d.c $(CORE_PACK_DIR)/src/core_pack_vf3d.c
 CORE_SCENE_SRCS := $(CORE_SCENE_DIR)/src/core_scene.c
 CORE_SCENE_COMPILE_SRCS := $(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c
+CORE_SCENE_VIEW_SRCS := $(CORE_SCENE_VIEW_DIR)/src/core_scene_view.c
 CORE_MESH_ASSET_SRCS := \
 	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
 	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_authoring_document.c \
