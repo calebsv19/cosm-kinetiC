@@ -506,6 +506,11 @@ Current shared profile:
   attached runtime-mesh emitter flow, clearing solid occupancy and emitting
   through actual mesh footprints. Preview sidecars remain visual and diagnostic
   only.
+- `core_scene_view >= 0.1.0` is now partially adopted through the USV5-S2
+  app-local read-only `PhysicsSimSceneViewPacketReadout`. It consumes
+  `ray_tracing_scene_view_packet_v0` compact readback and records a small
+  PhysicsSim summary while solver projection, cache output, retained scene
+  apply, and `extensions.physics_sim` writeback remain app-local.
 - the host now consumes those shared modules through a vendored `third_party/codework_shared` subtree instead of direct workspace-local `../shared` linkage.
 - `core_data` and `core_trace` partial.
 
@@ -527,6 +532,10 @@ Gaps:
   default-solid mesh instances and feeds the existing 3D obstacle occupancy
   rebuild. Mesh-emitter attachments remain app-local PhysicsSim semantics over
   the same runtime mesh geometry.
+- `Stabilize`: keep USV5-S2 `core_scene_view >= 0.1.0` adoption as read-only
+  packet readback. Do not use scene-view packets to write
+  `extensions.physics_sim`, drive solver projection, or emit cache output
+  unless a later metadata-authority proof explicitly selects that behavior.
 - `Partial`: deepen `core_data` model breadth beyond current export tables into broader sim-domain datasets.
 - `Partial`: further align `core_pack` payload semantics with canonical `core_data` schema.
 - `Partial`: standardize `core_trace` lanes/contracts beyond tooling-centric usage.
