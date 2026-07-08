@@ -62,6 +62,12 @@ Public identity:
 
 ## Public Runtime Docs
 - `README.md` (repo root): product/runtime overview, execution flow, and controls.
+- `AGENTS.md` (repo root): first-read source-checkout operating contract for
+  fresh human and AI agents.
+- `docs/AGENT_CONTROL.md`: agent control contract, supported command ladder,
+  path trust boundaries, detached local supervision, and exclusions.
+- `docs/AGENT_DEMO_PACK.md`: smallest deterministic source-checkout demo pack
+  with expected outputs and checks.
 - `docs/KEYBINDS.md`: full keybind list across fluid and structural lanes.
 - `docs/headless_cli.md`: direct `physics_sim_headless` command for
   retained runtime-scene volume runs, standalone Water Basin runs, detached

@@ -13,6 +13,12 @@ Last updated: 2026-06-24
 
 ## Current Shipped State
 - Producer-side truthful `3D` export is complete (through `PSBU-11D`).
+- The first external-agent source-checkout contract is documented in
+  `AGENTS.md`, `docs/AGENT_CONTROL.md`, and `docs/AGENT_DEMO_PACK.md`. It
+  starts with `physics_sim_headless`, the deterministic Water smoke, and the
+  scene-project cache-output fixture. It does not claim desktop package
+  freshness, website download validation, remote worker submission, registry
+  mutation, or release publication.
 - Direct retained-scene headless CLI volume runs are available through
   `physics_sim_headless`.
 - Headless scene-project cache output is now available through
