@@ -29,7 +29,15 @@ download validation, remote worker submission, or release publication.
 
 ## Quick Commands
 
-Run from the CodeWork workspace root:
+Run from a standalone GitHub clone root:
+
+```bash
+make physics_sim_headless
+make test-physics-sim-headless-water-mode
+make test-physics-sim-headless-scene-project-cache-output
+```
+
+Run from the larger CodeWork workspace parent:
 
 ```bash
 make -C physics_sim physics_sim_headless
@@ -38,7 +46,8 @@ make -C physics_sim test-physics-sim-headless-scene-project-cache-output
 ```
 
 These commands build and exercise the direct headless path. They write only to
-generated local output roots such as `physics_sim/tmp/`.
+generated local output roots such as `tmp/` in a standalone clone or
+`physics_sim/tmp/` from the workspace parent.
 
 ## Output Authority
 
@@ -78,6 +87,13 @@ endpoint without a separate wrapper policy.
 The detached runner is a second-tier local supervision workflow:
 
 ```bash
+make physics-sim-job-runner
+make test-physics-sim-job-runner-bundle-smoke
+```
+
+From the CodeWork workspace parent:
+
+```bash
 make -C physics_sim physics-sim-job-runner
 make -C physics_sim test-physics-sim-job-runner-bundle-smoke
 ```
@@ -103,6 +119,9 @@ Use this wording:
 - Source checkout and worker package: `physics_sim 0.3.0`.
 - Local headless proof uses the source checkout, not the public desktop ZIP.
 - Worker package evidence is separate from public desktop package evidence.
+- Worker packages are internal/fleet package-root artifacts unless a future
+  public release explicitly publishes them as downloads.
+- There is no public remote submission API in this contract.
 
 Do not describe `physics_sim 0.3.0` as the public desktop current unless a
 future approved release updates website metadata, production-registry state,
@@ -120,6 +139,8 @@ These are not part of the first external-agent contract:
 - release artifact builds, signing, notarization, upload, or promotion
 - desktop app freshness beyond the recorded public desktop current
 - public untrusted upload or sandboxing of arbitrary scene/project paths
+- public worker-package downloads
+- public remote job submission
 
 For those lanes, use the workspace-level CodeWork routing and release-control
 docs before taking action.

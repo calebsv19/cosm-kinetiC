@@ -18,7 +18,9 @@ Last updated: 2026-06-24
   starts with `physics_sim_headless`, the deterministic Water smoke, and the
   scene-project cache-output fixture. It does not claim desktop package
   freshness, website download validation, remote worker submission, registry
-  mutation, or release publication.
+  mutation, release publication, public worker-package downloads, or a public
+  remote submission API. The agent docs show both standalone GitHub clone
+  commands and CodeWork workspace-parent `make -C physics_sim ...` forms.
 - Direct retained-scene headless CLI volume runs are available through
   `physics_sim_headless`.
 - Headless scene-project cache output is now available through

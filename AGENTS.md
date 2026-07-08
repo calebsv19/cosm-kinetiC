@@ -21,7 +21,17 @@ short operational contract.
 
 ## Supported First Workflow
 
-Run these from the CodeWork workspace root, not from inside `physics_sim/`.
+If this repository was cloned by itself from GitHub, run these from the repo
+root:
+
+```bash
+make physics_sim_headless
+make test-physics-sim-headless-water-mode
+make test-physics-sim-headless-scene-project-cache-output
+```
+
+If you are inside the larger CodeWork workspace parent, use the equivalent
+workspace form:
 
 ```bash
 make -C physics_sim physics_sim_headless
@@ -45,6 +55,13 @@ Expected first-proof outputs are listed in `docs/AGENT_DEMO_PACK.md`.
 After the direct headless workflow is clear, a local agent may use:
 
 ```bash
+make physics-sim-job-runner
+make test-physics-sim-job-runner-bundle-smoke
+```
+
+From the CodeWork workspace parent, use:
+
+```bash
 make -C physics_sim physics-sim-job-runner
 make -C physics_sim test-physics-sim-job-runner-bundle-smoke
 ```
@@ -58,6 +75,17 @@ worker submission path.
 These are safe local source-checkout commands for agent operation:
 
 ```bash
+make physics_sim_headless
+make test-physics-sim-headless-water-mode
+make test-physics-sim-headless-scene-project-cache-output
+make test-physics-sim-headless-cli
+make physics-sim-job-runner
+make test-physics-sim-job-runner-bundle-smoke
+```
+
+Equivalent commands from the CodeWork workspace parent:
+
+```bash
 make -C physics_sim physics_sim_headless
 make -C physics_sim test-physics-sim-headless-water-mode
 make -C physics_sim test-physics-sim-headless-scene-project-cache-output
@@ -66,8 +94,9 @@ make -C physics_sim physics-sim-job-runner
 make -C physics_sim test-physics-sim-job-runner-bundle-smoke
 ```
 
-Use these only with normal local filesystem write access to `physics_sim/tmp/`
-or to the generated output roots named by the fixture scripts.
+Use these only with normal local filesystem write access to `tmp/` in a
+standalone clone, `physics_sim/tmp/` from a workspace parent, or to the
+generated output roots named by the fixture scripts.
 
 ## Do Not Treat These As First-Start Commands
 
@@ -100,6 +129,9 @@ Reasons:
 - Source checkout and worker-package line: `physics_sim 0.3.0`.
 - Local headless proof uses the source checkout, not the public desktop ZIP.
 - Worker-package evidence is separate from public desktop package evidence.
+- Worker packages are internal/fleet package-root artifacts unless a future
+  public release explicitly publishes them as downloads.
+- There is no public remote submission API in this contract.
 
 Do not describe `physics_sim 0.3.0` as the public desktop current unless a
 future approved desktop release updates website metadata, production-registry
@@ -117,6 +149,8 @@ The first agent docs must not claim support for:
 - release artifact builds, signing, notarization, upload, or promotion
 - desktop app freshness beyond the recorded public desktop current
 - public untrusted upload or sandboxing of arbitrary scene/project paths
+- public worker-package downloads
+- public remote job submission
 
 For cross-host, worker-fleet, website, registry, package, or release-control
 work, stop and use the workspace-level CodeWork routing docs and skills first.

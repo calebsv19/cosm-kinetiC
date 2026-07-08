@@ -6,6 +6,13 @@ Public identity:
 - packaged desktop product: `kinetiC`
 - repository/program key: `physics_sim`
 
+Command context:
+- from a standalone GitHub clone, run Make targets at the repo root, for
+  example `make physics_sim_headless`
+- from the larger CodeWork workspace parent, use the equivalent
+  `make -C physics_sim physics_sim_headless` form shown in many internal
+  verification lists below
+
 ## Scaffold State
 - `docs/current_truth.md`: current runtime structure, truthful `3D` export state, and verification snapshot.
 - `docs/future_intent.md`: next public direction, including the runtime mesh

@@ -7,11 +7,21 @@ using the menu or mutating persistent runtime state.
 For long-running detached supervision, use `physics_sim_job_runner` on top of
 the same headless CLI.
 
-Build it from the CodeWork root:
+Build it from a standalone GitHub clone root:
+
+```bash
+make physics_sim_headless
+```
+
+From the larger CodeWork workspace parent, use:
 
 ```bash
 make -C physics_sim physics_sim_headless
 ```
+
+Most examples below show CodeWork workspace-parent paths because they document
+cross-program scene handoff lanes. In a standalone clone, use `./physics_sim_headless`
+for the binary and keep outputs under local generated roots such as `tmp/`.
 
 Run a bounded retained-scene volume simulation:
 
