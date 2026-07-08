@@ -40,19 +40,23 @@ Workspace-parent equivalent:
 make -C physics_sim test-physics-sim-headless-water-mode
 ```
 
-The fixture runs:
+Equivalent direct command shape in a standalone clone:
 
 ```bash
-physics_sim/physics_sim_headless \
+./physics_sim_headless \
   --water-mode \
   --frames 2 \
   --sim-steps-per-frame 1 \
   --grid 16x12x8 \
   --water-level 0.42 \
-  --output-root physics_sim/tmp/headless_water_mode \
+  --output-root tmp/headless_water_mode \
   --save-volume-frames \
   --overwrite
 ```
+
+From the CodeWork workspace parent, the binary path is
+`physics_sim/physics_sim_headless` and the output root is
+`physics_sim/tmp/headless_water_mode`.
 
 Expected files:
 
@@ -104,17 +108,22 @@ Fixture inputs:
 From the CodeWork workspace parent these paths are under
 `physics_sim/tests/fixtures/`.
 
-The fixture copies those inputs to a generated temp project and runs:
+Equivalent direct command shape in a standalone clone:
 
 ```bash
+mkdir -p tmp
+cp -R tests/fixtures/scene_project_cache_output_minimal tmp/scene_project_cache_output_minimal
 PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-test-0001 \
-physics_sim/physics_sim_headless \
-  --scene-project <project-dir> \
+./physics_sim_headless \
+  --scene-project tmp/scene_project_cache_output_minimal \
   --frames 1 \
   --grid 8x8x8 \
   --save-volume-frames \
   --overwrite
 ```
+
+The Make fixture copies those inputs to a generated temp project before running
+the same cache-output shape, so source fixtures are not modified.
 
 Expected files:
 

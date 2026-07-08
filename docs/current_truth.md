@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-06-24
+Last updated: 2026-07-08
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -21,6 +21,12 @@ Last updated: 2026-06-24
   mutation, release publication, public worker-package downloads, or a public
   remote submission API. The agent docs show both standalone GitHub clone
   commands and CodeWork workspace-parent `make -C physics_sim ...` forms.
+- Public website agent discovery is live through
+  `https://ecosystem.calebsv.tech/agents/index.json`,
+  `https://ecosystem.calebsv.tech/agents/programs/cosm-kinetic.json`, and
+  `https://ecosystem.calebsv.tech/agents/programs/cosm-kinetic.md`. Those
+  public files are the supported external discovery layer; private registry and
+  release-control evidence is maintainer-only.
 - Direct retained-scene headless CLI volume runs are available through
   `physics_sim_headless`.
 - Headless scene-project cache output is now available through
@@ -229,8 +235,12 @@ Last updated: 2026-06-24
   wrappers, while SDL drawing, palette tuning, and button placement remain
   app-local.
 - Agent/headless retained-scene runs can now bypass menu interaction:
-  - build with `make -C physics_sim physics_sim_headless`
-  - run `physics_sim/physics_sim_headless --scene-project <project_dir> --frames <n> --grid <w>x<h>x<d> --save-volume-frames --overwrite` to write a project-local cache run and active cache manifests
+  - standalone clone build: `make physics_sim_headless`
+  - workspace-parent build: `make -C physics_sim physics_sim_headless`
+  - standalone clone scene-project run:
+    `./physics_sim_headless --scene-project <project_dir> --frames <n> --grid <w>x<h>x<d> --save-volume-frames --overwrite`
+  - workspace-parent scene-project run:
+    `physics_sim/physics_sim_headless --scene-project <project_dir> --frames <n> --grid <w>x<h>x<d> --save-volume-frames --overwrite`
 - Retained `3D` menu selection now recognizes selected scene-project roots
   that contain `scene_authoring.json` and `scene_runtime.json`, reports concise
   project cache state from `physics_sim/active_cache_manifest.json` or the
@@ -249,9 +259,12 @@ Last updated: 2026-06-24
   scene-project mode, the selected project root is the input/output container;
   legacy roots remain in config but are not shown as cache destinations. The
   bottom action row remains only `Duplicate`, `Edit Preset`, and `Start`.
-  - run `physics_sim/physics_sim_headless --runtime-scene <scene_runtime.json> --frames <n> --output-root <dir> --progress-interval <n> --save-volume-frames`
+  - standalone clone runtime-scene run:
+    `./physics_sim_headless --runtime-scene <scene_runtime.json> --frames <n> --output-root <dir> --progress-interval <n> --save-volume-frames`
+  - workspace-parent runtime-scene run:
+    `physics_sim/physics_sim_headless --runtime-scene <scene_runtime.json> --frames <n> --output-root <dir> --progress-interval <n> --save-volume-frames`
   - or run the standalone basin with
-    `physics_sim/physics_sim_headless --water-mode --water-level <0..1> --frames <n> --output-root <dir> --save-volume-frames`
+    `./physics_sim_headless --water-mode --water-level <0..1> --frames <n> --output-root <dir> --save-volume-frames`
   - pass `--volume-export-start-frame <n> --volume-export-stride <n>
     --volume-export-max-frames <n>` to write only selected retained VF3D/PACK
     and water-surface sidecar frames during long warm-up runs

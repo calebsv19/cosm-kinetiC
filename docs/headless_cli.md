@@ -19,31 +19,49 @@ From the larger CodeWork workspace parent, use:
 make -C physics_sim physics_sim_headless
 ```
 
-Most examples below show CodeWork workspace-parent paths because they document
-cross-program scene handoff lanes. In a standalone clone, use `./physics_sim_headless`
-for the binary and keep outputs under local generated roots such as `tmp/`.
+Fresh external agents should start with the standalone clone form. Use
+`./physics_sim_headless` for direct commands and keep generated outputs under
+local roots such as `tmp/`. If you are operating from a CodeWork workspace
+parent, replace `./physics_sim_headless` with `physics_sim/physics_sim_headless`
+and prefix repo-local fixture/output paths with `physics_sim/`.
+
+Smallest supported source-checkout proof:
+
+```bash
+make physics_sim_headless
+make test-physics-sim-headless-water-mode
+make test-physics-sim-headless-scene-project-cache-output
+```
+
+Those commands are the public first-start lane. They do not require private
+CodeWork paths, worker-fleet tools, website deployment, registry access, or a
+desktop package download.
 
 Run a bounded retained-scene volume simulation:
 
 ```bash
-physics_sim/physics_sim_headless \
-  --runtime-scene _private_workspace_artifacts/agent_runs/physics_trio/<scene_slug>/line_drawing/scene_runtime.json \
-  --frames 100 \
-  --sim-steps-per-frame 8 \
-  --grid 96x48x48 \
-  --output-root _private_workspace_artifacts/agent_runs/physics_trio/<scene_slug>/physics_sim \
-  --progress-interval 25 \
-  --save-volume-frames
+./physics_sim_headless \
+  --runtime-scene tests/fixtures/scene_project_cache_output_minimal/scene_runtime.json \
+  --frames 2 \
+  --sim-steps-per-frame 1 \
+  --grid 16x12x8 \
+  --output-root tmp/headless_runtime_scene_example \
+  --progress-interval 1 \
+  --save-volume-frames \
+  --overwrite
 ```
 
 Run a scene project cache update:
 
 ```bash
-physics_sim/physics_sim_headless \
-  --scene-project /path/to/scene_project_dir \
-  --frames 100 \
-  --sim-steps-per-frame 8 \
-  --grid 96x48x48 \
+mkdir -p tmp
+cp -R tests/fixtures/scene_project_cache_output_minimal tmp/scene_project_cache_output_minimal
+PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-example-0001 \
+./physics_sim_headless \
+  --scene-project tmp/scene_project_cache_output_minimal \
+  --frames 1 \
+  --sim-steps-per-frame 1 \
+  --grid 8x8x8 \
   --save-volume-frames \
   --overwrite
 ```
@@ -71,15 +89,20 @@ generated cache into `assets/vf3d/active`, `assets/physics/active`, retained
 Run a standalone Water Basin simulation:
 
 ```bash
-physics_sim/physics_sim_headless \
+./physics_sim_headless \
   --water-mode \
-  --frames 100 \
-  --sim-steps-per-frame 4 \
-  --grid 64x32x32 \
-  --water-level 0.45 \
-  --output-root _private_workspace_artifacts/agent_runs/physics_trio/<scene_slug>/physics_sim_water \
-  --save-volume-frames
+  --frames 2 \
+  --sim-steps-per-frame 1 \
+  --grid 16x12x8 \
+  --water-level 0.42 \
+  --output-root tmp/headless_water_example \
+  --save-volume-frames \
+  --overwrite
 ```
+
+Cross-program handoff runs may use staged LineDrawing/RayTracing artifact roots,
+but those are maintainer or workspace integration lanes. They are not required
+for public first-start validation.
 
 Useful flags:
 
