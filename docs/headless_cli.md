@@ -227,10 +227,10 @@ Path trust boundary:
   Those references are trusted local authoring conveniences. A portable worker
   request must stage the runtime scene, runtime mesh documents, preview
   sidecars, and run config together.
-- Private/generated lanes such as `build/agent_runs/`,
-  `_private_workspace_artifacts/`, `tmp/headless_*`, and detached job roots are
-  run artifacts. They are evidence for agents and operators, not public source
-  truth or package inputs unless a package target explicitly stages them.
+- Generated lanes such as `build/agent_runs/`, `tmp/headless_*`, detached job
+  roots, and maintainer-private artifact roots are run artifacts. They are
+  evidence for agents and operators, not public source truth or package inputs
+  unless a package target explicitly stages them.
 
 Standalone Water proof:
 

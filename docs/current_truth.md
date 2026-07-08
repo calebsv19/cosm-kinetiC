@@ -515,10 +515,10 @@ Last updated: 2026-07-08
   binary, launcher, `Info.plist`, bundled dylibs, config, shader resources,
   optional icon, and optional shared fonts; Linux worker packaging stages only
   headless/job-runner binaries, config, selected public docs, and manifests;
-  private/generated run lanes such as `build/agent_runs/`, `tmp/`,
-  `_private_workspace_artifacts/`, detached outputs, launcher logs, and local
-  icon source copies are not package inputs unless a future target explicitly
-  stages them.
+  private/generated run lanes such as `build/agent_runs/`, `tmp/`, detached
+  outputs, launcher logs, maintainer-private artifact roots, and local icon
+  source copies are not package inputs unless a future target explicitly stages
+  them.
 - Linux worker packaging now emits truthful host-architecture metadata for
   either `linux-x86_64` or `linux-aarch64` by default:
   - `make -C physics_sim package-linux-worker`
@@ -765,6 +765,6 @@ Last updated: 2026-07-08
     - together these three files move the remaining meaningful uncovered `3D` physics surface down into narrower support lanes rather than core solver/runtime math
 
 ## History and Deep Lane References
-- Detailed execution slices, archived plans, and deep phase logs are kept in private docs:
-  - `/Users/calebsv/Desktop/CodeWork/docs/private_program_docs/physics_sim/`
+- Detailed execution slices, archived plans, and deep phase logs are kept in
+  maintainer-private docs outside the public repository.
 - Use this public file as the compressed current-state contract.
