@@ -234,22 +234,24 @@ Path trust boundary:
 
 Standalone Water proof:
 
-- `make -C physics_sim test-physics-sim-headless-water-mode` runs
+- `make test-physics-sim-headless-water-mode` runs
   `--water-mode` with a small grid, `--water-level 0.42`, and
   `--save-volume-frames`; it validates `run_summary.json`,
   `run_progress.json`, `volume_frames/Water Basin/frame_*.vf3d`, matching
   `.pack` files, `manifest.json`, `scene_bundle.json`, the Y-up space
   contract, `water_manifest_v1.json`, and per-frame water heightfield sidecars
-  with finite normals.
-- `make -C physics_sim test-physics-sim-headless-water-object-coupling` runs
+  with finite normals. From a CodeWork workspace parent, use
+  `make -C physics_sim test-physics-sim-headless-water-mode`.
+- `make test-physics-sim-headless-water-object-coupling` runs
   `--water-mode --water-object-fixture` and validates the
   `water_pool_submerged_solid` footprint, wet overlap, nonzero displaced
   volume, applied displacement delta range, and `scene_bundle.json.water_source`
   continuity. The current fixture proof reports `64` object solid cells,
   `32` wet-overlap cells, about `0.148148 m^3` displaced volume, nonzero
   displacement sample/RMS diagnostics, and object-zone slope/height-variance
-  diagnostics on the smoke grid.
-- `make -C physics_sim test-physics-sim-headless-water-object-quality-compare`
+  diagnostics on the smoke grid. From a CodeWork workspace parent, use
+  `make -C physics_sim test-physics-sim-headless-water-object-coupling`.
+- `make test-physics-sim-headless-water-object-quality-compare`
   runs a PhysicsSim-only WTR-6.5 comparison between a baseline
   `24x16x24` / `6` frame / `2` substep object-water fixture and a quality
   `36x18x36` / `8` frame / `3` substep fixture. It writes
@@ -261,7 +263,8 @@ Standalone Water proof:
   `WTR65_MAX_OBJECT_ZONE_SLOPE`, default `0.050`) while keeping capped
   displacement samples at zero. It validates the current smoothed export-side
   displacement and deterministic wake response; it does not claim
-  solver-authored wake coupling.
+  solver-authored wake coupling. From a CodeWork workspace parent, use
+  `make -C physics_sim test-physics-sim-headless-water-object-quality-compare`.
 
 Water object-coupling sidecars add `summary.object_coupling` fields:
 
@@ -569,7 +572,7 @@ When `--save-volume-frames` is enabled, long warm-up runs can avoid writing
 every intermediate VF3D/PACK frame by selecting retained exports directly:
 
 ```bash
-physics_sim/physics_sim_headless \
+./physics_sim_headless \
   --water-mode \
   --frames 1041 \
   --save-volume-frames \
@@ -587,12 +590,15 @@ and manifests. For example, start `2`, stride `2`, and max `2` writes
 Detached runner:
 
 ```bash
-make -C physics_sim physics-sim-job-runner
+make physics-sim-job-runner
 
-physics_sim/physics_sim_job_runner submit --request <request.json>
-physics_sim/physics_sim_job_runner status --job-id <job_id>
-physics_sim/physics_sim_job_runner cancel --job-id <job_id>
+./physics_sim_job_runner submit --request <request.json>
+./physics_sim_job_runner status --job-id <job_id>
+./physics_sim_job_runner cancel --job-id <job_id>
 ```
+
+From a CodeWork workspace parent, use `make -C physics_sim ...` and
+`physics_sim/physics_sim_job_runner ...`.
 
 The first detached trio chain now routes through this runner via
 `bin/run_trio_detached_job_chain.sh`, which performs LineDrawing authoring
@@ -711,11 +717,13 @@ Displayless behavior:
 Validation:
 
 ```bash
-make -C physics_sim test-physics-sim-headless-cli
-make -C physics_sim test-physics-sim-job-runner-smoke
-make -C physics_sim test-physics-sim-job-runner-policy
-make -C physics_sim test-physics-sim-job-runner-bundle-smoke
+make test-physics-sim-headless-cli
+make test-physics-sim-job-runner-smoke
+make test-physics-sim-job-runner-policy
+make test-physics-sim-job-runner-bundle-smoke
 ```
+
+From a CodeWork workspace parent, prefix these with `make -C physics_sim`.
 
 The default smoke path uses the checked-in
 `tests/fixtures/runtime_scene_primitive_retained.json` retained-scene fixture,
