@@ -21,7 +21,8 @@ make -C physics_sim physics_sim_headless
 
 Expected output:
 
-- `physics_sim/physics_sim_headless`
+- standalone clone: `physics_sim_headless`
+- CodeWork workspace parent: `physics_sim/physics_sim_headless`
 
 This proves the local source checkout can build the supported headless
 entrypoint. It does not prove desktop packaging, notarization, website
