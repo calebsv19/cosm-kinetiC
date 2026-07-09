@@ -145,6 +145,11 @@ Useful flags:
   `<output-root>/run_progress.json`.
 - `--progress-interval <n>`: write progress every `n` completed frames.
   Defaults to `60`; use `0` to keep only initial/final progress writes.
+  For worker-backed cache jobs, choose an interval that gives the VPS/operator
+  surface enough signal without creating a tight polling loop. The progress
+  file is the PhysicsSim-owned source for completed simulation frames and
+  selected export counts; RayTracing rendered-frame fields are not a substitute
+  for PhysicsSim progress on stopped-stage cache jobs.
 - `--grid <width>x<height>x<depth>`: optional 3D resolution override for
   headless analysis runs. This is useful for long Wind tunnel stats-only probes
   where the desktop default grid is too expensive for iterative solver tuning.
