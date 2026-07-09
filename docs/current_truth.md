@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-07-08
+Last updated: 2026-07-09
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -93,6 +93,18 @@ Last updated: 2026-07-08
 - The packaged desktop launcher defaults the shared TimerHUD overlay off for
   normal app use. Developers can still re-enable it with
   `PHYSICS_SIM_TIMER_HUD=1` / `PHYSICS_SIM_TIMER_HUD_OVERLAY=1`.
+- A private Linux GUI desktop package proof lane now exists for the windowed
+  app. `package-linux-desktop-determinism-test` builds a `desktop_app_linux`
+  archive on Linux x86_64, verifies a deterministic `.tar.gz` plus `.sha256`
+  sidecar, and runs an unpacked launcher `--self-test`. Linux PC proof
+  `pslgui4-20260709a` built
+  `kinetiC-0.3.0-linux-x86_64-desktop-stable.tar.gz`, verified checksum
+  `ebd581a014abfe69f02df8745ca8bf645fea2b3a7551065ce59aeb47683a572e`,
+  launched the unpacked package in the logged-in X11 desktop session
+  (`DISPLAY=:0`, `XAUTHORITY=/tmp/xauth_SmfAha`), and captured nonblank
+  app-window screenshots. This remains private proof capability only: no
+  `VERSION` bump, public release artifact, website metadata, production
+  registry state, or worker-package install changed.
 - Detached status schema is `physics_sim_detached_job_status_v1` and exposes
   `queued`, `starting`, `running`, `stalled`, `completed`, `failed`, and
   `cancelled` states without requiring a live PTY.
@@ -498,6 +510,8 @@ Last updated: 2026-07-08
 - Packaging verification:
   - `make -C physics_sim package-linux-worker-self-test`
   - `make -C physics_sim package-linux-worker-dry-run`
+  - `make -C physics_sim package-linux-desktop-contract`
+  - `make -C physics_sim package-linux-desktop-determinism-test`
   - `make -C physics_sim package-desktop`
   - `make -C physics_sim PACKAGE_TOOLCHAIN=fisics package-desktop`
   - `make -C physics_sim package-desktop-smoke`
@@ -537,6 +551,30 @@ Last updated: 2026-07-08
   VPS worker-fleet visibility, worker-exchange requests, and VPS-side runtime
   proofs route through the VPS handoff lane. Raw SSH/SCP or ad hoc remote shell
   is outside the package boundary.
+- Private Linux GUI desktop packaging now has first scaffold targets:
+  - `make -C physics_sim package-linux-desktop-contract`
+  - `make -C physics_sim package-linux-desktop`
+  - `make -C physics_sim package-linux-desktop-self-test`
+  - `make -C physics_sim package-linux-desktop-determinism-test`
+  - package class: `desktop_app_linux`
+  - artifact role: `desktop_app`
+  - runtime: `linux_gui`
+  - private artifact name:
+    `kinetiC-<version>-linux-x86_64-desktop-stable.tar.gz`
+  - checksum sidecar:
+    `kinetiC-<version>-linux-x86_64-desktop-stable.tar.gz.sha256`
+  - this target is Linux-only and refuses real packaging on macOS; the local
+    Mac can verify the contract shape but not the GUI package build
+  - the Linux launcher runs from an unpacked archive, copies package resources
+    into XDG/proof runtime roots, writes launcher logs under XDG state or an
+    override, and supports display-free `--self-test`
+  - real release-grade GUI proof still requires the Mac/Linux PC handoff lane:
+    deterministic package target, sidecar verification, clean unpack
+    self-test, real logged-in desktop launch, app-window screenshots, and
+    launcher log/runtime markers
+  - no `VERSION` bump, public artifact, website metadata, registry mutation,
+    worker install, remote job submission, or RayTracing artifact change is
+    implied by this scaffold
 - The first compiler-overlay dual-toolchain contract is now active for app-local validation:
   - `clang-build` writes the default app binary to `build/clang/physics_sim`
   - `make` still copies the Clang binary to the repo-root `physics_sim` path for compatibility
