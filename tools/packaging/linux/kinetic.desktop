@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=kinetiC
+Comment=Physics simulation workspace
+Exec=bin/physics-sim-launcher
+Icon=kinetic
+Terminal=false
+Categories=Education;Science;Physics;
+StartupNotify=true

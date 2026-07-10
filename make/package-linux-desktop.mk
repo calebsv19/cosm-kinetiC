@@ -10,7 +10,14 @@ LINUX_DESKTOP_BASENAME := $(RELEASE_PRODUCT_NAME)-$(RELEASE_VERSION)-$(LINUX_DES
 LINUX_DESKTOP_DIR := $(RELEASE_DIR)/$(LINUX_DESKTOP_BASENAME)
 LINUX_DESKTOP_BIN_DIR := $(LINUX_DESKTOP_DIR)/bin
 LINUX_DESKTOP_RESOURCES_DIR := $(LINUX_DESKTOP_DIR)/resources
+LINUX_DESKTOP_SHARE_DIR := $(LINUX_DESKTOP_DIR)/share
 LINUX_DESKTOP_LAUNCHER_SRC := tools/packaging/linux/physics-sim-launcher
+LINUX_DESKTOP_ENTRY_SRC := tools/packaging/linux/kinetic.desktop
+LINUX_DESKTOP_ICON_SRC := tools/packaging/linux/icons/kinetic.svg
+LINUX_DESKTOP_INSTALLER_SRC := tools/packaging/linux/install-desktop-entry.sh
+LINUX_DESKTOP_ENTRY := $(LINUX_DESKTOP_SHARE_DIR)/applications/kinetic.desktop
+LINUX_DESKTOP_ICON := $(LINUX_DESKTOP_SHARE_DIR)/icons/hicolor/scalable/apps/kinetic.svg
+LINUX_DESKTOP_INSTALLER := $(LINUX_DESKTOP_SHARE_DIR)/install-desktop-entry.sh
 LINUX_DESKTOP_MANIFEST_JSON := $(LINUX_DESKTOP_DIR)/manifest.json
 LINUX_DESKTOP_PACKAGE_MANIFEST := $(LINUX_DESKTOP_DIR)/package_manifest.json
 LINUX_DESKTOP_ARCHIVE := $(RELEASE_DIR)/$(LINUX_DESKTOP_BASENAME).tar.gz
@@ -31,6 +38,9 @@ package-linux-desktop-contract:
 	@echo "  archive:       $(LINUX_DESKTOP_ARCHIVE)"
 	@echo "  launcher:      bin/physics-sim-launcher"
 	@echo "  binary:        bin/physics-sim-bin"
+	@echo "  desktop entry: share/applications/kinetic.desktop"
+	@echo "  icon:          share/icons/hicolor/scalable/apps/kinetic.svg"
+	@echo "  installer:     share/install-desktop-entry.sh"
 
 package-linux-desktop-clean:
 	@rm -rf "$(LINUX_DESKTOP_DIR)" "$(LINUX_DESKTOP_ARCHIVE)" "$(LINUX_DESKTOP_SHA256)" "$(RELEASE_DIR)/linux-desktop-self-test"
@@ -49,10 +59,13 @@ package-linux-desktop-host-check:
 package-linux-desktop: package-linux-desktop-host-check visual-harness
 	@echo "Preparing Linux desktop package..."
 	@rm -rf "$(LINUX_DESKTOP_DIR)" "$(LINUX_DESKTOP_ARCHIVE)" "$(LINUX_DESKTOP_SHA256)"
-	@mkdir -p "$(LINUX_DESKTOP_BIN_DIR)" "$(LINUX_DESKTOP_RESOURCES_DIR)" "$(LINUX_DESKTOP_RESOURCES_DIR)/data/runtime" "$(LINUX_DESKTOP_RESOURCES_DIR)/data/snapshots"
+	@mkdir -p "$(LINUX_DESKTOP_BIN_DIR)" "$(LINUX_DESKTOP_RESOURCES_DIR)" "$(dir $(LINUX_DESKTOP_ENTRY))" "$(dir $(LINUX_DESKTOP_ICON))" "$(LINUX_DESKTOP_RESOURCES_DIR)/data/runtime" "$(LINUX_DESKTOP_RESOURCES_DIR)/data/snapshots"
 	@cp "$(CLANG_TARGET)" "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-bin"
 	@cp "$(LINUX_DESKTOP_LAUNCHER_SRC)" "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-launcher"
-	@chmod +x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-bin" "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-launcher"
+	@cp "$(LINUX_DESKTOP_ENTRY_SRC)" "$(LINUX_DESKTOP_ENTRY)"
+	@cp "$(LINUX_DESKTOP_ICON_SRC)" "$(LINUX_DESKTOP_ICON)"
+	@cp "$(LINUX_DESKTOP_INSTALLER_SRC)" "$(LINUX_DESKTOP_INSTALLER)"
+	@chmod +x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-bin" "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-launcher" "$(LINUX_DESKTOP_INSTALLER)"
 	@cp -R config "$(LINUX_DESKTOP_RESOURCES_DIR)/"
 	@if [ -d "$(SHARED_ASSETS_DIR)/fonts" ]; then \
 		mkdir -p "$(LINUX_DESKTOP_RESOURCES_DIR)/shared/assets"; \
@@ -71,6 +84,9 @@ package-linux-desktop: package-linux-desktop-host-check visual-harness
 	@printf '  "version": "%s",\n' "$(RELEASE_VERSION)" >> "$(LINUX_DESKTOP_MANIFEST_JSON)"
 	@printf '  "platform": "%s",\n' "$(LINUX_DESKTOP_PLATFORM)" >> "$(LINUX_DESKTOP_MANIFEST_JSON)"
 	@printf '  "entrypoint": "bin/physics-sim-launcher",\n' >> "$(LINUX_DESKTOP_MANIFEST_JSON)"
+	@printf '  "desktop_entry": "share/applications/kinetic.desktop",\n' >> "$(LINUX_DESKTOP_MANIFEST_JSON)"
+	@printf '  "icon": "share/icons/hicolor/scalable/apps/kinetic.svg",\n' >> "$(LINUX_DESKTOP_MANIFEST_JSON)"
+	@printf '  "desktop_installer": "share/install-desktop-entry.sh",\n' >> "$(LINUX_DESKTOP_MANIFEST_JSON)"
 	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm", "SDL2", "SDL2_ttf", "json-c", "vulkan-loader", "vulkan-driver"]\n' >> "$(LINUX_DESKTOP_MANIFEST_JSON)"
 	@printf '}\n' >> "$(LINUX_DESKTOP_MANIFEST_JSON)"
 	@printf '{\n' > "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
@@ -85,6 +101,11 @@ package-linux-desktop: package-linux-desktop-host-check visual-harness
 	@printf '  "entrypoints": {\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
 	@printf '    "desktop_launcher": "bin/physics-sim-launcher",\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
 	@printf '    "runtime_binary": "bin/physics-sim-bin"\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
+	@printf '  },\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
+	@printf '  "desktop_integration": {\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
+	@printf '    "desktop_entry": "share/applications/kinetic.desktop",\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
+	@printf '    "icon": "share/icons/hicolor/scalable/apps/kinetic.svg",\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
+	@printf '    "installer": "share/install-desktop-entry.sh"\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
 	@printf '  },\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
 	@printf '  "self_test": {\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
 	@printf '    "type": "command",\n' >> "$(LINUX_DESKTOP_PACKAGE_MANIFEST)"
@@ -102,6 +123,9 @@ package-linux-desktop: package-linux-desktop-host-check visual-harness
 package-linux-desktop-self-test: package-linux-desktop
 	@test -x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-launcher" || (echo "Missing Linux launcher"; exit 1)
 	@test -x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-bin" || (echo "Missing app binary"; exit 1)
+	@test -f "$(LINUX_DESKTOP_ENTRY)" || (echo "Missing Linux desktop entry"; exit 1)
+	@test -f "$(LINUX_DESKTOP_ICON)" || (echo "Missing Linux desktop icon"; exit 1)
+	@test -x "$(LINUX_DESKTOP_INSTALLER)" || (echo "Missing Linux desktop installer"; exit 1)
 	@test -f "$(LINUX_DESKTOP_MANIFEST_JSON)" || (echo "Missing manifest.json"; exit 1)
 	@test -f "$(LINUX_DESKTOP_PACKAGE_MANIFEST)" || (echo "Missing package_manifest.json"; exit 1)
 	@test -f "$(LINUX_DESKTOP_RESOURCES_DIR)/config/app.json" || (echo "Missing config/app.json"; exit 1)
