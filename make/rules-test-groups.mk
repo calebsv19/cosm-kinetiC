@@ -66,6 +66,7 @@ STABLE_TEST_TARGETS := \
 
 FAST_TEST_TARGETS := \
 	test-physics-sim-file-picker \
+	test-physics-sim-path-opener \
 	test-volume-frames-3d-tiny-parity-contract \
 	test-sim-mode-route-contract \
 	test-wind-tunnel-3d-contract \

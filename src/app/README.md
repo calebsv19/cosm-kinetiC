@@ -21,6 +21,9 @@ interactive `kinetiC` program.
   Input Root, Output Root, and Atmospheric Warm Start. macOS uses
   `osascript`; Linux tries `zenity` then `kdialog`, while the menu retains
   manual path entry when no desktop picker is available.
+- `platform/physics_sim_path_opener.*` - app-local directory opener for the
+  Output Root `Show` action. macOS uses `open`; Linux tries `xdg-open` then
+  `gio open`, preserving an in-app status fallback when no opener is usable.
 - `physics_sim_cli_helpers.c` - app-local CLI value/scalar parsing helpers for
   support tools. It does not define a generic parser or own tool usage text.
 - `physics_sim_diagnostic_helpers.c` - app-local diagnostic string helpers for

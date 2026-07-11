@@ -325,6 +325,7 @@ restart_menu:
         .input_root_folder_button = {.rect = {0, 0, 0, 0}, .label = "Folder"},
         .output_root_edit_button = {.rect = {0, 0, 0, 0}, .label = "Edit"},
         .output_root_folder_button = {.rect = {0, 0, 0, 0}, .label = "Folder"},
+        .output_root_show_button = {.rect = {0, 0, 0, 0}, .label = "Show"},
         .warm_start_edit_button = {.rect = {0, 0, 0, 0}, .label = "Edit"},
         .warm_start_file_button = {.rect = {0, 0, 0, 0}, .label = "File"},
         .running = &run,
@@ -867,6 +868,11 @@ restart_menu:
                 menu_draw_button(ctx.renderer,
                                  &ctx.output_root_folder_button.rect,
                                  ctx.output_root_folder_button.label,
+                                 ctx.font_small ? ctx.font_small : ctx.font,
+                                 false);
+                menu_draw_button(ctx.renderer,
+                                 &ctx.output_root_show_button.rect,
+                                 ctx.output_root_show_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
                                  false);
                 {

@@ -275,6 +275,7 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
         ctx->output_root_rect = (SDL_Rect){0, 0, 0, 0};
         ctx->output_root_edit_button.rect = (SDL_Rect){0, 0, 0, 0};
         ctx->output_root_folder_button.rect = (SDL_Rect){0, 0, 0, 0};
+        ctx->output_root_show_button.rect = (SDL_Rect){0, 0, 0, 0};
         row_y += compact_h + row_gap;
         ctx->scene_project_cache_target_rect = (SDL_Rect){
             panel_x + config_pad,
@@ -367,15 +368,21 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
         ctx->cache_command_button.rect = (SDL_Rect){0, 0, 0, 0};
     }
 
-    output_buttons_total_w = output_button_w * 2 + 8;
+    output_buttons_total_w = output_button_w * 3 + 16;
     if (output_buttons_total_w > ctx->output_root_rect.w - 40) {
-        output_button_w = (ctx->output_root_rect.w - 48) / 2;
+        output_button_w = (ctx->output_root_rect.w - 56) / 3;
         if (output_button_w < 56) output_button_w = 56;
-        output_buttons_total_w = output_button_w * 2 + 8;
+        output_buttons_total_w = output_button_w * 3 + 16;
     }
     if (!scene_project_mode) {
-        ctx->output_root_folder_button.rect = (SDL_Rect){
+        ctx->output_root_show_button.rect = (SDL_Rect){
             ctx->output_root_rect.x + ctx->output_root_rect.w - output_button_w,
+            ctx->output_root_rect.y,
+            output_button_w,
+            ctx->output_root_rect.h
+        };
+        ctx->output_root_folder_button.rect = (SDL_Rect){
+            ctx->output_root_show_button.rect.x - output_button_w - 8,
             ctx->output_root_rect.y,
             output_button_w,
             ctx->output_root_rect.h

@@ -14,6 +14,7 @@ include make/rules-tools.mk
 include make/rules-shims.mk
 include make/rules-tests-contracts.mk
 include make/rules-test-file-picker.mk
+include make/rules-test-path-opener.mk
 include make/rules-test-groups.mk
 include make/package-macos.mk
 include make/package-linux-worker.mk

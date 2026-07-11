@@ -81,6 +81,7 @@ typedef struct SceneMenuInteraction {
     MenuButton input_root_folder_button;
     MenuButton output_root_edit_button;
     MenuButton output_root_folder_button;
+    MenuButton output_root_show_button;
     MenuButton warm_start_edit_button;
     MenuButton warm_start_file_button;
     SDL_Rect config_panel_rect;

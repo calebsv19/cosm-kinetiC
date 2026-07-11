@@ -130,7 +130,8 @@ static bool validate_layout_for_size(int width, int height, bool scene_project_m
             rect_has_area(ctx.input_root_edit_button.rect) ||
             rect_has_area(ctx.output_root_edit_button.rect) ||
             rect_has_area(ctx.input_root_folder_button.rect) ||
-            rect_has_area(ctx.output_root_folder_button.rect)) {
+            rect_has_area(ctx.output_root_folder_button.rect) ||
+            rect_has_area(ctx.output_root_show_button.rect)) {
             fprintf(stderr, "scene_menu_layout_contract_test: legacy root controls visible in scene project mode\n");
             return false;
         }
@@ -146,7 +147,10 @@ static bool validate_layout_for_size(int width, int height, bool scene_project_m
             !rect_has_area(ctx.input_root_edit_button.rect) ||
             !rect_has_area(ctx.output_root_edit_button.rect) ||
             !rect_has_area(ctx.input_root_folder_button.rect) ||
-            !rect_has_area(ctx.output_root_folder_button.rect)) {
+            !rect_has_area(ctx.output_root_folder_button.rect) ||
+            !rect_has_area(ctx.output_root_show_button.rect) ||
+            rects_overlap(ctx.output_root_edit_button.rect, ctx.output_root_show_button.rect) ||
+            rects_overlap(ctx.output_root_folder_button.rect, ctx.output_root_show_button.rect)) {
             fprintf(stderr, "scene_menu_layout_contract_test: legacy root controls missing\n");
             return false;
         }

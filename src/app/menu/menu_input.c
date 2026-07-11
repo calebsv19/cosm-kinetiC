@@ -11,6 +11,7 @@
 #include "app/menu/menu_window.h"
 #include "app/menu/shared_theme_font_adapter.h"
 #include "app/platform/physics_sim_file_picker.h"
+#include "app/platform/physics_sim_path_opener.h"
 #include "app/data_paths.h"
 #include "app/structural/structural_preset_editor.h"
 #include "config/config_loader.h"
@@ -49,6 +50,25 @@ static bool menu_apply_output_root(SceneMenuInteraction *ctx, const char *path) 
              path);
     menu_persist_runtime_config(ctx->cfg);
     return true;
+}
+
+static void menu_show_output_root(SceneMenuInteraction *ctx) {
+    const char *path = NULL;
+    PhysicsSimPathOpenerResult result;
+    if (!ctx) return;
+    path = (ctx->cfg && ctx->cfg->headless_output_dir[0])
+               ? ctx->cfg->headless_output_dir
+               : physics_sim_default_snapshot_dir();
+    result = PhysicsSim_PathOpener_OpenDirectory(path);
+    if (result == PHYSICS_SIM_PATH_OPENER_OPENED) {
+        menu_set_status(ctx, "Opened output root in file manager.", false);
+    } else if (result == PHYSICS_SIM_PATH_OPENER_INVALID_PATH) {
+        menu_set_status(ctx, "Output root does not exist yet.", false);
+    } else if (result == PHYSICS_SIM_PATH_OPENER_UNAVAILABLE) {
+        menu_set_status(ctx, "No system file manager opener is available.", false);
+    } else {
+        menu_set_status(ctx, "Failed to open output root.", false);
+    }
 }
 
 static bool menu_apply_input_root(SceneMenuInteraction *ctx, const char *path) {
@@ -179,6 +199,11 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         } else {
             menu_set_status(ctx, "Output root folder dialog canceled/unavailable.", false);
         }
+        return;
+    }
+
+    if (menu_point_in_rect(x, y, &ctx->output_root_show_button.rect)) {
+        menu_show_output_root(ctx);
         return;
     }
 
