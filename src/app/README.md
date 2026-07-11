@@ -17,6 +17,10 @@ interactive `kinetiC` program.
 - `physics_sim_json_helpers.c` - app-local JSON string escaping helper for
   manual artifact/status writers. Artifact schemas remain owned by their
   writer modules.
+- `platform/physics_sim_file_picker.*` - app-local host chooser adapter for
+  Input Root, Output Root, and Atmospheric Warm Start. macOS uses
+  `osascript`; Linux tries `zenity` then `kdialog`, while the menu retains
+  manual path entry when no desktop picker is available.
 - `physics_sim_cli_helpers.c` - app-local CLI value/scalar parsing helpers for
   support tools. It does not define a generic parser or own tool usage text.
 - `physics_sim_diagnostic_helpers.c` - app-local diagnostic string helpers for

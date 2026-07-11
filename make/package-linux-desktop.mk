@@ -121,6 +121,7 @@ package-linux-desktop: package-linux-desktop-host-check visual-harness
 	@echo "Linux desktop package ready: $(LINUX_DESKTOP_ARCHIVE)"
 
 package-linux-desktop-self-test: package-linux-desktop
+	@$(MAKE) test-physics-sim-file-picker
 	@test -x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-launcher" || (echo "Missing Linux launcher"; exit 1)
 	@test -x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-bin" || (echo "Missing app binary"; exit 1)
 	@test -f "$(LINUX_DESKTOP_ENTRY)" || (echo "Missing Linux desktop entry"; exit 1)

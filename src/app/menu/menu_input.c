@@ -10,6 +10,7 @@
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_window.h"
 #include "app/menu/shared_theme_font_adapter.h"
+#include "app/platform/physics_sim_file_picker.h"
 #include "app/data_paths.h"
 #include "app/structural/structural_preset_editor.h"
 #include "config/config_loader.h"
@@ -40,30 +41,6 @@ static void apply_shared_theme_palette(void) {
     menu_set_theme_palette(&menu_palette);
 }
 
-static bool menu_pick_output_root_macos(char *out_path, size_t out_cap) {
-#if defined(__APPLE__)
-    FILE *pipe = NULL;
-    char line[512];
-    if (!out_path || out_cap == 0u) return false;
-    pipe = popen("/usr/bin/osascript -e 'POSIX path of (choose folder with prompt \"Choose PhysicsSim Output Root\")'",
-                 "r");
-    if (!pipe) return false;
-    if (!fgets(line, sizeof(line), pipe)) {
-        (void)pclose(pipe);
-        return false;
-    }
-    (void)pclose(pipe);
-    line[strcspn(line, "\r\n")] = '\0';
-    if (line[0] == '\0') return false;
-    snprintf(out_path, out_cap, "%s", line);
-    return true;
-#else
-    (void)out_path;
-    (void)out_cap;
-    return false;
-#endif
-}
-
 static bool menu_apply_output_root(SceneMenuInteraction *ctx, const char *path) {
     if (!ctx || !ctx->cfg || !path || path[0] == '\0') return false;
     snprintf(ctx->cfg->headless_output_dir,
@@ -72,30 +49,6 @@ static bool menu_apply_output_root(SceneMenuInteraction *ctx, const char *path) 
              path);
     menu_persist_runtime_config(ctx->cfg);
     return true;
-}
-
-static bool menu_pick_input_root_macos(char *out_path, size_t out_cap) {
-#if defined(__APPLE__)
-    FILE *pipe = NULL;
-    char line[512];
-    if (!out_path || out_cap == 0u) return false;
-    pipe = popen("/usr/bin/osascript -e 'POSIX path of (choose folder with prompt \"Choose PhysicsSim Input Root\")'",
-                 "r");
-    if (!pipe) return false;
-    if (!fgets(line, sizeof(line), pipe)) {
-        (void)pclose(pipe);
-        return false;
-    }
-    (void)pclose(pipe);
-    line[strcspn(line, "\r\n")] = '\0';
-    if (line[0] == '\0') return false;
-    snprintf(out_path, out_cap, "%s", line);
-    return true;
-#else
-    (void)out_path;
-    (void)out_cap;
-    return false;
-#endif
 }
 
 static bool menu_apply_input_root(SceneMenuInteraction *ctx, const char *path) {
@@ -109,30 +62,6 @@ static bool menu_apply_input_root(SceneMenuInteraction *ctx, const char *path) {
     menu_ensure_slot_for_mode(ctx);
     menu_update_scrollbar(ctx);
     return true;
-}
-
-static bool menu_pick_warm_start_file_macos(char *out_path, size_t out_cap) {
-#if defined(__APPLE__)
-    FILE *pipe = NULL;
-    char line[512];
-    if (!out_path || out_cap == 0u) return false;
-    pipe = popen("/usr/bin/osascript -e 'POSIX path of (choose file with prompt \"Choose Atmospheric Warm Start\")'",
-                 "r");
-    if (!pipe) return false;
-    if (!fgets(line, sizeof(line), pipe)) {
-        (void)pclose(pipe);
-        return false;
-    }
-    (void)pclose(pipe);
-    line[strcspn(line, "\r\n")] = '\0';
-    if (line[0] == '\0') return false;
-    snprintf(out_path, out_cap, "%s", line);
-    return true;
-#else
-    (void)out_path;
-    (void)out_cap;
-    return false;
-#endif
 }
 
 static bool menu_apply_warm_start_path(SceneMenuInteraction *ctx, const char *path) {
@@ -183,7 +112,8 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
 
     if (menu_point_in_rect(x, y, &ctx->input_root_folder_button.rect)) {
         char selected[512];
-        if (menu_pick_input_root_macos(selected, sizeof(selected))) {
+        if (PhysicsSim_FilePicker_SelectFolder("Choose PhysicsSim Input Root", NULL, selected, sizeof(selected)) ==
+            PHYSICS_SIM_FILE_PICKER_SELECTED) {
             if (menu_apply_input_root(ctx, selected)) {
                 menu_set_status(ctx, "Input root updated.", false);
             }
@@ -212,7 +142,8 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
     if (menu_warm_start_controls_visible(ctx) &&
         menu_point_in_rect(x, y, &ctx->warm_start_file_button.rect)) {
         char selected[512];
-        if (menu_pick_warm_start_file_macos(selected, sizeof(selected))) {
+        if (PhysicsSim_FilePicker_SelectFile("Choose Atmospheric Warm Start", NULL, selected, sizeof(selected)) ==
+            PHYSICS_SIM_FILE_PICKER_SELECTED) {
             if (menu_apply_warm_start_path(ctx, selected)) {
                 menu_set_status(ctx, "Warm start selected.", false);
             }
@@ -240,7 +171,8 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
 
     if (menu_point_in_rect(x, y, &ctx->output_root_folder_button.rect)) {
         char selected[512];
-        if (menu_pick_output_root_macos(selected, sizeof(selected))) {
+        if (PhysicsSim_FilePicker_SelectFolder("Choose PhysicsSim Output Root", NULL, selected, sizeof(selected)) ==
+            PHYSICS_SIM_FILE_PICKER_SELECTED) {
             if (menu_apply_output_root(ctx, selected)) {
                 menu_set_status(ctx, "Output root updated from folder dialog.", false);
             }
@@ -735,7 +667,8 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     if (!menu_has_scene_project_cache_status(ctx) &&
         ctrl_or_cmd && key == SDLK_i && !shift) {
         char selected[512];
-        if (menu_pick_input_root_macos(selected, sizeof(selected))) {
+        if (PhysicsSim_FilePicker_SelectFolder("Choose PhysicsSim Input Root", NULL, selected, sizeof(selected)) ==
+            PHYSICS_SIM_FILE_PICKER_SELECTED) {
             if (menu_apply_input_root(ctx, selected)) {
                 menu_set_status(ctx, "Input root updated.", false);
             }
@@ -754,7 +687,8 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     if (!menu_has_scene_project_cache_status(ctx) &&
         ctrl_or_cmd && key == SDLK_o && !shift) {
         char selected[512];
-        if (menu_pick_output_root_macos(selected, sizeof(selected))) {
+        if (PhysicsSim_FilePicker_SelectFolder("Choose PhysicsSim Output Root", NULL, selected, sizeof(selected)) ==
+            PHYSICS_SIM_FILE_PICKER_SELECTED) {
             if (menu_apply_output_root(ctx, selected)) {
                 menu_set_status(ctx, "Output root updated from folder dialog.", false);
             }

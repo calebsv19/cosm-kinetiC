@@ -68,9 +68,11 @@ Keyboard handling:
   - `Enter`: confirm edit
   - `Esc`: cancel edit
   - other key/text input routed to text-input widget
-- `Cmd/Ctrl + I`: open native input-root folder chooser.
+- `Cmd/Ctrl + I`: open native input-root folder chooser (`zenity`, then
+  `kdialog` on Linux; manual path entry remains available if neither exists).
 - `Cmd/Ctrl + Shift + I`: open typed input-root edit mode.
-- `Cmd/Ctrl + O`: open native output-root folder chooser.
+- `Cmd/Ctrl + O`: open native output-root folder chooser (`zenity`, then
+  `kdialog` on Linux; manual path entry remains available if neither exists).
 - `Cmd/Ctrl + Shift + O`: open typed output-root edit mode.
 - `Cmd/Ctrl +/-/0`: text zoom shortcut (ignored while menu text fields are active).
 

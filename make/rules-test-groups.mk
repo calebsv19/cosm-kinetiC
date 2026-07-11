@@ -65,6 +65,7 @@ STABLE_TEST_TARGETS := \
 	test-physics-sim-headless-water-object-quality-compare
 
 FAST_TEST_TARGETS := \
+	test-physics-sim-file-picker \
 	test-volume-frames-3d-tiny-parity-contract \
 	test-sim-mode-route-contract \
 	test-wind-tunnel-3d-contract \
