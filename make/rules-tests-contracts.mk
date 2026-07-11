@@ -560,6 +560,7 @@ RUNTIME_SCENE_VIEW_METADATA_AUTHORITY_TEST_SRCS := \
 RUNTIME_MESH_PREVIEW_BRIDGE_TEST_SRCS := \
 	tests/runtime_mesh_preview_bridge_contract_test.c \
 	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
+	$(SRC_DIR)/import/runtime_mesh_preview_path_resolver.c \
 	$(CORE_MESH_PREVIEW_DIR)/src/core_mesh_preview.c \
 	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
 	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset_runtime_document.c \
@@ -1085,7 +1086,7 @@ test-runtime-scene-view-metadata-authority-contract: $(RUNTIME_SCENE_VIEW_METADA
 
 test-runtime-mesh-preview-bridge-contract: $(RUNTIME_MESH_PREVIEW_BRIDGE_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) \
+	$(CC) $(CFLAGS) -DPHYSICS_SIM_RUNTIME_MESH_PATH_RESOLVER_FORCE_LINUX=1 \
 		-I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include \
 		-I$(CORE_MESH_PREVIEW_DIR)/../../shape/external \
 		-I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \

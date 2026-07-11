@@ -1,4 +1,5 @@
 #include "import/runtime_mesh_preview_bridge.h"
+#include "import/runtime_mesh_preview_path_resolver.h"
 
 #include <json-c/json.h>
 #include <math.h>
@@ -457,33 +458,6 @@ static bool resolve_with_base(const char *runtime_scene_path_hint,
     return true;
 }
 
-static bool resolve_migrated_desktop_stls_path(const char *candidate,
-                                               char *out_path,
-                                               size_t out_path_size) {
-    const char *desktop_segment = NULL;
-    const char *tail = NULL;
-    const char *home = NULL;
-    if (!candidate || candidate[0] != '/' || !out_path || out_path_size == 0u) {
-        return false;
-    }
-    desktop_segment = strstr(candidate, "/Desktop/");
-    if (!desktop_segment) return false;
-    tail = desktop_segment + strlen("/Desktop/");
-    if (!tail[0]) return false;
-    home = getenv("HOME");
-    if (!home || !home[0]) return false;
-    if (snprintf(out_path, out_path_size, "%s/Desktop/stls/%s", home, tail) >=
-        (int)out_path_size) {
-        out_path[0] = '\0';
-        return false;
-    }
-    if (!path_exists(out_path)) {
-        out_path[0] = '\0';
-        return false;
-    }
-    return true;
-}
-
 static bool resolve_path_candidate(const char *runtime_scene_path_hint,
                                    const char *candidate,
                                    char *out_path,
@@ -494,7 +468,7 @@ static bool resolve_path_candidate(const char *runtime_scene_path_hint,
         return true;
     }
     if (candidate[0] == '/' &&
-        resolve_migrated_desktop_stls_path(candidate, out_path, out_path_size)) {
+        physics_sim_runtime_mesh_preview_resolve_migrated_path(candidate, out_path, out_path_size)) {
         return true;
     }
     return false;

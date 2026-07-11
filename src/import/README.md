@@ -22,8 +22,10 @@ Runtime scene / runtime mesh path boundary:
   worker-safe bundle stages the scene and asset payloads explicitly.
 - Runtime mesh paths may resolve from explicit absolute paths, paths relative
   to the runtime-scene directory, default `assets/mesh_assets/` /
-  `mesh_assets/` locations, or the current `$HOME/Desktop/stls/...` recovery
-  path for migrated Desktop references.
+  `mesh_assets/` locations, or migrated Desktop references. On Linux, legacy
+  Desktop references recover in order from
+  `$XDG_DATA_HOME/PhysicsSim/stls/`, `XDG_DESKTOP_DIR/stls/` from
+  `user-dirs.dirs`, then `$HOME/Desktop/stls/` for compatibility.
 - Absolute and recovered runtime mesh paths are valid local-authoring
   conveniences, not portable job-bundle guarantees.
 - Worker or cross-host handoff flows must package the runtime scene, runtime

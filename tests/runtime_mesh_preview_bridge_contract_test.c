@@ -1,4 +1,5 @@
 #include "import/runtime_mesh_preview_bridge.h"
+#include "import/runtime_mesh_preview_path_resolver.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,6 +27,14 @@ static bool write_text_file(const char *path, const char *text) {
     written = fwrite(text, 1u, len, f);
     fclose(f);
     return written == len;
+}
+
+static void restore_environment(const char *name, const char *value) {
+    if (value && value[0]) {
+        (void)setenv(name, value, 1);
+    } else {
+        (void)unsetenv(name);
+    }
 }
 
 static char *read_text_file_alloc(const char *path) {
@@ -236,7 +245,11 @@ static void test_scan_scene_recovers_migrated_desktop_stls_path(void) {
     const char *source_asset_path =
         "../ray_tracing/tests/fixtures/mesh_asset_runtime_spheres/assets/mesh_assets/asset_sphere_8x4.runtime.json";
     const char *old_home = getenv("HOME");
+    const char *old_xdg_data_home = getenv("XDG_DATA_HOME");
+    const char *old_xdg_config_home = getenv("XDG_CONFIG_HOME");
     char old_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+    char old_xdg_data_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+    char old_xdg_config_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
     char scene_json[4096] = {0};
     char *asset_text = NULL;
     PhysicsSimRuntimeMeshPreviewSet set;
@@ -245,6 +258,12 @@ static void test_scan_scene_recovers_migrated_desktop_stls_path(void) {
 
     if (old_home && old_home[0]) {
         snprintf(old_home_copy, sizeof(old_home_copy), "%s", old_home);
+    }
+    if (old_xdg_data_home && old_xdg_data_home[0]) {
+        snprintf(old_xdg_data_home_copy, sizeof(old_xdg_data_home_copy), "%s", old_xdg_data_home);
+    }
+    if (old_xdg_config_home && old_xdg_config_home[0]) {
+        snprintf(old_xdg_config_home_copy, sizeof(old_xdg_config_home_copy), "%s", old_xdg_config_home);
     }
     mkdir(root_dir, 0777);
     mkdir(home_dir, 0777);
@@ -282,16 +301,16 @@ static void test_scan_scene_recovers_migrated_desktop_stls_path(void) {
              legacy_path);
 
     expect_true("mesh_preview_migrated_set_home", setenv("HOME", home_dir, 1) == 0);
+    (void)unsetenv("XDG_DATA_HOME");
+    (void)unsetenv("XDG_CONFIG_HOME");
     ok = physics_sim_runtime_mesh_preview_scan_scene_json(scene_json,
                                                           NULL,
                                                           &set,
                                                           diagnostics,
                                                           sizeof(diagnostics));
-    if (old_home_copy[0]) {
-        expect_true("mesh_preview_migrated_restore_home", setenv("HOME", old_home_copy, 1) == 0);
-    } else {
-        unsetenv("HOME");
-    }
+    restore_environment("HOME", old_home_copy);
+    restore_environment("XDG_DATA_HOME", old_xdg_data_home_copy);
+    restore_environment("XDG_CONFIG_HOME", old_xdg_config_home_copy);
 
     expect_true("mesh_preview_migrated_scan_ok", ok);
     expect_true("mesh_preview_migrated_one_instance", set.instance_count == 1);
@@ -311,6 +330,74 @@ static void test_scan_scene_recovers_migrated_desktop_stls_path(void) {
     rmdir(desktop_dir);
     rmdir(home_dir);
     rmdir(root_dir);
+}
+
+static void test_migrated_path_prefers_xdg_data_home(void) {
+    const char *root_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data";
+    const char *home_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/home";
+    const char *data_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/data";
+    const char *physics_sim_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/data/PhysicsSim";
+    const char *stls_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls";
+    const char *library_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls/library";
+    const char *asset_path = "/private/tmp/physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls/library/mesh.runtime.json";
+    const char *old_home = getenv("HOME");
+    const char *old_xdg_data_home = getenv("XDG_DATA_HOME");
+    char old_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+    char old_xdg_data_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+    char resolved[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+
+    if (old_home) snprintf(old_home_copy, sizeof(old_home_copy), "%s", old_home);
+    if (old_xdg_data_home) snprintf(old_xdg_data_home_copy, sizeof(old_xdg_data_home_copy), "%s", old_xdg_data_home);
+    mkdir(root_dir, 0777); mkdir(home_dir, 0777); mkdir(data_dir, 0777); mkdir(physics_sim_dir, 0777);
+    mkdir(stls_dir, 0777); mkdir(library_dir, 0777);
+    expect_true("mesh_preview_xdg_data_write_asset", write_text_file(asset_path, "{}"));
+    expect_true("mesh_preview_xdg_data_set_home", setenv("HOME", home_dir, 1) == 0);
+    expect_true("mesh_preview_xdg_data_set_root", setenv("XDG_DATA_HOME", data_dir, 1) == 0);
+    expect_true("mesh_preview_xdg_data_resolved",
+                physics_sim_runtime_mesh_preview_resolve_migrated_path(
+                    "/former-home/Desktop/library/mesh.runtime.json", resolved, sizeof(resolved)));
+    expect_true("mesh_preview_xdg_data_path", strcmp(resolved, asset_path) == 0);
+    restore_environment("HOME", old_home_copy);
+    restore_environment("XDG_DATA_HOME", old_xdg_data_home_copy);
+    remove(asset_path); rmdir(library_dir); rmdir(stls_dir); rmdir(physics_sim_dir); rmdir(data_dir); rmdir(home_dir); rmdir(root_dir);
+}
+
+static void test_migrated_path_uses_xdg_desktop_dir(void) {
+    const char *root_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop";
+    const char *home_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home";
+    const char *config_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/config";
+    const char *desktop_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home/Workspace";
+    const char *stls_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls";
+    const char *library_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls/library";
+    const char *asset_path = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls/library/mesh.runtime.json";
+    const char *config_path = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/config/user-dirs.dirs";
+    const char *old_home = getenv("HOME");
+    const char *old_xdg_data_home = getenv("XDG_DATA_HOME");
+    const char *old_xdg_config_home = getenv("XDG_CONFIG_HOME");
+    char old_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+    char old_xdg_data_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+    char old_xdg_config_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+    char resolved[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
+
+    if (old_home) snprintf(old_home_copy, sizeof(old_home_copy), "%s", old_home);
+    if (old_xdg_data_home) snprintf(old_xdg_data_home_copy, sizeof(old_xdg_data_home_copy), "%s", old_xdg_data_home);
+    if (old_xdg_config_home) snprintf(old_xdg_config_home_copy, sizeof(old_xdg_config_home_copy), "%s", old_xdg_config_home);
+    mkdir(root_dir, 0777); mkdir(home_dir, 0777); mkdir(config_dir, 0777); mkdir(desktop_dir, 0777);
+    mkdir(stls_dir, 0777); mkdir(library_dir, 0777);
+    expect_true("mesh_preview_xdg_desktop_write_asset", write_text_file(asset_path, "{}"));
+    expect_true("mesh_preview_xdg_desktop_write_config", write_text_file(config_path, "XDG_DESKTOP_DIR=\"$HOME/Workspace\"\n"));
+    expect_true("mesh_preview_xdg_desktop_set_home", setenv("HOME", home_dir, 1) == 0);
+    expect_true("mesh_preview_xdg_desktop_set_config", setenv("XDG_CONFIG_HOME", config_dir, 1) == 0);
+    (void)unsetenv("XDG_DATA_HOME");
+    expect_true("mesh_preview_xdg_desktop_resolved",
+                physics_sim_runtime_mesh_preview_resolve_migrated_path(
+                    "/former-home/Desktop/library/mesh.runtime.json", resolved, sizeof(resolved)));
+    expect_true("mesh_preview_xdg_desktop_path", strcmp(resolved, asset_path) == 0);
+    restore_environment("HOME", old_home_copy);
+    restore_environment("XDG_DATA_HOME", old_xdg_data_home_copy);
+    restore_environment("XDG_CONFIG_HOME", old_xdg_config_home_copy);
+    remove(asset_path); remove(config_path); rmdir(library_dir); rmdir(stls_dir); rmdir(desktop_dir);
+    rmdir(config_dir); rmdir(home_dir); rmdir(root_dir);
 }
 
 static void test_scan_scene_mesh_emitter_disables_default_obstacle(void) {
@@ -364,6 +451,8 @@ int main(void) {
     test_scan_scene_attaches_preview_metadata();
     test_scan_scene_keeps_missing_preview_advisory();
     test_scan_scene_recovers_migrated_desktop_stls_path();
+    test_migrated_path_prefers_xdg_data_home();
+    test_migrated_path_uses_xdg_desktop_dir();
     test_scan_scene_mesh_emitter_disables_default_obstacle();
     if (g_failures != 0) {
         fprintf(stderr, "runtime_mesh_preview_bridge_contract_test: %d failure(s)\n", g_failures);
