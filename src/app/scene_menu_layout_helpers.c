@@ -126,6 +126,7 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     int frames_w = 0;
     bool show_warm_start = false;
     bool scene_project_mode = false;
+    bool compact_cache_actions = false;
     if (!ctx) return;
     retained_catalog = menu_showing_retained_catalog(ctx);
     show_warm_start = menu_warm_start_controls_visible(ctx);
@@ -244,6 +245,8 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
     ctx->inflow_rect = (SDL_Rect){0, 0, 0, 0};
     ctx->viscosity_rect = (SDL_Rect){0, 0, 0, 0};
 
+    compact_cache_actions = scene_project_mode &&
+                            panel_w - config_pad * 2 < 560;
     io_row_count = scene_project_mode ? 4 : (show_warm_start ? 4 : 3);
     io_rows_h = compact_h * io_row_count + row_gap * (io_row_count - 1);
     io_header_h = scene_project_mode ? small_h + 8 : small_h * 2 + 12;
@@ -328,10 +331,18 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
                                ? ctx->scene_project_root_rect.x
                                : ctx->output_root_rect.x;
         frames_w = action_row_w / 4;
-    if (frames_w < 150) frames_w = 150;
+    if (compact_cache_actions) {
+        frames_w = 96;
+    } else if (frames_w < 150) {
+        frames_w = 150;
+    }
     if (frames_w > 220) frames_w = 220;
-    cache_button_w = scene_project_mode ? (action_row_w - frames_w - cache_button_gap * 3) / 5 : 0;
-    if (cache_button_w < 120) cache_button_w = 120;
+    cache_button_w = scene_project_mode
+                         ? (action_row_w - frames_w - cache_button_gap * 3) / 5
+                         : 0;
+    if (cache_button_w < (compact_cache_actions ? 112 : 120)) {
+        cache_button_w = compact_cache_actions ? 112 : 120;
+    }
     if (cache_button_w > 180) cache_button_w = 180;
     if (!scene_project_mode) {
         cache_button_w = 0;

@@ -176,6 +176,7 @@ int main(void) {
     if (!validate_layout_for_size(MENU_MIN_WIDTH, MENU_MIN_HEIGHT, false)) return 1;
     if (!validate_layout_for_size(MENU_WIDTH, MENU_HEIGHT, true)) return 1;
     if (!validate_layout_for_size(MENU_MIN_WIDTH, MENU_MIN_HEIGHT, true)) return 1;
+    if (!validate_layout_for_size(1024, 720, true)) return 1;
     fprintf(stdout, "scene_menu_layout_contract_test: success\n");
     return 0;
 }
