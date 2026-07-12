@@ -303,6 +303,7 @@ restart_menu:
         .start_button = {.rect = {MENU_WIDTH - 220, MENU_HEIGHT - 80, 180, 50}, .label = "Start"},
         .duplicate_button = {.rect = {MENU_WIDTH - 620, MENU_HEIGHT - 80, 180, 50}, .label = "Duplicate"},
         .cache_command_button = {.rect = {MENU_WIDTH - 820, MENU_HEIGHT - 80, 180, 50}, .label = "Copy Cache Cmd"},
+        .cache_show_button = {.rect = {MENU_WIDTH - 620, MENU_HEIGHT - 80, 180, 50}, .label = "Show Cache"},
         .edit_button = {.rect = {MENU_WIDTH - 420, MENU_HEIGHT - 80, 180, 50}, .label = "Edit Preset"},
         .quit_button = {.rect = {20, MENU_HEIGHT - 70, 120, 40}, .label = "Quit"},
         .grid_dec_button = {.rect = {MENU_WIDTH - 260, 180, 40, 40}, .label = "-"},
@@ -917,6 +918,11 @@ restart_menu:
                 menu_draw_button(ctx.renderer,
                                  &ctx.cache_command_button.rect,
                                  ctx.cache_command_button.label,
+                                 ctx.font_small ? ctx.font_small : ctx.font,
+                                 false);
+                menu_draw_button(ctx.renderer,
+                                 &ctx.cache_show_button.rect,
+                                 ctx.cache_show_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
                                  false);
             }

@@ -330,14 +330,14 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
         frames_w = action_row_w / 4;
     if (frames_w < 150) frames_w = 150;
     if (frames_w > 220) frames_w = 220;
-    cache_button_w = scene_project_mode ? (action_row_w - frames_w - cache_button_gap * 2) / 4 : 0;
+    cache_button_w = scene_project_mode ? (action_row_w - frames_w - cache_button_gap * 3) / 5 : 0;
     if (cache_button_w < 120) cache_button_w = 120;
     if (cache_button_w > 180) cache_button_w = 180;
     if (!scene_project_mode) {
         cache_button_w = 0;
         cache_button_gap = 0;
     }
-    headless_button_w = action_row_w - frames_w - cache_button_w - cache_button_gap * 2;
+    headless_button_w = action_row_w - frames_w - cache_button_w * 2 - cache_button_gap * 3;
     if (headless_button_w < 150) {
         frames_w = action_row_w;
         headless_button_w = action_row_w;
@@ -364,8 +364,15 @@ void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,
             cache_button_w,
             ctx->headless_toggle_button.rect.h
         };
+        ctx->cache_show_button.rect = (SDL_Rect){
+            ctx->cache_command_button.rect.x + ctx->cache_command_button.rect.w + cache_button_gap,
+            ctx->cache_command_button.rect.y,
+            cache_button_w,
+            ctx->cache_command_button.rect.h
+        };
     } else {
         ctx->cache_command_button.rect = (SDL_Rect){0, 0, 0, 0};
+        ctx->cache_show_button.rect = (SDL_Rect){0, 0, 0, 0};
     }
 
     output_buttons_total_w = output_button_w * 3 + 16;
@@ -434,7 +441,8 @@ bool scene_menu_layout_validate_no_overlap(const SceneMenuInteraction *ctx,
         &ctx->warm_start_rect,
         &ctx->headless_frames_rect,
         &ctx->headless_toggle_button.rect,
-        &ctx->cache_command_button.rect
+        &ctx->cache_command_button.rect,
+        &ctx->cache_show_button.rect
     };
     const SDL_Rect *bottom_actions[] = {
         &ctx->duplicate_button.rect,
@@ -490,6 +498,12 @@ bool scene_menu_layout_validate_no_overlap(const SceneMenuInteraction *ctx,
         rects_overlap(ctx->cache_command_button.rect, ctx->edit_button.rect) ||
         rects_overlap(ctx->cache_command_button.rect, ctx->start_button.rect)) {
         layout_error(error, error_size, "cache command overlaps bottom actions");
+        return false;
+    }
+    if (rects_overlap(ctx->cache_show_button.rect, ctx->duplicate_button.rect) ||
+        rects_overlap(ctx->cache_show_button.rect, ctx->edit_button.rect) ||
+        rects_overlap(ctx->cache_show_button.rect, ctx->start_button.rect)) {
+        layout_error(error, error_size, "cache show overlaps bottom actions");
         return false;
     }
     if (error && error_size > 0u) error[0] = '\0';

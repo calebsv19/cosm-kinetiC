@@ -16,6 +16,7 @@ void menu_clear_retained_scene_selection(SceneMenuInteraction *ctx);
 void menu_update_scene_project_cache_status(SceneMenuInteraction *ctx);
 bool menu_has_scene_project_cache_status(const SceneMenuInteraction *ctx);
 bool menu_copy_scene_project_cache_command(SceneMenuInteraction *ctx);
+bool menu_show_scene_project_cache(SceneMenuInteraction *ctx);
 
 void menu_run_headless_batch(SceneMenuInteraction *ctx);
 

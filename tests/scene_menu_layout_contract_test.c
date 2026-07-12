@@ -117,7 +117,10 @@ static bool validate_layout_for_size(int width, int height, bool scene_project_m
     }
     if (rects_overlap(ctx.cache_command_button.rect, ctx.duplicate_button.rect) ||
         rects_overlap(ctx.cache_command_button.rect, ctx.edit_button.rect) ||
-        rects_overlap(ctx.cache_command_button.rect, ctx.start_button.rect)) {
+        rects_overlap(ctx.cache_command_button.rect, ctx.start_button.rect) ||
+        rects_overlap(ctx.cache_show_button.rect, ctx.duplicate_button.rect) ||
+        rects_overlap(ctx.cache_show_button.rect, ctx.edit_button.rect) ||
+        rects_overlap(ctx.cache_show_button.rect, ctx.start_button.rect)) {
         fprintf(stderr, "scene_menu_layout_contract_test: cache button overlaps bottom actions\n");
         return false;
     }
@@ -138,7 +141,9 @@ static bool validate_layout_for_size(int width, int height, bool scene_project_m
         if (!rect_has_area(ctx.scene_project_root_rect) ||
             !rect_has_area(ctx.scene_project_cache_target_rect) ||
             !rect_has_area(ctx.scene_project_cache_status_rect) ||
-            !rect_has_area(ctx.cache_command_button.rect)) {
+            !rect_has_area(ctx.cache_command_button.rect) ||
+            !rect_has_area(ctx.cache_show_button.rect) ||
+            rects_overlap(ctx.cache_command_button.rect, ctx.cache_show_button.rect)) {
             fprintf(stderr, "scene_menu_layout_contract_test: scene project controls missing\n");
             return false;
         }
@@ -157,7 +162,8 @@ static bool validate_layout_for_size(int width, int height, bool scene_project_m
         if (rect_has_area(ctx.scene_project_root_rect) ||
             rect_has_area(ctx.scene_project_cache_target_rect) ||
             rect_has_area(ctx.scene_project_cache_status_rect) ||
-            rect_has_area(ctx.cache_command_button.rect)) {
+            rect_has_area(ctx.cache_command_button.rect) ||
+            rect_has_area(ctx.cache_show_button.rect)) {
             fprintf(stderr, "scene_menu_layout_contract_test: scene project controls visible in legacy mode\n");
             return false;
         }

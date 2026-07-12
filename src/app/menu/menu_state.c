@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "app/quality_profiles.h"
+#include "app/platform/physics_sim_path_opener.h"
 #include "app/scene_controller.h"
 #include "app/scene_project_cache_output.h"
 #include "app/data_paths.h"
@@ -180,6 +181,26 @@ bool menu_copy_scene_project_cache_command(SceneMenuInteraction *ctx) {
     }
     menu_set_status(ctx, "Scene-project cache update command copied.", false);
     return true;
+}
+
+bool menu_show_scene_project_cache(SceneMenuInteraction *ctx) {
+    PhysicsSimPathOpenerResult result;
+    if (!menu_has_scene_project_cache_status(ctx) ||
+        !ctx->scene_project_cache_status.project_root[0]) {
+        if (ctx) menu_set_status(ctx, "No scene-project cache root for this selection.", false);
+        return false;
+    }
+    result = PhysicsSim_PathOpener_OpenDirectory(ctx->scene_project_cache_status.project_root);
+    if (result == PHYSICS_SIM_PATH_OPENER_OPENED) {
+        menu_set_status(ctx, "Opened scene-project cache root.", false);
+        return true;
+    }
+    if (result == PHYSICS_SIM_PATH_OPENER_UNAVAILABLE) {
+        menu_set_status(ctx, "No system file manager opener is available.", false);
+        return false;
+    }
+    menu_set_status(ctx, "Could not open the scene-project cache root.", false);
+    return false;
 }
 
 bool menu_point_in_rect(int x, int y, const SDL_Rect *rect) {

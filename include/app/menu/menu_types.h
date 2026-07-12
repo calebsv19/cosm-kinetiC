@@ -59,6 +59,7 @@ typedef struct SceneMenuInteraction {
     MenuButton start_button;
     MenuButton duplicate_button;
     MenuButton cache_command_button;
+    MenuButton cache_show_button;
     MenuButton edit_button;
     MenuButton quit_button;
     MenuButton grid_dec_button;

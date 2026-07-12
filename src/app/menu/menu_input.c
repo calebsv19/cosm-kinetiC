@@ -308,6 +308,13 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         return;
     }
 
+    if (menu_showing_retained_catalog(ctx) &&
+        menu_has_scene_project_cache_status(ctx) &&
+        menu_point_in_rect(x, y, &ctx->cache_show_button.rect)) {
+        (void)menu_show_scene_project_cache(ctx);
+        return;
+    }
+
     if (menu_point_in_rect(x, y, &ctx->edit_button.rect)) {
         if (ctx->rename_input.active) {
             menu_finish_rename(ctx, true);
