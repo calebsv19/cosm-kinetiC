@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import struct
 import sys
 import tarfile
 
@@ -26,6 +27,16 @@ FORBIDDEN_PACKAGE_PARTS = {
     "tmp",
     "_private_workspace_artifacts",
     "agent_runs",
+}
+
+ELF_MACHINE_BY_PLATFORM = {
+    "linux-x86_64": 62,
+    "linux-aarch64": 183,
+}
+
+PLATFORM_CAPABILITY_BY_PLATFORM = {
+    "linux-x86_64": "platform-linux-x86_64-v1",
+    "linux-aarch64": "platform-linux-aarch64-v1",
 }
 
 
@@ -54,6 +65,36 @@ def require_file(path: Path, executable: bool = False) -> None:
         fail(f"file is not executable: {path}")
 
 
+def elf_machine(data: bytes) -> int | None:
+    if len(data) < 20 or data[:4] != b"\x7fELF":
+        return None
+    if data[5] == 1:
+        byte_order = "<"
+    elif data[5] == 2:
+        byte_order = ">"
+    else:
+        return None
+    return int(struct.unpack(f"{byte_order}H", data[18:20])[0])
+
+
+def validate_native_binary(path: Path, platform: str) -> None:
+    expected_machine = ELF_MACHINE_BY_PLATFORM.get(platform)
+    if expected_machine is None:
+        fail(f"unsupported worker package platform: {platform}")
+    try:
+        data = path.read_bytes()[:64]
+    except OSError as exc:
+        fail(f"could not read native worker file {path}: {exc}")
+    machine = elf_machine(data)
+    if machine is None:
+        fail(f"native worker file is not ELF: {path}")
+    if machine != expected_machine:
+        fail(
+            f"native worker architecture mismatch for {path}: platform {platform} "
+            f"requires ELF machine {expected_machine}, got {machine}"
+        )
+
+
 def validate_manifest(
     manifest: dict,
     program: str,
@@ -76,6 +117,14 @@ def validate_manifest(
         fail("manifest.json job_types must be ['trio_headless_stage']")
     if not isinstance(manifest.get("runtime_dependencies"), list):
         fail("manifest.json runtime_dependencies must be a list")
+    expected_capabilities = {
+        "trio-headless-v1",
+        "scene-project-portable-v1",
+        "physics-cache-project-local-v1",
+        PLATFORM_CAPABILITY_BY_PLATFORM[platform],
+    }
+    if set(manifest.get("capabilities") or []) != expected_capabilities:
+        fail("manifest.json capabilities do not match the PhysicsSim package contract")
 
 
 def validate_package_manifest(
@@ -114,6 +163,14 @@ def validate_package_manifest(
         fail("package_manifest.json self_test.argv must be a non-empty list")
     if argv[0] != "bin/physics_sim_job_runner":
         fail("package_manifest.json self_test must exercise the job runner")
+    expected_capabilities = {
+        "trio-headless-v1",
+        "scene-project-portable-v1",
+        "physics-cache-project-local-v1",
+        PLATFORM_CAPABILITY_BY_PLATFORM[platform],
+    }
+    if set(package_manifest.get("capabilities") or []) != expected_capabilities:
+        fail("package_manifest.json capabilities do not match the PhysicsSim package contract")
     return [str(arg) for arg in argv]
 
 
@@ -184,6 +241,9 @@ def main() -> int:
 
     for relative in EXPECTED_STAGE_FILES:
         require_file(stage_dir / relative, executable=relative.startswith("bin/"))
+
+    validate_native_binary(stage_dir / "bin/physics_sim_headless", args.platform)
+    validate_native_binary(stage_dir / "bin/physics_sim_job_runner", args.platform)
 
     run_worker = (stage_dir / "bin/run_worker.sh").read_text(encoding="utf-8")
     if "physics_sim_headless" not in run_worker or "exec" not in run_worker:

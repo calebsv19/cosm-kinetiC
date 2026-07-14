@@ -234,10 +234,16 @@ Command context:
   - `make -C physics_sim package-desktop`
   - `make -C physics_sim PACKAGE_TOOLCHAIN=fisics package-desktop`
   - desktop packaging stays Clang-default unless `PACKAGE_TOOLCHAIN=fisics` is set
-  - Linux worker packaging now follows the Linux build-host architecture by
-    default (`linux-x86_64` or `linux-aarch64`)
+  - Linux worker packaging requires a native Linux build host and follows that
+    host architecture by default (`linux-x86_64` or `linux-aarch64`); the
+    package target rejects macOS and mismatched architecture selections because
+    no cross-compilation toolchain is configured
+  - both package manifests publish the exact PhysicsSim binary capabilities:
+    Trio headless execution, portable scene projects, project-local PhysicsSim
+    caches, and the selected Linux platform architecture
   - `package-linux-worker-dry-run` locally validates the worker archive
-    manifests, entrypoints, selected docs/config payload, archive contents, and
+    manifests, ELF machine architecture, exact platform/capability parity,
+    entrypoints, selected docs/config payload, archive contents, and
     manifest-declared self-test without remote upload/install/execution
   - worker package upload/install/status/fetch is not owned by
     `package-linux-worker`; cross-host validation routes through the Linux PC

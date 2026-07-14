@@ -177,6 +177,11 @@ make test-manifest-to-trace-export
 make test-vf2d-pack-dataset-parity
 ```
 
+Linux worker packages must be built on a native Linux host whose architecture
+matches `LINUX_WORKER_PLATFORM`; no cross-compilation toolchain is configured.
+The package validator checks ELF machine identity plus exact platform and
+capability metadata before an archive can be treated as a worker candidate.
+
 `test-fast` is the smallest deterministic non-GUI lane for common source
 changes. It uses checked-in fixtures only and excludes headless integration,
 package, local-system/private-path, long visual/video, and remote-worker probes.

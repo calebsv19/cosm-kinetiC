@@ -2,6 +2,7 @@
 #  Linux headless worker packaging
 # =========================
 LINUX_WORKER_HOST_ARCH := $(shell uname -m)
+LINUX_WORKER_HOST_OS := $(shell uname -s)
 ifndef LINUX_WORKER_PLATFORM
 ifeq ($(LINUX_WORKER_HOST_ARCH),x86_64)
 LINUX_WORKER_PLATFORM := linux-x86_64
@@ -16,6 +17,13 @@ $(error Unsupported Linux worker package host architecture: $(LINUX_WORKER_HOST_
 endif
 endif
 LINUX_WORKER_SLUG := physics_sim_headless_worker
+ifeq ($(LINUX_WORKER_PLATFORM),linux-x86_64)
+LINUX_WORKER_PLATFORM_CAPABILITY := platform-linux-x86_64-v1
+else ifeq ($(LINUX_WORKER_PLATFORM),linux-aarch64)
+LINUX_WORKER_PLATFORM_CAPABILITY := platform-linux-aarch64-v1
+else
+$(error Unsupported Linux worker package platform: $(LINUX_WORKER_PLATFORM))
+endif
 LINUX_WORKER_BASENAME := $(RELEASE_PROGRAM_KEY)-$(RELEASE_VERSION)-$(LINUX_WORKER_PLATFORM)-worker
 LINUX_WORKER_DIR := $(RELEASE_DIR)/$(LINUX_WORKER_BASENAME)
 LINUX_WORKER_BIN_DIR := $(LINUX_WORKER_DIR)/bin
@@ -26,7 +34,7 @@ LINUX_WORKER_MANIFEST := $(LINUX_WORKER_DIR)/package_manifest.json
 LINUX_WORKER_ARCHIVE := $(RELEASE_DIR)/$(LINUX_WORKER_BASENAME).tar.gz
 LINUX_WORKER_PACKAGE_VALIDATOR := tools/packaging/validate_linux_worker_package.py
 
-.PHONY: package-linux-worker-contract package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run
+.PHONY: package-linux-worker-contract package-linux-worker-host-check package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run
 
 package-linux-worker-contract:
 	@echo "Linux worker package contract"
@@ -39,11 +47,22 @@ package-linux-worker-contract:
 	@echo "    - $(PHYSICS_SIM_HEADLESS_TOOL_BIN)"
 	@echo "    - $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)"
 
+package-linux-worker-host-check:
+	@if [ "$(LINUX_WORKER_HOST_OS)" != "Linux" ]; then \
+		echo "Linux worker package build requires a Linux host; got $(LINUX_WORKER_HOST_OS)/$(LINUX_WORKER_HOST_ARCH)"; \
+		exit 1; \
+	fi
+	@if { [ "$(LINUX_WORKER_PLATFORM)" = "linux-x86_64" ] && [ "$(LINUX_WORKER_HOST_ARCH)" != "x86_64" ] && [ "$(LINUX_WORKER_HOST_ARCH)" != "amd64" ]; } || \
+	   { [ "$(LINUX_WORKER_PLATFORM)" = "linux-aarch64" ] && [ "$(LINUX_WORKER_HOST_ARCH)" != "aarch64" ] && [ "$(LINUX_WORKER_HOST_ARCH)" != "arm64" ]; }; then \
+		echo "Linux worker package platform $(LINUX_WORKER_PLATFORM) does not match native host architecture $(LINUX_WORKER_HOST_ARCH); no cross toolchain is configured"; \
+		exit 1; \
+	fi
+
 package-linux-worker-clean:
 	@rm -rf "$(LINUX_WORKER_DIR)" "$(LINUX_WORKER_ARCHIVE)"
 	@echo "Removed Linux worker package artifacts: $(LINUX_WORKER_BASENAME)"
 
-package-linux-worker: physics_sim_headless physics-sim-job-runner
+package-linux-worker: package-linux-worker-host-check physics_sim_headless physics-sim-job-runner
 	@echo "Preparing Linux worker package..."
 	@rm -rf "$(LINUX_WORKER_DIR)"
 	@mkdir -p "$(LINUX_WORKER_BIN_DIR)" "$(LINUX_WORKER_CONFIG_DIR)" "$(LINUX_WORKER_DOCS_DIR)"
@@ -64,6 +83,7 @@ package-linux-worker: physics_sim_headless physics-sim-job-runner
 	@printf '  "platform": "%s",\n' "$(LINUX_WORKER_PLATFORM)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "program": "%s",\n' "$(RELEASE_PROGRAM_KEY)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "job_types": ["trio_headless_stage"],\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
+	@printf '  "capabilities": ["trio-headless-v1", "scene-project-portable-v1", "physics-cache-project-local-v1", "%s"],\n' "$(LINUX_WORKER_PLATFORM_CAPABILITY)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "entrypoint": "bin/run_worker.sh",\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "default_args": [],\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm", "SDL2", "SDL2_ttf"]\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
@@ -79,6 +99,7 @@ package-linux-worker: physics_sim_headless physics-sim-job-runner
 	@printf '    "headless_cli": "bin/physics_sim_headless",\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '    "job_runner": "bin/physics_sim_job_runner"\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  },\n' >> "$(LINUX_WORKER_MANIFEST)"
+	@printf '  "capabilities": ["trio-headless-v1", "scene-project-portable-v1", "physics-cache-project-local-v1", "%s"],\n' "$(LINUX_WORKER_PLATFORM_CAPABILITY)" >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm"],\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "self_test": {\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '    "type": "command",\n' >> "$(LINUX_WORKER_MANIFEST)"
