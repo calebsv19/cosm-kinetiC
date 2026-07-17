@@ -16,6 +16,7 @@ CORE_MESH_PREVIEW_SRCS := $(CORE_MESH_PREVIEW_DIR)/src/core_mesh_preview.c
 CORE_OBJECT_SRCS := $(CORE_OBJECT_DIR)/src/core_object.c
 CORE_UNITS_SRCS := $(CORE_UNITS_DIR)/src/core_units.c
 CORE_VIEWPORT2D_SRCS := $(CORE_VIEWPORT2D_DIR)/src/core_viewport2d.c
+CORE_SCREEN_PICK_SRCS := $(CORE_SCREEN_PICK_DIR)/src/core_screen_pick.c
 CORE_PANE_SRCS := $(CORE_PANE_DIR)/src/core_pane.c
 CORE_SIM_SRCS := $(CORE_SIM_DIR)/src/core_sim.c
 CORE_TRACE_SRCS := $(CORE_TRACE_DIR)/src/core_trace.c

@@ -1008,6 +1008,13 @@ test-scene-editor-viewport-contract: $(SCENE_EDITOR_VIEWPORT_TEST_SRCS)
 		-o $(BUILD_DIR)/scene_editor_viewport_contract_test $(SCENE_EDITOR_VIEWPORT_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_viewport_contract_test
 
+test-scene-editor-object-pick-contract: $(PHYSICS_SIM_APP_OBJS_NO_MAIN) tests/scene_editor_object_pick_contract_test.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) \
+		-o $(BUILD_DIR)/scene_editor_object_pick_contract_test \
+		tests/scene_editor_object_pick_contract_test.c $(PHYSICS_SIM_APP_OBJS_NO_MAIN) $(LIBS)
+	$(BUILD_DIR)/scene_editor_object_pick_contract_test
+
 test-scene-editor-wind-setup-contract: $(SCENE_EDITOR_WIND_SETUP_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \

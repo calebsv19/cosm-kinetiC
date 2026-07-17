@@ -1,7 +1,54 @@
 #include "app/editor/scene_editor_canvas.h"
 #include "app/shape_lookup.h"
+#include "core_screen_pick.h"
 
 #include <math.h>
+
+static CoreScreenPickIndex g_object_pick_index;
+static bool g_object_pick_index_initialized = false;
+
+static bool scene_editor_canvas_rebuild_object_pick_index(const FluidScenePreset *preset,
+                                                          int canvas_x,
+                                                          int canvas_y,
+                                                          int canvas_w,
+                                                          int canvas_h) {
+    CoreScreenPickCandidate candidates[MAX_PRESET_OBJECTS];
+    CoreScreenPickConfig config = core_screen_pick_config_default();
+    CoreResult result = {0};
+    size_t candidate_count = 0;
+
+    if (!preset || canvas_w <= 0 || canvas_h <= 0) return false;
+    if (!g_object_pick_index_initialized) {
+        result = core_screen_pick_index_init(&g_object_pick_index, config);
+        if (result.code != CORE_OK) return false;
+        g_object_pick_index_initialized = true;
+    }
+
+    for (size_t i = 0; i < preset->object_count && i < MAX_PRESET_OBJECTS; ++i) {
+        int center_x = 0;
+        int center_y = 0;
+        scene_editor_canvas_project(canvas_x,
+                                    canvas_y,
+                                    canvas_w,
+                                    canvas_h,
+                                    preset->objects[i].position_x,
+                                    preset->objects[i].position_y,
+                                    &center_x,
+                                    &center_y);
+        candidates[candidate_count].stable_key = (uint64_t)(i + 1);
+        candidates[candidate_count].payload = (int64_t)i;
+        candidates[candidate_count].screen_x = (double)center_x;
+        candidates[candidate_count].screen_y = (double)center_y;
+        candidates[candidate_count].view_depth = 0.0;
+        candidate_count += 1;
+    }
+
+    result = core_screen_pick_index_rebuild(&g_object_pick_index,
+                                            candidates,
+                                            candidate_count,
+                                            g_object_pick_index.revision + 1);
+    return result.code == CORE_OK;
+}
 
 static float emitter_visual_radius_norm(const FluidScenePreset *preset,
                                         int emitter_index,
@@ -146,32 +193,27 @@ int scene_editor_canvas_collect_hits(const FluidScenePreset *preset,
         }
     }
 
-    // Object bodies
-    for (int i = (int)preset->object_count - 1; i >= 0; --i) {
-        const PresetObject *obj = &preset->objects[i];
-        int cx, cy;
-        scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
-                                    obj->position_x, obj->position_y,
-                                    &cx, &cy);
-        if (obj->type == PRESET_OBJECT_CIRCLE) {
-            int radius = (int)lroundf(scene_editor_canvas_object_visual_radius_px(obj, canvas_w));
-            float dx = (float)px - (float)cx;
-            float dy = (float)py - (float)cy;
-            if (dx * dx + dy * dy <= (float)(radius * radius)) {
-                SceneEditorHit h = {.kind = HIT_OBJECT, .index = i, .drag_mode = DRAG_POSITION, .boundary_edge = -1};
-                count = push_hit(out_hits, max_hits, count, h);
-            }
-        } else {
-            float half_w = 0.0f, half_h = 0.0f;
-            scene_editor_canvas_object_visual_half_sizes_px(obj, canvas_w, canvas_h, &half_w, &half_h);
-            float dx = (float)px - (float)cx;
-            float dy = (float)py - (float)cy;
-            float cos_a = cosf(obj->angle);
-            float sin_a = sinf(obj->angle);
-            float local_x = dx * cos_a + dy * sin_a;
-            float local_y = -dx * sin_a + dy * cos_a;
-            if (fabsf(local_x) <= half_w && fabsf(local_y) <= half_h) {
-                SceneEditorHit h = {.kind = HIT_OBJECT, .index = i, .drag_mode = DRAG_POSITION, .boundary_edge = -1};
+    // Object bodies use the shared projected-origin ranking contract. Handles
+    // above and emitters/boundaries below retain their app-local arbitration.
+    if (scene_editor_canvas_rebuild_object_pick_index(
+            preset, canvas_x, canvas_y, canvas_w, canvas_h)) {
+        CoreScreenPickResult ranked[MAX_PRESET_OBJECTS];
+        size_t ranked_count = 0;
+        CoreResult result = core_screen_pick_query_ranked(&g_object_pick_index,
+                                                          (double)px,
+                                                          (double)py,
+                                                          ranked,
+                                                          MAX_PRESET_OBJECTS,
+                                                          &ranked_count);
+        if (result.code == CORE_OK) {
+            if (ranked_count > MAX_PRESET_OBJECTS) ranked_count = MAX_PRESET_OBJECTS;
+            for (size_t i = 0; i < ranked_count; ++i) {
+                SceneEditorHit h = {
+                    .kind = HIT_OBJECT,
+                    .index = (int)ranked[i].payload,
+                    .drag_mode = DRAG_POSITION,
+                    .boundary_edge = -1
+                };
                 count = push_hit(out_hits, max_hits, count, h);
             }
         }
@@ -275,35 +317,18 @@ int scene_editor_canvas_hit_object(const FluidScenePreset *preset,
                                    int canvas_h,
                                    int px,
                                    int py) {
-    if (!preset) return -1;
-    for (size_t i = 0; i < preset->object_count; ++i) {
-        const PresetObject *obj = &preset->objects[i];
-        int cx, cy;
-        scene_editor_canvas_project(canvas_x, canvas_y, canvas_w, canvas_h,
-                                    obj->position_x, obj->position_y,
-                                    &cx, &cy);
-        if (obj->type == PRESET_OBJECT_CIRCLE) {
-            int radius = (int)lroundf(scene_editor_canvas_object_visual_radius_px(obj, canvas_w));
-            float dx = (float)px - (float)cx;
-            float dy = (float)py - (float)cy;
-            if (dx * dx + dy * dy <= (float)(radius * radius)) {
-                return (int)i;
-            }
-        } else {
-            float half_w = 0.0f, half_h = 0.0f;
-            scene_editor_canvas_object_visual_half_sizes_px(obj, canvas_w, canvas_h, &half_w, &half_h);
-            float dx = (float)px - (float)cx;
-            float dy = (float)py - (float)cy;
-            float cos_a = cosf(obj->angle);
-            float sin_a = sinf(obj->angle);
-            float local_x = dx * cos_a + dy * sin_a;
-            float local_y = -dx * sin_a + dy * cos_a;
-            if (fabsf(local_x) <= half_w && fabsf(local_y) <= half_h) {
-                return (int)i;
-            }
-        }
+    CoreScreenPickResult pick = {0};
+    CoreResult result = {0};
+    if (!scene_editor_canvas_rebuild_object_pick_index(
+            preset, canvas_x, canvas_y, canvas_w, canvas_h)) {
+        return -1;
     }
-    return -1;
+    result = core_screen_pick_query_nearest(&g_object_pick_index,
+                                            (double)px,
+                                            (double)py,
+                                            &pick);
+    if (result.code != CORE_OK || !pick.found) return -1;
+    return (int)pick.payload;
 }
 
 int scene_editor_canvas_hit_object_handle(const FluidScenePreset *preset,

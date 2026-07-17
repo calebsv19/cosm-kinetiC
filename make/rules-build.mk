@@ -290,6 +290,10 @@ $(BUILD_DIR)/core_viewport2d/%.o: $(CORE_VIEWPORT2D_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
+$(BUILD_DIR)/core_screen_pick/%.o: $(CORE_SCREEN_PICK_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
 $(FISICS_BUILD_DIR)/core_viewport2d/%.o: $(CORE_VIEWPORT2D_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@

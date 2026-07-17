@@ -29,6 +29,7 @@ CORE_MESH_PREVIEW_DIR := $(SHARED_ROOT)/core/core_mesh_preview
 CORE_OBJECT_DIR := $(SHARED_ROOT)/core/core_object
 CORE_UNITS_DIR := $(SHARED_ROOT)/core/core_units
 CORE_VIEWPORT2D_DIR := $(SHARED_ROOT)/core/core_viewport2d
+CORE_SCREEN_PICK_DIR := $(SHARED_ROOT)/core/core_screen_pick
 CORE_PANE_DIR := $(SHARED_ROOT)/core/core_pane
 CORE_SIM_DIR := $(SHARED_ROOT)/core/core_sim
 CORE_TRACE_DIR := $(SHARED_ROOT)/core/core_trace
@@ -42,6 +43,10 @@ endif
 
 ifeq ($(wildcard $(CORE_SCENE_VIEW_DIR)/include/core_scene_view.h),)
 CORE_SCENE_VIEW_DIR := $(SHARED_WORKSPACE_DIR)/core/core_scene_view
+endif
+
+ifeq ($(wildcard $(CORE_SCREEN_PICK_DIR)/include/core_screen_pick.h),)
+CORE_SCREEN_PICK_DIR := $(SHARED_WORKSPACE_DIR)/core/core_screen_pick
 endif
 
 ifeq ($(wildcard $(CORE_MESH_ASSET_DIR)/include/core_mesh_asset.h),)
