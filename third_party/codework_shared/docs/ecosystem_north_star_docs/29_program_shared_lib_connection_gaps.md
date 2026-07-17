@@ -161,9 +161,9 @@ Gaps:
 Current shared profile:
 - Strong on `core_base/core_io/core_data/core_pack`, `core_font`, and `kit_viz`.
 - `WASR-S3` now adopts the shared `kit_workspace_authoring >= 0.5.0` font/theme surface with the required `kit_render`/`core_theme` dependency chain.
-- `kit_ui >= 0.11.1` now owns the bottom playback HUD and top-left session
+- `kit_ui >= 0.11.2` now owns the bottom playback HUD, top-left session
   HUD alpha-aware floating style, button/readout row layout, nested
-  corner/inset sizing, and optional SDL rounded panel/button/readout adapter
+  corner/inset sizing, and optional SDL rounded panel/button/readout/scrollbar adapter
   while DataLab keeps playback/action policy, session content, file stepping,
   manual edge-wrap navigation, active theme persistence, and theme/custom-token
   mapping local.
@@ -178,6 +178,9 @@ Gaps:
   DataLab `kit_ui` HUD-row/SDL-adapter adopters; reuse this adapter in one more
   SDL program before promoting broader app-agnostic action semantics, and only
   then broaden rounded-surface polish to picker/session panels.
+- `Stabilize`: picker pane geometry now routes through `core_pane`, while the
+  persistent file/directory rails use the `kit_ui >= 0.11.2` direct-SDL
+  scrollbar adapter; DataLab keeps pointer routing and scroll offsets local.
 - `Stabilize`: `core_viewport2d` proving-host adoption is now in place for sketch/image lanes; keep viewport persistence, fit-reset behavior, and future large-image/tiled follow-ons aligned to the shared math contract instead of regressing into app-local viewport drift.
 - `Stabilize`: bounded `kit_graph_timeseries` trace graph adoption is complete;
   only open a fresh graph plan for concrete needs such as panning, multi-series
@@ -611,8 +614,21 @@ Current shared profile:
 - the scene editor pane shell now also adopts shared `core_pane` for pane solve and shared `kit_pane` for splitter hover/drag interaction, while pane meaning and editor routing remain app-local.
 - the host now consumes that shared surface through a vendored `third_party/codework_shared` subtree instead of direct workspace-local `../shared` linkage.
 - `core_sim >= 0.2.0` is now partially adopted for runtime-frame control-plane routing, and the app now consumes that simulation surface through the vendored subtree host instead of a direct live `../shared` `CORE_SIM_DIR` reference.
+- `core_viewport3d >= 0.1.0` is adopted from managed snapshot `e804658` for native editor pan,
+  anchor zoom, and controlled orbit transitions through a thin conversion
+  bridge. RayTracing retains durable target/projector storage, zoom-domain
+  policy, input, picking, overlays, mesh previews, final rendering, and BVHs.
+- `kit_viewport3d >= 0.1.0` is adopted behind a thin SDL adapter for
+  Solid/Material surface outlines. Shared kit owns the proven semantic accent,
+  selected/hover priority, silhouette, relative depth-edge, and object-owner
+  boundary composition; RayTracing retains CPU rasterization, Vulkan texture
+  upload/cache, projection, picking, and overlay visibility policy.
 
 Gaps:
+- `Partial`: the `core_viewport3d` bridge, focused tests, package self-test,
+  Desktop refresh, and managed-subtree refresh pass. Keep the local navigation
+  math as rollback oracle until hands-on proof and the four remaining native
+  volume-surface broad-suite assertions are closed.
 - `Partial`: raise `core_data` usage from render-metrics export slice into broader analyzable runtime datasets.
 - `Partial`: lock `core_pack` export/import schemas around that data model for cross-app reuse.
 - `Partial`: promote `core_trace` from tooling-first to clearer runtime contract lanes where useful.
@@ -634,12 +650,14 @@ Gaps:
   workspace-shared fallback until the vendored subtree includes
   `core_mesh_asset`; keep native `3D` triangle generation and BVH out of this
   shared contract.
-- `Partial`: first `core_mesh_preview >= 0.4.0` cutover is now in place for
-  runtime mesh preview diagnostics. The runtime mesh asset loader records
-  derived preview sidecar paths, probe state, and metadata for loaded assets
-  plus preview-limited skipped instances, allowing editor/digest/UI follow-up
-  without loading full preview arrays. Keep final render geometry, material
-  semantics, native `3D` triangle expansion, and BVH construction app-local.
+- `Partial`: `core_mesh_preview >= 0.5.0` now supplies renderer-neutral preview
+  diagnostics and coherent indexed LOD geometry. RayTracing keeps the loader
+  ABI unchanged and prepares bounded LODs in a separate editor-only store; its
+  app-local Bounds/Wire/Solid/Material vocabulary also pins stable quality
+  invalidation across zoom, pan, hover, and selection. Rendering and picking
+  cutover remains the next boundary. Keep final render geometry, native GPU and
+  depth rendering, normals, materials, light sampling, camera, overlays, cache
+  policy, and BVH construction app-local.
 - `Partial`: TimerHUD host adoption is now on the explicit `TimerHUDSession` path for `ray_tracing`: the app owns session creation/config, frame and per-pass timer hooks now route through session APIs, and the packaged launcher exports runtime-owned TimerHUD settings/output defaults with the overlay forced on for proof. The remaining follow-up is vendored `third_party/codework_shared/timer_hud` subtree refresh in a clean worktree so the default subtree-backed build matches the live shared-root verification path.
 - `Partial`: native `3D` tile scheduling now uses shared `core_queue` and
   `core_workers` for bounded completion handoff plus worker-pool dispatch; keep
@@ -658,7 +676,17 @@ Current shared profile:
 - first `kit_render` adoption slice is now in place for the font migration: Makefile wiring, shared role/tier/zoom bridge policy, active Vulkan UTF-8 draw/measure runtime, and packaged launcher/runtime default alignment to the shared `ide` font baseline.
 - first pane-host interaction slice is now in place for layout resizing: shared `core_pane` owns pane solve and shared `kit_pane` owns splitter hover/drag state while pane purpose stays app-local.
 - first `core_mesh_asset >= 0.3.1` adoption slice is now in place for the object-workspace asset lane: primitive-seed authored object assets save/load through shared `mesh_asset_authoring_v1` documents while `ObjectAuthoring` evaluation, app-local extensions, and asset-browser UX remain local.
-- first `core_mesh_preview >= 0.4.0` adoption slice is now in place for the imported STL/runtime mesh viewport lane: shared `core_mesh_preview_runtime_v1` sidecars own bounded feature-edge preview payloads, explicit source/preview counts, budget/coverage metadata, source feature-edge counts, local bounds/span/sphere metadata, the shared sampled-triangle, point-cloud, and bounds-proxy preview-mode contract, runtime-file build/save helpers, metadata-only sidecar reads, and preview-file probes. `line_drawing` consumes the feature-edge path for viewport drawing, reads metadata-only sidecars for degraded previews, uses shared preview bounds/span metadata for mesh hitboxes, and surfaces preview mode/count/bounds readouts while keeping renderer colors, projection, auto-scale placement, scene-bounds preservation, and pane layout local.
+- `core_mesh_preview >= 0.5.0` is adopted for the imported STL/runtime mesh viewport lane: shared sidecars own bounded feature-edge payloads, explicit source/preview counts, bounds/span/sphere metadata, sampled-triangle/point-cloud/bounds-proxy modes, runtime-file helpers, metadata-only reads, and probes. The additive coherent indexed LOD builder now also owns renderer-neutral triangle-budget reduction for Wire, Solid, and Material previews. LineDrawing keeps projection, CPU depth rasterization, silhouette composition, renderer colors/cache lifetime, interaction-quality timing, auto-scale placement, scene-bounds preservation, and pane layout local.
+- `core_viewport3d >= 0.1.0` is adopted from managed snapshot `a0714c0` for free-view pan, orbit,
+  anchor zoom, and frame transitions through an app-local effective-target
+  bridge. `FreeViewCamera`/Grid storage, degrees, projection, input and
+  authoring arbitration, picking, overlays, and rendering remain LineDrawing
+  owned. Hands-on proof remains pending CV3D4.
+- `kit_viewport3d >= 0.1.0` is adopted for the filled-surface and
+  outline-only composition stage over LineDrawing's existing CPU raster
+  buffers. Shared kit owns only the matching semantic palette and boundary
+  composition; LineDrawing retains projection, rasterization, adaptive quality,
+  cache, picking, authoring, and renderer ownership.
 - first `core_scene_view >= 0.1.0` adoption slice is now in place for the USV2
   read-only packet consumer: `LayoutSceneViewPacketConsumer` consumes shared
   schema/readback helpers while plane/prism face-group mapping, canonical scene
@@ -669,7 +697,7 @@ Gaps:
 - `Stabilize`: first font-runtime unification slice is complete; active Vulkan text and the former scattered fallback UI text paths now route through the centralized bridge/helper layer over shared `kit_render`, while remaining drift is bounded to centralized non-Vulkan fallback behavior and thin local fallback font-path ownership.
 - `Stabilize`: first shared pane-resize slice is complete; keep future resizing/persistence/layout-authoring work additive on top of the shared `core_pane` + `kit_pane` seam instead of reopening app-local splitter math.
 - `Stabilize`: keep the object-asset primitive-seed save/load lane on shared `core_mesh_asset` documents while `ObjectAuthoring` evaluation, line-drawing extension payloads, mesh generation, and asset browser/UI semantics remain app-local.
-- `Stabilize`: keep runtime mesh viewport previews on shared `core_mesh_preview` sidecars so high-triangle imported STL assets do not require full triangle rendering in UI paths; LineDrawing now proves bounds-only degraded-preview selection through shared preview metadata, so RayTracing and PhysicsSim can adopt preview sidecars for editor/diagnostic display while retopo/LOD/GPU-buffer/collision-proxy ownership remains separate.
+- `Stabilize`: keep runtime mesh viewport previews on shared `core_mesh_preview` sidecars and coherent indexed LODs so high-triangle imported STL assets remain bounded in UI paths. RayTracing can adopt the same neutral feature-edge/LOD data while retaining its native renderer, materials, and BVHs; GPU buffers, collision proxies, solver truth, retopo, and mesh repair remain separate.
 - `Stabilize`: `LDWA1` host attach is complete through S5; active-only pane overlay, shared full-screen font/theme panel adoption, accepted-only preference persistence, and closeout are done, with module content placement still deferred.
 - `Partial`: first `core_scene_view` cutover is deliberately read-only and
   schema/readback-only. Keep the workspace-shared fallback temporary until a
