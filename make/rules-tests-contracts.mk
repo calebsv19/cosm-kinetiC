@@ -515,6 +515,7 @@ RUNTIME_SCENE_BRIDGE_TEST_SRCS := \
 	tests/runtime_scene_bridge_contract_writeback_suite.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
 	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
+	$(SRC_DIR)/import/runtime_mesh_preview_path_resolver.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
@@ -642,6 +643,7 @@ SCENE_RUNTIME_LAUNCH_PROJECTION_TEST_SRCS := \
 	$(SRC_DIR)/app/scene_runtime_launch_projection.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
 	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
+	$(SRC_DIR)/import/runtime_mesh_preview_path_resolver.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \

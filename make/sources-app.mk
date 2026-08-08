@@ -9,6 +9,7 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/render/TimerHUD/*' \
 	! -path '$(SRC_DIR)/render/TimerHUD_legacy_backup/*')
 VK_RENDERER_SRCS := $(shell find $(VK_RENDERER_DIR)/src -name '*.c')
+VK_RUNTIME_SRCS := $(shell find $(VK_RUNTIME_DIR)/src -name '*.c')
 VK_RENDERER_SDL_COMPAT_SRCS := \
 	$(SRC_DIR)/app/editor/editor_scroll.c \
 	$(SRC_DIR)/app/editor/scene_editor_canvas.c \

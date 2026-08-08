@@ -4,6 +4,8 @@
 SHARED_ROOT ?= third_party/codework_shared
 SHARED_WORKSPACE_DIR ?= ../shared
 VK_RENDERER_DIR := $(SHARED_ROOT)/vk_renderer
+VK_RUNTIME_DIR := $(SHARED_ROOT)/vk_runtime
+CANONICAL_SHARED_ROOT ?= ../shared
 KIT_VIZ_DIR := $(SHARED_ROOT)/kit/kit_viz
 KIT_RENDER_DIR := $(SHARED_ROOT)/kit/kit_render
 KIT_PANE_DIR := $(SHARED_ROOT)/kit/kit_pane

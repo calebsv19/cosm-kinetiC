@@ -4,7 +4,9 @@
 OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 VK_RENDERER_SDL_COMPAT_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(VK_RENDERER_SDL_COMPAT_SRCS))
 VK_RENDERER_OBJS := $(patsubst $(VK_RENDERER_DIR)/src/%.c,$(BUILD_DIR)/vk_renderer/%.o,$(VK_RENDERER_SRCS))
+VK_RUNTIME_OBJS := $(patsubst $(VK_RUNTIME_DIR)/src/%.c,$(BUILD_DIR)/vk_runtime/%.o,$(VK_RUNTIME_SRCS))
 OBJS += $(VK_RENDERER_OBJS)
+OBJS += $(VK_RUNTIME_OBJS)
 OBJS += $(patsubst $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c,$(BUILD_DIR)/kit_workspace_authoring/%.o,$(KIT_WORKSPACE_AUTHORING_SRCS))
 TIMER_HUD_OBJS := $(patsubst $(TIMER_HUD_DIR)/src/%.c,$(BUILD_DIR)/timer_hud/%.o,$(TIMER_HUD_SRCS))
 TIMER_HUD_EXTERNAL_OBJS := $(patsubst $(TIMER_HUD_DIR)/external/%.c,$(BUILD_DIR)/timer_hud_external/%.o,$(TIMER_HUD_EXTERNAL_SRCS))
@@ -39,6 +41,7 @@ DEPS := $(OBJS:.o=.d)
 PHYSICS_SIM_APP_OBJS_NO_MAIN := $(filter-out $(BUILD_DIR)/main.o,$(OBJS))
 PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/main.c \
+	$(SRC_DIR)/app/physics_sim_vulkan_rollout.c \
 	$(SRC_DIR)/app/scene_menu.c \
 	$(SRC_DIR)/app/scene_menu_layout_helpers.c \
 	$(SRC_DIR)/app/menu/menu_input.c \
@@ -125,7 +128,7 @@ PHYSICS_SIM_HEADLESS_KIT_RENDER_EXCLUDED_OBJS := \
 	$(BUILD_DIR)/kit_render/kit_render_backend_vk.o \
 	$(BUILD_DIR)/kit_render/kit_render_external_text.o
 PHYSICS_SIM_HEADLESS_WORKER_OBJS := \
-	$(filter-out $(PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_OBJS) $(VK_RENDERER_OBJS) $(PHYSICS_SIM_HEADLESS_KIT_RENDER_EXCLUDED_OBJS),$(PHYSICS_SIM_APP_OBJS_NO_MAIN)) \
+	$(filter-out $(PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_OBJS) $(VK_RENDERER_OBJS) $(VK_RUNTIME_OBJS) $(PHYSICS_SIM_HEADLESS_KIT_RENDER_EXCLUDED_OBJS),$(PHYSICS_SIM_APP_OBJS_NO_MAIN)) \
 	$(PHYSICS_SIM_HEADLESS_RENDERER_STUB_OBJ) \
 	$(PHYSICS_SIM_HEADLESS_OVERLAY_STUB_OBJ) \
 	$(PHYSICS_SIM_HEADLESS_KIT_RENDER_STUB_OBJ)

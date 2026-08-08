@@ -190,6 +190,14 @@ $(FISICS_BUILD_DIR)/vk_renderer/%.o: $(VK_RENDERER_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
+$(BUILD_DIR)/vk_runtime/%.o: $(VK_RUNTIME_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(FISICS_BUILD_DIR)/vk_runtime/%.o: $(VK_RUNTIME_DIR)/src/%.c
+	@mkdir -p $(dir $@)
+	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+
 $(BUILD_DIR)/kit_workspace_authoring/%.o: $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@

@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-07-09
+Last updated: 2026-08-08
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -12,6 +12,18 @@ Last updated: 2026-07-09
   - wrapper shell: `include/physics_sim/physics_sim_app_main.h`, `src/app/physics_sim_app_main.c`
 
 ## Current Shipped State
+- A protected, source-grounded Vulkan lifecycle adoption is verified locally
+  against canonical shared commit
+  `60084f90564105983c7c74e862a299d8b6775347`: the managed subtree now carries
+  `vk_runtime 0.6.0` and `vk_renderer 1.3.1`, and the existing
+  `VkRendererDevice` singleton delegates instance/device/queue ownership to
+  `VkRuntime`. The app-local `vulkan-rollout-self-test` proves shared-device
+  handle identity, validation-clean startup/resize/restart, deterministic BMP
+  capture readback, and 2.0x Retina drawable sizing (`1440x900` then
+  `1800x1120`). This is protected worktree truth, not yet a PhysicsSim commit,
+  version bump, release, publication, Registry promotion, Linux package proof,
+  or compute-kernel adoption. The simulation and CPU solver paths remain
+  app-owned and unchanged.
 - Producer-side truthful `3D` export is complete (through `PSBU-11D`).
 - The first external-agent source-checkout contract is documented in
   `AGENTS.md`, `docs/AGENT_CONTROL.md`, and `docs/AGENT_DEMO_PACK.md`. It

@@ -15,6 +15,7 @@
 #include "config/config_loader.h"
 #include "geo/shape_library.h"
 #include "physics_sim/physics_sim_app_main.h"
+#include "physics_sim/physics_sim_vulkan_rollout.h"
 #include "render/timer_hud_adapter.h"
 #include "timer_hud/time_scope.h"
 #include "render/vk_shared_device.h"
@@ -85,8 +86,9 @@ static bool physics_sim_apply_startup_root_fallbacks(AppConfig *cfg,
 }
 
 int physics_sim_app_main_legacy(int argc, char **argv) {
-    (void)argc;
-    (void)argv;
+    if (argc == 2 && strcmp(argv[1], "--vulkan-rollout-self-test") == 0) {
+        return physics_sim_vulkan_rollout_self_test();
+    }
 
     char preset_input_path[512];
     char shape_dir_buffer[512];
