@@ -17,6 +17,7 @@ $(error Unsupported Linux worker package host architecture: $(LINUX_WORKER_HOST_
 endif
 endif
 LINUX_WORKER_SLUG := physics_sim_headless_worker
+LINUX_WORKER_MAX_GLIBC ?= 2.39.0
 ifeq ($(LINUX_WORKER_PLATFORM),linux-x86_64)
 LINUX_WORKER_PLATFORM_CAPABILITY := platform-linux-x86_64-v1
 else ifeq ($(LINUX_WORKER_PLATFORM),linux-aarch64)
@@ -41,6 +42,7 @@ package-linux-worker-contract:
 	@echo "  worker slug: $(LINUX_WORKER_SLUG)"
 	@echo "  version:     $(RELEASE_VERSION)"
 	@echo "  platform:    $(LINUX_WORKER_PLATFORM)"
+	@echo "  max glibc:   $(LINUX_WORKER_MAX_GLIBC)"
 	@echo "  stage dir:   $(LINUX_WORKER_DIR)"
 	@echo "  archive:     $(LINUX_WORKER_ARCHIVE)"
 	@echo "  binaries:"
@@ -86,6 +88,7 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 	@printf '  "capabilities": ["trio-headless-v1", "scene-project-portable-v1", "physics-cache-project-local-v1", "%s"],\n' "$(LINUX_WORKER_PLATFORM_CAPABILITY)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "entrypoint": "bin/run_worker.sh",\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "default_args": [],\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
+	@printf '  "max_glibc_version": "%s",\n' "$(LINUX_WORKER_MAX_GLIBC)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm", "SDL2", "SDL2_ttf"]\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '}\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '{\n' > "$(LINUX_WORKER_MANIFEST)"
@@ -95,6 +98,7 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 	@printf '  "program": "%s",\n' "$(RELEASE_PROGRAM_KEY)" >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "version": "%s",\n' "$(RELEASE_VERSION)" >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "platform": "%s",\n' "$(LINUX_WORKER_PLATFORM)" >> "$(LINUX_WORKER_MANIFEST)"
+	@printf '  "max_glibc_version": "%s",\n' "$(LINUX_WORKER_MAX_GLIBC)" >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "entrypoints": {\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '    "headless_cli": "bin/physics_sim_headless",\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '    "job_runner": "bin/physics_sim_job_runner"\n' >> "$(LINUX_WORKER_MANIFEST)"
@@ -128,4 +132,5 @@ package-linux-worker-dry-run: package-linux-worker-self-test
 		--program "$(RELEASE_PROGRAM_KEY)" \
 		--version "$(RELEASE_VERSION)" \
 		--platform "$(LINUX_WORKER_PLATFORM)" \
-		--worker-slug "$(LINUX_WORKER_SLUG)"
+		--worker-slug "$(LINUX_WORKER_SLUG)" \
+		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)"

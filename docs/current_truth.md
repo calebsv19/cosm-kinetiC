@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-08-08
+Last updated: 2026-08-13
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -554,8 +554,10 @@ Last updated: 2026-08-08
   - `LINUX_WORKER_PLATFORM=<value>` remains available for explicit override
 - `package-linux-worker-dry-run` is local-only validation. It validates the
   staged manifests, entrypoints, selected docs/config payload, archive contents,
-  and package-manifest self-test command without upload, install, registration,
-  raw SSH/SCP, or remote worker execution.
+  package-manifest self-test command, and each executable's required GLIBC
+  symbol ceiling without upload, install, registration, raw SSH/SCP, or remote
+  worker execution. The default fleet ceiling is GLIBC 2.39 and is recorded as
+  `max_glibc_version` in both worker manifests.
 - Worker package/cross-host handoff boundary is explicit: the local Linux
   worker archive does not install, upload, run, or register itself; worker-safe
   payloads must stage runtime scene, run config, runtime mesh documents,

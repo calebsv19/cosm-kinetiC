@@ -1,6 +1,6 @@
 # Physics Sim Desktop Packaging
 
-Last updated: 2026-07-09
+Last updated: 2026-08-13
 
 ## Bundle Targets
 - `make -C physics_sim package-desktop`
@@ -61,11 +61,15 @@ Worker package / cross-host handoff boundary:
 - `package-linux-worker-dry-run` is the local package proof target. It stages
   the archive, runs `package-linux-worker-self-test`, validates manifest and
   package-manifest metadata, checks the expected entrypoints/docs/config files,
-  confirms the archive excludes private/generated run lanes, and executes only
-  the package-manifest declared local self-test command.
+  confirms the archive excludes private/generated run lanes, verifies that
+  both native executables require no GLIBC symbol newer than the declared
+  fleet ceiling, and executes only the package-manifest declared local
+  self-test command. The default ceiling is `2.39.0`; override
+  `LINUX_WORKER_MAX_GLIBC` only for an explicitly different target fleet.
 - The worker package manifest advertises `worker_slug =
   physics_sim_headless_worker`, `job_types = ["trio_headless_stage"]`, and the
-  entrypoint `bin/run_worker.sh`.
+  entrypoint `bin/run_worker.sh`. Both manifests also bind
+  `max_glibc_version` so compatibility intent remains visible after packaging.
 - Worker-safe job payloads must stage the runtime scene, run config, runtime
   mesh documents, preview sidecars, and expected output/report roots together.
   Do not rely on author-machine absolute paths or local recovery paths once the

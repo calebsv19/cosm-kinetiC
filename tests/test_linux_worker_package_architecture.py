@@ -3,6 +3,7 @@ import importlib.util
 import tempfile
 import struct
 import unittest
+from unittest import mock
 from contextlib import redirect_stderr
 from io import StringIO
 from pathlib import Path
@@ -48,6 +49,28 @@ class LinuxWorkerPackageArchitectureTests(unittest.TestCase):
             binary.write_bytes(b"Mach-O arm64")
             with redirect_stderr(StringIO()), self.assertRaises(SystemExit):
                 MODULE.validate_native_binary(binary, "linux-x86_64")
+
+    def test_reads_maximum_glibc_symbol_requirement(self) -> None:
+        completed = mock.Mock(
+            returncode=0,
+            stdout="Name: GLIBC_2.17  Flags: none\nName: GLIBC_2.39  Flags: none\n",
+            stderr="",
+        )
+        with mock.patch.object(MODULE.subprocess, "run", return_value=completed):
+            self.assertEqual(
+                MODULE.validate_glibc_ceiling(Path("worker"), "2.39.0"),
+                "2.39",
+            )
+
+    def test_rejects_glibc_requirement_above_fleet_ceiling(self) -> None:
+        completed = mock.Mock(
+            returncode=0,
+            stdout="Name: GLIBC_2.17  Flags: none\nName: GLIBC_2.43  Flags: none\n",
+            stderr="",
+        )
+        with mock.patch.object(MODULE.subprocess, "run", return_value=completed):
+            with redirect_stderr(StringIO()), self.assertRaises(SystemExit):
+                MODULE.validate_glibc_ceiling(Path("worker"), "2.39.0")
 
 
 if __name__ == "__main__":

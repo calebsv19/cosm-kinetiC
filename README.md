@@ -179,8 +179,10 @@ make test-vf2d-pack-dataset-parity
 
 Linux worker packages must be built on a native Linux host whose architecture
 matches `LINUX_WORKER_PLATFORM`; no cross-compilation toolchain is configured.
-The package validator checks ELF machine identity plus exact platform and
-capability metadata before an archive can be treated as a worker candidate.
+The package validator checks ELF machine identity, exact platform/capability
+metadata, and the binaries' maximum required GLIBC symbol version before an
+archive can be treated as a worker candidate. The default fleet ceiling is
+GLIBC 2.39 (`LINUX_WORKER_MAX_GLIBC=2.39.0`).
 
 `test-fast` is the smallest deterministic non-GUI lane for common source
 changes. It uses checked-in fixtures only and excludes headless integration,

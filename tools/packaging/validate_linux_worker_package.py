@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import struct
 import sys
@@ -38,6 +39,8 @@ PLATFORM_CAPABILITY_BY_PLATFORM = {
     "linux-x86_64": "platform-linux-x86_64-v1",
     "linux-aarch64": "platform-linux-aarch64-v1",
 }
+
+GLIBC_VERSION_RE = re.compile(r"\bGLIBC_([0-9]+(?:\.[0-9]+)+)\b")
 
 
 def fail(message: str) -> None:
@@ -95,12 +98,52 @@ def validate_native_binary(path: Path, platform: str) -> None:
         )
 
 
+def version_tuple(value: str) -> tuple[int, ...]:
+    if not re.fullmatch(r"[0-9]+(?:\.[0-9]+)+", value):
+        fail(f"invalid GLIBC version: {value!r}")
+    return tuple(int(part) for part in value.split("."))
+
+
+def glibc_symbol_versions(path: Path) -> set[str]:
+    try:
+        result = subprocess.run(
+            ["readelf", "--version-info", "--wide", str(path)],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except OSError as exc:
+        fail(f"could not inspect GLIBC requirements for {path}: {exc}")
+    if result.returncode != 0:
+        fail(
+            f"readelf failed for {path} with exit {result.returncode}: "
+            f"{result.stderr.strip()}"
+        )
+    return set(GLIBC_VERSION_RE.findall(result.stdout))
+
+
+def validate_glibc_ceiling(path: Path, maximum: str) -> str:
+    allowed = version_tuple(maximum)
+    versions = glibc_symbol_versions(path)
+    if not versions:
+        fail(f"native worker file has no readable GLIBC requirements: {path}")
+    observed = max(versions, key=version_tuple)
+    if version_tuple(observed) > allowed:
+        fail(
+            f"native worker GLIBC requirement exceeds fleet ceiling for {path}: "
+            f"requires GLIBC_{observed}, maximum is GLIBC_{maximum}"
+        )
+    return observed
+
+
 def validate_manifest(
     manifest: dict,
     program: str,
     version: str,
     platform: str,
     worker_slug: str,
+    max_glibc_version: str,
 ) -> None:
     expected = {
         "schema_version": "codework-worker-package/v1",
@@ -109,6 +152,7 @@ def validate_manifest(
         "platform": platform,
         "program": program,
         "entrypoint": "bin/run_worker.sh",
+        "max_glibc_version": max_glibc_version,
     }
     for key, value in expected.items():
         if manifest.get(key) != value:
@@ -133,6 +177,7 @@ def validate_package_manifest(
     version: str,
     platform: str,
     worker_slug: str,
+    max_glibc_version: str,
 ) -> list[str]:
     expected = {
         "schema_version": "codework_worker_package_manifest_v1",
@@ -141,6 +186,7 @@ def validate_package_manifest(
         "program": program,
         "version": version,
         "platform": platform,
+        "max_glibc_version": max_glibc_version,
     }
     for key, value in expected.items():
         if package_manifest.get(key) != value:
@@ -232,6 +278,7 @@ def main() -> int:
     parser.add_argument("--version", required=True)
     parser.add_argument("--platform", required=True)
     parser.add_argument("--worker-slug", required=True)
+    parser.add_argument("--max-glibc-version", required=True)
     args = parser.parse_args()
 
     stage_dir = Path(args.stage_dir).resolve()
@@ -244,6 +291,12 @@ def main() -> int:
 
     validate_native_binary(stage_dir / "bin/physics_sim_headless", args.platform)
     validate_native_binary(stage_dir / "bin/physics_sim_job_runner", args.platform)
+    headless_glibc = validate_glibc_ceiling(
+        stage_dir / "bin/physics_sim_headless", args.max_glibc_version
+    )
+    runner_glibc = validate_glibc_ceiling(
+        stage_dir / "bin/physics_sim_job_runner", args.max_glibc_version
+    )
 
     run_worker = (stage_dir / "bin/run_worker.sh").read_text(encoding="utf-8")
     if "physics_sim_headless" not in run_worker or "exec" not in run_worker:
@@ -251,18 +304,30 @@ def main() -> int:
 
     manifest = load_json(stage_dir / "manifest.json")
     package_manifest = load_json(stage_dir / "package_manifest.json")
-    validate_manifest(manifest, args.program, args.version, args.platform, args.worker_slug)
+    validate_manifest(
+        manifest,
+        args.program,
+        args.version,
+        args.platform,
+        args.worker_slug,
+        args.max_glibc_version,
+    )
     self_test_argv = validate_package_manifest(
         package_manifest,
         args.program,
         args.version,
         args.platform,
         args.worker_slug,
+        args.max_glibc_version,
     )
     validate_archive(archive)
     run_manifest_self_test(stage_dir, self_test_argv)
 
-    print(f"package-linux-worker-dry-run passed: {archive}")
+    print(
+        f"package-linux-worker-dry-run passed: {archive} "
+        f"(GLIBC ceiling {args.max_glibc_version}; observed "
+        f"headless {headless_glibc}, job runner {runner_glibc})"
+    )
     return 0
 
 
