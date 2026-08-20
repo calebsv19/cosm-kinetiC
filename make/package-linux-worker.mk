@@ -33,6 +33,7 @@ LINUX_WORKER_DOCS_DIR := $(LINUX_WORKER_DIR)/docs
 LINUX_WORKER_MANIFEST_JSON := $(LINUX_WORKER_DIR)/manifest.json
 LINUX_WORKER_MANIFEST := $(LINUX_WORKER_DIR)/package_manifest.json
 LINUX_WORKER_ARCHIVE := $(RELEASE_DIR)/$(LINUX_WORKER_BASENAME).tar.gz
+LINUX_WORKER_SHA256 := $(LINUX_WORKER_ARCHIVE).sha256
 LINUX_WORKER_PACKAGE_VALIDATOR := tools/packaging/validate_linux_worker_package.py
 
 .PHONY: package-linux-worker-contract package-linux-worker-host-check package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run
@@ -112,6 +113,7 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 	@printf '}\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@mkdir -p "$(RELEASE_DIR)"
 	@tar -czf "$(LINUX_WORKER_ARCHIVE)" -C "$(RELEASE_DIR)" "$(LINUX_WORKER_BASENAME)"
+	@sha256sum "$(LINUX_WORKER_ARCHIVE)" > "$(LINUX_WORKER_SHA256)"
 	@echo "Linux worker package ready: $(LINUX_WORKER_ARCHIVE)"
 
 package-linux-worker-self-test: package-linux-worker
@@ -123,6 +125,7 @@ package-linux-worker-self-test: package-linux-worker
 	@test -f "$(LINUX_WORKER_DOCS_DIR)/headless_cli.md" || (echo "Missing docs/headless_cli.md"; exit 1)
 	@test -f "$(LINUX_WORKER_CONFIG_DIR)/app.json" || (echo "Missing config/app.json"; exit 1)
 	@test -f "$(LINUX_WORKER_ARCHIVE)" || (echo "Missing worker archive"; exit 1)
+	@test -f "$(LINUX_WORKER_SHA256)" || (echo "Missing worker checksum"; exit 1)
 	@echo "package-linux-worker-self-test passed."
 
 package-linux-worker-dry-run: package-linux-worker-self-test

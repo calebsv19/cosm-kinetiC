@@ -51,6 +51,19 @@ release-bundle-audit: package-desktop-self-test
 	done
 	@echo "release-bundle-audit passed."
 
+# Unsigned, local package evidence for Decision 1. Authentication and
+# publication remain separate later stages.
+release-local-artifact: release-bundle-audit
+	@mkdir -p "$(RELEASE_DIR)"
+	@rm -f "$(RELEASE_APP_ZIP)" "$(RELEASE_APP_ZIP).sha256" "$(RELEASE_MANIFEST)"
+	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(PACKAGE_APP_DIR)" "$(RELEASE_APP_ZIP)"
+	@shasum -a 256 "$(RELEASE_APP_ZIP)" > "$(RELEASE_APP_ZIP).sha256"
+	@printf 'product=%s\nprogram=%s\nversion=%s\nplatform=%s\narch=%s\nsigned=0\nnotarized=0\nzip=%s\nsha256=%s\n' \
+		"$(RELEASE_PRODUCT_NAME)" "$(RELEASE_PROGRAM_KEY)" "$(RELEASE_VERSION)" \
+		"$(RELEASE_PLATFORM)" "$(RELEASE_ARCH)" "$(RELEASE_APP_ZIP)" \
+		"$$(cut -d' ' -f1 "$(RELEASE_APP_ZIP).sha256")" > "$(RELEASE_MANIFEST)"
+	@echo "release-local-artifact complete: $(RELEASE_APP_ZIP)"
+
 release-sign: release-bundle-audit
 	@echo "Signing with identity: $(RELEASE_CODESIGN_IDENTITY)"
 	@if [ "$(RELEASE_CODESIGN_IDENTITY)" = "-" ]; then \
