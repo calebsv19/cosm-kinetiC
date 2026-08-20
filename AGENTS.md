@@ -126,14 +126,14 @@ Reasons:
 ## Version And Surface Split
 
 - Public desktop current: `kinetiC 0.2.0` for macOS arm64.
-- Source checkout and worker-package line: `physics_sim 0.3.0`.
+- Source checkout and worker-package line: `physics_sim 0.3.2`.
 - Local headless proof uses the source checkout, not the public desktop ZIP.
 - Worker-package evidence is separate from public desktop package evidence.
 - Worker packages are internal/fleet package-root artifacts unless a future
   public release explicitly publishes them as downloads.
 - There is no public remote submission API in this contract.
 
-Do not describe `physics_sim 0.3.0` as the public desktop current unless a
+Do not describe `physics_sim 0.3.2` as the public desktop current unless a
 future approved desktop release updates website metadata, production-registry
 state, and public readback.
 
