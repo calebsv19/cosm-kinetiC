@@ -7,7 +7,7 @@ import struct
 import subprocess
 from pathlib import Path
 
-EXPECTED_SHARED_COMMIT = "60084f90564105983c7c74e862a299d8b6775347"
+EXPECTED_SHARED_COMMIT = "ddc0c2b1420d95132ef089e68e2ce7728fbc53a4"
 
 
 def command_output(command: list[str], cwd: Path) -> str:
@@ -147,8 +147,8 @@ def main() -> int:
     renderer = read_version(root / "vk_renderer/VERSION")
     if runtime != (0, 6, 0):
         raise SystemExit(f"vk_runtime 0.6.0 required, found {runtime}")
-    if renderer != (1, 3, 1):
-        raise SystemExit(f"vk_renderer 1.3.1 required, found {renderer}")
+    if renderer != (1, 3, 2):
+        raise SystemExit(f"vk_renderer 1.3.2 required, found {renderer}")
 
     if args.app:
         if not args.initial_capture or not args.resized_capture or not args.log:

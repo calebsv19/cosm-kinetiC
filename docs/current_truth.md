@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-08-13
+Last updated: 2026-08-21
 
 ## Program Identity
 - Repository directory: `physics_sim/`
@@ -12,11 +12,9 @@ Last updated: 2026-08-13
   - wrapper shell: `include/physics_sim/physics_sim_app_main.h`, `src/app/physics_sim_app_main.c`
 
 ## Current Shipped State
-- The source-grounded Vulkan lifecycle adoption is committed locally in
-  `2f9bb55` (managed shared subtree refresh) and `e534f95` (kinetiC integration),
-  against canonical shared commit
-  `60084f90564105983c7c74e862a299d8b6775347`: the managed subtree now carries
-  `vk_runtime 0.6.0` and `vk_renderer 1.3.1`, and the existing
+- The source-grounded Vulkan lifecycle adoption now tracks canonical shared
+  commit `ddc0c2b1420d95132ef089e68e2ce7728fbc53a4`: the managed subtree carries
+  `vk_runtime 0.6.0` and `vk_renderer 1.3.2`, and the existing
   `VkRendererDevice` singleton delegates instance/device/queue ownership to
   `VkRuntime`. The app-local `vulkan-rollout-self-test` proves shared-device
   handle identity, validation-clean startup/resize/restart, deterministic BMP
