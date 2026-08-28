@@ -550,6 +550,12 @@ Last updated: 2026-08-21
   - `make -C physics_sim package-linux-worker-dry-run`
   - the package manifest platform follows the Linux build host architecture
   - `LINUX_WORKER_PLATFORM=<value>` remains available for explicit override
+  - the archive is accompanied by `.tar.gz.sha256` and deterministic
+    `.tar.gz.manifest.txt` sidecars so generic portable executors can discover
+    one exact archive/checksum/manifest set
+- `make -C physics_sim test-linux-worker-artifact-manifest` exercises the real
+  Make producer with local stub executables and verifies the exact sidecar
+  naming, content, checksum binding, and deterministic regeneration.
 - `package-linux-worker-dry-run` is local-only validation. It validates the
   staged manifests, entrypoints, selected docs/config payload, archive contents,
   package-manifest self-test command, and each executable's required GLIBC

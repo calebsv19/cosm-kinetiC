@@ -231,6 +231,7 @@ Command context:
   - `make -C physics_sim toolchain-contract`
   - `make -C physics_sim package-linux-worker-self-test`
   - `make -C physics_sim package-linux-worker-dry-run`
+  - `make -C physics_sim test-linux-worker-artifact-manifest`
   - `make -C physics_sim package-desktop`
   - `make -C physics_sim PACKAGE_TOOLCHAIN=fisics package-desktop`
   - desktop packaging stays Clang-default unless `PACKAGE_TOOLCHAIN=fisics` is set
@@ -245,6 +246,9 @@ Command context:
     manifests, ELF machine architecture, exact platform/capability parity,
     entrypoints, selected docs/config payload, archive contents, and
     manifest-declared self-test without remote upload/install/execution
+  - the worker producer also emits adjacent `.tar.gz.sha256` and
+    `.tar.gz.manifest.txt` sidecars; the latter deterministically binds the
+    executor-facing artifact identity and checksum
   - worker package upload/install/status/fetch is not owned by
     `package-linux-worker`; cross-host validation routes through the Linux PC
     or VPS handoff lanes, and worker-safe payloads must stage runtime scene,

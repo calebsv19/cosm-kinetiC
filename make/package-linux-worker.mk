@@ -34,9 +34,11 @@ LINUX_WORKER_MANIFEST_JSON := $(LINUX_WORKER_DIR)/manifest.json
 LINUX_WORKER_MANIFEST := $(LINUX_WORKER_DIR)/package_manifest.json
 LINUX_WORKER_ARCHIVE := $(RELEASE_DIR)/$(LINUX_WORKER_BASENAME).tar.gz
 LINUX_WORKER_SHA256 := $(LINUX_WORKER_ARCHIVE).sha256
+LINUX_WORKER_ARTIFACT_MANIFEST := $(LINUX_WORKER_ARCHIVE).manifest.txt
 LINUX_WORKER_PACKAGE_VALIDATOR := tools/packaging/validate_linux_worker_package.py
+LINUX_WORKER_ARTIFACT_MANIFEST_WRITER := tools/packaging/write_linux_worker_artifact_manifest.py
 
-.PHONY: package-linux-worker-contract package-linux-worker-host-check package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run
+.PHONY: package-linux-worker-contract package-linux-worker-host-check package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run test-linux-worker-artifact-manifest
 
 package-linux-worker-contract:
 	@echo "Linux worker package contract"
@@ -62,7 +64,7 @@ package-linux-worker-host-check:
 	fi
 
 package-linux-worker-clean:
-	@rm -rf "$(LINUX_WORKER_DIR)" "$(LINUX_WORKER_ARCHIVE)"
+	@rm -rf "$(LINUX_WORKER_DIR)" "$(LINUX_WORKER_ARCHIVE)" "$(LINUX_WORKER_SHA256)" "$(LINUX_WORKER_ARTIFACT_MANIFEST)"
 	@echo "Removed Linux worker package artifacts: $(LINUX_WORKER_BASENAME)"
 
 package-linux-worker: package-linux-worker-host-check physics_sim_headless physics-sim-job-runner
@@ -114,6 +116,15 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 	@mkdir -p "$(RELEASE_DIR)"
 	@tar -czf "$(LINUX_WORKER_ARCHIVE)" -C "$(RELEASE_DIR)" "$(LINUX_WORKER_BASENAME)"
 	@sha256sum "$(LINUX_WORKER_ARCHIVE)" > "$(LINUX_WORKER_SHA256)"
+	@python3 "$(LINUX_WORKER_ARTIFACT_MANIFEST_WRITER)" \
+		--archive "$(LINUX_WORKER_ARCHIVE)" \
+		--checksum "$(LINUX_WORKER_SHA256)" \
+		--output "$(LINUX_WORKER_ARTIFACT_MANIFEST)" \
+		--program "$(RELEASE_PROGRAM_KEY)" \
+		--version "$(RELEASE_VERSION)" \
+		--platform "$(LINUX_WORKER_PLATFORM)" \
+		--worker-slug "$(LINUX_WORKER_SLUG)" \
+		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)"
 	@echo "Linux worker package ready: $(LINUX_WORKER_ARCHIVE)"
 
 package-linux-worker-self-test: package-linux-worker
@@ -126,6 +137,17 @@ package-linux-worker-self-test: package-linux-worker
 	@test -f "$(LINUX_WORKER_CONFIG_DIR)/app.json" || (echo "Missing config/app.json"; exit 1)
 	@test -f "$(LINUX_WORKER_ARCHIVE)" || (echo "Missing worker archive"; exit 1)
 	@test -f "$(LINUX_WORKER_SHA256)" || (echo "Missing worker checksum"; exit 1)
+	@test -f "$(LINUX_WORKER_ARTIFACT_MANIFEST)" || (echo "Missing worker artifact sidecar manifest"; exit 1)
+	@python3 "$(LINUX_WORKER_ARTIFACT_MANIFEST_WRITER)" \
+		--archive "$(LINUX_WORKER_ARCHIVE)" \
+		--checksum "$(LINUX_WORKER_SHA256)" \
+		--output "$(LINUX_WORKER_ARTIFACT_MANIFEST)" \
+		--program "$(RELEASE_PROGRAM_KEY)" \
+		--version "$(RELEASE_VERSION)" \
+		--platform "$(LINUX_WORKER_PLATFORM)" \
+		--worker-slug "$(LINUX_WORKER_SLUG)" \
+		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)" \
+		--verify
 	@echo "package-linux-worker-self-test passed."
 
 package-linux-worker-dry-run: package-linux-worker-self-test
@@ -137,3 +159,6 @@ package-linux-worker-dry-run: package-linux-worker-self-test
 		--platform "$(LINUX_WORKER_PLATFORM)" \
 		--worker-slug "$(LINUX_WORKER_SLUG)" \
 		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)"
+
+test-linux-worker-artifact-manifest:
+	@python3 -m unittest -v tests.test_linux_worker_artifact_manifest

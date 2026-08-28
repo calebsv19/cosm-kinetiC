@@ -58,6 +58,11 @@ Package/artifact trust boundary:
 Worker package / cross-host handoff boundary:
 - `package-linux-worker` creates a local archive only. It does not install,
   upload, run, or register the worker package on any remote host.
+- The producer writes the executor-facing artifact set as adjacent
+  `<archive>.tar.gz`, `<archive>.tar.gz.sha256`, and
+  `<archive>.tar.gz.manifest.txt` files. The text sidecar deterministically
+  binds program, worker slug, version, platform, package role, format, archive
+  basename, archive SHA-256, and maximum GLIBC version.
 - `package-linux-worker-dry-run` is the local package proof target. It stages
   the archive, runs `package-linux-worker-self-test`, validates manifest and
   package-manifest metadata, checks the expected entrypoints/docs/config files,
@@ -66,6 +71,9 @@ Worker package / cross-host handoff boundary:
   fleet ceiling, and executes only the package-manifest declared local
   self-test command. The default ceiling is `2.39.0`; override
   `LINUX_WORKER_MAX_GLIBC` only for an explicitly different target fleet.
+- `make -C physics_sim test-linux-worker-artifact-manifest` runs the real Make
+  producer with local stub executables and proves the exact three-file set plus
+  deterministic sidecar regeneration without remote execution.
 - The worker package manifest advertises `worker_slug =
   physics_sim_headless_worker`, `job_types = ["trio_headless_stage"]`, and the
   entrypoint `bin/run_worker.sh`. Both manifests also bind
