@@ -15,6 +15,9 @@ Command context:
 
 ## Scaffold State
 - `docs/current_truth.md`: current runtime structure, truthful `3D` export state, and verification snapshot.
+- `docs/main_edit_worktree.md`: persistent functional-development lane,
+  isolated `kinetiC Main Edit.app` identity, verification, integration, and
+  retention gates.
 - `docs/future_intent.md`: next public direction, including the runtime mesh
   validation/authoring boundary and deferred downstream `ray_tracing` `3D`
   ingest/render handoff.

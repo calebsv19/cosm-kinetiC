@@ -2,6 +2,13 @@
 #  Package and release paths
 # =========================
 PACKAGE_APP_NAME := kinetiC.app
+PACKAGE_DISPLAY_NAME ?= kinetiC
+PACKAGE_BUNDLE_ID ?= com.cosm.kinetic
+PACKAGE_PROFILE ?= standard
+PACKAGE_RUNTIME_NAMESPACE ?= PhysicsSim
+PACKAGE_LOG_NAMESPACE ?= PhysicsSim
+PACKAGE_BUILD_LABEL ?= kinetiC-$(RELEASE_VERSION)
+PACKAGE_EMBED_BUILD_IDENTITY ?= 0
 PACKAGE_APP_DIR := $(DIST_DIR)/$(PACKAGE_APP_NAME)
 PACKAGE_CONTENTS_DIR := $(PACKAGE_APP_DIR)/Contents
 PACKAGE_MACOS_DIR := $(PACKAGE_CONTENTS_DIR)/MacOS
@@ -18,6 +25,19 @@ PACKAGE_LAUNCHER_SRC := tools/packaging/macos/physics-sim-launcher
 PACKAGE_DYLIB_BUNDLER := tools/packaging/macos/bundle-dylibs.sh
 DESKTOP_APP_DIR ?= $(HOME)/Desktop/$(PACKAGE_APP_NAME)
 PACKAGE_ADHOC_SIGN_IDENTITY ?= -
+MEW1_TOOL ?= $(CODEWORK_WORKSPACE_ROOT)/shared/scripts/mew1/mew1.py
+MAIN_EDIT_DIST_DIR := $(BUILD_DIR)/dist/dev/main-edit
+MAIN_EDIT_APP_NAME := kinetiC Main Edit.app
+MAIN_EDIT_DISPLAY_NAME := kinetiC Main Edit
+MAIN_EDIT_BUNDLE_ID := com.cosm.kinetic.main-edit
+MAIN_EDIT_RUNTIME_NAMESPACE := PhysicsSim-Main-Edit
+MAIN_EDIT_LOG_NAMESPACE := PhysicsSim-Main-Edit
+MAIN_EDIT_PROFILE := main-edit
+MAIN_EDIT_BUILD_LABEL := kinetiC-main-edit-$(RELEASE_VERSION)
+MAIN_EDIT_APP_DIR := $(MAIN_EDIT_DIST_DIR)/$(MAIN_EDIT_APP_NAME)
+MAIN_EDIT_DESKTOP_APP_DIR ?= $(HOME)/Desktop/$(MAIN_EDIT_APP_NAME)
+MAIN_EDIT_PROCESS_RECEIPT := $(BUILD_DIR)/receipts/mew1/process-audit.json
+MAIN_EDIT_SELF_TEST_DIR := $(BUILD_DIR)/package-main-edit-self-test
 
 RELEASE_ARTIFACT_BASENAME := $(RELEASE_PRODUCT_NAME)-$(RELEASE_VERSION)-$(RELEASE_PLATFORM)-$(RELEASE_ARCH)-$(RELEASE_CHANNEL)
 # Production Registry supplies a job-scoped relative root for package lanes.

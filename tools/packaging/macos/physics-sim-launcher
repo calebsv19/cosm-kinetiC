@@ -4,11 +4,23 @@ set -eu
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
 APP_CONTENTS_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
 RES_DIR="$APP_CONTENTS_DIR/Resources"
-APP_SUPPORT_DIR_DEFAULT="${HOME}/Library/Application Support/PhysicsSim"
+INFO_PLIST="$APP_CONTENTS_DIR/Info.plist"
+plist_value() {
+    /usr/libexec/PlistBuddy -c "Print :$1" "$INFO_PLIST" 2>/dev/null || true
+}
+PACKAGE_PROFILE="$(plist_value PhysicsSimPackageProfile)"
+RUNTIME_NAMESPACE="$(plist_value PhysicsSimRuntimeNamespace)"
+LOG_NAMESPACE="$(plist_value PhysicsSimLogNamespace)"
+BUILD_LABEL="$(plist_value PhysicsSimBuildLabel)"
+[ -n "$PACKAGE_PROFILE" ] || PACKAGE_PROFILE="standard"
+[ -n "$RUNTIME_NAMESPACE" ] || RUNTIME_NAMESPACE="PhysicsSim"
+[ -n "$LOG_NAMESPACE" ] || LOG_NAMESPACE="PhysicsSim"
+[ -n "$BUILD_LABEL" ] || BUILD_LABEL="kinetiC"
+APP_SUPPORT_DIR_DEFAULT="${HOME}/Library/Application Support/$RUNTIME_NAMESPACE"
 APP_SUPPORT_DIR="${PHYSICS_SIM_APP_SUPPORT_DIR:-$APP_SUPPORT_DIR_DEFAULT}"
 RUNTIME_DIR_DEFAULT="$APP_SUPPORT_DIR/runtime"
 RUNTIME_DIR="${PHYSICS_SIM_RUNTIME_DIR:-$RUNTIME_DIR_DEFAULT}"
-LOG_DIR="${HOME}/Library/Logs/PhysicsSim"
+LOG_DIR="${HOME}/Library/Logs/$LOG_NAMESPACE"
 LOG_FILE="$LOG_DIR/launcher.log"
 MOLTENVK_DYLIB="$APP_CONTENTS_DIR/Frameworks/libMoltenVK.dylib"
 VK_RUNTIME_DIR=""
@@ -16,14 +28,14 @@ VK_ICD_FILE=""
 
 mkdir -p "$LOG_DIR" 2>/dev/null || true
 if ! touch "$LOG_FILE" 2>/dev/null; then
-    LOG_FILE="${TMPDIR:-/tmp}/physics-sim-launcher.log"
+    LOG_FILE="${TMPDIR:-/tmp}/${LOG_NAMESPACE}-launcher.log"
     touch "$LOG_FILE" 2>/dev/null || true
 fi
 
 setup_runtime_root() {
     mkdir -p "$RUNTIME_DIR" 2>/dev/null || true
     if [ ! -d "$RUNTIME_DIR" ]; then
-        RUNTIME_DIR="${TMPDIR:-/tmp}/PhysicsSim/runtime"
+        RUNTIME_DIR="${TMPDIR:-/tmp}/$RUNTIME_NAMESPACE/runtime"
         mkdir -p "$RUNTIME_DIR" 2>/dev/null || true
     fi
     if [ ! -d "$RUNTIME_DIR" ]; then
@@ -57,7 +69,7 @@ if [ -f "$MOLTENVK_DYLIB" ]; then
     VK_RUNTIME_DIR="$RUNTIME_DIR/vk"
     VK_ICD_FILE="$VK_RUNTIME_DIR/MoltenVK_icd.json"
     if ! mkdir -p "$VK_RUNTIME_DIR" 2>/dev/null; then
-        VK_RUNTIME_DIR="${TMPDIR:-/tmp}/PhysicsSim/vk"
+        VK_RUNTIME_DIR="${TMPDIR:-/tmp}/$RUNTIME_NAMESPACE/vk"
         VK_ICD_FILE="$VK_RUNTIME_DIR/MoltenVK_icd.json"
         mkdir -p "$VK_RUNTIME_DIR" 2>/dev/null || true
     fi
@@ -83,6 +95,10 @@ fi
 if [ "${1:-}" = "--print-config" ]; then
     echo "APP_CONTENTS_DIR=$APP_CONTENTS_DIR"
     echo "RES_DIR=$RES_DIR"
+    echo "PACKAGE_PROFILE=$PACKAGE_PROFILE"
+    echo "RUNTIME_NAMESPACE=$RUNTIME_NAMESPACE"
+    echo "LOG_NAMESPACE=$LOG_NAMESPACE"
+    echo "BUILD_LABEL=$BUILD_LABEL"
     echo "LOG_FILE=$LOG_FILE"
     echo "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
     echo "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
@@ -110,6 +126,10 @@ if [ "${1:-}" = "--self-test" ]; then
     [ -f "$MOLTENVK_DYLIB" ] || { echo "missing: bundled MoltenVK dylib" >&2; exit 1; }
     [ -d "$RUNTIME_DIR" ] || { echo "missing: runtime state dir ($RUNTIME_DIR)" >&2; exit 1; }
     echo "self-test: ok"
+    echo "PACKAGE_PROFILE=$PACKAGE_PROFILE"
+    echo "RUNTIME_NAMESPACE=$RUNTIME_NAMESPACE"
+    echo "LOG_NAMESPACE=$LOG_NAMESPACE"
+    echo "BUILD_LABEL=$BUILD_LABEL"
     echo "LOG_FILE=$LOG_FILE"
     echo "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
     echo "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"

@@ -79,7 +79,7 @@ static bool setup_runtime_scene_fixture(const char *root_dir,
     const char *assets_dir = "/private/tmp/physics_sim_mesh_preview_bridge/assets";
     const char *mesh_dir = "/private/tmp/physics_sim_mesh_preview_bridge/assets/mesh_assets";
     const char *source_asset_path =
-        "../ray_tracing/tests/fixtures/mesh_asset_runtime_spheres/assets/mesh_assets/asset_sphere_8x4.runtime.json";
+        "tests/fixtures/mesh_asset_runtime_sphere_8x4.json";
     const char *scene_json =
         "{"
         "\"schema_family\":\"codework_scene\","
@@ -243,7 +243,7 @@ static void test_scan_scene_recovers_migrated_desktop_stls_path(void) {
     const char *legacy_path =
         "/legacy-home/Desktop/migrated_meshes/asset_sphere_8x4.runtime.json";
     const char *source_asset_path =
-        "../ray_tracing/tests/fixtures/mesh_asset_runtime_spheres/assets/mesh_assets/asset_sphere_8x4.runtime.json";
+        "tests/fixtures/mesh_asset_runtime_sphere_8x4.json";
     const char *old_home = getenv("HOME");
     const char *old_xdg_data_home = getenv("XDG_DATA_HOME");
     const char *old_xdg_config_home = getenv("XDG_CONFIG_HOME");

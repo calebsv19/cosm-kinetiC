@@ -1,6 +1,6 @@
 # Physics Sim Desktop Packaging
 
-Last updated: 2026-08-13
+Last updated: 2026-09-03
 
 ## Bundle Targets
 - `make -C physics_sim package-desktop`
@@ -11,6 +11,9 @@ Last updated: 2026-08-13
 - `make -C physics_sim package-desktop-open`
 - `make -C physics_sim package-desktop-remove`
 - `make -C physics_sim package-desktop-refresh`
+- `make -C physics_sim package-desktop-main-edit`
+- `make -C physics_sim package-desktop-main-edit-self-test`
+- `make -C physics_sim package-desktop-main-edit-refresh`
 - `make -C physics_sim package-linux-worker-dry-run`
 - `make -C physics_sim package-linux-desktop-contract`
 - `make -C physics_sim package-linux-desktop`
@@ -22,6 +25,16 @@ Last updated: 2026-08-13
 - launcher: `Contents/MacOS/physics-sim-launcher`
 - binary: `Contents/MacOS/physics-sim-bin`
 - resources root: `Contents/Resources`
+
+Main Edit development package:
+- app path: `physics_sim/build/dist/dev/main-edit/kinetiC Main Edit.app`
+- bundle ID: `com.cosm.kinetic.main-edit`
+- runtime/log namespaces: `PhysicsSim-Main-Edit`
+- embedded identity: `Contents/Resources/build_identity.json`
+
+The Main Edit package is local development evidence, not the public desktop
+artifact or a worker/release package. Its refresh target uses a separate
+Desktop name and refuses to overwrite a running development app.
 
 Bundled resource lanes:
 - `config/` (including `config/objects/` and structural preset files)
@@ -209,11 +222,13 @@ Plain `make -C physics_sim package-desktop-refresh` and `package-desktop-self-te
   - `.../physics-sim-launcher --self-test`
 
 Runtime defaults set by launcher:
-- app support root: `${HOME}/Library/Application Support/PhysicsSim`, unless
+- package profile, runtime namespace, log namespace, and build label are read
+  from package-local `Info.plist`, with canonical defaults for older packages
+- app support root: `${HOME}/Library/Application Support/<runtime-namespace>`, unless
   `PHYSICS_SIM_APP_SUPPORT_DIR` is set
 - writable runtime root: `$PHYSICS_SIM_APP_SUPPORT_DIR/runtime`, unless
   `PHYSICS_SIM_RUNTIME_DIR` is set
-- runtime-root fallback: `${TMPDIR:-/tmp}/PhysicsSim/runtime` if the app support
+- runtime-root fallback: `${TMPDIR:-/tmp}/<runtime-namespace>/runtime` if the app support
   runtime directory cannot be created
 - linked resource lanes under the runtime root:
   - `config -> Contents/Resources/config`
@@ -231,12 +246,13 @@ Runtime defaults set by launcher:
   `$PHYSICS_SIM_RUNTIME_DIR/vk/MoltenVK_icd.json` when the bundled
   `Contents/Frameworks/libMoltenVK.dylib` is present
 - cwd switches to the runtime root before binary exec
-- logs write to `~/Library/Logs/PhysicsSim/launcher.log` with
-  `${TMPDIR:-/tmp}/physics-sim-launcher.log` fallback
+- logs write to `~/Library/Logs/<log-namespace>/launcher.log` with a
+  namespace-specific `${TMPDIR:-/tmp}` fallback
 
 Diagnostic commands:
 - `.../physics-sim-launcher --print-config` prints `APP_CONTENTS_DIR`,
-  `RES_DIR`, `LOG_FILE`, `PHYSICS_SIM_RUNTIME_DIR`, timer HUD values,
+  `RES_DIR`, package profile/runtime/log/build identity, `LOG_FILE`,
+  `PHYSICS_SIM_RUNTIME_DIR`, timer HUD values,
   `VK_RENDERER_SHADER_ROOT`, `SHAPE_ASSET_DIR`, Vulkan ICD/driver files, and
   `MOLTENVK_DYLIB`.
 - `.../physics-sim-launcher --self-test` verifies the bundled binary,
@@ -245,6 +261,18 @@ Diagnostic commands:
   then prints the same diagnostic environment lanes.
 
 ## Verification Sequence
+Main Edit development verification:
+1. `make -C physics_sim main-edit-package-contract-checks`
+2. `make -C physics_sim package-desktop-main-edit-self-test`
+3. optionally, with separate Desktop-mutation authority,
+   `make -C physics_sim package-desktop-main-edit-refresh`
+
+Canonical Desktop verification requires canonical, clean `main`, exactly one
+registered PhysicsSim worktree, and no running canonical app. It is expected
+to fail closed while the persistent Main Edit or specialist registrations are
+retained.
+
+Canonical sequence:
 1. `make -C physics_sim package-desktop-refresh`
 2. `make -C physics_sim package-desktop-self-test`
 3. `/Users/<user>/Desktop/kinetiC.app/Contents/MacOS/physics-sim-launcher --print-config`

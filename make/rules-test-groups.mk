@@ -1,6 +1,10 @@
 # =========================
 #  Test groups and phony surface
 # =========================
+.PHONY: package-desktop-refresh-authority package-desktop-main-edit \
+	package-desktop-main-edit-self-test package-desktop-main-edit-refresh \
+	main-edit-package-contract-checks
+
 STABLE_TEST_TARGETS := \
 	test-volume-frames-3d-export-contract \
 	test-volume-frames-3d-tiny-parity-contract \

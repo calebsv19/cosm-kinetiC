@@ -46,7 +46,7 @@ static bool test_retained_runtime_launch_projection_overwrites_stale_live_preset
     snprintf(runtime_launch.retained_runtime_scene_path,
              sizeof(runtime_launch.retained_runtime_scene_path),
              "%s",
-             "data/runtime/scenes/scene_ps4d_visual_test.json");
+             "tests/fixtures/scene_runtime_launch_projection.json");
 
     if (!scene_runtime_launch_apply_retained_projection(&runtime_launch,
                                                         &cfg,

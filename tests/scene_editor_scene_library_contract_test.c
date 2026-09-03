@@ -107,7 +107,7 @@ static bool test_scene_library_splits_legacy_and_retained_catalogs(void) {
         "\"extensions\":{}"
         "}";
 
-    snprintf(root_dir, sizeof(root_dir), "%s", "data/runtime/scene_library_contract_split_root");
+    snprintf(root_dir, sizeof(root_dir), "%s", "build/scene_library_contract_split_root");
     if (!create_scene_contract_dir(root_dir,
                                    "Split Scene",
                                    runtime_json,
@@ -175,7 +175,7 @@ static bool test_scene_library_requires_authoring_and_runtime_pair(void) {
         "\"extensions\":{}"
         "}";
 
-    snprintf(root_dir, sizeof(root_dir), "%s", "data/runtime/scene_library_contract_missing_authoring_root");
+    snprintf(root_dir, sizeof(root_dir), "%s", "build/scene_library_contract_missing_authoring_root");
     snprintf(scene_dir, sizeof(scene_dir), "%s/%s", root_dir, "Missing Authoring");
     snprintf(runtime_path, sizeof(runtime_path), "%s/%s", scene_dir, "scene_runtime.json");
     snprintf(authoring_path, sizeof(authoring_path), "%s/%s", scene_dir, "scene_authoring.json");
@@ -225,7 +225,7 @@ static bool test_scene_library_can_find_retained_row_by_exact_path(void) {
         "\"extensions\":{}"
         "}";
 
-    snprintf(root_dir, sizeof(root_dir), "%s", "data/runtime/scene_library_contract_lookup_root");
+    snprintf(root_dir, sizeof(root_dir), "%s", "build/scene_library_contract_lookup_root");
     if (!create_scene_contract_dir(root_dir,
                                    "Lookup Scene",
                                    runtime_json,
@@ -284,7 +284,7 @@ static bool test_scene_library_prefers_exact_current_path_for_duplicate_scene_id
         "\"extensions\":{}"
         "}";
 
-    snprintf(root_dir, sizeof(root_dir), "%s", "data/runtime/scene_library_contract_duplicate_root");
+    snprintf(root_dir, sizeof(root_dir), "%s", "build/scene_library_contract_duplicate_root");
     if (!create_scene_contract_dir(root_dir,
                                    "Duplicate A",
                                    runtime_json,
@@ -358,7 +358,7 @@ static bool test_scene_library_ignores_flat_runtime_json_in_input_root(void) {
         "\"extensions\":{}"
         "}";
 
-    snprintf(root_dir, sizeof(root_dir), "%s", "data/runtime/scene_library_contract_flat_runtime_root");
+    snprintf(root_dir, sizeof(root_dir), "%s", "build/scene_library_contract_flat_runtime_root");
     snprintf(runtime_path, sizeof(runtime_path), "%s/%s", root_dir, "flat_runtime_scene.json");
     if (!ensure_dir(root_dir) || !write_text_file(runtime_path, runtime_json)) {
         remove_if_exists(runtime_path);
@@ -407,7 +407,7 @@ static bool test_scene_library_discovers_grouped_scene_directories(void) {
         "  \"scene_name\": \"Harbor Setup\"\n"
         "}";
 
-    snprintf(root_dir, sizeof(root_dir), "%s", "data/runtime/scene_library_contract_group_root");
+    snprintf(root_dir, sizeof(root_dir), "%s", "build/scene_library_contract_group_root");
     snprintf(group_dir, sizeof(group_dir), "%s/%s", root_dir, "Harbor");
     if (!ensure_dir(root_dir) ||
         !ensure_dir(group_dir) ||

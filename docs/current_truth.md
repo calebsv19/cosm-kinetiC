@@ -1,6 +1,27 @@
 # kinetiC Current Truth
 
-Last updated: 2026-08-21
+Last updated: 2026-09-03
+
+## Persistent Main Edit Development Identity
+
+- Canonical source remains `main`; functional development uses the persistent
+  `codex/physics-sim-main-edit` lane documented in
+  `docs/main_edit_worktree.md`.
+- The isolated package is `kinetiC Main Edit.app`, bundle
+  `com.cosm.kinetic.main-edit`, with separate `PhysicsSim-Main-Edit` runtime
+  and log namespaces.
+- `package-desktop-main-edit`, `package-desktop-main-edit-self-test`, and
+  `package-desktop-main-edit-refresh` provide the local development package
+  surface with exact generic source/binary build identity.
+- Packaging fails if source mutates during the build. Main Edit refresh also
+  refuses the canonical Desktop destination and a running development app.
+- Canonical Desktop refresh now fails closed unless it runs from canonical,
+  clean `main` with exactly one registered PhysicsSim worktree and no running
+  canonical app. Retained specialist registrations are not removed or ignored
+  to satisfy that gate.
+- This development identity does not change `VERSION`, the public desktop or
+  worker-package line, release history, Registry state, publication, or remote
+  runtime authority.
 
 ## Program Identity
 - Repository directory: `physics_sim/`

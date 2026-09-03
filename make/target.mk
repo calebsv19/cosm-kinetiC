@@ -2,7 +2,7 @@
 #  Host and target contract
 # =========================
 UNAME_S   := $(shell uname -s)
-TARGET_CONTRACT_HELPER ?= ../bin/desktop_release_target_contract.sh
+TARGET_CONTRACT_HELPER ?= $(CODEWORK_WORKSPACE_ROOT)/bin/desktop_release_target_contract.sh
 HOST_ARCH := $(shell uname -m)
 TARGET_ARCH ?= $(HOST_ARCH)
 RELEASE_PLATFORM ?= $(UNAME_S)
