@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "physics/structural/structural_solver.h"
 #include "physics/structural/structural_solver_internal.h"
 
@@ -60,15 +62,15 @@ static bool structural_member_axis_2d(const StructNode *a,
         return false;
     }
 
-    float ax [[fisics::dim(length)]] [[fisics::unit(meter)]] = a->x;
-    float ay [[fisics::dim(length)]] [[fisics::unit(meter)]] = a->y;
-    float bx [[fisics::dim(length)]] [[fisics::unit(meter)]] = bnode->x;
-    float by [[fisics::dim(length)]] [[fisics::unit(meter)]] = bnode->y;
-    float dx [[fisics::dim(length)]] [[fisics::unit(meter)]] = bx - ax;
-    float dy [[fisics::dim(length)]] [[fisics::unit(meter)]] = by - ay;
-    float length [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+    float ax FISICS_DIM(length) FISICS_UNIT(meter) = a->x;
+    float ay FISICS_DIM(length) FISICS_UNIT(meter) = a->y;
+    float bx FISICS_DIM(length) FISICS_UNIT(meter) = bnode->x;
+    float by FISICS_DIM(length) FISICS_UNIT(meter) = bnode->y;
+    float dx FISICS_DIM(length) FISICS_UNIT(meter) = bx - ax;
+    float dy FISICS_DIM(length) FISICS_UNIT(meter) = by - ay;
+    float length FISICS_DIM(length) FISICS_UNIT(meter) =
         sqrtf(dx * dx + dy * dy);
-    float minimum_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = 1e-4f;
+    float minimum_length FISICS_DIM(length) FISICS_UNIT(meter) = 1e-4f;
     if (length < minimum_length) return false;
 
     *out_dx = dx;
@@ -83,8 +85,8 @@ static void structural_apply_planar_nodal_force_components(
     float *b,
     int dof_x,
     int dof_y,
-    float fx [[fisics::dim(force)]] [[fisics::unit(newton)]],
-    float fy [[fisics::dim(force)]] [[fisics::unit(newton)]]) {
+    float fx FISICS_DIM(force) FISICS_UNIT(newton),
+    float fy FISICS_DIM(force) FISICS_UNIT(newton)) {
     if (!b) return;
     if (dof_x >= 0) b[dof_x] += fx;
     if (dof_y >= 0) b[dof_y] += fy;
@@ -92,7 +94,7 @@ static void structural_apply_planar_nodal_force_components(
 
 static float structural_material_cross_sectional_area(
     const StructMaterial *mat) {
-    float area [[fisics::dim(area)]] [[fisics::unit(square_meter)]] = 1.0f;
+    float area FISICS_DIM(area) FISICS_UNIT(square_meter) = 1.0f;
     if (mat) area = mat->area;
     return area;
 }
@@ -100,8 +102,8 @@ static float structural_material_cross_sectional_area(
 static float structural_material_youngs_modulus(
     const StructMaterial *mat) {
     float youngs_modulus
-        [[fisics::dim(pressure)]]
-        [[fisics::unit(pascal)]] = 1.0f;
+        FISICS_DIM(pressure)
+        FISICS_UNIT(pascal) = 1.0f;
     if (mat) youngs_modulus = mat->youngs_modulus;
     return youngs_modulus;
 }
@@ -109,37 +111,37 @@ static float structural_material_youngs_modulus(
 static float structural_material_second_moment_of_area(
     const StructMaterial *mat) {
     float moment_inertia
-        [[fisics::dim(second_moment_of_area)]]
-        [[fisics::unit(meter_to_fourth)]] = 1.0f;
+        FISICS_DIM(second_moment_of_area)
+        FISICS_UNIT(meter_to_fourth) = 1.0f;
     if (mat) moment_inertia = mat->moment_inertia;
     return moment_inertia;
 }
 
 static float structural_axial_stress_from_force(
-    float axial_force [[fisics::dim(force)]] [[fisics::unit(newton)]],
-    float area [[fisics::dim(area)]] [[fisics::unit(square_meter)]]) {
-    float minimum_area [[fisics::dim(area)]] [[fisics::unit(square_meter)]] =
+    float axial_force FISICS_DIM(force) FISICS_UNIT(newton),
+    float area FISICS_DIM(area) FISICS_UNIT(square_meter)) {
+    float minimum_area FISICS_DIM(area) FISICS_UNIT(square_meter) =
         1e-8f;
     if (area <= minimum_area) return 0.0f;
     float axial_stress
-        [[fisics::dim(pressure)]]
-        [[fisics::unit(pascal)]] = axial_force / area;
+        FISICS_DIM(pressure)
+        FISICS_UNIT(pascal) = axial_force / area;
     return axial_stress;
 }
 
 static float structural_axial_stiffness_coefficient(
-    float youngs_modulus [[fisics::dim(pressure)]] [[fisics::unit(pascal)]],
-    float area [[fisics::dim(area)]] [[fisics::unit(square_meter)]],
-    float length [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    float youngs_modulus FISICS_DIM(pressure) FISICS_UNIT(pascal),
+    float area FISICS_DIM(area) FISICS_UNIT(square_meter),
+    float length FISICS_DIM(length) FISICS_UNIT(meter)) {
     return (youngs_modulus * area) / length;
 }
 
 static float structural_bending_stiffness_coefficient(
-    float youngs_modulus [[fisics::dim(pressure)]] [[fisics::unit(pascal)]],
+    float youngs_modulus FISICS_DIM(pressure) FISICS_UNIT(pascal),
     float moment_inertia
-        [[fisics::dim(second_moment_of_area)]]
-        [[fisics::unit(meter_to_fourth)]],
-    float length [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+        FISICS_DIM(second_moment_of_area)
+        FISICS_UNIT(meter_to_fourth),
+    float length FISICS_DIM(length) FISICS_UNIT(meter)) {
     float length_squared = length * length;
     float length_cubed = length_squared * length;
     return (youngs_modulus * moment_inertia) / length_cubed;
@@ -151,8 +153,8 @@ static void add_frame_gravity_loads(const StructuralScene *scene,
     if (!scene || !dof_map || !b) return;
     {
         float gravity_strength
-            [[fisics::dim(acceleration)]]
-            [[fisics::unit(meter_per_second_squared)]] = scene->gravity_strength;
+            FISICS_DIM(acceleration)
+            FISICS_UNIT(meter_per_second_squared) = scene->gravity_strength;
         if (!scene->gravity_enabled || fabsf(gravity_strength) < 1e-6f) return;
     }
 
@@ -271,8 +273,8 @@ bool structural_solve_truss(StructuralScene *scene, StructuralSolveResult *resul
         if (node_index < 0) continue;
         int dof_x = dof_map[node_index * 2];
         int dof_y = dof_map[node_index * 2 + 1];
-        float load_fx [[fisics::dim(force)]] [[fisics::unit(newton)]] = load->fx;
-        float load_fy [[fisics::dim(force)]] [[fisics::unit(newton)]] = load->fy;
+        float load_fx FISICS_DIM(force) FISICS_UNIT(newton) = load->fx;
+        float load_fy FISICS_DIM(force) FISICS_UNIT(newton) = load->fy;
         structural_apply_planar_nodal_force_components(b, dof_x, dof_y, load_fx, load_fy);
     }
 
@@ -382,8 +384,10 @@ bool structural_solve_truss(StructuralScene *scene, StructuralSolveResult *resul
         float c = 0.0f;
         float s = 0.0f;
         if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) {
-            edge->axial_force = 0.0f;
-            edge->axial_stress = 0.0f;
+            float zero_force FISICS_DIM(force) FISICS_UNIT(newton) = 0.0f;
+            float zero_stress FISICS_DIM(pressure) FISICS_UNIT(pascal) = 0.0f;
+            edge->axial_force = zero_force;
+            edge->axial_stress = zero_stress;
             continue;
         }
 
@@ -396,11 +400,11 @@ bool structural_solve_truss(StructuralScene *scene, StructuralSolveResult *resul
         }
         float k = structural_axial_stiffness_coefficient(E, A, L);
 
-        float dux [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        float dux FISICS_DIM(length) FISICS_UNIT(meter) =
             scene->disp_x[idx_b] - scene->disp_x[idx_a];
-        float duy [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        float duy FISICS_DIM(length) FISICS_UNIT(meter) =
             scene->disp_y[idx_b] - scene->disp_y[idx_a];
-        float axial [[fisics::dim(length)]] [[fisics::unit(meter)]] = dux * c + duy * s;
+        float axial FISICS_DIM(length) FISICS_UNIT(meter) = dux * c + duy * s;
         edge->axial_force = k * axial;
         edge->axial_stress =
             structural_axial_stress_from_force(edge->axial_force, A);
@@ -454,8 +458,8 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
         int dof_x = dof_map[node_index * 3];
         int dof_y = dof_map[node_index * 3 + 1];
         int dof_t = dof_map[node_index * 3 + 2];
-        float load_fx [[fisics::dim(force)]] [[fisics::unit(newton)]] = load->fx;
-        float load_fy [[fisics::dim(force)]] [[fisics::unit(newton)]] = load->fy;
+        float load_fx FISICS_DIM(force) FISICS_UNIT(newton) = load->fx;
+        float load_fy FISICS_DIM(force) FISICS_UNIT(newton) = load->fy;
         structural_apply_planar_nodal_force_components(b, dof_x, dof_y, load_fx, load_fy);
         if (dof_t >= 0) b[dof_t] += load->mz;
     }
@@ -610,8 +614,10 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
         float c = 0.0f;
         float s = 0.0f;
         if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) {
-            edge->axial_force = 0.0f;
-            edge->axial_stress = 0.0f;
+            float zero_force FISICS_DIM(force) FISICS_UNIT(newton) = 0.0f;
+            float zero_stress FISICS_DIM(pressure) FISICS_UNIT(pascal) = 0.0f;
+            edge->axial_force = zero_force;
+            edge->axial_stress = zero_stress;
             edge->shear_force_a = 0.0f;
             edge->shear_force_b = 0.0f;
             edge->bending_moment_a = 0.0f;
@@ -643,14 +649,14 @@ bool structural_solve_frame(StructuralScene *scene, StructuralSolveResult *resul
         };
         apply_frame_releases(k_local, edge->release_a, edge->release_b);
 
-        float disp_ax [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene->disp_x[idx_a];
-        float disp_ay [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene->disp_y[idx_a];
-        float disp_bx [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene->disp_x[idx_b];
-        float disp_by [[fisics::dim(length)]] [[fisics::unit(meter)]] = scene->disp_y[idx_b];
-        float u1 [[fisics::dim(length)]] [[fisics::unit(meter)]] = c * disp_ax + s * disp_ay;
-        float v1 [[fisics::dim(length)]] [[fisics::unit(meter)]] = -s * disp_ax + c * disp_ay;
-        float u2 [[fisics::dim(length)]] [[fisics::unit(meter)]] = c * disp_bx + s * disp_by;
-        float v2 [[fisics::dim(length)]] [[fisics::unit(meter)]] = -s * disp_bx + c * disp_by;
+        float disp_ax FISICS_DIM(length) FISICS_UNIT(meter) = scene->disp_x[idx_a];
+        float disp_ay FISICS_DIM(length) FISICS_UNIT(meter) = scene->disp_y[idx_a];
+        float disp_bx FISICS_DIM(length) FISICS_UNIT(meter) = scene->disp_x[idx_b];
+        float disp_by FISICS_DIM(length) FISICS_UNIT(meter) = scene->disp_y[idx_b];
+        float u1 FISICS_DIM(length) FISICS_UNIT(meter) = c * disp_ax + s * disp_ay;
+        float v1 FISICS_DIM(length) FISICS_UNIT(meter) = -s * disp_ax + c * disp_ay;
+        float u2 FISICS_DIM(length) FISICS_UNIT(meter) = c * disp_bx + s * disp_by;
+        float v2 FISICS_DIM(length) FISICS_UNIT(meter) = -s * disp_bx + c * disp_by;
         float d_local[6] = {
             u1,
             v1,
@@ -710,8 +716,10 @@ void structural_compute_frame_internal_forces_ex(StructuralScene *scene,
         float s = 0.0f;
         if (!structural_member_axis_2d(a, bnode, &dx, &dy, &L, &c, &s)) {
             if (update_edges) {
-                edge->axial_force = 0.0f;
-                edge->axial_stress = 0.0f;
+                float zero_force FISICS_DIM(force) FISICS_UNIT(newton) = 0.0f;
+                float zero_stress FISICS_DIM(pressure) FISICS_UNIT(pascal) = 0.0f;
+                edge->axial_force = zero_force;
+                edge->axial_stress = zero_stress;
                 edge->shear_force_a = 0.0f;
                 edge->shear_force_b = 0.0f;
                 edge->bending_moment_a = 0.0f;
@@ -744,17 +752,17 @@ void structural_compute_frame_internal_forces_ex(StructuralScene *scene,
         };
         apply_frame_releases(k_local, edge->release_a, edge->release_b);
 
-        float uax [[fisics::dim(length)]] [[fisics::unit(meter)]] = u[idx_a * 3 + 0];
-        float uay [[fisics::dim(length)]] [[fisics::unit(meter)]] = u[idx_a * 3 + 1];
+        float uax FISICS_DIM(length) FISICS_UNIT(meter) = u[idx_a * 3 + 0];
+        float uay FISICS_DIM(length) FISICS_UNIT(meter) = u[idx_a * 3 + 1];
         float tax = u[idx_a * 3 + 2];
-        float ubx [[fisics::dim(length)]] [[fisics::unit(meter)]] = u[idx_b * 3 + 0];
-        float uby [[fisics::dim(length)]] [[fisics::unit(meter)]] = u[idx_b * 3 + 1];
+        float ubx FISICS_DIM(length) FISICS_UNIT(meter) = u[idx_b * 3 + 0];
+        float uby FISICS_DIM(length) FISICS_UNIT(meter) = u[idx_b * 3 + 1];
         float tbx = u[idx_b * 3 + 2];
 
-        float u1 [[fisics::dim(length)]] [[fisics::unit(meter)]] = c * uax + s * uay;
-        float v1 [[fisics::dim(length)]] [[fisics::unit(meter)]] = -s * uax + c * uay;
-        float u2 [[fisics::dim(length)]] [[fisics::unit(meter)]] = c * ubx + s * uby;
-        float v2 [[fisics::dim(length)]] [[fisics::unit(meter)]] = -s * ubx + c * uby;
+        float u1 FISICS_DIM(length) FISICS_UNIT(meter) = c * uax + s * uay;
+        float v1 FISICS_DIM(length) FISICS_UNIT(meter) = -s * uax + c * uay;
+        float u2 FISICS_DIM(length) FISICS_UNIT(meter) = c * ubx + s * uby;
+        float v2 FISICS_DIM(length) FISICS_UNIT(meter) = -s * ubx + c * uby;
         float d_local[6] = {
             u1,
             v1,

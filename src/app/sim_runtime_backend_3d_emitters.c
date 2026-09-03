@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_runtime_backend_3d_scaffold_internal.h"
 #include "app/sim_runtime_backend_3d_emitter_shapes.h"
 
@@ -1004,9 +1006,9 @@ static void backend_3d_scaffold_apply_attached_runtime_mesh_emitter(
 
 void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
                                         SceneState *scene,
-                                        double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                                        double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     SimRuntimeBackend3DScaffold *state = NULL;
-    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
+    double zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0;
     if (!backend || !scene || !scene->preset || dt <= zero_seconds) return;
     state = (SimRuntimeBackend3DScaffold *)backend->impl;
     if (!state) return;

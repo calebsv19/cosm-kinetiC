@@ -1,15 +1,17 @@
+#include <fisics/extensions.h>
+
 #include "app/scene_apply.h"
 
 #include "app/sim_runtime_backend.h"
 
 void scene_apply_emitters(SceneState *scene,
-                          double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                          double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     if (!scene) return;
     sim_runtime_backend_apply_emitters(scene->backend, scene, dt);
 }
 
 void scene_apply_boundary_flows(SceneState *scene,
-                                double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                                double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     if (!scene) return;
     sim_runtime_backend_apply_boundary_flows(scene->backend, scene, dt);
 }

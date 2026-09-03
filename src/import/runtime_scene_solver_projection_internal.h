@@ -1,6 +1,8 @@
 #ifndef PHYSICS_SIM_RUNTIME_SCENE_SOLVER_PROJECTION_INTERNAL_H
 #define PHYSICS_SIM_RUNTIME_SCENE_SOLVER_PROJECTION_INTERNAL_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 
 #include "import/runtime_scene_solver_projection.h"
@@ -59,15 +61,15 @@ typedef struct SolverProjectionXYDomainMapping {
 
 float runtime_scene_solver_projection_clampf_dim(float v, float min_v, float max_v);
 float runtime_scene_solver_projection_domain_dimension(
-    double extent [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double extent FISICS_DIM(length) FISICS_UNIT(meter),
     double world_scale,
-    float fallback [[fisics::dim(length)]] [[fisics::unit(meter)]]);
+    float fallback FISICS_DIM(length) FISICS_UNIT(meter));
 float runtime_scene_solver_projection_scaled_size(
-    double dimension [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double dimension FISICS_DIM(length) FISICS_UNIT(meter),
     double world_scale,
-    float fallback [[fisics::dim(length)]] [[fisics::unit(meter)]]);
+    float fallback FISICS_DIM(length) FISICS_UNIT(meter));
 float runtime_scene_solver_projection_scaled_position(
-    double coord [[fisics::dim(length)]] [[fisics::unit(meter)]],
+    double coord FISICS_DIM(length) FISICS_UNIT(meter),
     double world_scale);
 float runtime_scene_solver_projection_normalize_velocity(double value, double span);
 bool runtime_scene_solver_projection_parse_vec3(json_object *root,

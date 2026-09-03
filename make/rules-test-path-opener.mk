@@ -7,6 +7,6 @@ PHYSICS_SIM_PATH_OPENER_TEST_SRCS := \
 test-physics-sim-path-opener: $(PHYSICS_SIM_PATH_OPENER_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) -D_DARWIN_C_SOURCE -D_POSIX_C_SOURCE=200809L -DPHYSICS_SIM_PATH_OPENER_FORCE_LINUX=1 \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/physics_sim_path_opener_test $(PHYSICS_SIM_PATH_OPENER_TEST_SRCS)
 	$(BUILD_DIR)/physics_sim_path_opener_test

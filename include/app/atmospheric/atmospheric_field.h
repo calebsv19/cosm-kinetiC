@@ -1,6 +1,8 @@
 #ifndef ATMOSPHERIC_FIELD_H
 #define ATMOSPHERIC_FIELD_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -8,9 +10,9 @@
 
 typedef struct AtmosphericFieldSample {
     float density;
-    float velocity_x [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]];
-    float velocity_y [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]];
-    float velocity_z [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]];
+    float velocity_x FISICS_DIM(velocity) FISICS_UNIT(meter_per_second);
+    float velocity_y FISICS_DIM(velocity) FISICS_UNIT(meter_per_second);
+    float velocity_z FISICS_DIM(velocity) FISICS_UNIT(meter_per_second);
 } AtmosphericFieldSample;
 
 typedef enum AtmosphericInitialStateSource {

@@ -1,6 +1,8 @@
 #ifndef FLUID2D_H
 #define FLUID2D_H
 
+#include <fisics/extensions.h>
+
 #include <stdint.h>
 #include "app/app_config.h"
 #include "app/scene_presets.h"
@@ -28,7 +30,7 @@ void fluid2d_add_density(Fluid2D *f, int x, int y, float amount);
 void fluid2d_add_velocity(Fluid2D *f, int x, int y, float vx, float vy);
 
 void fluid2d_step(Fluid2D *f,
-                  double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                  double dt FISICS_DIM(time) FISICS_UNIT(second),
                   const AppConfig *cfg,
                   const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
                   const uint8_t *solid_mask,

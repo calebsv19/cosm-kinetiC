@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_runtime_backend_2d_internal.h"
 
 #include <math.h>
@@ -25,11 +27,11 @@ static void backend_2d_emitter_density_source_velocity(
     float scalar_strength,
     float *out_vx,
     float *out_vy) {
-    float emitted_velocity_x [[fisics::dim(velocity)]]
-                             [[fisics::unit(meter_per_second)]] =
+    float emitted_velocity_x FISICS_DIM(velocity)
+                             FISICS_UNIT(meter_per_second) =
         vx_dir * scalar_strength * 0.25f;
-    float emitted_velocity_y [[fisics::dim(velocity)]]
-                             [[fisics::unit(meter_per_second)]] =
+    float emitted_velocity_y FISICS_DIM(velocity)
+                             FISICS_UNIT(meter_per_second) =
         vy_dir * scalar_strength * 0.25f;
     if (out_vx) *out_vx = emitted_velocity_x;
     if (out_vy) *out_vy = emitted_velocity_y;
@@ -40,11 +42,11 @@ static void backend_2d_emitter_jet_velocity(float vx_dir,
                                             float scalar_strength,
                                             float *out_vx,
                                             float *out_vy) {
-    float emitted_velocity_x [[fisics::dim(velocity)]]
-                             [[fisics::unit(meter_per_second)]] =
+    float emitted_velocity_x FISICS_DIM(velocity)
+                             FISICS_UNIT(meter_per_second) =
         vx_dir * scalar_strength;
-    float emitted_velocity_y [[fisics::dim(velocity)]]
-                             [[fisics::unit(meter_per_second)]] =
+    float emitted_velocity_y FISICS_DIM(velocity)
+                             FISICS_UNIT(meter_per_second) =
         vy_dir * scalar_strength;
     if (out_vx) *out_vx = emitted_velocity_x;
     if (out_vy) *out_vy = emitted_velocity_y;
@@ -55,11 +57,11 @@ static void backend_2d_emitter_sink_velocity(float vx_dir,
                                              float scalar_strength,
                                              float *out_vx,
                                              float *out_vy) {
-    float emitted_velocity_x [[fisics::dim(velocity)]]
-                             [[fisics::unit(meter_per_second)]] =
+    float emitted_velocity_x FISICS_DIM(velocity)
+                             FISICS_UNIT(meter_per_second) =
         -vx_dir * scalar_strength * 0.4f;
-    float emitted_velocity_y [[fisics::dim(velocity)]]
-                             [[fisics::unit(meter_per_second)]] =
+    float emitted_velocity_y FISICS_DIM(velocity)
+                             FISICS_UNIT(meter_per_second) =
         -vy_dir * scalar_strength * 0.4f;
     if (out_vx) *out_vx = emitted_velocity_x;
     if (out_vy) *out_vy = emitted_velocity_y;
@@ -424,7 +426,7 @@ static float backend_2d_emitter_strength_scale(const SceneState *scene,
 
 static float backend_2d_emitter_total_strength(const SceneState *scene,
                                                const FluidEmitter *emitter,
-                                               float dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                                               float dt FISICS_DIM(time) FISICS_UNIT(second),
                                                float area_scale) {
     float scale = backend_2d_emitter_strength_scale(scene, emitter->type);
     return emitter->strength * scale * EMITTER_POWER_BOOST * dt * area_scale;
@@ -718,10 +720,10 @@ static void backend_2d_emitter_apply_attached_object(SimRuntimeBackend2D *state,
 
 void backend_2d_apply_emitters(SimRuntimeBackend *backend,
                                SceneState *scene,
-                               double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                               double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = (float)dt;
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second) = (float)dt;
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (!scene || !scene->preset || !state || !state->fluid) return;
     if (!scene->emitters_enabled) return;
     if (dt_seconds <= zero_seconds) return;

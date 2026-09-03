@@ -1,6 +1,8 @@
 #ifndef RIGID2D_COLLISION_H
 #define RIGID2D_COLLISION_H
 
+#include <fisics/extensions.h>
+
 #include "physics/rigid/rigid2d.h"
 
 // Compute/caches AABB for any body (circle/box/poly) in world space.
@@ -26,6 +28,6 @@ void rigid2d_positional_correction(RigidBody2D *a,
 void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                                    RigidBody2D *b,
                                    RigidManifold *m,
-                                   float dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+                                   float dt FISICS_DIM(time) FISICS_UNIT(second));
 
 #endif // RIGID2D_COLLISION_H

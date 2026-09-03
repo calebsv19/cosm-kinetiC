@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_mode.h"
 
 #include <math.h>
@@ -87,7 +89,7 @@ static void wind_prepare(SceneState *scene) {
 }
 
 static void wind_pre_substep(SceneState *scene,
-                             double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                             double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     (void)dt;
     if (!scene || !scene->config || !scene->preset) return;
     scene_set_emitters_enabled(scene, false);
@@ -96,7 +98,7 @@ static void wind_pre_substep(SceneState *scene,
 }
 
 static void wind_post_substep(SceneState *scene,
-                              double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                              double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     (void)scene;
     (void)dt;
 }

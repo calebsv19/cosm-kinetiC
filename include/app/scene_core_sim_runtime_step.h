@@ -1,6 +1,8 @@
 #ifndef SCENE_CORE_SIM_RUNTIME_STEP_H
 #define SCENE_CORE_SIM_RUNTIME_STEP_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 
 #include "app/scene_state.h"
@@ -28,7 +30,7 @@ void physics_sim_scene_core_sim_set_paused(SceneState *scene, bool paused);
 bool physics_sim_scene_core_sim_step(SceneState *scene,
                                      AppConfig *cfg,
                                      const SimModeHooks *mode_hooks,
-                                     double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                                     double dt FISICS_DIM(time) FISICS_UNIT(second),
                                      PhysicsSimSceneCoreSimStepResult *result);
 
 #endif

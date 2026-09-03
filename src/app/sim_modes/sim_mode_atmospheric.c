@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_mode.h"
 
 #include "app/atmospheric/atmospheric_field.h"
@@ -21,14 +23,14 @@ static void atmospheric_prepare(SceneState *scene) {
 
 static void atmospheric_pre_substep(
     SceneState *scene,
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     (void)scene;
     (void)dt;
 }
 
 static void atmospheric_post_substep(
     SceneState *scene,
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     (void)scene;
     (void)dt;
 }

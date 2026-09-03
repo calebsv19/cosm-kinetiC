@@ -5,7 +5,7 @@ SHIM_PARSE_SMOKE_SRC := tests/shim_include_smoke.c
 SHIM_PARSE_LOG_DIR := $(BUILD_DIR)/shim
 SHIM_PARSE_BASELINE_LOG := $(SHIM_PARSE_LOG_DIR)/parse_headers_baseline.log
 SHIM_PARSE_SHADOW_LOG := $(SHIM_PARSE_LOG_DIR)/parse_headers_shadow.log
-SHIM_PARSE_FLAGS := $(CSTD) $(WARN) $(DEBUG) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools
+SHIM_PARSE_FLAGS := $(CSTD) $(WARN) $(DEBUG) -I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) -I$(SRC_DIR)/tools
 SHIM_COMPILE_SUBSET_SRCS := \
 	tests/shim_include_smoke.c \
 	src/physics/math/math2d.c \

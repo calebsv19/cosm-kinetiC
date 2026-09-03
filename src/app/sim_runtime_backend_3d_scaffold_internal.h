@@ -1,6 +1,8 @@
 #ifndef SIM_RUNTIME_BACKEND_3D_SCAFFOLD_INTERNAL_H
 #define SIM_RUNTIME_BACKEND_3D_SCAFFOLD_INTERNAL_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -119,7 +121,7 @@ static inline bool backend_3d_scaffold_dense_mirror_live(
 
 void backend_3d_scaffold_apply_emitters(SimRuntimeBackend *backend,
                                         struct SceneState *scene,
-                                        double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+                                        double dt FISICS_DIM(time) FISICS_UNIT(second));
 void backend_3d_scaffold_rasterize_retained_object_obstacles(
     SimRuntimeBackend3DScaffold *state,
     const struct SceneState *scene);

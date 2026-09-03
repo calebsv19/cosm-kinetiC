@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_runtime_3d_solver_core_sim.h"
 
 typedef struct PhysicsSim3DSolverCoreSimContext {
@@ -16,7 +18,7 @@ static bool run_solver_first_pass(void *user_context,
                                   CoreSimPassOutcome *outcome) {
     PhysicsSim3DSolverCoreSimContext *ctx =
         (PhysicsSim3DSolverCoreSimContext *)user_context;
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]] =
+    double dt FISICS_DIM(time) FISICS_UNIT(second) =
         tick ? tick->dt_seconds : 0.0;
 
     core_sim_pass_outcome_init(outcome, PHYSICS_SIM_3D_SOLVER_CORE_SIM_PASS_FIRST_PASS);
@@ -55,7 +57,7 @@ bool sim_runtime_3d_solver_core_sim_step_first_pass(
     const uint8_t *solid_mask,
     const SimRuntime3DForceAxis *scene_up_axis,
     const AppConfig *cfg,
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+    double dt FISICS_DIM(time) FISICS_UNIT(second),
     float max_velocity_displacement_cells_limit,
     CoreSimFrameOutcome *outcome,
     SimRuntime3DSolverStepMetrics *out_metrics) {
@@ -65,7 +67,7 @@ bool sim_runtime_3d_solver_core_sim_step_first_pass(
     CoreSimPassOrder pass_order;
     CoreSimFrameRequest request;
     CoreSimFrameOutcome frame_outcome;
-    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
+    double zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0;
 
     if (!loop_state || !volume || !scratch || !cfg || dt <= zero_seconds) {
         if (outcome) {

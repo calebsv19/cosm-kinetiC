@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/structural/structural_controller_internal.h"
 
 #include <math.h>
@@ -6,60 +8,60 @@
 #include <string.h>
 
 static float structural_runtime_step_length(
-    float dx [[fisics::dim(length)]] [[fisics::unit(meter)]],
-    float dy [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    float dx FISICS_DIM(length) FISICS_UNIT(meter),
+    float dy FISICS_DIM(length) FISICS_UNIT(meter)) {
     return sqrtf(dx * dx + dy * dy);
 }
 
 static float structural_runtime_step_speed(
-    float displacement [[fisics::dim(length)]] [[fisics::unit(meter)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float displacement FISICS_DIM(length) FISICS_UNIT(meter),
+    float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     return displacement / dt;
 }
 
 static float structural_runtime_translation_predict_position(
-    float position [[fisics::dim(length)]] [[fisics::unit(meter)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]],
-    float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
+    float position FISICS_DIM(length) FISICS_UNIT(meter),
+    float dt FISICS_DIM(time) FISICS_UNIT(second),
+    float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second),
     float accel_scale,
-    float accel [[fisics::dim(acceleration)]] [[fisics::unit(meter_per_second_squared)]]) {
+    float accel FISICS_DIM(acceleration) FISICS_UNIT(meter_per_second_squared)) {
     return position + dt * velocity + dt * dt * accel_scale * accel;
 }
 
 static float structural_runtime_translation_predict_velocity(
-    float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+    float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second),
+    float dt FISICS_DIM(time) FISICS_UNIT(second),
     float accel_scale,
-    float accel [[fisics::dim(acceleration)]] [[fisics::unit(meter_per_second_squared)]]) {
+    float accel FISICS_DIM(acceleration) FISICS_UNIT(meter_per_second_squared)) {
     return velocity + dt * accel_scale * accel;
 }
 
 static float structural_runtime_translation_correct_position(
-    float predicted_position [[fisics::dim(length)]] [[fisics::unit(meter)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+    float predicted_position FISICS_DIM(length) FISICS_UNIT(meter),
+    float dt FISICS_DIM(time) FISICS_UNIT(second),
     float beta,
-    float accel [[fisics::dim(acceleration)]] [[fisics::unit(meter_per_second_squared)]]) {
+    float accel FISICS_DIM(acceleration) FISICS_UNIT(meter_per_second_squared)) {
     return predicted_position + beta * dt * dt * accel;
 }
 
 static float structural_runtime_translation_correct_velocity(
-    float predicted_velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+    float predicted_velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second),
+    float dt FISICS_DIM(time) FISICS_UNIT(second),
     float gamma,
-    float accel [[fisics::dim(acceleration)]] [[fisics::unit(meter_per_second_squared)]]) {
+    float accel FISICS_DIM(acceleration) FISICS_UNIT(meter_per_second_squared)) {
     return predicted_velocity + gamma * dt * accel;
 }
 
 static float structural_runtime_translation_damping_force(
     float alpha,
-    float mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]],
-    float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]]) {
+    float mass FISICS_DIM(mass) FISICS_UNIT(kilogram),
+    float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second)) {
     return alpha * mass * velocity;
 }
 
 static float structural_runtime_translation_acceleration(
-    float net_force [[fisics::dim(force)]] [[fisics::unit(newton)]],
-    float mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]]) {
+    float net_force FISICS_DIM(force) FISICS_UNIT(newton),
+    float mass FISICS_DIM(mass) FISICS_UNIT(kilogram)) {
     return net_force / mass;
 }
 
@@ -67,8 +69,9 @@ static void runtime_build_mass_diagonal(const StructuralScene *scene,
                                         StructuralRuntimeView *view) {
     if (!scene || !view || !view->mass || view->dof_count < scene->node_count * 3) return;
     size_t node_count = scene->node_count;
+    float zero_mass FISICS_DIM(mass) FISICS_UNIT(kilogram) = 0.0f;
     for (size_t i = 0; i < node_count * 3; ++i) {
-        view->mass[i] = 0.0f;
+        view->mass[i] = zero_mass;
     }
 
     for (size_t e = 0; e < scene->edge_count; ++e) {
@@ -239,8 +242,8 @@ static void runtime_build_damping_force(const StructuralScene *scene,
     if (fabsf(alpha) > 1e-6f) {
         for (size_t i = 0; i < dof_count; ++i) {
             if ((i % 3U) < 2U) {
-                float mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]] = view->mass[i];
-                float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+                float mass FISICS_DIM(mass) FISICS_UNIT(kilogram) = view->mass[i];
+                float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) =
                     vel[i];
                 out_force[i] += structural_runtime_translation_damping_force(
                     alpha, mass, velocity);
@@ -284,21 +287,21 @@ static void runtime_apply_constraints(const StructuralScene *scene,
 static void runtime_limit_step(StructuralRuntimeView *view,
                                const float *prev_u,
                                size_t node_count,
-                               float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+                               float dt FISICS_DIM(time) FISICS_UNIT(second)) {
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (!view || !prev_u || dt <= zero_seconds) return;
     {
-        const float max_trans [[fisics::dim(length)]] [[fisics::unit(meter)]] = 8.0f;
+        const float max_trans FISICS_DIM(length) FISICS_UNIT(meter) = 8.0f;
         const float max_rot = 0.25f;
-        const float min_trans_length [[fisics::dim(length)]] [[fisics::unit(meter)]] = 1e-6f;
+        const float min_trans_length FISICS_DIM(length) FISICS_UNIT(meter) = 1e-6f;
         for (size_t i = 0; i < node_count; ++i) {
             size_t base = i * 3;
-            float dx [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            float dx FISICS_DIM(length) FISICS_UNIT(meter) =
                 view->u[base + 0] - prev_u[base + 0];
-            float dy [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            float dy FISICS_DIM(length) FISICS_UNIT(meter) =
                 view->u[base + 1] - prev_u[base + 1];
             float dtheta = view->u[base + 2] - prev_u[base + 2];
-            float len [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            float len FISICS_DIM(length) FISICS_UNIT(meter) =
                 structural_runtime_step_length(dx, dy);
             float scale = 1.0f;
             if (len > max_trans && len > min_trans_length) {
@@ -491,7 +494,7 @@ void structural_controller_runtime_view_clear(StructuralRuntimeView *view) {
     view->u = NULL;
     view->v = NULL;
     view->a = NULL;
-    view->mass = NULL;
+    memset(&view->mass, 0, sizeof(view->mass));
     view->dof_count = 0;
 }
 
@@ -526,8 +529,8 @@ void structural_controller_runtime_view_sync_from_scene(StructuralRuntimeView *v
 
 void structural_controller_runtime_step_dynamic(
     StructuralController *ctrl,
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float dt FISICS_DIM(time) FISICS_UNIT(second)) {
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (!ctrl || dt <= zero_seconds) return;
     {
         StructuralScene *scene = &ctrl->scene;
@@ -546,9 +549,9 @@ void structural_controller_runtime_step_dynamic(
 
         float gravity_factor = scene->gravity_enabled ? 1.0f : 0.0f;
         if (scene->gravity_enabled && ctrl->gravity_ramp_enabled) {
-            float ramp_duration [[fisics::dim(time)]] [[fisics::unit(second)]] =
+            float ramp_duration FISICS_DIM(time) FISICS_UNIT(second) =
                 ctrl->gravity_ramp_duration;
-            float ramp_time [[fisics::dim(time)]] [[fisics::unit(second)]] =
+            float ramp_time FISICS_DIM(time) FISICS_UNIT(second) =
                 ctrl->gravity_ramp_time;
             if (ramp_duration > zero_seconds) {
                 gravity_factor = fminf(1.0f, ramp_time / ramp_duration);
@@ -571,12 +574,12 @@ void structural_controller_runtime_step_dynamic(
                 float v_pred[STRUCT_MAX_NODES * 3] = {0};
                 for (size_t i = 0; i < dof_count; ++i) {
                     if ((i % 3U) < 2U) {
-                        float position [[fisics::dim(length)]] [[fisics::unit(meter)]] = view->u[i];
-                        float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+                        float position FISICS_DIM(length) FISICS_UNIT(meter) = view->u[i];
+                        float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) =
                             view->v[i];
                         float accel
-                            [[fisics::dim(acceleration)]]
-                            [[fisics::unit(meter_per_second_squared)]] = view->a[i];
+                            FISICS_DIM(acceleration)
+                            FISICS_UNIT(meter_per_second_squared) = view->a[i];
                         u_pred[i] = structural_runtime_translation_predict_position(
                             position, dt, velocity, 0.5f - ctrl->newmark_beta, accel);
                         v_pred[i] = structural_runtime_translation_predict_velocity(
@@ -630,14 +633,14 @@ void structural_controller_runtime_step_dynamic(
                                 view->a[i] = a_next[i];
                                 if ((i % 3U) < 2U) {
                                     float predicted_position
-                                        [[fisics::dim(length)]]
-                                        [[fisics::unit(meter)]] = u_pred[i];
+                                        FISICS_DIM(length)
+                                        FISICS_UNIT(meter) = u_pred[i];
                                     float predicted_velocity
-                                        [[fisics::dim(velocity)]]
-                                        [[fisics::unit(meter_per_second)]] = v_pred[i];
+                                        FISICS_DIM(velocity)
+                                        FISICS_UNIT(meter_per_second) = v_pred[i];
                                     float accel
-                                        [[fisics::dim(acceleration)]]
-                                        [[fisics::unit(meter_per_second_squared)]] = a_next[i];
+                                        FISICS_DIM(acceleration)
+                                        FISICS_UNIT(meter_per_second_squared) = a_next[i];
                                     view->u[i] = structural_runtime_translation_correct_position(
                                         predicted_position, dt, ctrl->newmark_beta, accel);
                                     view->v[i] = structural_runtime_translation_correct_velocity(
@@ -660,21 +663,21 @@ void structural_controller_runtime_step_dynamic(
                 for (size_t i = 0; i < dof_count; ++i) {
                     float mass = view->mass[i];
                     if ((i % 3U) < 2U) {
-                        float mass_t [[fisics::dim(mass)]] [[fisics::unit(kilogram)]] = mass;
-                        float external_force [[fisics::dim(force)]] [[fisics::unit(newton)]] =
+                        float mass_t FISICS_DIM(mass) FISICS_UNIT(kilogram) = mass;
+                        float external_force FISICS_DIM(force) FISICS_UNIT(newton) =
                             f_ext[i];
-                        float internal_force [[fisics::dim(force)]] [[fisics::unit(newton)]] =
+                        float internal_force FISICS_DIM(force) FISICS_UNIT(newton) =
                             f_int[i];
-                        float damping_force [[fisics::dim(force)]] [[fisics::unit(newton)]] =
+                        float damping_force FISICS_DIM(force) FISICS_UNIT(newton) =
                             f_damp[i];
-                        float net_force [[fisics::dim(force)]] [[fisics::unit(newton)]] =
+                        float net_force FISICS_DIM(force) FISICS_UNIT(newton) =
                             external_force - internal_force - damping_force;
-                        float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+                        float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) =
                             view->v[i];
-                        float position [[fisics::dim(length)]] [[fisics::unit(meter)]] = view->u[i];
+                        float position FISICS_DIM(length) FISICS_UNIT(meter) = view->u[i];
                         float accel_t
-                            [[fisics::dim(acceleration)]]
-                            [[fisics::unit(meter_per_second_squared)]] =
+                            FISICS_DIM(acceleration)
+                            FISICS_UNIT(meter_per_second_squared) =
                                 structural_runtime_translation_acceleration(net_force, mass_t);
                         view->a[i] = accel_t;
                         velocity = structural_runtime_translation_correct_velocity(
@@ -703,7 +706,7 @@ void structural_controller_runtime_step_dynamic(
         structural_compute_frame_internal_forces_ex(scene, view->u, NULL, 0, true);
         scene->has_solution = true;
         if (ctrl->gravity_ramp_enabled) {
-            float ramp_time [[fisics::dim(time)]] [[fisics::unit(second)]] =
+            float ramp_time FISICS_DIM(time) FISICS_UNIT(second) =
                 ctrl->gravity_ramp_time;
             ramp_time += dt;
             ctrl->gravity_ramp_time = ramp_time;

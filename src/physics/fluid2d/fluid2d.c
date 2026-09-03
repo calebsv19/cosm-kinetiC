@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "physics/fluid2d/fluid2d.h"
 #include "physics/objects/object_manager.h"
 
@@ -219,7 +221,7 @@ static void enforce_outflow_direction(
 static void apply_buoyancy_seconds(
     Fluid2D *f,
     const AppConfig *cfg,
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second)) {
     apply_buoyancy(f, cfg, dt_seconds);
 }
 
@@ -240,7 +242,7 @@ typedef struct Fluid2DLegacyStepInputs {
 
 static Fluid2DLegacyStepInputs fluid2d_prepare_legacy_step_inputs(
     const AppConfig *cfg,
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second)) {
     Fluid2DLegacyStepInputs inputs;
     inputs.diffusion = cfg ? cfg->density_diffusion : 0.0f;
     inputs.viscosity = cfg ? cfg->velocity_damping : 0.0f;
@@ -315,7 +317,7 @@ static void fluid2d_run_density_phase(
 static void fluid2d_apply_density_decay(
     Fluid2D *f,
     const AppConfig *cfg,
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second)) {
     if (!f || !cfg) return;
 
     size_t count = (size_t)f->w * (size_t)f->h;
@@ -626,14 +628,14 @@ static void enforce_outflow_direction(Fluid2D *f,
 }
 
 void fluid2d_step(Fluid2D *f,
-                  double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                  double dt FISICS_DIM(time) FISICS_UNIT(second),
                   const AppConfig *cfg,
                   const BoundaryFlow flows[BOUNDARY_EDGE_COUNT],
                   const uint8_t *solid_mask,
                   const float *solid_vel_x,
                   const float *solid_vel_y) {
     if (!f || !cfg) return;
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = (float)dt;
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second) = (float)dt;
     Fluid2DLegacyStepInputs step =
         fluid2d_prepare_legacy_step_inputs(cfg, dt_seconds);
 

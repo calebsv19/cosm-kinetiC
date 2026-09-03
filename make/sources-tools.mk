@@ -95,7 +95,7 @@ VF2D_DATASET_TOOL_SRCS := \
 	$(CORE_UNITS_DIR)/src/core_units.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
 	$(TIMER_HUD_DIR)/external/cJSON.c
-VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/../../shape/external -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include -I$(TIMER_HUD_DIR)/external -DVOLUME_FRAMES_DATASET_TOOL_ONLY=1 $(SDL_CFLAGS)
+VF2D_DATASET_TOOL_INCS := -I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) -I$(SRC_DIR)/tools -I$(CORE_DATA_DIR)/include -I$(CORE_PACK_DIR)/include -I$(CORE_IO_DIR)/include -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/../../shape/external -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include -I$(TIMER_HUD_DIR)/external -DVOLUME_FRAMES_DATASET_TOOL_ONLY=1 $(SDL_CFLAGS)
 ifeq ($(UNAME_S),Darwin)
 VF2D_DATASET_TOOL_INCS += -I/opt/homebrew/include -D_THREAD_SAFE
 endif

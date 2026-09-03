@@ -1,6 +1,8 @@
 #ifndef STRUCTURAL_CONTROLLER_INTERNAL_H
 #define STRUCTURAL_CONTROLLER_INTERNAL_H
 
+#include <fisics/extensions.h>
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
@@ -77,7 +79,7 @@ void structural_controller_runtime_view_sync_from_scene(StructuralRuntimeView *v
                                                         const StructuralScene *scene);
 void structural_controller_runtime_step_dynamic(
     StructuralController *ctrl,
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+    float dt FISICS_DIM(time) FISICS_UNIT(second));
 
 void structural_controller_render_scene(SDL_Renderer *renderer, StructuralController *ctrl);
 

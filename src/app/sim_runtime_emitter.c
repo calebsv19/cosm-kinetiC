@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_runtime_emitter.h"
 #include "app/sim_runtime_3d_space.h"
 
@@ -136,8 +138,8 @@ bool sim_runtime_emitter_resolve(const FluidScenePreset *preset,
                                  SimRuntimeEmitterResolved *out_resolved) {
     const FluidEmitter *emitter = NULL;
     SimRuntimeEmitterResolved resolved = {0};
-    float resolved_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
-    float resolved_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
+    float resolved_position_z FISICS_DIM(length) FISICS_UNIT(meter) = 0.0f;
+    float resolved_radius FISICS_DIM(length) FISICS_UNIT(meter) = 0.0f;
     if (!preset || !out_resolved) return false;
     if (emitter_index >= preset->emitter_count || emitter_index >= MAX_FLUID_EMITTERS) return false;
 
@@ -191,8 +193,8 @@ bool sim_runtime_emitter_resolve_3d_placement(const SimRuntime3DDomainDesc *doma
                                               SimRuntimeEmitterPlacement3D *out_placement) {
     SimRuntimeEmitterPlacement3D placement = {0};
     int max_axis_cells = 0;
-    float position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
-    float radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
+    float position_z FISICS_DIM(length) FISICS_UNIT(meter) = 0.0f;
+    float radius FISICS_DIM(length) FISICS_UNIT(meter) = 0.0f;
     if (!domain || !resolved || !out_placement) return false;
     if (domain->grid_w <= 0 || domain->grid_h <= 0 || domain->grid_d <= 0) return false;
     position_z = resolved->position_z;

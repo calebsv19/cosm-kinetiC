@@ -1,6 +1,8 @@
 #ifndef SIM_RUNTIME_BACKEND_3D_RUNTIME_H
 #define SIM_RUNTIME_BACKEND_3D_RUNTIME_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -12,6 +14,6 @@ void backend_3d_scaffold_runtime_note_export_cache_materialized(SimRuntimeBacken
 bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
                                       struct SceneState *scene,
                                       const AppConfig *cfg,
-                                      double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+                                      double dt FISICS_DIM(time) FISICS_UNIT(second));
 
 #endif

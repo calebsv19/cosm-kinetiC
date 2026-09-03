@@ -37,6 +37,12 @@ Packaging and Desktop refresh flows produce `kinetiC.app`; see
 
 Compiler-units dual-toolchain contract:
 
+PhysicsSim first-party runtime sources use the portable spellings from
+`<fisics/extensions.h>` (`FISICS_DIM` and `FISICS_UNIT`). They expand to
+fisiCs attributes under the fisiCs driver and to empty annotations under the
+ordinary Clang build, so both lanes compile the same source without warning
+suppressions.
+
 ```bash
 make clang-build
 make fisics-build

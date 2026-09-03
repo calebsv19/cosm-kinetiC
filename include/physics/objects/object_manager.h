@@ -1,6 +1,8 @@
 #ifndef OBJECT_MANAGER_H
 #define OBJECT_MANAGER_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 
 #include "app/app_config.h"
@@ -33,8 +35,8 @@ void object_manager_shutdown(ObjectManager *mgr);
 
 SceneObject *object_manager_add_circle(ObjectManager *mgr,
                                        Vec2 position,
-                                       float radius [[fisics::dim(length)]]
-                                                    [[fisics::unit(meter)]],
+                                       float radius FISICS_DIM(length)
+                                                    FISICS_UNIT(meter),
                                        bool is_static);
 SceneObject *object_manager_add_box(ObjectManager *mgr,
                                     Vec2 position,
@@ -48,8 +50,8 @@ SceneObject *object_manager_add_poly(ObjectManager *mgr,
 SceneObject *object_manager_get(ObjectManager *mgr, int id);
 bool         object_manager_remove(ObjectManager *mgr, int id);
 void         object_manager_step(ObjectManager *mgr,
-                                 double dt [[fisics::dim(time)]]
-                                           [[fisics::unit(second)]],
+                                 double dt FISICS_DIM(time)
+                                           FISICS_UNIT(second),
                                  const AppConfig *cfg,
                                  bool gravity_enabled);
 int          object_manager_count(const ObjectManager *mgr);

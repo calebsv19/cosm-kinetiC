@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "import/runtime_scene_solver_projection_internal.h"
 
 #include <math.h>
@@ -121,15 +123,17 @@ void runtime_scene_solver_projection_apply_emitters_from_lights(json_object *run
         json_object *intensity = NULL;
         double lx = 0.5, ly = 0.5, lz = 0.0;
         double strength = 5.0;
+        const float zero_length FISICS_DIM(length) FISICS_UNIT(meter) = 0.0f;
+        const float default_radius FISICS_DIM(length) FISICS_UNIT(meter) = 0.08f;
         FluidEmitter *dst = NULL;
         if (!light || !json_object_is_type(light, json_type_object)) continue;
         dst = &in_out_preset->emitters[in_out_preset->emitter_count];
         memset(dst, 0, sizeof(*dst));
 
         if (runtime_scene_solver_projection_parse_vec3(light, "position", &lx, &ly, &lz)) {
-            double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = lx;
-            double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = ly;
-            double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = lz;
+            double scene_position_x FISICS_DIM(length) FISICS_UNIT(meter) = lx;
+            double scene_position_y FISICS_DIM(length) FISICS_UNIT(meter) = ly;
+            double scene_position_z FISICS_DIM(length) FISICS_UNIT(meter) = lz;
 
             dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
             dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
@@ -137,14 +141,14 @@ void runtime_scene_solver_projection_apply_emitters_from_lights(json_object *run
         } else {
             dst->position_x = 0.5f;
             dst->position_y = 0.5f;
-            dst->position_z = 0.0f;
+            dst->position_z = zero_length;
         }
         if (json_object_object_get_ex(light, "intensity", &intensity)) {
             strength = json_object_get_double(intensity);
         }
 
         dst->type = EMITTER_DENSITY_SOURCE;
-        dst->radius = 0.08f;
+        dst->radius = default_radius;
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)strength, 0.0f, 5000.0f);
         apply_overlay_emitter_3d_contract(NULL, dst);
         {
@@ -187,9 +191,9 @@ int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
         memset(dst, 0, sizeof(*dst));
         dst->type = overlay.emitter_type;
         if (mapping.valid) {
-            double scene_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_emitter_radius FISICS_DIM(length) FISICS_UNIT(meter) =
                 overlay.emitter_radius;
-            double scene_span_min [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_span_min FISICS_DIM(length) FISICS_UNIT(meter) =
                 (mapping.span_x < mapping.span_y ? mapping.span_x : mapping.span_y);
 
             apply_normalized_emitter_position(origin.x, origin.y, &mapping, dst);
@@ -198,14 +202,14 @@ int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
                 scene_span_min,
                 0.0);
         } else {
-            double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = origin.x;
-            double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = origin.y;
-            double scene_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_position_x FISICS_DIM(length) FISICS_UNIT(meter) = origin.x;
+            double scene_position_y FISICS_DIM(length) FISICS_UNIT(meter) = origin.y;
+            double scene_emitter_radius FISICS_DIM(length) FISICS_UNIT(meter) =
                 overlay.emitter_radius;
-            double scaled_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scaled_emitter_radius FISICS_DIM(length) FISICS_UNIT(meter) =
                 scene_emitter_radius * world_scale;
-            float min_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
-            float max_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 5000.0f;
+            float min_radius FISICS_DIM(length) FISICS_UNIT(meter) = 0.0f;
+            float max_radius FISICS_DIM(length) FISICS_UNIT(meter) = 5000.0f;
 
             dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
             dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
@@ -213,7 +217,7 @@ int runtime_scene_solver_projection_apply_emitters_from_retained_objects(
                 (float)scaled_emitter_radius, min_radius, max_radius);
         }
         {
-            double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = origin.z;
+            double scene_position_z FISICS_DIM(length) FISICS_UNIT(meter) = origin.z;
             dst->position_z = runtime_scene_solver_projection_scaled_position(scene_position_z, world_scale);
         }
         dst->strength = runtime_scene_solver_projection_clampf_dim((float)overlay.emitter_strength,
@@ -273,15 +277,15 @@ int runtime_scene_solver_projection_apply_emitters_from_runtime_root_objects(
         memset(dst, 0, sizeof(*dst));
         dst->type = overlay.emitter_type;
         {
-            double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = px;
-            double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = py;
-            double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = pz;
-            double scene_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_position_x FISICS_DIM(length) FISICS_UNIT(meter) = px;
+            double scene_position_y FISICS_DIM(length) FISICS_UNIT(meter) = py;
+            double scene_position_z FISICS_DIM(length) FISICS_UNIT(meter) = pz;
+            double scene_emitter_radius FISICS_DIM(length) FISICS_UNIT(meter) =
                 overlay.emitter_radius;
-            double scaled_emitter_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scaled_emitter_radius FISICS_DIM(length) FISICS_UNIT(meter) =
                 scene_emitter_radius * world_scale;
-            float min_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
-            float max_radius [[fisics::dim(length)]] [[fisics::unit(meter)]] = 5000.0f;
+            float min_radius FISICS_DIM(length) FISICS_UNIT(meter) = 0.0f;
+            float max_radius FISICS_DIM(length) FISICS_UNIT(meter) = 5000.0f;
 
             dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
             dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);

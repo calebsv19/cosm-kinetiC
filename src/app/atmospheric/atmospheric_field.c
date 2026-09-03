@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/atmospheric/atmospheric_field.h"
 
 #include <math.h>
@@ -37,9 +39,9 @@ static float lerpf_local(float a, float b, float t) {
 }
 
 static float atmospheric_velocity_from_curl(
-    float base_wind [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
+    float base_wind FISICS_DIM(velocity) FISICS_UNIT(meter_per_second),
     float curl_component,
-    float turbulence_strength [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]]) {
+    float turbulence_strength FISICS_DIM(velocity) FISICS_UNIT(meter_per_second)) {
     return base_wind + curl_component * turbulence_strength;
 }
 
@@ -123,15 +125,19 @@ static float region_weight(const AtmosphericDensityRegion *region,
 
 AtmosphericPresetSettings atmospheric_preset_default_settings(void) {
     AtmosphericPresetSettings settings = {0};
+    float base_wind_x FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) = 4.0f;
+    float base_wind_y FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) = 0.25f;
+    float base_wind_z FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) = 1.0f;
+    float turbulence_strength FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) = 2.0f;
     settings.enabled = true;
     settings.seed = 1337u;
     settings.base_density = 0.0f;
     settings.density_scale = 7.0f;
     settings.density_threshold = 0.54f;
-    settings.base_wind_x = 4.0f;
-    settings.base_wind_y = 0.25f;
-    settings.base_wind_z = 1.0f;
-    settings.turbulence_strength = 2.0f;
+    settings.base_wind_x = base_wind_x;
+    settings.base_wind_y = base_wind_y;
+    settings.base_wind_z = base_wind_z;
+    settings.turbulence_strength = turbulence_strength;
     settings.noise_scale = 3.0f;
     settings.detail_scale = 10.0f;
     settings.band_min_y = 0.22f;
@@ -252,14 +258,14 @@ static AtmosphericFieldSample sample_field(const AtmosphericPresetSettings *sett
         sample.density = 0.0f;
     }
 
-    float base_wind_x [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+    float base_wind_x FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) =
         local.base_wind_x;
-    float base_wind_y [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+    float base_wind_y FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) =
         local.base_wind_y;
-    float base_wind_z [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]] =
+    float base_wind_z FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) =
         local.base_wind_z;
-    float turbulence_strength [[fisics::dim(velocity)]]
-                             [[fisics::unit(meter_per_second)]] =
+    float turbulence_strength FISICS_DIM(velocity)
+                             FISICS_UNIT(meter_per_second) =
         local.turbulence_strength;
 
     const float e = 0.015f;
@@ -344,7 +350,8 @@ static AtmosphericFieldSample sample_field(const AtmosphericPresetSettings *sett
             base_wind_x, (n_y1 - n_y0) * inv, turbulence_strength);
         sample.velocity_y = atmospheric_velocity_from_curl(
             base_wind_y, -(n_x1 - n_x0) * inv, turbulence_strength);
-        sample.velocity_z = 0.0f;
+        float zero_velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) = 0.0f;
+        sample.velocity_z = zero_velocity;
     }
     return sample;
 }

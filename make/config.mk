@@ -18,6 +18,7 @@ BUILD_DIR := build
 TARGET    := physics_sim
 DIST_DIR  := dist
 CODEWORK_WORKSPACE_ROOT := $(abspath $(shell git rev-parse --path-format=absolute --git-common-dir)/../..)
+FISICS_INCLUDE_DIR ?= $(CODEWORK_WORKSPACE_ROOT)/fisiCs/include
 CLANG_BUILD_DIR := $(BUILD_DIR)/clang
 FISICS_BUILD_DIR := $(BUILD_DIR)/fisics
 CLANG_TARGET := $(CLANG_BUILD_DIR)/$(TARGET)

@@ -1,6 +1,8 @@
 #ifndef SIM_MODE_H
 #define SIM_MODE_H
 
+#include <fisics/extensions.h>
+
 #include "app/app_config.h"
 #include "app/scene_presets.h"
 
@@ -10,9 +12,9 @@ typedef struct SimModeHooks {
     void (*configure_app)(AppConfig *cfg, FluidScenePreset *preset);
     void (*prepare_scene)(struct SceneState *scene);
     void (*pre_substep)(struct SceneState *scene,
-                        double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+                        double dt FISICS_DIM(time) FISICS_UNIT(second));
     void (*post_substep)(struct SceneState *scene,
-                         double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+                         double dt FISICS_DIM(time) FISICS_UNIT(second));
 } SimModeHooks;
 
 typedef enum SimBackendLane {

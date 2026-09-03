@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_mode.h"
 
 #include "app/scene_state.h"
@@ -12,13 +14,13 @@ static void box_prepare(SceneState *scene) {
 }
 
 static void box_pre_substep(SceneState *scene,
-                            double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                            double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     (void)scene;
     (void)dt;
 }
 
 static void box_post_substep(SceneState *scene,
-                             double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                             double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     (void)scene;
     (void)dt;
 }

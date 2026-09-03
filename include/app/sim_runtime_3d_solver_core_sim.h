@@ -1,6 +1,8 @@
 #ifndef SIM_RUNTIME_3D_SOLVER_CORE_SIM_H
 #define SIM_RUNTIME_3D_SOLVER_CORE_SIM_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -18,7 +20,7 @@ bool sim_runtime_3d_solver_core_sim_step_first_pass(
     const uint8_t *solid_mask,
     const SimRuntime3DForceAxis *scene_up_axis,
     const AppConfig *cfg,
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+    double dt FISICS_DIM(time) FISICS_UNIT(second),
     float max_velocity_displacement_cells_limit,
     CoreSimFrameOutcome *outcome,
     SimRuntime3DSolverStepMetrics *out_metrics);

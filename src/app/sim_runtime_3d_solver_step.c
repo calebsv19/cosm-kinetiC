@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_runtime_3d_solver.h"
 
 #include <math.h>
@@ -359,12 +361,12 @@ static void apply_buoyancy(SimRuntime3DVolume *volume,
                            const uint8_t *solid_mask,
                            const SimRuntime3DForceAxis *scene_up_axis,
                            float buoyancy_force,
-                           float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                           float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     float axis_x = 0.0f;
     float axis_y = -1.0f;
     float axis_z = 0.0f;
     float axis_len = 0.0f;
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (!volume || !scratch || buoyancy_force == 0.0f || dt <= zero_seconds) return;
     if (scene_up_axis && scene_up_axis->valid) {
         axis_x = scene_up_axis->x;
@@ -582,9 +584,9 @@ static void advect_density(SimRuntime3DVolume *volume,
                            float dt_cells,
                            float diffusion_blend,
                            float density_decay,
-                           float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                           float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     const SimRuntime3DDomainDesc *desc = NULL;
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (!volume || !scratch) return;
     desc = &volume->desc;
 
@@ -640,14 +642,14 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                                            const uint8_t *solid_mask,
                                            const SimRuntime3DForceAxis *scene_up_axis,
                                            const AppConfig *cfg,
-                                           double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                                           double dt FISICS_DIM(time) FISICS_UNIT(second),
                                            float max_velocity_displacement_cells_limit,
                                            SimRuntime3DSolverStepMetrics *out_metrics) {
-    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
-    float zero_meters [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.0f;
-    float one_meter [[fisics::dim(length)]] [[fisics::unit(meter)]] = 1.0f;
-    float voxel_size [[fisics::dim(length)]] [[fisics::unit(meter)]] = 1.0f;
+    double zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0;
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
+    float zero_meters FISICS_DIM(length) FISICS_UNIT(meter) = 0.0f;
+    float one_meter FISICS_DIM(length) FISICS_UNIT(meter) = 1.0f;
+    float voxel_size FISICS_DIM(length) FISICS_UNIT(meter) = 1.0f;
     float dt_cells = 0.0f;
     float diffusion_blend = 0.0f;
     float viscosity_blend = 0.0f;

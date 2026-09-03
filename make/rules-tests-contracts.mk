@@ -28,7 +28,7 @@ KIT_VIZ_FIELD_TEST_SRCS := \
 test-kitviz-field-adapter: $(KIT_VIZ_FIELD_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-I$(KIT_VIZ_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/kit_viz_field_adapter_test $(KIT_VIZ_FIELD_TEST_SRCS) -lm
 	$(BUILD_DIR)/kit_viz_field_adapter_test
@@ -36,14 +36,14 @@ test-kitviz-field-adapter: $(KIT_VIZ_FIELD_TEST_SRCS)
 test-atmospheric-field-contract: $(ATMOSPHERIC_FIELD_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/atmospheric_field_contract_test $(ATMOSPHERIC_FIELD_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/atmospheric_field_contract_test
 
 test-soft-body-contract: $(SOFT_BODY_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/soft_body_contract_test $(SOFT_BODY_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/soft_body_contract_test
 
@@ -778,21 +778,21 @@ endif
 test-sim-mode-route-contract: $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/sim_mode_route_contract_test $(SIM_MODE_ROUTE_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_mode_route_contract_test
 
 test-wind-tunnel-3d-contract: $(WIND_TUNNEL_3D_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/wind_tunnel_3d_contract_test $(WIND_TUNNEL_3D_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/wind_tunnel_3d_contract_test
 
 test-water-mode-contract: $(WATER_MODE_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/water_mode_contract_test $(WATER_MODE_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/water_mode_contract_test
 
@@ -807,14 +807,14 @@ test-water-surface-artifacts-contract: $(WATER_SURFACE_ARTIFACTS_CONTRACT_TEST_S
 test-sim-runtime-emitter-contract: $(SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/sim_runtime_emitter_contract_test $(SIM_RUNTIME_EMITTER_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_emitter_contract_test
 
 test-sim-runtime-obstacle-contract: $(SIM_RUNTIME_OBSTACLE_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/sim_runtime_obstacle_contract_test $(SIM_RUNTIME_OBSTACLE_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_obstacle_contract_test
 
@@ -872,14 +872,14 @@ test-sim-runtime-3d-anchor-contract: $(SIM_RUNTIME_3D_ANCHOR_TEST_SRCS)
 test-sim-runtime-3d-footprint-contract: $(SIM_RUNTIME_3D_FOOTPRINT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/sim_runtime_3d_footprint_contract_test $(SIM_RUNTIME_3D_FOOTPRINT_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_3d_footprint_contract_test
 
 test-sim-runtime-3d-space-contract: $(SIM_RUNTIME_3D_SPACE_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_3d_space_contract_test $(SIM_RUNTIME_3D_SPACE_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_3d_space_contract_test
@@ -887,7 +887,7 @@ test-sim-runtime-3d-space-contract: $(SIM_RUNTIME_3D_SPACE_TEST_SRCS)
 test-sim-runtime-3d-domain-contract: $(SIM_RUNTIME_3D_DOMAIN_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_3d_domain_contract_test $(SIM_RUNTIME_3D_DOMAIN_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_3d_domain_contract_test
@@ -895,7 +895,7 @@ test-sim-runtime-3d-domain-contract: $(SIM_RUNTIME_3D_DOMAIN_TEST_SRCS)
 test-sim-runtime-3d-solver-contract: $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_SIM_DIR)/include \
 		-o $(BUILD_DIR)/sim_runtime_3d_solver_contract_test $(SIM_RUNTIME_3D_SOLVER_TEST_SRCS) -lm
 	$(BUILD_DIR)/sim_runtime_3d_solver_contract_test
@@ -909,7 +909,7 @@ test-scene-core-sim-runtime-step-contract: $(SCENE_CORE_SIM_RUNTIME_STEP_TEST_SR
 test-menu-settings-shell-contract: $(MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) -I$(SRC_DIR)/tools \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/menu_settings_shell_contract_test $(MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/menu_settings_shell_contract_test
@@ -925,14 +925,14 @@ test-scene-menu-layout-contract: $(SCENE_MENU_LAYOUT_CONTRACT_TEST_SRCS)
 test-quality-profiles-contract: $(QUALITY_PROFILES_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/quality_profiles_contract_test $(QUALITY_PROFILES_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/quality_profiles_contract_test
 
 test-config-loader-contract: $(CONFIG_LOADER_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/config_loader_contract_test $(CONFIG_LOADER_CONTRACT_TEST_SRCS) -lm
 	$(BUILD_DIR)/config_loader_contract_test
 
@@ -952,7 +952,7 @@ test-sim-runtime-backend-dispatch-contract: $(SIM_RUNTIME_BACKEND_DISPATCH_TEST_
 test-preset-io-dimensional-contract: $(PRESET_IO_DIMENSIONAL_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-o $(BUILD_DIR)/preset_io_dimensional_contract_test $(PRESET_IO_DIMENSIONAL_TEST_SRCS) -lm
 	$(BUILD_DIR)/preset_io_dimensional_contract_test
 
@@ -971,21 +971,21 @@ test-rigid2d-collision-contract: $(RIGID2D_COLLISION_CONTRACT_TEST_SRCS)
 test-scene-editor-retained-document-contract: $(SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) $(MESH_PREVIEW_BRIDGE_INCS) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) $(MESH_PREVIEW_BRIDGE_INCS) \
 		-o $(BUILD_DIR)/scene_editor_retained_document_contract_test $(SCENE_EDITOR_RETAINED_DOCUMENT_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_retained_document_contract_test
 
 test-scene-editor-scene-library-contract: $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_scene_library_contract_test $(SCENE_EDITOR_SCENE_LIBRARY_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_scene_library_contract_test
 
 test-scene-project-cache-output-status-contract: $(SCENE_PROJECT_CACHE_OUTPUT_STATUS_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -Itests \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) -Itests \
 		-o $(BUILD_DIR)/scene_project_cache_output_status_contract_test $(SCENE_PROJECT_CACHE_OUTPUT_STATUS_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_project_cache_output_status_contract_test
 
@@ -999,14 +999,14 @@ test-physics-sim-workspace-authoring-host: $(PHYSICS_SIM_WORKSPACE_AUTHORING_HOS
 test-scene-editor-pane-host-contract: $(SCENE_EDITOR_PANE_HOST_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_PANE_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_RENDER_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_BASE_DIR)/include \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) -I$(CORE_PANE_DIR)/include -I$(KIT_PANE_DIR)/include -I$(KIT_RENDER_DIR)/include -I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_pane_host_contract_test $(SCENE_EDITOR_PANE_HOST_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_pane_host_contract_test
 
 test-scene-editor-viewport-contract: $(SCENE_EDITOR_VIEWPORT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_VIEWPORT2D_DIR)/include -I$(CORE_BASE_DIR)/include \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) -I$(CORE_VIEWPORT2D_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_viewport_contract_test $(SCENE_EDITOR_VIEWPORT_TEST_SRCS) -lm
 	$(BUILD_DIR)/scene_editor_viewport_contract_test
 
@@ -1020,7 +1020,7 @@ test-scene-editor-object-pick-contract: $(PHYSICS_SIM_APP_OBJS_NO_MAIN) tests/sc
 test-scene-editor-wind-setup-contract: $(SCENE_EDITOR_WIND_SETUP_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		$(JSON_CFLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_BASE_DIR)/include \
+		$(JSON_CFLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) -I$(CORE_SCENE_DIR)/include $(MESH_PREVIEW_BRIDGE_INCS) -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/scene_editor_wind_setup_contract_test $(SCENE_EDITOR_WIND_SETUP_TEST_SRCS) $(JSON_LIBS) -lm
 	$(BUILD_DIR)/scene_editor_wind_setup_contract_test
 
@@ -1116,7 +1116,7 @@ test-runtime-mesh-obstacle-proxy-contract: $(RUNTIME_MESH_OBSTACLE_PROXY_TEST_SR
 test-structural-runtime-split-contract: $(STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CSTD) $(WARN) $(DEBUG) \
-		-I$(INC_DIR) -I$(SRC_DIR) $(STRUCTURAL_RUNTIME_SPLIT_TEST_PLATFORM_CFLAGS) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) $(STRUCTURAL_RUNTIME_SPLIT_TEST_PLATFORM_CFLAGS) \
 		-o $(BUILD_DIR)/structural_runtime_split_contract_test $(STRUCTURAL_RUNTIME_SPLIT_TEST_SRCS) -lm
 	$(BUILD_DIR)/structural_runtime_split_contract_test
 
@@ -1245,7 +1245,7 @@ PHYSICS_SIM_UI_BUTTON_CONTRACT_TEST_SRCS := \
 test-shared-theme-font-adapter: $(SHARED_THEME_FONT_ADAPTER_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/shared_theme_font_adapter_test $(SHARED_THEME_FONT_ADAPTER_TEST_SRCS) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
 	$(BUILD_DIR)/shared_theme_font_adapter_test
@@ -1253,7 +1253,7 @@ test-shared-theme-font-adapter: $(SHARED_THEME_FONT_ADAPTER_TEST_SRCS)
 test-physics-sim-ui-button-contract: $(PHYSICS_SIM_UI_BUTTON_CONTRACT_TEST_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) \
-		-I$(INC_DIR) -I$(SRC_DIR) \
+		-I$(INC_DIR) -I$(SRC_DIR) -I$(FISICS_INCLUDE_DIR) \
 		-I$(KIT_UI_DIR)/include -I$(KIT_RENDER_DIR)/include \
 		-I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/physics_sim_ui_button_contract_test $(PHYSICS_SIM_UI_BUTTON_CONTRACT_TEST_SRCS) $(LIBS)

@@ -1,6 +1,8 @@
 #ifndef SOFT_BODY_H
 #define SOFT_BODY_H
 
+#include <fisics/extensions.h>
+
 #include "physics/math/math2d.h"
 #include "app/app_config.h"
 
@@ -45,8 +47,8 @@ SoftBody2D *soft_body2d_create(int capacity);
 void        soft_body2d_destroy(SoftBody2D *body);
 int         soft_body2d_add_node(SoftBody2D *body,
                                  Vec2 position,
-                                 float mass [[fisics::dim(mass)]]
-                                            [[fisics::unit(kilogram)]]);
+                                 float mass FISICS_DIM(mass)
+                                            FISICS_UNIT(kilogram));
 bool        soft_body2d_add_spring(SoftBody2D *body,
                                    int node_a,
                                    int node_b,
@@ -58,8 +60,8 @@ bool        soft_body2d_add_area_constraint(SoftBody2D *body,
                                             int node_c,
                                             float stiffness);
 void        soft_body2d_step(SoftBody2D *body,
-                             double dt [[fisics::dim(time)]]
-                                       [[fisics::unit(second)]],
+                             double dt FISICS_DIM(time)
+                                       FISICS_UNIT(second),
                              const AppConfig *cfg);
 
 #endif // SOFT_BODY_H

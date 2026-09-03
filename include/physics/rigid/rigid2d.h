@@ -1,6 +1,8 @@
 #ifndef RIGID2D_H
 #define RIGID2D_H
 
+#include <fisics/extensions.h>
+
 #include "physics/math/math2d.h"
 #include "app/app_config.h"
 
@@ -82,7 +84,7 @@ void rigid2d_set_mass(RigidBody2D *b, float mass, float inertia);
 
 // Integrate motion, handle simple circle-circle and circle-floor collisions.
 void rigid2d_step(Rigid2DWorld *w,
-                  double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                  double dt FISICS_DIM(time) FISICS_UNIT(second),
                   const AppConfig *cfg);
 
 #endif // RIGID2D_H

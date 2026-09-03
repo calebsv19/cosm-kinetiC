@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "import/runtime_scene_solver_projection_internal.h"
 
 #include <string.h>
@@ -139,13 +141,13 @@ static void runtime_scene_solver_projection_apply_json_object(json_object *src,
         apply_normalized_size(sx, sy, sz, mapping, dst);
         dst->position_z = runtime_scene_solver_projection_scaled_position(pz, world_scale);
     } else {
-        double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = px;
-        double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = py;
-        double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = pz;
-        double scene_size_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = sx;
-        double scene_size_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = sy;
-        double scene_size_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = sz;
-        float fallback_size [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.08f;
+        double scene_position_x FISICS_DIM(length) FISICS_UNIT(meter) = px;
+        double scene_position_y FISICS_DIM(length) FISICS_UNIT(meter) = py;
+        double scene_position_z FISICS_DIM(length) FISICS_UNIT(meter) = pz;
+        double scene_size_x FISICS_DIM(length) FISICS_UNIT(meter) = sx;
+        double scene_size_y FISICS_DIM(length) FISICS_UNIT(meter) = sy;
+        double scene_size_z FISICS_DIM(length) FISICS_UNIT(meter) = sz;
+        float fallback_size FISICS_DIM(length) FISICS_UNIT(meter) = 0.08f;
 
         dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
         dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
@@ -184,9 +186,9 @@ static void runtime_scene_solver_projection_apply_object(
         position = object->plane_primitive.frame.origin;
         apply_frame_orientation(&object->plane_primitive.frame, dst);
         if (mapping && mapping->valid) {
-            double scene_half_width [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_half_width FISICS_DIM(length) FISICS_UNIT(meter) =
                 object->plane_primitive.width * 0.5;
-            double scene_half_height [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_half_height FISICS_DIM(length) FISICS_UNIT(meter) =
                 object->plane_primitive.height * 0.5;
 
             dst->size_x = (float)sim_runtime_3d_space_normalize_half_extent(
@@ -194,9 +196,9 @@ static void runtime_scene_solver_projection_apply_object(
             dst->size_y = (float)sim_runtime_3d_space_normalize_half_extent(
                 scene_half_height, mapping->span_y, 0.04f);
         } else {
-            double scene_half_width [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_half_width FISICS_DIM(length) FISICS_UNIT(meter) =
                 object->plane_primitive.width * 0.5;
-            double scene_half_height [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_half_height FISICS_DIM(length) FISICS_UNIT(meter) =
                 object->plane_primitive.height * 0.5;
 
             dst->size_x = runtime_scene_solver_projection_scaled_size(
@@ -210,9 +212,9 @@ static void runtime_scene_solver_projection_apply_object(
         position = object->rect_prism_primitive.frame.origin;
         apply_frame_orientation(&object->rect_prism_primitive.frame, dst);
         if (mapping && mapping->valid) {
-            double scene_half_width [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_half_width FISICS_DIM(length) FISICS_UNIT(meter) =
                 object->rect_prism_primitive.width * 0.5;
-            double scene_half_height [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_half_height FISICS_DIM(length) FISICS_UNIT(meter) =
                 object->rect_prism_primitive.height * 0.5;
 
             dst->size_x = (float)sim_runtime_3d_space_normalize_half_extent(
@@ -220,9 +222,9 @@ static void runtime_scene_solver_projection_apply_object(
             dst->size_y = (float)sim_runtime_3d_space_normalize_half_extent(
                 scene_half_height, mapping->span_y, 0.04f);
         } else {
-            double scene_half_width [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_half_width FISICS_DIM(length) FISICS_UNIT(meter) =
                 object->rect_prism_primitive.width * 0.5;
-            double scene_half_height [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+            double scene_half_height FISICS_DIM(length) FISICS_UNIT(meter) =
                 object->rect_prism_primitive.height * 0.5;
 
             dst->size_x = runtime_scene_solver_projection_scaled_size(
@@ -236,10 +238,10 @@ static void runtime_scene_solver_projection_apply_object(
         position = object->object.transform.position;
         scale = object->object.transform.scale;
         {
-            double scene_size_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = scale.x;
-            double scene_size_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = scale.y;
-            double scene_size_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = scale.z;
-            float fallback_object_size [[fisics::dim(length)]] [[fisics::unit(meter)]] = 0.08f;
+            double scene_size_x FISICS_DIM(length) FISICS_UNIT(meter) = scale.x;
+            double scene_size_y FISICS_DIM(length) FISICS_UNIT(meter) = scale.y;
+            double scene_size_z FISICS_DIM(length) FISICS_UNIT(meter) = scale.z;
+            float fallback_object_size FISICS_DIM(length) FISICS_UNIT(meter) = 0.08f;
 
             if (mapping && mapping->valid) {
                 apply_normalized_size(scene_size_x, scene_size_y, scene_size_z, mapping, dst);
@@ -257,13 +259,13 @@ static void runtime_scene_solver_projection_apply_object(
     if (mapping && mapping->valid) {
         apply_normalized_position(position.x, position.y, mapping, dst);
     } else {
-        double scene_position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.x;
-        double scene_position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.y;
+        double scene_position_x FISICS_DIM(length) FISICS_UNIT(meter) = position.x;
+        double scene_position_y FISICS_DIM(length) FISICS_UNIT(meter) = position.y;
         dst->position_x = runtime_scene_solver_projection_scaled_position(scene_position_x, world_scale);
         dst->position_y = runtime_scene_solver_projection_scaled_position(scene_position_y, world_scale);
     }
     {
-        double scene_position_z [[fisics::dim(length)]] [[fisics::unit(meter)]] = position.z;
+        double scene_position_z FISICS_DIM(length) FISICS_UNIT(meter) = position.z;
         dst->position_z = runtime_scene_solver_projection_scaled_position(scene_position_z, world_scale);
     }
     if (runtime_scene_solver_projection_overlay_for_object(runtime_root,

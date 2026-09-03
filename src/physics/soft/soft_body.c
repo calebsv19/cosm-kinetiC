@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "physics/soft/soft_body.h"
 
 #include <math.h>
@@ -19,30 +21,30 @@ static float soft_body_triangle_signed_area(Vec2 a, Vec2 b, Vec2 c) {
 }
 
 static float soft_body_velocity_displacement(
-    float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second),
+    float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     return velocity * dt;
 }
 
 static float soft_body_position_advance(
-    float position [[fisics::dim(length)]] [[fisics::unit(meter)]],
-    float displacement [[fisics::dim(length)]] [[fisics::unit(meter)]]) {
+    float position FISICS_DIM(length) FISICS_UNIT(meter),
+    float displacement FISICS_DIM(length) FISICS_UNIT(meter)) {
     return position + displacement;
 }
 
 static float soft_body_force_from_mass_acceleration(
-    float mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]],
-    float acceleration [[fisics::dim(acceleration)]]
-                       [[fisics::unit(meter_per_second_squared)]]) {
+    float mass FISICS_DIM(mass) FISICS_UNIT(kilogram),
+    float acceleration FISICS_DIM(acceleration)
+                       FISICS_UNIT(meter_per_second_squared)) {
     return mass * acceleration;
 }
 
 static float soft_body_acceleration_from_force(
-    float force [[fisics::dim(force)]] [[fisics::unit(newton)]],
-    float mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]]) {
-    float zero_mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]] = 0.0f;
-    float zero_accel [[fisics::dim(acceleration)]]
-                     [[fisics::unit(meter_per_second_squared)]] = 0.0f;
+    float force FISICS_DIM(force) FISICS_UNIT(newton),
+    float mass FISICS_DIM(mass) FISICS_UNIT(kilogram)) {
+    float zero_mass FISICS_DIM(mass) FISICS_UNIT(kilogram) = 0.0f;
+    float zero_accel FISICS_DIM(acceleration)
+                     FISICS_UNIT(meter_per_second_squared) = 0.0f;
     return (mass > zero_mass) ? (force / mass) : zero_accel;
 }
 
@@ -223,8 +225,8 @@ void soft_body2d_destroy(SoftBody2D *body) {
 
 int soft_body2d_add_node(SoftBody2D *body,
                          Vec2 position,
-                         float mass [[fisics::dim(mass)]]
-                                    [[fisics::unit(kilogram)]]) {
+                         float mass FISICS_DIM(mass)
+                                    FISICS_UNIT(kilogram)) {
     if (!body) return -1;
     if (!soft_body_reserve_nodes(body, body->count + 1)) return -1;
     SoftBodyNode *node = &body->nodes[body->count];
@@ -283,12 +285,12 @@ bool soft_body2d_add_area_constraint(SoftBody2D *body,
 }
 
 void soft_body2d_step(SoftBody2D *body,
-                      double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                      double dt FISICS_DIM(time) FISICS_UNIT(second),
                       const AppConfig *cfg) {
     (void)cfg;
     if (!body || body->count == 0) return;
-    float fdt [[fisics::dim(time)]] [[fisics::unit(second)]] = (float)dt;
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float fdt FISICS_DIM(time) FISICS_UNIT(second) = (float)dt;
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (fdt <= zero_seconds) return;
     Vec2 *forces = (Vec2 *)calloc((size_t)body->count, sizeof(*forces));
     Vec2 *previous_positions = (Vec2 *)calloc((size_t)body->count, sizeof(*previous_positions));
@@ -302,14 +304,14 @@ void soft_body2d_step(SoftBody2D *body,
         previous_positions[i] = body->nodes[i].position;
     }
 
-    float gravity_y [[fisics::dim(acceleration)]]
-                    [[fisics::unit(meter_per_second_squared)]] = body->gravity.y;
-    float zero_mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]] = 0.0f;
+    float gravity_y FISICS_DIM(acceleration)
+                    FISICS_UNIT(meter_per_second_squared) = body->gravity.y;
+    float zero_mass FISICS_DIM(mass) FISICS_UNIT(kilogram) = 0.0f;
     for (int i = 0; i < body->count; ++i) {
         SoftBodyNode *node = &body->nodes[i];
-        float mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]] = node->mass;
+        float mass FISICS_DIM(mass) FISICS_UNIT(kilogram) = node->mass;
         if (mass <= zero_mass) continue;
-        float gravity_force_y [[fisics::dim(force)]] [[fisics::unit(newton)]] =
+        float gravity_force_y FISICS_DIM(force) FISICS_UNIT(newton) =
             soft_body_force_from_mass_acceleration(mass, gravity_y);
         forces[i].y += gravity_force_y;
     }
@@ -340,34 +342,34 @@ void soft_body2d_step(SoftBody2D *body,
                                  : SOFT_BODY_DEFAULT_DAMPING;
     for (int i = 0; i < body->count; ++i) {
         SoftBodyNode *node = &body->nodes[i];
-        float mass [[fisics::dim(mass)]] [[fisics::unit(kilogram)]] = node->mass;
+        float mass FISICS_DIM(mass) FISICS_UNIT(kilogram) = node->mass;
         if (mass <= zero_mass) {
             node->velocity = vec2(0.0f, 0.0f);
             continue;
         }
-        float force_x [[fisics::dim(force)]] [[fisics::unit(newton)]] = forces[i].x;
-        float force_y [[fisics::dim(force)]] [[fisics::unit(newton)]] = forces[i].y;
-        float accel_x [[fisics::dim(acceleration)]]
-                      [[fisics::unit(meter_per_second_squared)]] =
+        float force_x FISICS_DIM(force) FISICS_UNIT(newton) = forces[i].x;
+        float force_y FISICS_DIM(force) FISICS_UNIT(newton) = forces[i].y;
+        float accel_x FISICS_DIM(acceleration)
+                      FISICS_UNIT(meter_per_second_squared) =
             soft_body_acceleration_from_force(force_x, mass);
-        float accel_y [[fisics::dim(acceleration)]]
-                      [[fisics::unit(meter_per_second_squared)]] =
+        float accel_y FISICS_DIM(acceleration)
+                      FISICS_UNIT(meter_per_second_squared) =
             soft_body_acceleration_from_force(force_y, mass);
-        float position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        float position_x FISICS_DIM(length) FISICS_UNIT(meter) =
             node->position.x;
-        float position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        float position_y FISICS_DIM(length) FISICS_UNIT(meter) =
             node->position.y;
-        float velocity_x [[fisics::dim(velocity)]]
-                         [[fisics::unit(meter_per_second)]] = node->velocity.x;
-        float velocity_y [[fisics::dim(velocity)]]
-                         [[fisics::unit(meter_per_second)]] = node->velocity.y;
+        float velocity_x FISICS_DIM(velocity)
+                         FISICS_UNIT(meter_per_second) = node->velocity.x;
+        float velocity_y FISICS_DIM(velocity)
+                         FISICS_UNIT(meter_per_second) = node->velocity.y;
         velocity_x += accel_x * fdt;
         velocity_y += accel_y * fdt;
         velocity_x *= velocity_damping;
         velocity_y *= velocity_damping;
-        float displacement_x [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        float displacement_x FISICS_DIM(length) FISICS_UNIT(meter) =
             soft_body_velocity_displacement(velocity_x, fdt);
-        float displacement_y [[fisics::dim(length)]] [[fisics::unit(meter)]] =
+        float displacement_y FISICS_DIM(length) FISICS_UNIT(meter) =
             soft_body_velocity_displacement(velocity_y, fdt);
         node->position.x = soft_body_position_advance(position_x, displacement_x);
         node->position.y = soft_body_position_advance(position_y, displacement_y);

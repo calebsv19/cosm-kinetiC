@@ -1,6 +1,8 @@
 #ifndef SIM_RUNTIME_BACKEND_2D_INTERNAL_H
 #define SIM_RUNTIME_BACKEND_2D_INTERNAL_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -58,6 +60,6 @@ void backend_2d_build_emitter_masks(SimRuntimeBackend *backend, SceneState *scen
 void backend_2d_rasterize_dynamic_obstacles(SimRuntimeBackend *backend, SceneState *scene);
 void backend_2d_apply_emitters(SimRuntimeBackend *backend,
                                SceneState *scene,
-                               double dt [[fisics::dim(time)]] [[fisics::unit(second)]]);
+                               double dt FISICS_DIM(time) FISICS_UNIT(second));
 
 #endif // SIM_RUNTIME_BACKEND_2D_INTERNAL_H

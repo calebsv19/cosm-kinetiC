@@ -22,10 +22,8 @@ endif
 WARN      := -Wall -Wextra -Wpedantic
 DEBUG     := -g
 
-CFLAGS    := $(CSTD) $(WARN) $(DEBUG) $(ARCH_FLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools
+CFLAGS    := $(CSTD) $(WARN) $(DEBUG) $(ARCH_FLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(FISICS_INCLUDE_DIR)
 CFLAGS    += -DPHYSICS_SIM_REPO_ROOT=\"$(abspath .)\"
-CFLAGS    += -Wno-unknown-attributes
-CFLAGS    += -Wno-c23-extensions
 LDFLAGS   := $(ARCH_FLAGS)
 LIBS      :=
 FISICS_FLAGS := --overlay=physics-units
@@ -143,4 +141,7 @@ else
 PACKAGE_SOURCE_BIN := $(CLANG_TARGET)
 endif
 
-FISICS_CFLAGS = $(filter-out -Wno-unknown-attributes,$(CFLAGS))
+# The fisiCs driver accepts include paths and preprocessor definitions, but it
+# is not a drop-in Clang flag parser. Keep its compile lane limited to the
+# shared source contract instead of forwarding warning, debug, and arch flags.
+FISICS_CFLAGS = $(filter -I% -D%,$(CFLAGS))

@@ -1,6 +1,8 @@
 #ifndef PARTICLES2D_H
 #define PARTICLES2D_H
 
+#include <fisics/extensions.h>
+
 #include "physics/math/math2d.h"
 #include "app/app_config.h"
 #include "physics/fluid2d/fluid2d.h"
@@ -31,7 +33,7 @@ void particles2d_spawn(Particles2D *p,
 
 // Step particles; optionally respond to fluid velocity and gravity.
 void particles2d_step(Particles2D *p,
-                      double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                      double dt FISICS_DIM(time) FISICS_UNIT(second),
                       const AppConfig *cfg,
                       const Fluid2D   *fluid,
                       const Rigid2DWorld *rigid);

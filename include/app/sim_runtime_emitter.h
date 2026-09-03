@@ -1,6 +1,8 @@
 #ifndef SIM_RUNTIME_EMITTER_H
 #define SIM_RUNTIME_EMITTER_H
 
+#include <fisics/extensions.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -42,8 +44,8 @@ typedef struct SimRuntimeEmitterResolved {
     int attached_runtime_mesh;
     float position_x;
     float position_y;
-    float position_z [[fisics::dim(length)]] [[fisics::unit(meter)]];
-    float radius [[fisics::dim(length)]] [[fisics::unit(meter)]];
+    float position_z FISICS_DIM(length) FISICS_UNIT(meter);
+    float radius FISICS_DIM(length) FISICS_UNIT(meter);
     float strength;
     float dir_x;
     float dir_y;

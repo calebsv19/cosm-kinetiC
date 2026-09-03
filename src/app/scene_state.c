@@ -1,5 +1,6 @@
 #include "app/scene_state.h"
 
+#include <fisics/extensions.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -26,10 +27,11 @@ SceneState scene_create(const AppConfig *cfg,
                         const ShapeAssetLibrary *shape_library,
                         const SimModeRoute *mode_route) {
     SceneState s;
+    double zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0;
     memset(&s, 0, sizeof(s));
 
     s.time = 0.0;
-    s.dt = 0.0;
+    s.dt = zero_seconds;
     (void)core_sim_loop_init(&s.runtime_loop, NULL);
     core_sim_loop_set_paused(&s.runtime_loop, false);
     s.paused = false;

@@ -687,6 +687,12 @@ Last updated: 2026-09-03
 - The current local compiler-units boundary now includes the structural
   dynamic-runtime lane and the `2D` particle integrator lane in addition to
   the rigid-body lane:
+  - all first-party runtime declarations in `src/` and `include/` now use the
+    public `FISICS_DIM(...)` / `FISICS_UNIT(...)` portability surface from
+    `<fisics/extensions.h>`; ordinary Clang builds erase the annotations while
+    fisiCs semantic-dump lanes retain their physical meaning
+  - direct `[[fisics::dim(...)]]` and `[[fisics::unit(...)]]` spellings are no
+    longer present in first-party runtime source
   - rigid-body lane remains active:
     - `src/physics/rigid/rigid2d.c` now has an explicit semantic-dump target
       and time-typed `dt` at the solver entry

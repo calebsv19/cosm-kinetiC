@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/scene_core_sim_runtime_step.h"
 
 #include <math.h>
@@ -26,7 +28,7 @@ static bool run_mode_pre(void *user_context,
                          const CoreSimTickContext *tick,
                          CoreSimPassOutcome *outcome) {
     PhysicsSimSceneCoreSimStepContext *ctx = (PhysicsSimSceneCoreSimStepContext *)user_context;
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]] = tick ? tick->dt_seconds : 0.0;
+    double dt FISICS_DIM(time) FISICS_UNIT(second) = tick ? tick->dt_seconds : 0.0;
     core_sim_pass_outcome_init(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_MODE_PRE);
     if (!ctx || !tick || !ctx->scene || !ctx->step_cfg) {
         set_pass_failure(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_MODE_PRE, "missing mode pre context");
@@ -42,7 +44,7 @@ static bool run_emitters_boundary(void *user_context,
                                   const CoreSimTickContext *tick,
                                   CoreSimPassOutcome *outcome) {
     PhysicsSimSceneCoreSimStepContext *ctx = (PhysicsSimSceneCoreSimStepContext *)user_context;
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]] = tick ? tick->dt_seconds : 0.0;
+    double dt FISICS_DIM(time) FISICS_UNIT(second) = tick ? tick->dt_seconds : 0.0;
     core_sim_pass_outcome_init(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_EMITTERS_BOUNDARY);
     if (!ctx || !tick || !ctx->scene) {
         set_pass_failure(outcome,
@@ -60,7 +62,7 @@ static bool run_backend_step(void *user_context,
                              const CoreSimTickContext *tick,
                              CoreSimPassOutcome *outcome) {
     PhysicsSimSceneCoreSimStepContext *ctx = (PhysicsSimSceneCoreSimStepContext *)user_context;
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]] = tick ? tick->dt_seconds : 0.0;
+    double dt FISICS_DIM(time) FISICS_UNIT(second) = tick ? tick->dt_seconds : 0.0;
     core_sim_pass_outcome_init(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_BACKEND_STEP);
     if (!ctx || !tick || !ctx->scene || !ctx->step_cfg) {
         set_pass_failure(outcome,
@@ -95,7 +97,7 @@ static bool run_mode_post(void *user_context,
                           const CoreSimTickContext *tick,
                           CoreSimPassOutcome *outcome) {
     PhysicsSimSceneCoreSimStepContext *ctx = (PhysicsSimSceneCoreSimStepContext *)user_context;
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]] = tick ? tick->dt_seconds : 0.0;
+    double dt FISICS_DIM(time) FISICS_UNIT(second) = tick ? tick->dt_seconds : 0.0;
     core_sim_pass_outcome_init(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_MODE_POST);
     if (!ctx || !tick || !ctx->scene) {
         set_pass_failure(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_MODE_POST, "missing mode post context");
@@ -124,7 +126,7 @@ static bool run_objects(void *user_context,
                         const CoreSimTickContext *tick,
                         CoreSimPassOutcome *outcome) {
     PhysicsSimSceneCoreSimStepContext *ctx = (PhysicsSimSceneCoreSimStepContext *)user_context;
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]] = tick ? tick->dt_seconds : 0.0;
+    double dt FISICS_DIM(time) FISICS_UNIT(second) = tick ? tick->dt_seconds : 0.0;
     core_sim_pass_outcome_init(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_OBJECTS);
     if (!ctx || !tick || !ctx->scene || !ctx->step_cfg) {
         set_pass_failure(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_OBJECTS, "missing object-step context");
@@ -142,7 +144,7 @@ static bool run_dynamic_obstacles(void *user_context,
                                   const CoreSimTickContext *tick,
                                   CoreSimPassOutcome *outcome) {
     PhysicsSimSceneCoreSimStepContext *ctx = (PhysicsSimSceneCoreSimStepContext *)user_context;
-    double dt [[fisics::dim(time)]] [[fisics::unit(second)]] = tick ? tick->dt_seconds : 0.0;
+    double dt FISICS_DIM(time) FISICS_UNIT(second) = tick ? tick->dt_seconds : 0.0;
     core_sim_pass_outcome_init(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_DYNAMIC_OBSTACLES);
     if (!ctx || !tick || !ctx->scene) {
         set_pass_failure(outcome,
@@ -184,7 +186,7 @@ void physics_sim_scene_core_sim_set_paused(SceneState *scene, bool paused) {
 bool physics_sim_scene_core_sim_step(SceneState *scene,
                                      AppConfig *cfg,
                                      const SimModeHooks *mode_hooks,
-                                     double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                                     double dt FISICS_DIM(time) FISICS_UNIT(second),
                                      PhysicsSimSceneCoreSimStepResult *result) {
     static const CoreSimPassDescriptor passes[] = {
         {PHYSICS_SIM_SCENE_CORE_SIM_PASS_MODE_PRE, "mode_pre", run_mode_pre},
@@ -202,10 +204,10 @@ bool physics_sim_scene_core_sim_step(SceneState *scene,
     PhysicsSimSceneCoreSimStepContext ctx;
     CoreSimFrameOutcome outcome;
     int substeps;
-    double zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0;
-    double substep_dt [[fisics::dim(time)]] [[fisics::unit(second)]];
-    double frame_dt [[fisics::dim(time)]] [[fisics::unit(second)]];
-    double accumulator_epsilon [[fisics::dim(time)]] [[fisics::unit(second)]];
+    double zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0;
+    double substep_dt FISICS_DIM(time) FISICS_UNIT(second);
+    double frame_dt FISICS_DIM(time) FISICS_UNIT(second);
+    double accumulator_epsilon FISICS_DIM(time) FISICS_UNIT(second);
 
     if (!scene || !cfg || dt <= zero_seconds) {
         if (result) {
@@ -213,7 +215,7 @@ bool physics_sim_scene_core_sim_step(SceneState *scene,
                 CORE_SIM_STATUS_INVALID_ARGUMENT,
                 "invalid scene core sim step arguments");
             result->substeps_requested = 0;
-            result->substep_dt = 0.0;
+            result->substep_dt = zero_seconds;
         }
         return false;
     }

@@ -9,6 +9,7 @@
 #include "app/sim_runtime_obstacle.h"
 #include "app/atmospheric/atmospheric_field.h"
 
+#include <fisics/extensions.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -759,6 +760,7 @@ static void backend_3d_scaffold_seed_uniform_velocity_2d(SimRuntimeBackend *back
                                                          float velocity_x,
                                                          float velocity_y) {
     SimRuntimeBackend3DScaffold *state = backend_3d_scaffold_state(backend);
+    const float zero_velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second) = 0.0f;
     if (!state || state->volume.desc.cell_count == 0) return;
     for (int z = 0; z < state->volume.desc.grid_d; ++z) {
         for (int y = 0; y < state->volume.desc.grid_h; ++y) {
@@ -780,7 +782,7 @@ static void backend_3d_scaffold_seed_uniform_velocity_2d(SimRuntimeBackend *back
             state->volume.density[i] = 0.0f;
             state->volume.velocity_x[i] = velocity_x;
             state->volume.velocity_y[i] = velocity_y;
-            state->volume.velocity_z[i] = 0.0f;
+            state->volume.velocity_z[i] = zero_velocity;
             state->volume.pressure[i] = 0.0f;
         }
     }

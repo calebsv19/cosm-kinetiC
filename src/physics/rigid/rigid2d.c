@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "physics/rigid/rigid2d.h"
 #include "physics/rigid/rigid2d_collision.h"
 
@@ -25,7 +27,7 @@ static void rigid2d_integrate_body(
     RigidBody2D *b,
     Vec2 gravity_vec,
     float ground_y,
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second)) {
     if (!b) return;
     if (b->is_static || b->inv_mass <= 0.0f || b->locked) return;
 
@@ -54,7 +56,7 @@ static void rigid2d_integrate_world(
     Rigid2DWorld *w,
     Vec2 gravity_vec,
     float ground_y,
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second)) {
     if (!w) return;
     for (int i = 0; i < w->count; ++i) {
         rigid2d_integrate_body(&w->bodies[i], gravity_vec, ground_y, dt_seconds);
@@ -65,7 +67,7 @@ static void rigid2d_solve_manifolds(
     Rigid2DWorld *w,
     RigidManifold *manifolds,
     int manifold_count,
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second)) {
     if (!w || !manifolds || manifold_count <= 0) return;
 
     for (int iter = 0; iter < R2D_IMPULSE_ITERS; ++iter) {
@@ -322,12 +324,12 @@ static int broadphase_pairs_grid(Rigid2DWorld *w,
 }
 
 void rigid2d_step(Rigid2DWorld *w,
-                  double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                  double dt FISICS_DIM(time) FISICS_UNIT(second),
                   const AppConfig *cfg) {
     if (!w) return;
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (dt <= zero_seconds) return;
-    float dt_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = (float)dt;
+    float dt_seconds FISICS_DIM(time) FISICS_UNIT(second) = (float)dt;
     float ground_y = (cfg && cfg->window_h > 0) ? (float)(cfg->window_h - 1) : 0.0f;
     Vec2 gravity_vec = w->gravity;
 

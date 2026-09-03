@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "physics/rigid/rigid2d_collision.h"
 
 #include <math.h>
@@ -457,30 +459,30 @@ void rigid2d_positional_correction(RigidBody2D *a,
 }
 
 static float rigid2d_inverse_step_seconds(
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
-    float min_step_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] =
+    float dt FISICS_DIM(time) FISICS_UNIT(second)) {
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
+    float min_step_seconds FISICS_DIM(time) FISICS_UNIT(second) =
         1.0f / 60.0f;
     float safe_dt = (dt > zero_seconds) ? dt : min_step_seconds;
     return 1.0f / safe_dt;
 }
 
 static float rigid2d_collision_restitution_velocity(
-    float vel_along_normal [[fisics::dim(velocity)]]
-                           [[fisics::unit(meter_per_second)]],
+    float vel_along_normal FISICS_DIM(velocity)
+                           FISICS_UNIT(meter_per_second),
     float restitution) {
-    float rest_thresh [[fisics::dim(velocity)]]
-                      [[fisics::unit(meter_per_second)]] = 0.5f;
+    float rest_thresh FISICS_DIM(velocity)
+                      FISICS_UNIT(meter_per_second) = 0.5f;
     return (vel_along_normal < -rest_thresh) ? restitution : 0.0f;
 }
 
 static float rigid2d_collision_bias_velocity(
-    float penetration [[fisics::dim(length)]] [[fisics::unit(meter)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float penetration FISICS_DIM(length) FISICS_UNIT(meter),
+    float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     const float baumgarte = 0.25f;
-    float bias_slop [[fisics::dim(length)]] [[fisics::unit(meter)]] = 2.0f;
-    float zero_velocity [[fisics::dim(velocity)]]
-                        [[fisics::unit(meter_per_second)]] = 0.0f;
+    float bias_slop FISICS_DIM(length) FISICS_UNIT(meter) = 2.0f;
+    float zero_velocity FISICS_DIM(velocity)
+                        FISICS_UNIT(meter_per_second) = 0.0f;
     if (penetration <= bias_slop) return zero_velocity;
     return -baumgarte * (penetration - bias_slop) * rigid2d_inverse_step_seconds(dt);
 }
@@ -491,12 +493,12 @@ static float rigid2d_collision_tangent_speed(
     Vec2 *tangent_out) {
     Vec2 tangent_velocity =
         vec2_sub(relative_velocity, vec2_scale(normal, vec2_dot(relative_velocity, normal)));
-    float tangent_speed [[fisics::dim(velocity)]]
-                        [[fisics::unit(meter_per_second)]] = vec2_len(tangent_velocity);
-    float min_tangent_speed [[fisics::dim(velocity)]]
-                            [[fisics::unit(meter_per_second)]] = 1e-5f;
-    float zero_velocity [[fisics::dim(velocity)]]
-                        [[fisics::unit(meter_per_second)]] = 0.0f;
+    float tangent_speed FISICS_DIM(velocity)
+                        FISICS_UNIT(meter_per_second) = vec2_len(tangent_velocity);
+    float min_tangent_speed FISICS_DIM(velocity)
+                            FISICS_UNIT(meter_per_second) = 1e-5f;
+    float zero_velocity FISICS_DIM(velocity)
+                        FISICS_UNIT(meter_per_second) = 0.0f;
     if (tangent_speed < min_tangent_speed) {
         if (tangent_out) *tangent_out = vec2(0.0f, 0.0f);
         return zero_velocity;
@@ -508,13 +510,13 @@ static float rigid2d_collision_tangent_speed(
 void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                                    RigidBody2D *b,
                                    RigidManifold *m,
-                                   float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                                   float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     if (!a || !b || !m || m->contact_count <= 0) return;
     Vec2 normal = m->normal;
-    float zero_velocity [[fisics::dim(velocity)]]
-                        [[fisics::unit(meter_per_second)]] = 0.0f;
-    float min_tangent_speed [[fisics::dim(velocity)]]
-                            [[fisics::unit(meter_per_second)]] = 1e-5f;
+    float zero_velocity FISICS_DIM(velocity)
+                        FISICS_UNIT(meter_per_second) = 0.0f;
+    float min_tangent_speed FISICS_DIM(velocity)
+                            FISICS_UNIT(meter_per_second) = 1e-5f;
     // First pass: normal impulses
     for (int ci = 0; ci < m->contact_count; ++ci) {
         Vec2 cp = m->contacts[ci].position;
@@ -525,8 +527,8 @@ void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                                                       b->angular_velocity * rB.x)),
                            vec2_add(a->velocity, vec2(-a->angular_velocity * rA.y,
                                                       a->angular_velocity * rA.x)));
-        float vel_along_normal [[fisics::dim(velocity)]]
-                               [[fisics::unit(meter_per_second)]] = vec2_dot(rv, normal);
+        float vel_along_normal FISICS_DIM(velocity)
+                               FISICS_UNIT(meter_per_second) = vec2_dot(rv, normal);
         if (vel_along_normal > zero_velocity) continue;
 
         float raN = rA.x * normal.y - rA.y * normal.x; // cross(rA, n)
@@ -536,9 +538,9 @@ void rigid2d_resolve_impulse_basic(RigidBody2D *a,
         if (inv_mass_norm <= 0.0f) continue;
 
         float e = rigid2d_collision_restitution_velocity(vel_along_normal, m->restitution);
-        float pen [[fisics::dim(length)]] [[fisics::unit(meter)]] = m->contacts[ci].penetration;
-        float bias [[fisics::dim(velocity)]]
-                   [[fisics::unit(meter_per_second)]] = rigid2d_collision_bias_velocity(pen, dt);
+        float pen FISICS_DIM(length) FISICS_UNIT(meter) = m->contacts[ci].penetration;
+        float bias FISICS_DIM(velocity)
+                   FISICS_UNIT(meter_per_second) = rigid2d_collision_bias_velocity(pen, dt);
         float j = -(1.0f + e) * vel_along_normal + bias;
         j /= inv_mass_norm;
         // Clamp angular contribution to avoid huge spin from shallow contacts.
@@ -571,12 +573,12 @@ void rigid2d_resolve_impulse_basic(RigidBody2D *a,
                            vec2_add(a->velocity, vec2(-a->angular_velocity * rA.y,
                                                       a->angular_velocity * rA.x)));
         Vec2 tnorm;
-        float tangent_speed [[fisics::dim(velocity)]]
-                            [[fisics::unit(meter_per_second)]] =
+        float tangent_speed FISICS_DIM(velocity)
+                            FISICS_UNIT(meter_per_second) =
             rigid2d_collision_tangent_speed(rv, normal, &tnorm);
         if (tangent_speed < min_tangent_speed) continue;
-        float vel_along_tangent [[fisics::dim(velocity)]]
-                                [[fisics::unit(meter_per_second)]] =
+        float vel_along_tangent FISICS_DIM(velocity)
+                                FISICS_UNIT(meter_per_second) =
             vec2_dot(rv, tnorm);
         float raT = rA.x * tnorm.y - rA.y * tnorm.x;
         float rbT = rB.x * tnorm.y - rB.y * tnorm.x;

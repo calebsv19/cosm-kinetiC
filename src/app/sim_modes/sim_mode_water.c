@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "app/sim_mode.h"
 
 #include <math.h>
@@ -95,14 +97,14 @@ static void water_prepare(SceneState *scene) {
 }
 
 static void water_pre_substep(SceneState *scene,
-                              double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                              double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     (void)dt;
     if (!scene) return;
     scene_set_emitters_enabled(scene, false);
 }
 
 static void water_post_substep(SceneState *scene,
-                               double dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+                               double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     (void)dt;
     (void)water_object_coupling_apply_fixture(scene);
 }

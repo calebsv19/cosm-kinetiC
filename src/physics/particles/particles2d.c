@@ -1,3 +1,5 @@
+#include <fisics/extensions.h>
+
 #include "physics/particles/particles2d.h"
 
 #include <stdlib.h>
@@ -5,31 +7,31 @@
 
 static Vec2 particles2d_gravity_accel(void) {
     float gravity_x
-        [[fisics::dim(acceleration)]]
-        [[fisics::unit(meter_per_second_squared)]] = 0.0f;
+        FISICS_DIM(acceleration)
+        FISICS_UNIT(meter_per_second_squared) = 0.0f;
     float gravity_y
-        [[fisics::dim(acceleration)]]
-        [[fisics::unit(meter_per_second_squared)]] = 9.8f;
+        FISICS_DIM(acceleration)
+        FISICS_UNIT(meter_per_second_squared) = 9.8f;
     return vec2(gravity_x, gravity_y);
 }
 
 static float particles2d_integrate_lifetime(
-    float lifetime [[fisics::dim(time)]] [[fisics::unit(second)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float lifetime FISICS_DIM(time) FISICS_UNIT(second),
+    float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     return lifetime - dt;
 }
 
 static float particles2d_integrate_velocity_component(
-    float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
-    float accel [[fisics::dim(acceleration)]] [[fisics::unit(meter_per_second_squared)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second),
+    float accel FISICS_DIM(acceleration) FISICS_UNIT(meter_per_second_squared),
+    float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     return velocity + accel * dt;
 }
 
 static float particles2d_integrate_position_component(
-    float position [[fisics::dim(length)]] [[fisics::unit(meter)]],
-    float velocity [[fisics::dim(velocity)]] [[fisics::unit(meter_per_second)]],
-    float dt [[fisics::dim(time)]] [[fisics::unit(second)]]) {
+    float position FISICS_DIM(length) FISICS_UNIT(meter),
+    float velocity FISICS_DIM(velocity) FISICS_UNIT(meter_per_second),
+    float dt FISICS_DIM(time) FISICS_UNIT(second)) {
     return position + velocity * dt;
 }
 
@@ -115,7 +117,7 @@ void particles2d_spawn(Particles2D *p,
 }
 
 void particles2d_step(Particles2D *p,
-                      double dt [[fisics::dim(time)]] [[fisics::unit(second)]],
+                      double dt FISICS_DIM(time) FISICS_UNIT(second),
                       const AppConfig *cfg,
                       const Fluid2D   *fluid,
                       const Rigid2DWorld *rigid) {
@@ -123,10 +125,10 @@ void particles2d_step(Particles2D *p,
     (void)rigid;
     if (!p || p->count == 0) return;
 
-    float zero_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = 0.0f;
+    float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (dt <= zero_seconds) return;
 
-    float fdt [[fisics::dim(time)]] [[fisics::unit(second)]] = (float)dt;
+    float fdt FISICS_DIM(time) FISICS_UNIT(second) = (float)dt;
     Vec2 gravity = particles2d_gravity_accel();
 
     int write_index = 0;
@@ -135,7 +137,7 @@ void particles2d_step(Particles2D *p,
 
         // Kill dead particles
         {
-            float lifetime_seconds [[fisics::dim(time)]] [[fisics::unit(second)]] = pt.lifetime;
+            float lifetime_seconds FISICS_DIM(time) FISICS_UNIT(second) = pt.lifetime;
             lifetime_seconds = particles2d_integrate_lifetime(lifetime_seconds, fdt);
             pt.lifetime = lifetime_seconds;
         }
@@ -146,17 +148,17 @@ void particles2d_step(Particles2D *p,
         // Apply gravity
         {
             float velocity_x
-                [[fisics::dim(velocity)]]
-                [[fisics::unit(meter_per_second)]] = pt.velocity.x;
+                FISICS_DIM(velocity)
+                FISICS_UNIT(meter_per_second) = pt.velocity.x;
             float velocity_y
-                [[fisics::dim(velocity)]]
-                [[fisics::unit(meter_per_second)]] = pt.velocity.y;
+                FISICS_DIM(velocity)
+                FISICS_UNIT(meter_per_second) = pt.velocity.y;
             float gravity_x
-                [[fisics::dim(acceleration)]]
-                [[fisics::unit(meter_per_second_squared)]] = gravity.x;
+                FISICS_DIM(acceleration)
+                FISICS_UNIT(meter_per_second_squared) = gravity.x;
             float gravity_y
-                [[fisics::dim(acceleration)]]
-                [[fisics::unit(meter_per_second_squared)]] = gravity.y;
+                FISICS_DIM(acceleration)
+                FISICS_UNIT(meter_per_second_squared) = gravity.y;
             pt.velocity.x = particles2d_integrate_velocity_component(
                 velocity_x, gravity_x, fdt);
             pt.velocity.y = particles2d_integrate_velocity_component(
@@ -169,14 +171,14 @@ void particles2d_step(Particles2D *p,
 
         // Integrate
         {
-            float position_x [[fisics::dim(length)]] [[fisics::unit(meter)]] = pt.position.x;
-            float position_y [[fisics::dim(length)]] [[fisics::unit(meter)]] = pt.position.y;
+            float position_x FISICS_DIM(length) FISICS_UNIT(meter) = pt.position.x;
+            float position_y FISICS_DIM(length) FISICS_UNIT(meter) = pt.position.y;
             float velocity_x
-                [[fisics::dim(velocity)]]
-                [[fisics::unit(meter_per_second)]] = pt.velocity.x;
+                FISICS_DIM(velocity)
+                FISICS_UNIT(meter_per_second) = pt.velocity.x;
             float velocity_y
-                [[fisics::dim(velocity)]]
-                [[fisics::unit(meter_per_second)]] = pt.velocity.y;
+                FISICS_DIM(velocity)
+                FISICS_UNIT(meter_per_second) = pt.velocity.y;
             pt.position.x = particles2d_integrate_position_component(
                 position_x, velocity_x, fdt);
             pt.position.y = particles2d_integrate_position_component(
