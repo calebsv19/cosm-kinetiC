@@ -1,0 +1,53 @@
+{
+  "schema_version": "physics-sim/independent-worker-release-contract/v1",
+  "program": "physics_sim",
+  "worker_slug": "physics_sim_headless_worker",
+  "app_version_file": "VERSION",
+  "worker_version_file": "WORKER_VERSION",
+  "package_target": "package-linux-worker-self-test",
+  "package_platforms": [
+    "linux-x86_64",
+    "linux-aarch64"
+  ],
+  "registry_target_key": "worker_package",
+  "compatibility": {
+    "job_types": [
+      "trio_headless_stage"
+    ],
+    "required_capabilities": [
+      "trio-headless-v1",
+      "scene-project-portable-v1",
+      "physics-cache-project-local-v1"
+    ]
+  },
+  "host_policy": "all-compatible-canonical-inventory-nodes",
+  "required_receipt_types": [
+    "worker-package-catalog",
+    "host-distribution",
+    "installed-runtime",
+    "worker-submission-registry"
+  ],
+  "authority_boundaries": {
+    "decision_one": [
+      "worker_version_transition",
+      "source_commit",
+      "fixed_gates",
+      "worker_package_build",
+      "worker_artifact_authentication"
+    ],
+    "decision_two": [
+      "worker_package_catalog",
+      "selected_host_distribution",
+      "selected_host_readback",
+      "worker_submission_projection",
+      "registry_worker_current",
+      "completion_readback"
+    ],
+    "separate": [
+      "desktop_app_version",
+      "desktop_app_package",
+      "public_download_publication",
+      "cleanup"
+    ]
+  }
+}

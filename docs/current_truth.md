@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-09-03
+Last updated: 2026-09-06
 
 ## Persistent Main Edit Development Identity
 
@@ -22,6 +22,17 @@ Last updated: 2026-09-03
 - This development identity does not change `VERSION`, the public desktop or
   worker-package line, release history, Registry state, publication, or remote
   runtime authority.
+- The Main Edit candidate now gives the headless worker an independently owned
+  `WORKER_VERSION` source surface. `VERSION` and `WORKER_VERSION` both read
+  `0.3.2` at this adoption boundary, but Linux worker archive names and worker
+  manifests resolve only from `WORKER_VERSION`; package manifests separately
+  retain `source_program_version` from `VERSION`.
+- `config/worker_release_contract.json` records the worker slug, supported
+  Linux platforms, job/capability contract, required receipt classes, and the
+  two release-authority decisions. This is source-candidate truth only: it
+  does not build or authenticate a release artifact, update Release Control's
+  PhysicsSim adapter, move Registry current, distribute to a host, or submit a
+  job.
 
 ## Program Identity
 - Repository directory: `physics_sim/`

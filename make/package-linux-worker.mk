@@ -25,7 +25,7 @@ LINUX_WORKER_PLATFORM_CAPABILITY := platform-linux-aarch64-v1
 else
 $(error Unsupported Linux worker package platform: $(LINUX_WORKER_PLATFORM))
 endif
-LINUX_WORKER_BASENAME := $(RELEASE_PROGRAM_KEY)-$(RELEASE_VERSION)-$(LINUX_WORKER_PLATFORM)-worker
+LINUX_WORKER_BASENAME := $(RELEASE_PROGRAM_KEY)-$(WORKER_VERSION)-$(LINUX_WORKER_PLATFORM)-worker
 LINUX_WORKER_DIR := $(RELEASE_DIR)/$(LINUX_WORKER_BASENAME)
 LINUX_WORKER_BIN_DIR := $(LINUX_WORKER_DIR)/bin
 LINUX_WORKER_CONFIG_DIR := $(LINUX_WORKER_DIR)/config
@@ -38,12 +38,13 @@ LINUX_WORKER_ARTIFACT_MANIFEST := $(LINUX_WORKER_ARCHIVE).manifest.txt
 LINUX_WORKER_PACKAGE_VALIDATOR := tools/packaging/validate_linux_worker_package.py
 LINUX_WORKER_ARTIFACT_MANIFEST_WRITER := tools/packaging/write_linux_worker_artifact_manifest.py
 
-.PHONY: package-linux-worker-contract package-linux-worker-host-check package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run test-linux-worker-artifact-manifest
+.PHONY: package-linux-worker-contract package-linux-worker-host-check package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run test-linux-worker-artifact-manifest test-worker-release-contract
 
 package-linux-worker-contract:
 	@echo "Linux worker package contract"
 	@echo "  worker slug: $(LINUX_WORKER_SLUG)"
-	@echo "  version:     $(RELEASE_VERSION)"
+	@echo "  worker version: $(WORKER_VERSION)"
+	@echo "  source program version: $(RELEASE_VERSION)"
 	@echo "  platform:    $(LINUX_WORKER_PLATFORM)"
 	@echo "  max glibc:   $(LINUX_WORKER_MAX_GLIBC)"
 	@echo "  stage dir:   $(LINUX_WORKER_DIR)"
@@ -84,7 +85,8 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 	@printf '{\n' > "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "schema_version": "codework-worker-package/v1",\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "worker_slug": "%s",\n' "$(LINUX_WORKER_SLUG)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
-	@printf '  "version": "%s",\n' "$(RELEASE_VERSION)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
+	@printf '  "version": "%s",\n' "$(WORKER_VERSION)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
+	@printf '  "source_program_version": "%s",\n' "$(RELEASE_VERSION)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "platform": "%s",\n' "$(LINUX_WORKER_PLATFORM)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "program": "%s",\n' "$(RELEASE_PROGRAM_KEY)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "job_types": ["trio_headless_stage"],\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
@@ -99,7 +101,8 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 	@printf '  "package_role": "headless-worker",\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "worker_slug": "%s",\n' "$(LINUX_WORKER_SLUG)" >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "program": "%s",\n' "$(RELEASE_PROGRAM_KEY)" >> "$(LINUX_WORKER_MANIFEST)"
-	@printf '  "version": "%s",\n' "$(RELEASE_VERSION)" >> "$(LINUX_WORKER_MANIFEST)"
+	@printf '  "version": "%s",\n' "$(WORKER_VERSION)" >> "$(LINUX_WORKER_MANIFEST)"
+	@printf '  "source_program_version": "%s",\n' "$(RELEASE_VERSION)" >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "platform": "%s",\n' "$(LINUX_WORKER_PLATFORM)" >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "max_glibc_version": "%s",\n' "$(LINUX_WORKER_MAX_GLIBC)" >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "entrypoints": {\n' >> "$(LINUX_WORKER_MANIFEST)"
@@ -121,7 +124,8 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 		--checksum "$(LINUX_WORKER_SHA256)" \
 		--output "$(LINUX_WORKER_ARTIFACT_MANIFEST)" \
 		--program "$(RELEASE_PROGRAM_KEY)" \
-		--version "$(RELEASE_VERSION)" \
+		--version "$(WORKER_VERSION)" \
+		--source-program-version "$(RELEASE_VERSION)" \
 		--platform "$(LINUX_WORKER_PLATFORM)" \
 		--worker-slug "$(LINUX_WORKER_SLUG)" \
 		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)"
@@ -143,7 +147,8 @@ package-linux-worker-self-test: package-linux-worker
 		--checksum "$(LINUX_WORKER_SHA256)" \
 		--output "$(LINUX_WORKER_ARTIFACT_MANIFEST)" \
 		--program "$(RELEASE_PROGRAM_KEY)" \
-		--version "$(RELEASE_VERSION)" \
+		--version "$(WORKER_VERSION)" \
+		--source-program-version "$(RELEASE_VERSION)" \
 		--platform "$(LINUX_WORKER_PLATFORM)" \
 		--worker-slug "$(LINUX_WORKER_SLUG)" \
 		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)" \
@@ -155,10 +160,14 @@ package-linux-worker-dry-run: package-linux-worker-self-test
 		--stage-dir "$(LINUX_WORKER_DIR)" \
 		--archive "$(LINUX_WORKER_ARCHIVE)" \
 		--program "$(RELEASE_PROGRAM_KEY)" \
-		--version "$(RELEASE_VERSION)" \
+		--version "$(WORKER_VERSION)" \
+		--source-program-version "$(RELEASE_VERSION)" \
 		--platform "$(LINUX_WORKER_PLATFORM)" \
 		--worker-slug "$(LINUX_WORKER_SLUG)" \
 		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)"
 
 test-linux-worker-artifact-manifest:
 	@python3 -m unittest -v tests.test_linux_worker_artifact_manifest
+
+test-worker-release-contract:
+	@python3 -m unittest -v tests.test_worker_release_contract

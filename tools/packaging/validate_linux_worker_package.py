@@ -141,6 +141,7 @@ def validate_manifest(
     manifest: dict,
     program: str,
     version: str,
+    source_program_version: str,
     platform: str,
     worker_slug: str,
     max_glibc_version: str,
@@ -149,6 +150,7 @@ def validate_manifest(
         "schema_version": "codework-worker-package/v1",
         "worker_slug": worker_slug,
         "version": version,
+        "source_program_version": source_program_version,
         "platform": platform,
         "program": program,
         "entrypoint": "bin/run_worker.sh",
@@ -175,6 +177,7 @@ def validate_package_manifest(
     package_manifest: dict,
     program: str,
     version: str,
+    source_program_version: str,
     platform: str,
     worker_slug: str,
     max_glibc_version: str,
@@ -185,6 +188,7 @@ def validate_package_manifest(
         "worker_slug": worker_slug,
         "program": program,
         "version": version,
+        "source_program_version": source_program_version,
         "platform": platform,
         "max_glibc_version": max_glibc_version,
     }
@@ -276,6 +280,7 @@ def main() -> int:
     parser.add_argument("--archive", required=True)
     parser.add_argument("--program", required=True)
     parser.add_argument("--version", required=True)
+    parser.add_argument("--source-program-version", required=True)
     parser.add_argument("--platform", required=True)
     parser.add_argument("--worker-slug", required=True)
     parser.add_argument("--max-glibc-version", required=True)
@@ -308,6 +313,7 @@ def main() -> int:
         manifest,
         args.program,
         args.version,
+        args.source_program_version,
         args.platform,
         args.worker_slug,
         args.max_glibc_version,
@@ -316,6 +322,7 @@ def main() -> int:
         package_manifest,
         args.program,
         args.version,
+        args.source_program_version,
         args.platform,
         args.worker_slug,
         args.max_glibc_version,

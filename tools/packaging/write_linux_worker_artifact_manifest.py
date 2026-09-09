@@ -30,7 +30,8 @@ def checksum_digest(path: Path) -> str:
 
 def manifest_bytes(
     *, archive: Path, checksum: Path, program: str, version: str,
-    platform: str, worker_slug: str, max_glibc_version: str,
+    source_program_version: str, platform: str, worker_slug: str,
+    max_glibc_version: str,
 ) -> bytes:
     archive_digest = sha256(archive)
     if checksum_digest(checksum) != archive_digest:
@@ -39,6 +40,7 @@ def manifest_bytes(
         ("program", program),
         ("worker_slug", worker_slug),
         ("version", version),
+        ("source_program_version", source_program_version),
         ("platform", platform),
         ("package_role", "headless-worker"),
         ("format", "tar.gz"),
@@ -59,6 +61,7 @@ def main() -> int:
     parser.add_argument("--output", required=True)
     parser.add_argument("--program", required=True)
     parser.add_argument("--version", required=True)
+    parser.add_argument("--source-program-version", required=True)
     parser.add_argument("--platform", required=True)
     parser.add_argument("--worker-slug", required=True)
     parser.add_argument("--max-glibc-version", required=True)
@@ -70,7 +73,8 @@ def main() -> int:
     output = Path(args.output)
     expected = manifest_bytes(
         archive=archive, checksum=checksum, program=args.program,
-        version=args.version, platform=args.platform,
+        version=args.version, source_program_version=args.source_program_version,
+        platform=args.platform,
         worker_slug=args.worker_slug,
         max_glibc_version=args.max_glibc_version,
     )

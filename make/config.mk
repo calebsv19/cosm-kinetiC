@@ -85,6 +85,11 @@ RELEASE_VERSION ?= $(strip $(shell cat "$(RELEASE_VERSION_FILE)" 2>/dev/null))
 ifeq ($(RELEASE_VERSION),)
 RELEASE_VERSION := 0.1.0
 endif
+WORKER_VERSION_FILE ?= WORKER_VERSION
+WORKER_VERSION ?= $(strip $(shell cat "$(WORKER_VERSION_FILE)" 2>/dev/null))
+ifeq ($(WORKER_VERSION),)
+$(error WORKER_VERSION is required; expected $(WORKER_VERSION_FILE))
+endif
 RELEASE_CHANNEL ?= stable
 RELEASE_PRODUCT_NAME := kinetiC
 RELEASE_PROGRAM_KEY := physics_sim

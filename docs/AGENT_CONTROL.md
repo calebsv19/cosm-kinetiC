@@ -116,16 +116,21 @@ The bundle smoke also writes a shared report under
 Use this wording:
 
 - Public desktop current: `kinetiC 0.2.0` macOS arm64.
-- Source checkout and worker package: `physics_sim 0.3.2`.
+- Source checkout program version: `physics_sim 0.3.2` from `VERSION`.
+- Worker source version: `physics_sim_headless_worker 0.3.2` from the
+  independently owned `WORKER_VERSION` surface.
+- Equality at this boundary does not couple the identities. Future worker-only
+  transitions must use Release Control and must preserve the source program
+  version in package provenance.
 - Local headless proof uses the source checkout, not the public desktop ZIP.
 - Worker package evidence is separate from public desktop package evidence.
 - Worker packages are internal/fleet package-root artifacts unless a future
   public release explicitly publishes them as downloads.
 - There is no public remote submission API in this contract.
 
-Do not describe `physics_sim 0.3.2` as the public desktop current unless a
-future approved release updates website metadata, production-registry state,
-and public readback.
+Do not describe either PhysicsSim `0.3.2` source identity as the public desktop
+current unless a future approved release updates website metadata,
+production-registry state, and public readback.
 
 ## Exclusions
 
