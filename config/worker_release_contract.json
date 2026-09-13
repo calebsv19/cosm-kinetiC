@@ -5,6 +5,10 @@
   "app_version_file": "VERSION",
   "worker_version_file": "WORKER_VERSION",
   "package_target": "package-linux-worker-self-test",
+  "package_targets_by_platform": {
+    "linux-aarch64": "package-linux-worker-self-test",
+    "linux-x86_64": "package-linux-worker-x86_64-self-test"
+  },
   "package_platforms": [
     "linux-x86_64",
     "linux-aarch64"

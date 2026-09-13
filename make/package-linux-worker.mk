@@ -38,7 +38,7 @@ LINUX_WORKER_ARTIFACT_MANIFEST := $(LINUX_WORKER_ARCHIVE).manifest.txt
 LINUX_WORKER_PACKAGE_VALIDATOR := tools/packaging/validate_linux_worker_package.py
 LINUX_WORKER_ARTIFACT_MANIFEST_WRITER := tools/packaging/write_linux_worker_artifact_manifest.py
 
-.PHONY: package-linux-worker-contract package-linux-worker-host-check package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-dry-run test-linux-worker-artifact-manifest test-worker-release-contract
+.PHONY: package-linux-worker-contract package-linux-worker-host-check package-linux-worker-clean package-linux-worker package-linux-worker-self-test package-linux-worker-x86_64-self-test package-linux-worker-dry-run test-linux-worker-artifact-manifest test-worker-release-contract
 
 package-linux-worker-contract:
 	@echo "Linux worker package contract"
@@ -154,6 +154,12 @@ package-linux-worker-self-test: package-linux-worker
 		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)" \
 		--verify
 	@echo "package-linux-worker-self-test passed."
+
+# A distinct Registry target binds x86_64 proof to x86_64 package bytes. The
+# recursive invocation evaluates all simply-expanded package paths for that
+# platform, while the existing target remains the adopted aarch64/Pi route.
+package-linux-worker-x86_64-self-test:
+	@$(MAKE) LINUX_WORKER_PLATFORM=linux-x86_64 package-linux-worker-self-test
 
 package-linux-worker-dry-run: package-linux-worker-self-test
 	@python3 "$(LINUX_WORKER_PACKAGE_VALIDATOR)" \

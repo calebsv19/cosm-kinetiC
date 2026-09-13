@@ -33,6 +33,19 @@ class WorkerReleaseContractTests(unittest.TestCase):
             set(contract["package_platforms"]),
             {"linux-x86_64", "linux-aarch64"},
         )
+        self.assertEqual(contract["package_targets_by_platform"], {
+            "linux-aarch64": "package-linux-worker-self-test",
+            "linux-x86_64": "package-linux-worker-x86_64-self-test",
+        })
+
+    def test_x86_target_is_a_distinct_platform_bound_entrypoint(self) -> None:
+        completed = subprocess.run(
+            ["make", "-n", "package-linux-worker-x86_64-self-test"],
+            cwd=ROOT, check=False, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, text=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("LINUX_WORKER_PLATFORM=linux-x86_64", completed.stdout)
 
     def test_make_contract_keeps_app_and_worker_versions_distinct(self) -> None:
         completed = subprocess.run(
