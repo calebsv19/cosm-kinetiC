@@ -8,6 +8,28 @@ OUT_DIR="$PHYSICS_DIR/tmp/headless_cli_portable_retained_scene"
 SUMMARY="$OUT_DIR/run_summary.json"
 PROGRESS="$OUT_DIR/run_progress.json"
 STEP_LOG="/private/tmp/physics_sim_headless_step_progress.out"
+VERSION_JSON="$($PHYSICS_DIR/physics_sim_headless --version)"
+
+printf '%s' "$VERSION_JSON" | python3 -c '
+import json
+import platform
+import sys
+
+identity = json.load(sys.stdin)
+expected_platform = {
+    ("Darwin", "arm64"): "macOS-arm64",
+    ("Darwin", "x86_64"): "macOS-x86_64",
+    ("Linux", "aarch64"): "linux-aarch64",
+    ("Linux", "x86_64"): "linux-x86_64",
+}.get((platform.system(), platform.machine()), "unknown")
+assert identity == {
+    "program": "physics_sim",
+    "worker_slug": "physics_sim_headless_worker",
+    "worker_version": "0.3.3",
+    "source_program_version": "0.3.2",
+    "platform": expected_platform,
+}, identity
+'
 
 if [ ! -f "$RUNTIME_SCENE" ]; then
   echo "missing runtime scene fixture: $RUNTIME_SCENE" >&2

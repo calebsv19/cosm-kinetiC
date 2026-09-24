@@ -21,6 +21,14 @@
 
 #define PHYSICS_SIM_HEADLESS_PATH_MAX 1024
 
+#ifndef PHYSICS_SIM_SOURCE_VERSION
+#define PHYSICS_SIM_SOURCE_VERSION "unknown"
+#endif
+
+#ifndef PHYSICS_SIM_WORKER_VERSION
+#define PHYSICS_SIM_WORKER_VERSION "unknown"
+#endif
+
 typedef enum PhysicsSimHeadlessOutputPolicy {
     PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS = 0,
     PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE = 1
@@ -78,6 +86,31 @@ static double progress_ratio_for(const HeadlessProgressInfo *progress);
 
 static bool join_path(char *out, size_t out_size, const char *dir, const char *name);
 
+static const char *compiled_platform(void) {
+#if defined(__linux__) && defined(__x86_64__)
+    return "linux-x86_64";
+#elif defined(__linux__) && defined(__aarch64__)
+    return "linux-aarch64";
+#elif defined(__APPLE__) && defined(__aarch64__)
+    return "macOS-arm64";
+#elif defined(__APPLE__) && defined(__x86_64__)
+    return "macOS-x86_64";
+#else
+    return "unknown";
+#endif
+}
+
+static void print_version(void) {
+    printf("{\"program\":\"physics_sim\","
+           "\"worker_slug\":\"physics_sim_headless_worker\","
+           "\"worker_version\":\"%s\","
+           "\"source_program_version\":\"%s\","
+           "\"platform\":\"%s\"}\n",
+           PHYSICS_SIM_WORKER_VERSION,
+           PHYSICS_SIM_SOURCE_VERSION,
+           compiled_platform());
+}
+
 static void print_usage(const char *argv0) {
     fprintf(stderr,
             "usage: %s (--scene-project <dir>|--runtime-scene <scene_runtime.json>|--water-mode) --frames <n> "
@@ -93,7 +126,9 @@ static void print_usage(const char *argv0) {
             "[--water-review-ripple-amplitude <meters>] [--water-object-fixture] "
             "[--wind-shot-camera <three_quarter|side|top|downstream|runtime_default>] "
             "[--wind-visual-mode <flow|speed|speed_deficit|vorticity|object_mask|slice_speed_deficit|slice_vorticity|volume_speed_deficit|volume_vorticity>] "
-            "[--overwrite] [--present]\n",
+            "[--overwrite] [--present]\n"
+            "       %s --version\n",
+            argv0 ? argv0 : "physics_sim_headless",
             argv0 ? argv0 : "physics_sim_headless");
 }
 
@@ -324,6 +359,9 @@ static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out)
             out->skip_present = true;
         } else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
             print_usage(argv[0]);
+            exit(0);
+        } else if (strcmp(argv[i], "--version") == 0 && argc == 2) {
+            print_version();
             exit(0);
         } else {
             return false;

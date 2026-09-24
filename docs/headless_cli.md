@@ -7,6 +7,17 @@ using the menu or mutating persistent runtime state.
 For long-running detached supervision, use `physics_sim_job_runner` on top of
 the same headless CLI.
 
+Inspect the exact compiled worker identity without starting a simulation:
+
+```bash
+./physics_sim_headless --version
+```
+
+The command prints one JSON object containing `program`, `worker_slug`,
+`worker_version`, `source_program_version`, and `platform`. Installed-worker
+validation should use this executable readback rather than archive naming or a
+package manifest alone.
+
 Build it from a standalone GitHub clone root:
 
 ```bash

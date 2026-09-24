@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-09-13
+Last updated: 2026-09-24
 
 ## Persistent Main Edit Development Identity
 
@@ -23,10 +23,10 @@ Last updated: 2026-09-13
   worker-package line, release history, Registry state, publication, or remote
   runtime authority.
 - PhysicsSim source gives the headless worker an independently owned
-  `WORKER_VERSION` source surface. `VERSION` and `WORKER_VERSION` both read
-  `0.3.2` at this adoption boundary, but Linux worker archive names and worker
-  manifests resolve only from `WORKER_VERSION`; package manifests separately
-  retain `source_program_version` from `VERSION`.
+  `WORKER_VERSION` source surface. `VERSION` remains `0.3.2` while the current
+  worker release candidate reads `0.3.3`; Linux worker archive names and worker
+  manifests resolve only from `WORKER_VERSION`, while package manifests retain
+  `source_program_version` from `VERSION`.
 - `config/worker_release_contract.json` records the worker slug, supported
   Linux platforms, job/capability contract, required receipt classes, and the
   two release-authority decisions. This is source-candidate truth only: it
@@ -37,9 +37,9 @@ Last updated: 2026-09-13
   `package-linux-worker-x86_64-self-test` entrypoint while retaining
   `package-linux-worker-self-test` for the adopted aarch64/Pi route. Both
   package identities still derive from the single independent
-  `WORKER_VERSION`; the x86_64 route is not an installed or accepted host
-  capability until the separate Linux-PC executor readback succeeds. Its
-  Production Registry bindings remain an isolated, unadopted source candidate.
+  `WORKER_VERSION`. The existing Linux PC installation remains worker `0.3.2`;
+  worker `0.3.3` is not installed or accepted until its separate executor
+  readback and targeted queue workload succeed.
 
 ## Program Identity
 - Repository directory: `physics_sim/`
