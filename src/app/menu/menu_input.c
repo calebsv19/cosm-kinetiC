@@ -1,4 +1,5 @@
 #include "app/menu/menu_input.h"
+#include "app/session_workspace.h"
 
 #include <SDL2/SDL.h>
 #include <stdio.h>
@@ -540,6 +541,13 @@ void menu_pointer_down(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
     if (state->button != SDL_BUTTON_LEFT) return;
+    int width = 0;
+    SDL_GetWindowSize(ctx->window, &width, NULL);
+    if (state->x >= width - 240 && state->y < 38) {
+        menu_key_down(ctx, SDLK_F8, KMOD_NONE);
+        ctx->suppress_pointer_until_up = true;
+        return;
+    }
     if (ctx->suppress_pointer_until_up) return;
     if (ctx->headless_running) return;
     if (ctx->status_wait_ack && ctx->status_visible) {
@@ -585,6 +593,12 @@ void menu_wheel(void *user, const InputWheelState *wheel) {
 
 void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
+    if (ctx && key == SDLK_F8) {
+        SDL_HideWindow(ctx->window);
+        physics_sim_session_workspace_run(NULL);
+        SDL_ShowWindow(ctx->window);
+        return;
+    }
     bool ctrl_or_cmd = (mod & KMOD_CTRL) != 0 || (mod & KMOD_GUI) != 0;
     bool shift = (mod & KMOD_SHIFT) != 0;
     if (!ctx) return;

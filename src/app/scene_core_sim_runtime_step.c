@@ -73,6 +73,17 @@ static bool run_backend_step(void *user_context,
     ts_start_timer("fluid_step");
     sim_runtime_backend_step(ctx->scene->backend, ctx->scene, ctx->step_cfg, dt);
     ts_stop_timer("fluid_step");
+    if (!ctx->scene->backend || !ctx->scene->backend->last_step_succeeded) {
+        set_pass_failure(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_BACKEND_STEP,
+                         "backend step failed");
+        return false;
+    }
+    SimRuntimeBackendReport report = {0};
+    if (scene_backend_report(ctx->scene, &report) && report.runtime_solver_region_guard_triggered) {
+        set_pass_failure(outcome, PHYSICS_SIM_SCENE_CORE_SIM_PASS_BACKEND_STEP,
+                         "solver region budget exceeded; regions did not advance");
+        return false;
+    }
     return true;
 }
 

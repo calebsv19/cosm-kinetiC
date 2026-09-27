@@ -60,6 +60,9 @@ setup_runtime_root() {
 setup_runtime_root
 
 export VK_RENDERER_SHADER_ROOT="${VK_RENDERER_SHADER_ROOT:-$RUNTIME_DIR}"
+export PHYSICS_SIM_SESSION_TOOL="${PHYSICS_SIM_SESSION_TOOL:-$RES_DIR/scripts/physics_sim_session.py}"
+export PHYSICS_SIM_SESSION_WORKER="${PHYSICS_SIM_SESSION_WORKER:-$SCRIPT_DIR/physics_sim_session_worker}"
+export PHYSICS_SIM_SESSION_ROOT="${PHYSICS_SIM_SESSION_ROOT:-$RUNTIME_DIR/data/runtime/agent_sessions}"
 export SHAPE_ASSET_DIR="${SHAPE_ASSET_DIR:-$RUNTIME_DIR/config/objects}"
 export PHYSICS_SIM_TIMER_HUD="${PHYSICS_SIM_TIMER_HUD:-0}"
 export PHYSICS_SIM_TIMER_HUD_OVERLAY="${PHYSICS_SIM_TIMER_HUD_OVERLAY:-0}"
@@ -141,6 +144,11 @@ if [ "${1:-}" = "--self-test" ]; then
     echo "VK_DRIVER_FILES=${VK_DRIVER_FILES:-}"
     echo "MOLTENVK_DYLIB=$MOLTENVK_DYLIB"
     exit 0
+fi
+
+if [ "${1:-}" = "--agent-mcp" ]; then
+    shift
+    exec python3 "$PHYSICS_SIM_SESSION_TOOL" --mcp "$@"
 fi
 
 cd "$RUNTIME_DIR"

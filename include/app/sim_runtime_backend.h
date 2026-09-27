@@ -279,6 +279,7 @@ typedef struct SimRuntimeBackendOps {
 } SimRuntimeBackendOps;
 
 struct SimRuntimeBackend {
+    bool last_step_succeeded; // Set by the dispatch wrapper; backend may report failure.
     SimRuntimeBackendKind kind;
     void *impl;
     const SimRuntimeBackendOps *ops;

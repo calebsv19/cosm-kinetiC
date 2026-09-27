@@ -148,3 +148,10 @@ These are not part of the first external-agent contract:
 
 For those lanes, use the workspace-level CodeWork routing and release-control
 docs before taking action.
+
+## Local agent session workspace (S1)
+
+The source/Main Edit lane now includes a background Wind session worker, bounded
+inspection, eight MCP tools, and a native workspace sharing the same run controls.
+See [agent_session.md](agent_session.md) for build, connection and acceptance
+contracts. This does not change the public desktop version or remote-worker API.

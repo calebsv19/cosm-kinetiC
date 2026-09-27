@@ -458,7 +458,12 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
                     running = false;
                     break;
                 }
-                (void)physics_sim_scene_core_sim_step(scene, cfg, mode_hooks, sim_dt, NULL);
+                if (!physics_sim_scene_core_sim_step(scene, cfg, mode_hooks, sim_dt, NULL)) {
+                    fprintf(stderr, "[scene] Solver step failed or exceeded its region budget.\n");
+                    frame.solver_failed = true;
+                    frame.running = false;
+                    break;
+                }
                 if (headless_mode && headless && headless->progress_callback) {
                     step_progress.sim_steps_completed_in_frame = (uint32_t)(step_index + 1);
                     headless->progress_callback(headless->progress_user_data, &step_progress);
@@ -880,6 +885,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
 
     bool running = true;
     bool aborted = false;
+    bool solver_failed = false;
     int snapshot_index = 0;
     uint64_t frame_index = 0;
     (void)snapshot_dir;
@@ -960,6 +966,10 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                           mode_hooks,
                                           snapshot_dir,
                                           &snapshot_index);
+        if (update_frame.solver_failed) {
+            solver_failed = true;
+            break;
+        }
         ir1_diag_totals.frame_count += 1u;
         ir1_diag_totals.routed_global_total += input_frame.route.routed_global_count;
         ir1_diag_totals.routed_scene_total += input_frame.route.routed_scene_count;
@@ -1088,17 +1098,17 @@ int scene_controller_run(const AppConfig *initial_cfg,
     if (renderer_required) {
         renderer_sdl_shutdown();
     }
-    if (headless_mode && headless && headless->progress_callback && aborted) {
+    if (headless_mode && headless && headless->progress_callback && (aborted || solver_failed)) {
         HeadlessProgressInfo canceled_progress = {
             .frames_completed = frame_index,
             .frames_requested = headless_frame_limit,
             .frame_index = frame_index,
             .sim_steps_completed_in_frame = 0u,
             .sim_steps_total_in_frame = 0u,
-            .stage = "canceled",
+            .stage = solver_failed ? "failed" : "canceled",
             .final_update = true
         };
         headless->progress_callback(headless->progress_user_data, &canceled_progress);
     }
-    return aborted ? 2 : 0;
+    return solver_failed ? 1 : (aborted ? 2 : 0);
 }

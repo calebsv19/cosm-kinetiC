@@ -1,4 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-"$ROOT/shared/assets/scenes/trio_contract/run_scene_contract_diff_smoke.sh"
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+SHARED="$REPO/third_party/codework_shared"
+DIFF_DIR="$SHARED/core/core_scene_compile"
+FIX_DIR="$SHARED/assets/scenes/trio_contract"
+make -C "$DIFF_DIR" scene-contract-diff >/dev/null
+DIFF_BIN="$DIFF_DIR/build/scene_contract_diff"
+"$DIFF_BIN" "$FIX_DIR/scene_runtime_min.json" "$FIX_DIR/scene_runtime_min_reordered.json" >/dev/null
+actual="$(mktemp -t physics_scene_contract).json"
+trap 'rm -f "$actual"' EXIT
+python3 - "$FIX_DIR/scene_runtime_min.json" "$actual" <<'PYTHON'
+import json,sys
+value=json.load(open(sys.argv[1]));value['space_mode_default']='3d'
+with open(sys.argv[2],'w') as out:json.dump(value,out)
+PYTHON
+if "$DIFF_BIN" "$FIX_DIR/scene_runtime_min.json" "$actual" >/dev/null 2>&1; then
+    echo "expected scene drift was not detected" >&2
+    exit 1
+fi
+echo "scene contract diff smoke passed"

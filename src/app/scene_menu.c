@@ -621,6 +621,8 @@ restart_menu:
                                title_y,
                                menu_color_text());
             }
+            menu_draw_text(ctx.renderer, ctx.font_small ? ctx.font_small : ctx.font,
+                           "Agent workspace [F8]", win_w - 230, 12, menu_color_text());
             menu_draw_preset_list(&ctx);
 
             TTF_Font *toggle_font = ctx.font_small ? ctx.font_small : ctx.font;

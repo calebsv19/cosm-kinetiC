@@ -41,11 +41,13 @@ void sim_runtime_backend_enforce_obstacles(SimRuntimeBackend *backend,
     (void)scene;
 }
 
+static bool force_backend_failure;
+
 void sim_runtime_backend_step(SimRuntimeBackend *backend,
                               struct SceneState *scene,
                               const AppConfig *cfg,
                               double dt) {
-    (void)backend;
+    if (backend) backend->last_step_succeeded = !force_backend_failure;
     (void)scene;
     (void)cfg;
     (void)dt;
@@ -104,6 +106,8 @@ static bool test_scene_runtime_step_uses_core_sim_pass_network(void) {
 
     memset(&scene, 0, sizeof(scene));
     memset(&result, 0, sizeof(result));
+    SimRuntimeBackend backend = {0};
+    scene.backend = &backend;
     scene.config = &cfg;
     scene.mode_route.simulation_mode = cfg.sim_mode;
     scene.mode_route.requested_space_mode = cfg.space_mode;
@@ -160,7 +164,20 @@ static bool test_scene_runtime_step_syncs_pause_state(void) {
     return scene.runtime_loop.paused && nearly_equal(scene.runtime_loop.accumulator_seconds, 0.0);
 }
 
+static bool test_backend_failure_stops_time_and_passes(void) {
+    AppConfig cfg = test_config();
+    SimRuntimeBackend backend = {0};
+    SceneState scene = {.backend = &backend, .config = &cfg};
+    PhysicsSimSceneCoreSimStepResult result = {0};
+    force_backend_failure = true;
+    bool ok = physics_sim_scene_core_sim_step(&scene, &cfg, NULL, 0.03, &result);
+    force_backend_failure = false;
+    return !ok && scene.time == 0.0 && result.outcome.ticks_executed == 0 &&
+           result.outcome.failed_pass_id == PHYSICS_SIM_SCENE_CORE_SIM_PASS_BACKEND_STEP;
+}
+
 int main(void) {
+    if (!test_backend_failure_stops_time_and_passes()) return 1;
     if (!test_scene_runtime_step_uses_core_sim_pass_network()) {
         fprintf(stderr, "scene_core_sim_runtime_step_contract_test: pass network failed\n");
         return 1;

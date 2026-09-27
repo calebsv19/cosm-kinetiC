@@ -17,7 +17,7 @@ package-desktop-refresh-authority:
 	fi
 	@echo "Desktop refresh authority: canonical clean main, one worktree, no running app"
 
-package-desktop: $(PACKAGE_SOURCE_BIN)
+package-desktop: $(PACKAGE_SOURCE_BIN) physics_sim_session_worker
 	@echo "Preparing desktop package..."
 	@rm -rf "$(PACKAGE_APP_DIR)"
 	@mkdir -p "$(PACKAGE_MACOS_DIR)" "$(PACKAGE_RESOURCES_DIR)" "$(PACKAGE_FRAMEWORKS_DIR)"
@@ -31,6 +31,11 @@ package-desktop: $(PACKAGE_SOURCE_BIN)
 	@/usr/libexec/PlistBuddy -c "Add :PhysicsSimLogNamespace string $(PACKAGE_LOG_NAMESPACE)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
 	@/usr/libexec/PlistBuddy -c "Add :PhysicsSimBuildLabel string $(PACKAGE_BUILD_LABEL)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
 	@cp "$(PACKAGE_SOURCE_BIN)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
+	@cp physics_sim_session_worker "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"
+	@mkdir -p "$(PACKAGE_RESOURCES_DIR)/scripts/agent_session"
+	@cp scripts/physics_sim_session.py "$(PACKAGE_RESOURCES_DIR)/scripts/"
+	@cp scripts/agent_session/*.py "$(PACKAGE_RESOURCES_DIR)/scripts/agent_session/"
+	@PACKAGE_DEP_SEARCH_ROOTS="$(TARGET_DEP_SEARCH_ROOTS)" "$(PACKAGE_DYLIB_BUNDLER)" "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker" "$(PACKAGE_FRAMEWORKS_DIR)"
 	@cp "$(PACKAGE_LAUNCHER_SRC)" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
 	@PACKAGE_DEP_SEARCH_ROOTS="$(TARGET_DEP_SEARCH_ROOTS)" "$(PACKAGE_DYLIB_BUNDLER)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_FRAMEWORKS_DIR)"
 	@chmod +x "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
@@ -55,6 +60,7 @@ package-desktop: $(PACKAGE_SOURCE_BIN)
 	@/usr/bin/find "$(PACKAGE_FRAMEWORKS_DIR)" -type f -name '*.dylib' \
 		-exec /usr/bin/codesign --force --sign "$(PACKAGE_ADHOC_SIGN_IDENTITY)" --timestamp=none {} \;
 	@/usr/bin/codesign --force --sign "$(PACKAGE_ADHOC_SIGN_IDENTITY)" --timestamp=none "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
+	@/usr/bin/codesign --force --sign "$(PACKAGE_ADHOC_SIGN_IDENTITY)" --timestamp=none "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"
 	@/usr/bin/codesign --force --sign "$(PACKAGE_ADHOC_SIGN_IDENTITY)" --timestamp=none "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
 	@if [ "$(PACKAGE_EMBED_BUILD_IDENTITY)" = "1" ]; then \
 		python3 "$(MEW1_TOOL)" write-identity \
@@ -95,6 +101,8 @@ package-desktop-smoke: package-desktop
 	fi
 	@test -f "$(PACKAGE_RESOURCES_DIR)/vk_renderer/shaders/textured.vert.spv" || (echo "Missing bundled vk_renderer shader"; exit 1)
 	@test -f "$(PACKAGE_RESOURCES_DIR)/shaders/textured.vert.spv" || (echo "Missing bundled runtime shader"; exit 1)
+	@test -x "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"
+	@test -f "$(PACKAGE_RESOURCES_DIR)/scripts/agent_session/service.py"
 	@echo "package-desktop-smoke passed."
 
 package-desktop-self-test: package-desktop-smoke

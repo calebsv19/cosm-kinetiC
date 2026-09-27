@@ -265,3 +265,10 @@ Command context:
 ## Private Planning Docs
 - Private scaffold plans/checklists are kept in the workspace private docs bucket:
   - `../../docs/private_program_docs/physics_sim/`
+
+## Local agent session workspace (S1)
+
+The source/Main Edit lane now includes a background Wind session worker, bounded
+inspection, eight MCP tools, and a native workspace sharing the same run controls.
+See [agent_session.md](agent_session.md) for build, connection and acceptance
+contracts. This does not change the public desktop version or remote-worker API.

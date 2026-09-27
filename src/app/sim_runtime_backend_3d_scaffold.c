@@ -743,7 +743,7 @@ static void backend_3d_scaffold_step(SimRuntimeBackend *backend,
                                      struct SceneState *scene,
                                      const AppConfig *cfg,
                                      double dt) {
-    (void)backend_3d_scaffold_runtime_step(backend, scene, cfg, dt);
+    backend->last_step_succeeded = backend_3d_scaffold_runtime_step(backend, scene, cfg, dt);
 }
 
 static void backend_3d_scaffold_inject_object_motion(SimRuntimeBackend *backend,

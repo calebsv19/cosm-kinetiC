@@ -130,7 +130,9 @@ void sim_runtime_backend_step(SimRuntimeBackend *backend,
                               struct SceneState *scene,
                               const AppConfig *cfg,
                               double dt FISICS_DIM(time) FISICS_UNIT(second)) {
+    if (backend) backend->last_step_succeeded = false;
     if (backend && backend->ops && backend->ops->step) {
+        backend->last_step_succeeded = true;
         backend->ops->step(backend, scene, cfg, dt);
     }
 }

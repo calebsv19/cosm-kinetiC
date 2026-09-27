@@ -7,6 +7,7 @@
 #include "app/app_config.h"
 #include "app/data_paths.h"
 #include "app/scene_controller.h"
+#include "app/session_workspace.h"
 #include "app/preset_io.h"
 #include "app/scene_menu.h"
 #include "app/scene_presets.h"
@@ -86,6 +87,8 @@ static bool physics_sim_apply_startup_root_fallbacks(AppConfig *cfg,
 }
 
 int physics_sim_app_main_legacy(int argc, char **argv) {
+    if (argc >= 2 && strcmp(argv[1], "--agent-workspace") == 0)
+        return physics_sim_session_workspace_run(argc > 2 ? argv[2] : NULL);
     if (argc == 2 && strcmp(argv[1], "--vulkan-rollout-self-test") == 0) {
         return physics_sim_vulkan_rollout_self_test();
     }

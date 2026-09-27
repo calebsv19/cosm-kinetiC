@@ -128,3 +128,10 @@ manifest_to_trace: physics_trace_tool
 	else \
 		./$(PHYSICS_TRACE_TOOL_BIN) "$(MANIFEST)" "$(TRACE)"; \
 	fi
+
+# Trusted-local S1 background simulation owner.
+physics_sim_session_worker: $(BUILD_DIR)/tools/cli/physics_sim_session_worker.o $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^ $(HEADLESS_WORKER_LIBS)
+
+test-agent-session: physics_sim_session_worker
+	python3 -m unittest discover -s tests -p 'test_agent_session*.py' -v

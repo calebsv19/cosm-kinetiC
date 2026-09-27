@@ -127,6 +127,7 @@ typedef struct SceneControllerInputFrame {
 } SceneControllerInputFrame;
 
 typedef struct SceneControllerUpdateFrame {
+    bool solver_failed;
     bool valid;
     bool running;
     bool aborted;
