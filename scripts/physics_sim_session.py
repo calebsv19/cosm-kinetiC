@@ -5,6 +5,9 @@ import json
 from pathlib import Path
 import sys
 
+# Packaged scripts are sealed resources; runtime caches must not mutate the app.
+sys.dont_write_bytecode = True
+
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'agent_session'))
 from service import Service, SessionError, encode
 from protocol import call, tools
@@ -40,10 +43,10 @@ def serve(service):
                 params = request.get('params',{})
                 try:
                     value = call(service,params.get('name'),params.get('arguments',{}))
-                    image = image_content(value) if params.get('name') == 'run_inspect' else None
+                    image = image_content(value) if params.get('name') in ('run_inspect','run_sample') else None
                     if image:
                         value['preview'].pop('samples', None)
-                        value['preview']['display'] = 'velocity magnitude, auto-scaled; white solids; no visual gain'
+                        value['preview']['display'] = 'field heatmap; white solids; range and vector scale in metadata'
                     content = [{'type':'text','text':encode(value)}]
                     if image:
                         content.append(image)

@@ -135,3 +135,8 @@ physics_sim_session_worker: $(BUILD_DIR)/tools/cli/physics_sim_session_worker.o 
 
 test-agent-session: physics_sim_session_worker
 	python3 -m unittest discover -s tests -p 'test_agent_session*.py' -v
+
+.PHONY: test-agent-session test-session-observation
+test-session-observation: $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/session_observation_test tests/session_observation_test.c $^ $(HEADLESS_WORKER_LIBS)
+	$(BUILD_DIR)/session_observation_test

@@ -153,6 +153,8 @@ static bool resolve_existing_font_path(const CoreFontRoleSpec* role,
         }
 
         if (strncmp(raw, "shared/", 7) == 0) {
+            snprintf(adjusted, sizeof(adjusted), "third_party/codework_shared/%s", raw + 7);
+            if (copy_existing_path(out_path, out_path_size, adjusted)) return true;
             snprintf(adjusted, sizeof(adjusted), "../%s", raw);
             if (copy_existing_path(out_path, out_path_size, adjusted)) {
                 return true;

@@ -8,6 +8,7 @@
 #include "core_scene_compile.h"
 #include "export/export_paths.h"
 #include "export/volume_frames.h"
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <json-c/json.h>
@@ -69,6 +70,8 @@ typedef struct Session {
     const char *state;
     const char *error;
     bool paused;
+    struct json_object *history;
+    uint64_t history_tick;
 } Session;
 
 static struct json_object *snapshot(Session *s) {
@@ -76,6 +79,7 @@ static struct json_object *snapshot(Session *s) {
     scene_backend_report(&s->scene, &r);
     struct json_object *o = json_object_new_object();
     str(o, "schema", "physics_sim_session_snapshot_v1");
+    integer(o, "sample_protocol", 1);
     str(o, "run_id", string(s->request, "run_id"));
     str(o, "scene_revision", string(s->request, "scene_revision"));
     str(o, "state", s->state);
@@ -114,6 +118,22 @@ static struct json_object *snapshot(Session *s) {
     str(health, "pressure_convergence", "unavailable: fixed-iteration solver");
     str(health, "nonfinite_scope", "bounded preview samples and reported metrics");
     json_object_object_add(o, "health", health);
+    if (!s->history)
+        s->history = json_object_new_array();
+    if (!json_object_array_length(s->history) || s->history_tick != s->tick) {
+        struct json_object *point = json_object_new_object();
+        integer(point, "tick", s->tick);
+        num(point, "simulation_time", s->scene.time);
+        num(point, "step_ms", s->step_ms);
+        num(point, "max_divergence", r.runtime_solver_max_abs_divergence_after_project);
+        num(point, "max_speed", r.runtime_solver_max_velocity_magnitude_post_clamp);
+        integer(point, "velocity_clamped_cells", r.runtime_solver_velocity_clamp_cell_count);
+        json_object_array_add(s->history, point);
+        s->history_tick = s->tick;
+        if (json_object_array_length(s->history) > 128)
+            json_object_array_del_idx(s->history, 0, 1);
+    }
+    json_object_object_add(o, "history", json_object_get(s->history));
     json_object_object_add(o, "preview", physics_sim_session_observation(&s->scene));
     return o;
 }
@@ -139,6 +159,46 @@ static bool publish(Session *s, bool event) {
     json_object_put(o);
     return ok;
 }
+
+// Diagnostic requests are independent of control receipts and never advance time.
+// Bounded service admission and at most two reads per boundary prevent starvation.
+static void sample_requests(Session *s) {
+    char directory[1100];
+    snprintf(directory, sizeof(directory), "%s/sample_requests", s->root);
+    DIR *dir = opendir(directory);
+    if (!dir)
+        return;
+    struct dirent *entry;
+    int handled = 0;
+    while (handled < 2 && (entry = readdir(dir))) {
+        if (entry->d_name[0] == '.' || !strstr(entry->d_name, ".json"))
+            continue;
+        char input[1400], output[1400];
+        snprintf(input, sizeof(input), "%s/%s", directory, entry->d_name);
+        snprintf(output, sizeof(output), "%s/sample_results/%s", s->root, entry->d_name);
+        struct json_object *req = json_object_from_file(input);
+        if (!req)
+            continue;
+        struct json_object *o = json_object_new_object();
+        str(o, "schema", "physics_sim_sample_v1");
+        str(o, "request_id", string(req, "request_id"));
+        str(o, "run_id", string(s->request, "run_id"));
+        str(o, "scene_revision", string(s->request, "scene_revision"));
+        str(o, "status", "ready");
+        str(o, "state", s->state);
+        integer(o, "tick", s->tick);
+        num(o, "simulation_time", s->scene.time);
+        num(o, "sampled_at", (double)time(NULL));
+        json_object_object_add(o, "preview", physics_sim_session_sample(&s->scene, req));
+        if (atomic_json(output, o))
+            unlink(input);
+        json_object_put(req);
+        json_object_put(o);
+        handled++;
+    }
+    closedir(dir);
+}
+
 static bool step(Session *s, AppConfig *cfg, const SimModeHooks *hooks) {
     double begin = monotonic_seconds();
     s->scene.dt = s->dt;
@@ -322,6 +382,7 @@ int main(int argc, char **argv) {
             json_object_put(command);
             continue;
         }
+        sample_requests(&s);
         if (s.paused) {
             struct timespec delay = {0, 10000000};
             nanosleep(&delay, NULL);
@@ -336,6 +397,7 @@ int main(int argc, char **argv) {
             last_publish = monotonic_seconds();
         }
     }
+    sample_requests(&s);
     bool ok = publish(&s, true);
     scene_destroy(&s.scene);
     json_object_put(request);

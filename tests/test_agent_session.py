@@ -145,6 +145,43 @@ class SessionIntegration(unittest.TestCase):
         result=self.service.run_start('next','wind',self.revision,steps=1,start_paused=False)
         self.assertEqual(result['run_id'],'next')
 
+    def test_rich_samples_are_coherent_bounded_and_do_not_advance(self):
+        self.start(steps=200)
+        self.control('step')
+        for plane in ('XY','XZ','YZ'):
+            sample=self.service.run_sample('run',plane,plane=plane,position=1,resolution=64,
+                points=[[.1,.1,.1],[-1,0,0]],wait_ms=5000,field='vorticity',vectors=True)
+            self.assertEqual(sample['status'],'ready')
+            self.assertEqual(sample['tick'],1)
+            p=sample['preview'];self.assertLessEqual(len(p['samples']),4096)
+            self.assertEqual(p['slice_index'],p['grid'][p['normal_axis']]-1)
+            self.assertTrue(p['probes'][0]['inside']);self.assertFalse(p['probes'][1]['inside'])
+            self.assertEqual(len(p['probes'][0]['values']),9)
+            for cell in p['samples']:
+                self.assertAlmostEqual(cell[0],sum(x*x for x in cell[3:6])**.5,places=5)
+            from preview import image_content
+            self.assertEqual(image_content(sample)['mimeType'],'image/png')
+        status=self.service.run_inspect('run',history=True)
+        self.assertEqual(status['tick'],1)
+        self.assertEqual(status['health']['export_materializations'],0)
+        self.assertEqual([p['tick'] for p in status['history']],[0,1])
+        with self.assertRaises(SessionError):self.service.run_sample('run','XY',plane='YZ')
+        for args in ({'plane':'ZZ'},{'position':2},{'resolution':65},{'color_range':[1,0]}, {'points':[[0,0,0]]*17}):
+            with self.assertRaises(SessionError):self.service.run_sample('run','invalid',**args)
+        self.control('cancel')
+        with self.assertRaises(SessionError):self.service.run_sample('run','after-end')
+
+    def test_sampling_concurrent_clients_and_retention(self):
+        self.start()
+        def sample(i):
+            return Service(self.tmp.name).run_sample('run',f'sample{i}',position=i/4,wait_ms=5000)
+        with concurrent.futures.ThreadPoolExecutor(4) as pool:
+            results=list(pool.map(sample,range(4)))
+        self.assertTrue(all(r['status']=='ready' and r['tick']==0 for r in results))
+        for i in range(36):
+            self.assertEqual(self.service.run_sample('run',f'extra{i}',resolution=4,wait_ms=5000)['status'],'ready')
+        self.assertLessEqual(len(list((self.service.run_dir('run')/'sample_ids').glob('*.json'))),32)
+
     def test_protocol_end_to_end(self):
         p=subprocess.Popen([sys.executable,str(ROOT/'scripts/physics_sim_session.py'),'--root',self.tmp.name,'--mcp'],
                            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
@@ -164,7 +201,7 @@ class SessionIntegration(unittest.TestCase):
             return r['structuredContent']
         try:
             self.assertIn('tools',rpc('initialize',{'protocolVersion':'2025-11-25'})['capabilities'])
-            self.assertEqual(len(rpc('tools/list')['tools']),8)
+            self.assertEqual(len(rpc('tools/list')['tools']),9)
             created=tool('scene_create',{'scene_id':'sphere','template':'wind_sphere'})
             revision=created['scene_revision']
             tool('scene_validate',{'scene_id':'sphere','scene_revision':revision})
@@ -173,6 +210,10 @@ class SessionIntegration(unittest.TestCase):
             receipt=tool('run_control',dict(args,command_id='one',action='step'))
             self.assertEqual(receipt['tick'],1)
             self.assertIn('preview',tool('run_inspect',{'run_id':'mcp','preview':True}))
+            sampled=tool('run_sample',{'run_id':'mcp','request_id':'rich','plane':'XZ','field':'divergence','vectors':True,'color_range':[-10,10],'wait_ms':5000})
+            self.assertEqual(sampled['tick'],1)
+            self.assertEqual(sampled['preview']['display_range'],[-10,10])
+            self.assertNotIn('samples',sampled['preview'])
             # Transport disconnect must not own or stop the solver session.
             p.stdin.close();p.wait(timeout=10);p.stdout.close();p.stderr.close()
             p=subprocess.Popen([sys.executable,str(ROOT/'scripts/physics_sim_session.py'),'--root',self.tmp.name,'--mcp'],

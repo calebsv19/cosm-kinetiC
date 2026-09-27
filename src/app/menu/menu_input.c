@@ -597,6 +597,8 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         SDL_HideWindow(ctx->window);
         physics_sim_session_workspace_run(NULL);
         SDL_ShowWindow(ctx->window);
+        SDL_RaiseWindow(ctx->window);
+        menu_set_status(ctx, "Returned to setup. Background Wind sessions remain available in Live inspection [F8].", false);
         return;
     }
     bool ctrl_or_cmd = (mod & KMOD_CTRL) != 0 || (mod & KMOD_GUI) != 0;

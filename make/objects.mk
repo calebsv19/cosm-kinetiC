@@ -41,6 +41,7 @@ DEPS := $(OBJS:.o=.d)
 PHYSICS_SIM_APP_OBJS_NO_MAIN := $(filter-out $(BUILD_DIR)/main.o,$(OBJS))
 PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/app/session_workspace.c \
+	$(SRC_DIR)/app/session_workspace_text.c \
 	$(SRC_DIR)/main.c \
 	$(SRC_DIR)/app/physics_sim_vulkan_rollout.c \
 	$(SRC_DIR)/app/scene_menu.c \

@@ -87,8 +87,11 @@ static bool physics_sim_apply_startup_root_fallbacks(AppConfig *cfg,
 }
 
 int physics_sim_app_main_legacy(int argc, char **argv) {
-    if (argc >= 2 && strcmp(argv[1], "--agent-workspace") == 0)
-        return physics_sim_session_workspace_run(argc > 2 ? argv[2] : NULL);
+    if (argc >= 2 && strcmp(argv[1], "--agent-workspace") == 0) {
+        int result = physics_sim_session_workspace_run(argc > 2 ? argv[2] : NULL);
+        if (result != 2) return result;
+        // Explicit Setup navigation rejoins the normal application shell.
+    }
     if (argc == 2 && strcmp(argv[1], "--vulkan-rollout-self-test") == 0) {
         return physics_sim_vulkan_rollout_self_test();
     }

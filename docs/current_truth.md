@@ -877,3 +877,8 @@ The source/Main Edit lane now includes a background Wind session worker, bounded
 inspection, eight MCP tools, and a native workspace sharing the same run controls.
 See [agent_session.md](agent_session.md) for build, connection and acceptance
 contracts. This does not change the public desktop version or remote-worker API.
+
+S2 adds three-plane live diagnostic slices, scalar/vector field inspection,
+world-coordinate MCP probes, bounded health history, fixed-range comparison, and
+native-density shared-font rendering in the agent workspace. See the S2 section
+of [agent_session.md](agent_session.md) for sampling limits and model caveats.

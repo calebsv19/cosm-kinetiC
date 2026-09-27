@@ -84,6 +84,7 @@ class Service:
         return {'schema': 'physics_sim_session_capabilities_v1', 'models': ['wind_approximate_v1'],
                 'templates': ['wind_box', 'wind_sphere'], 'active_runs_per_root': 1,
                 'controls': ['pause', 'step', 'continue', 'cancel'], 'checkpoint_restart': False,
+                'inspection': {'planes':['XY','XZ','YZ'],'fields':['speed','dye','solid','vx','vy','vz','pressure_proxy','divergence','vorticity'], 'max_samples':4096,'max_probes':16,'history_points':128,'pending_requests':8,'retained_requests':32},
                 'states': ['starting','running','paused','completed','cancelled','failed'],
                 'tick_semantics': 'one fixed dt, including configured core_sim substeps; acknowledgement at safe boundaries',
                 'preview': 'XY midpoint, at most 64x64 sparse samples; [speed,dye_density,solid]',
@@ -243,9 +244,9 @@ class Service:
 
     @staticmethod
     def _compact(snap):
-        return {k: v for k, v in snap.items() if k != 'preview'}
+        return {k: v for k, v in snap.items() if k not in ('preview','history')}
 
-    def run_inspect(self, run_id, preview=False, log_tail_lines=0):
+    def run_inspect(self, run_id, preview=False, log_tail_lines=0, history=False):
         number(log_tail_lines,0,100,True)
         with self.lock():
             path = self.run_dir(run_id)
@@ -258,7 +259,10 @@ class Service:
                 size = log.tell()
                 log.seek(max(0,size-65536))
                 snap['log_tail'] = log.read().decode('utf-8',errors='replace').splitlines()[-log_tail_lines:]
-        return snap if preview else self._compact(snap)
+        result = snap if preview else self._compact(snap)
+        if history: result['history'] = snap.get('history',[])
+        elif preview: result.pop('history',None)
+        return result
 
     def run_control(self, run_id, command_id, action, scene_revision, wait_ms=0):
         identifier(command_id)
@@ -346,4 +350,56 @@ class Service:
                                   'sha256': hashlib.sha256(file.read_bytes()).hexdigest()})
         result = {'status': status, 'provenance': read(path / 'request.json'), 'artifacts': artifacts}
         atomic(path / 'result.json', result)
+        return result
+
+    def run_sample(self, run_id, request_id, plane='XY', position=.5, resolution=48,
+                   field='speed', points=None, wait_ms=0, color_range=None, vectors=False):
+        identifier(request_id)
+        if plane not in ('XY','XZ','YZ'): raise SessionError('plane must be XY, XZ or YZ')
+        fields=('speed','dye','solid','vx','vy','vz','pressure_proxy','divergence','vorticity')
+        if field not in fields: raise SessionError('unsupported field')
+        number(position,0,1);number(resolution,4,64,True);number(wait_ms,0,5000,True)
+        if not isinstance(vectors,bool): raise SessionError('vectors must be boolean')
+        points=[] if points is None else points
+        if not isinstance(points,list) or len(points)>16: raise SessionError('at most 16 world-space probes')
+        for point in points:
+            if not isinstance(point,list) or len(point)!=3: raise SessionError('each probe needs XYZ meters')
+            for value in point:number(value,-1e6,1e6)
+        if color_range is not None:
+            if not isinstance(color_range,list) or len(color_range)!=2: raise SessionError('color_range requires min,max')
+            for value in color_range:number(value,-1e12,1e12)
+            if color_range[0]>=color_range[1]: raise SessionError('color_range must increase')
+        payload=dict(request_id=request_id,plane=plane,position=position,resolution=resolution,
+                     field=field,points=points,color_range=color_range,vectors=vectors)
+        with self.lock():
+            path=self.run_dir(run_id)
+            for name in ('sample_requests','sample_results','sample_ids'):(path/name).mkdir(exist_ok=True)
+            identity=path/'sample_ids'/f'{request_id}.json'
+            response=path/'sample_results'/f'{request_id}.json'
+            pending=path/'sample_requests'/f'{request_id}.json'
+            if identity.exists():
+                if read(identity)!=payload:raise SessionError('sample_request_id_conflict')
+            else:
+                if self._status(path)['state'] in TERMINAL:raise SessionError('live_sampling_unavailable_after_terminal; use retained samples and result artifacts')
+                if self._status(path).get('sample_protocol') != 1:raise SessionError('worker_has_no_live_sampling; start a new S2 run')
+                # Expire abandoned pending requests and cap retained diagnostic requests.
+                for old in (path/'sample_requests').glob('*.json'):
+                    if time.time()-old.stat().st_mtime>30:old.unlink()
+                if len(list((path/'sample_requests').glob('*.json')))>=8:raise SessionError('sample_queue_full; retry later')
+                entries=sorted((path/'sample_ids').glob('*.json'),key=lambda p:p.stat().st_mtime)
+                retained=len(entries)
+                for old in entries:
+                    if retained<32:break
+                    if (path/'sample_requests'/old.name).exists():continue
+                    (path/'sample_results'/old.name).unlink(missing_ok=True);old.unlink();retained-=1
+                if retained>=32:raise SessionError('sample_retention_busy; retry later')
+                atomic(identity,payload);atomic(pending,payload)
+        deadline=time.monotonic()+wait_ms/1000
+        while not response.exists() and time.monotonic()<deadline:time.sleep(.01)
+        if not response.exists():
+            state=self.run_inspect(run_id)['state']
+            return dict(request_id=request_id,run_id=run_id,status='unavailable' if state in TERMINAL or not pending.exists() else 'pending',state=state)
+        result=read(response)
+        preview=result['preview'];preview.update(field=field,color_range=color_range,vectors=vectors)
+        result['sample_age_seconds']=max(0,time.time()-result['sampled_at'])
         return result
