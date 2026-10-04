@@ -106,7 +106,12 @@ package-desktop-smoke: package-desktop
 	@echo "package-desktop-smoke passed."
 
 package-desktop-self-test: package-desktop-smoke
-	@"$(PACKAGE_MACOS_DIR)/physics-sim-launcher" --self-test || (echo "package-desktop self-test failed."; exit 1)
+	@python3 tools/packaging/validate_macos_session.py --app "$(PACKAGE_APP_DIR)"
+	@support="$$(mktemp -d "$(CURDIR)/$(BUILD_DIR)/package-self-test.XXXXXX")"; \
+	PHYSICS_SIM_APP_SUPPORT_DIR="$$support" PHYSICS_SIM_LOG_DIR="$$support/logs" \
+		"$(PACKAGE_MACOS_DIR)/physics-sim-launcher" --self-test; result=$$?; \
+	if [ "$$result" = 0 ]; then rm -rf "$$support"; else echo "package-desktop self-test failed; evidence: $$support"; fi; \
+	exit "$$result"
 	@echo "package-desktop-self-test passed."
 
 package-desktop-copy-desktop: package-desktop-refresh-authority package-desktop

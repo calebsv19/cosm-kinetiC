@@ -297,3 +297,16 @@ Note:
    - launch the unpacked package in the logged-in Linux PC desktop session and
      fetch app-window screenshots plus launcher logs through the bounded
      handoff lane.
+
+## Local session prerequisite and package validation
+
+Live inspection and the bundled MCP server require Python 3.9 or newer as
+`python3` on the user launch PATH. Python is external to the application bundle;
+the original setup and simulation modes do not depend on the session client.
+`package-desktop-self-test` verifies the bundled stdlib-only session imports,
+MCP initialization, tool discovery and capability response using the selected
+Python interpreter and a disposable session root. Release signing covers the
+new `Contents/MacOS/physics_sim_session_worker` executable as well as the main
+app, launcher and bundled libraries. A clean user launch environment and a real
+packaged desktop/MCP shared-run check remain required release acceptance gates.
+This does not certify the approximate Wind model as physically validated CFD.
