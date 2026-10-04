@@ -2058,3 +2058,14 @@ will distinguish the remainingcost/iteration floor before another distinctcandid
 Quality-passed43008tet finerL4 remains withheld; exactfactor gap287.527MiB against
 1800MiB cap preserved. Existingmatched L4/L8 and heldfloor6 force-sensitivity fields
 remain available, with rawforce/energy acceptance failures explicitly retained.
+
+## GrowthSim surface-source communication (2026-10-04)
+
+The source-only offline adapter now admits GrowthSim Fire v1 copied frames/bundles
+under an explicit pinned policy and journals replay-safe admission/allocation plans.
+Area intersections and half-open uniform-rate substeps preserve transferred J/kg
+budgets on a declared stationary XY fluid-facing layer. This general fluid/atmosphere
+contract lane does not require a wind-tunnel scene and does not alter native solver,
+fields, time, forces, live MCP capabilities or installed packages. See
+[commands and acceptance boundaries](surface_source_admission.md). Thermal state,
+physical injection, buoyancy and atomic fluid/source restart remain unimplemented.

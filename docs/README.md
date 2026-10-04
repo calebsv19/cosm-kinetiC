@@ -474,3 +474,5 @@ No commit, package or installed Desktop capability is implied.
 - [One-pass cubic coarse action and full numerical result](cfd_3d_p3_cg8_scalar_checkpoint.md)
 - [Sixteen-step inner correction and measured cost floor](cfd_3d_p3_cg16_scalar_checkpoint.md)
 - [Next bounded pressure proxy and mode coverage diagnostic](cfd_3d_p3_cg16_scalar_next_goal.md)
+
+- [Offline surface-source admission and allocation](surface_source_admission.md) — general fluid/atmosphere communication, conservative plans and unchanged-solver boundary.

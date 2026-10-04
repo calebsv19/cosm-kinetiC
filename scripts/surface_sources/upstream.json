@@ -1,0 +1,7 @@
+{
+  "owner": "growth_sim",
+  "revision": "1e24d710f23d0532b964799c1567923069b41b04",
+  "path": "scripts/fire_source/contract.py",
+  "sha256": "6e1aa6bf1fa72d0992480b0df08ecaa0494e2707e5f4bfe5d76e6e4c3bd8401d",
+  "policy": "byte-identical normative validator; update only with explicit contract review"
+}

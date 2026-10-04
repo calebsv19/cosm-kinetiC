@@ -1052,3 +1052,8 @@ test-cfd-3d-box-session-sanitize:
 .PHONY: test-agent-box3d
 test-agent-box3d: $(SESSION_WORKER_BIN)
 	PYTHONDONTWRITEBYTECODE=1 PHYSICS_SIM_SESSION_WORKER="$(abspath $(SESSION_WORKER_BIN))" python3 -m unittest discover -s tests -p test_agent_box3d.py -v
+
+# Offline general-fluid/atmosphere source contract; no native solver mutation.
+.PHONY: test-surface-source-receiver
+test-surface-source-receiver:
+	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_surface_source_receiver.py -v

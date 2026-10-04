@@ -1,0 +1,103 @@
+{
+  "schema": "physics_sim_surface_source_policy/v1",
+  "consumer_id": "atmosphere-patch",
+  "model_id": "fluid_atmosphere_offline_allocation_v1",
+  "source_config": {
+    "branch_id": "original",
+    "calibration": {
+      "energy_j_per_fuel_kg": 1000000,
+      "energy_transfer_fraction": 0.6,
+      "fuel_kg_per_unit_m2": 0.5,
+      "id": "demonstration-only",
+      "smoke_kg_per_fuel_kg": 0.1,
+      "smoke_transfer_fraction": 0.8
+    },
+    "cell_size_m": 0.1,
+    "dt_s": 0.016666666666666666,
+    "height": 8,
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "run_id": "example-fire",
+    "seed": 42,
+    "surface_id": "stationary-patch",
+    "width": 8
+  },
+  "producer": {
+    "adapter_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "worker_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "stream_start_tick": 0,
+  "receiver": {
+    "frame": "right_handed_z_up_meters",
+    "origin_m": [
+      0,
+      0,
+      0
+    ],
+    "spacing_m": [
+      0.1,
+      0.1,
+      0.1
+    ],
+    "dimensions": [
+      7,
+      7,
+      2
+    ],
+    "layer": 0,
+    "fluid_mask": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ]
+  }
+}
