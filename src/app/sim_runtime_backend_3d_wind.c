@@ -152,7 +152,8 @@ static void wind_write_receive_outlet_slab(SimRuntimeBackend3DScaffold *state,
                                            int slab_cells,
                                            float velocity_x,
                                            float velocity_y,
-                                           float velocity_z) {
+                                           float velocity_z,
+                                           bool extrapolate_velocity) {
     int min_x = 0;
     int max_x = 0;
     int min_y = 0;
@@ -176,6 +177,7 @@ static void wind_write_receive_outlet_slab(SimRuntimeBackend3DScaffold *state,
             for (int x = min_x; x < max_x; ++x) {
                 float density = 0.0f;
                 float pressure = 0.0f;
+                float cell_vx=velocity_x, cell_vy=velocity_y, cell_vz=velocity_z;
                 int sample_x = x;
                 int sample_y = y;
                 int sample_z = z;
@@ -209,30 +211,35 @@ static void wind_write_receive_outlet_slab(SimRuntimeBackend3DScaffold *state,
                                                           sample_y,
                                                           sample_z,
                                                           &density,
-                                                          NULL,
-                                                          NULL,
-                                                          NULL,
+                                                          extrapolate_velocity ? &cell_vx : NULL,
+                                                          extrapolate_velocity ? &cell_vy : NULL,
+                                                          extrapolate_velocity ? &cell_vz : NULL,
                                                           &pressure);
                 if (backend_3d_scaffold_dense_mirror_live(state)) {
                     size_t sample_idx =
                         sim_runtime_3d_volume_index(&state->volume.desc, sample_x, sample_y, sample_z);
                     density = state->volume.density[sample_idx];
                     pressure = state->volume.pressure[sample_idx];
+                    if (extrapolate_velocity) {
+                        cell_vx=state->volume.velocity_x[sample_idx];
+                        cell_vy=state->volume.velocity_y[sample_idx];
+                        cell_vz=state->volume.velocity_z[sample_idx];
+                    }
                 }
                 (void)sim_runtime_3d_brick_store_set_cell(&state->brick_store,
                                                           x,
                                                           y,
                                                           z,
                                                           density,
-                                                          velocity_x,
-                                                          velocity_y,
-                                                          velocity_z,
+                                                          cell_vx,
+                                                          cell_vy,
+                                                          cell_vz,
                                                           pressure);
                 if (backend_3d_scaffold_dense_mirror_live(state)) {
                     state->volume.density[idx] = density;
-                    state->volume.velocity_x[idx] = velocity_x;
-                    state->volume.velocity_y[idx] = velocity_y;
-                    state->volume.velocity_z[idx] = velocity_z;
+                    state->volume.velocity_x[idx] = cell_vx;
+                    state->volume.velocity_y[idx] = cell_vy;
+                    state->volume.velocity_z[idx] = cell_vz;
                     state->volume.pressure[idx] = pressure;
                 }
             }
@@ -648,6 +655,7 @@ void backend_3d_scaffold_apply_wind_tunnel_boundary(SimRuntimeBackend3DScaffold 
     if (!wind_tunnel_3d_config_validate(config)) return;
 
     wind_face_vector(config->inlet_face, config->inflow_speed, &vx, &vy, &vz);
+    if (!scene->config->fluid_3d_disable_wind_heuristics) {
     if (config->inlet_face == WIND_TUNNEL_3D_FACE_LEFT &&
         config->outlet_face == WIND_TUNNEL_3D_FACE_RIGHT) {
         wind_apply_corridor_velocity_relaxed_x_axis(state, 1, vx);
@@ -661,6 +669,7 @@ void backend_3d_scaffold_apply_wind_tunnel_boundary(SimRuntimeBackend3DScaffold 
                                      vx,
                                      vy,
                                      vz);
+    }
     }
     wind_write_slab(state,
                     config->inlet_face,
@@ -687,9 +696,11 @@ void backend_3d_scaffold_apply_wind_tunnel_boundary(SimRuntimeBackend3DScaffold 
                                        1,
                                        vx,
                                        vy,
-                                       vz);
+                                       vz,
+                                       scene->config->fluid_3d_disable_wind_heuristics);
     }
-    wind_apply_obstacle_wake_relaxation(state, config);
+    if (!scene->config->fluid_3d_disable_wind_heuristics)
+        wind_apply_obstacle_wake_relaxation(state, config);
     state->wind_step_index++;
     backend_3d_scaffold_mark_fluid_dirty(state);
 }

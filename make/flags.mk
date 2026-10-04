@@ -23,6 +23,10 @@ WARN      := -Wall -Wextra -Wpedantic
 DEBUG     := -g
 
 CFLAGS    := $(CSTD) $(WARN) $(DEBUG) $(ARCH_FLAGS) -I$(INC_DIR) -I$(SRC_DIR) -I$(SRC_DIR)/tools -I$(FISICS_INCLUDE_DIR)
+ifeq ($(CFD_BUILD_OPT),1)
+CFLAGS += -O2
+endif
+
 CFLAGS    += -DPHYSICS_SIM_REPO_ROOT=\"$(abspath .)\"
 LDFLAGS   := $(ARCH_FLAGS)
 LIBS      :=
@@ -71,6 +75,19 @@ ifeq ($(UNAME_S),Darwin)
     SDL_TTF_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs SDL2_ttf 2>/dev/null)
     JSON_CFLAGS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --cflags json-c 2>/dev/null)
     JSON_LIBS := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --libs json-c 2>/dev/null)
+    # The local json-c 0.19 iterative container destructor leaks array storage.
+    # C3D-7's ownership regression reproduces this without any simulation work.
+    # Bind the already installed 0.18 archive so an opt/ symlink update cannot
+    # change the runtime dependency after the source worker is qualified.
+    PHYSICS_SIM_JSON_VERSION := $(shell env PKG_CONFIG_LIBDIR="$(TARGET_PKG_CONFIG_LIBDIR)" $(PKG_CONFIG) --modversion json-c 2>/dev/null)
+    ifeq ($(PHYSICS_SIM_JSON_VERSION),0.19)
+        PHYSICS_SIM_JSON_COMPAT_PREFIX ?= $(TARGET_HOMEBREW_PREFIX)/Cellar/json-c/0.18
+        ifeq ($(wildcard $(PHYSICS_SIM_JSON_COMPAT_PREFIX)/lib/libjson-c.a),)
+            $(error json-c 0.19 fails container cleanup; supply PHYSICS_SIM_JSON_COMPAT_PREFIX for an installed 0.18 archive and run test-json-container-ownership)
+        endif
+        JSON_CFLAGS := -I$(PHYSICS_SIM_JSON_COMPAT_PREFIX)/include -I$(PHYSICS_SIM_JSON_COMPAT_PREFIX)/include/json-c
+        JSON_LIBS := $(PHYSICS_SIM_JSON_COMPAT_PREFIX)/lib/libjson-c.a
+    endif
     CFLAGS  += -D_POSIX_C_SOURCE=200809L -D_THREAD_SAFE
     ifneq ($(strip $(SDL_CFLAGS)),)
         CFLAGS += $(SDL_CFLAGS) $(SDL_TTF_CFLAGS)

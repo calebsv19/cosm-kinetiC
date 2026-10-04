@@ -11,6 +11,7 @@
 #include "app/scene_presets.h"
 #include "app/sim_mode.h"
 #include "app/sim_runtime_3d_domain.h"
+#include "app/sim_runtime_3d_solver.h"
 #include "app/wind_tunnel_3d.h"
 #include "import/runtime_scene_bridge.h"
 #include "input/stroke_buffer.h"
@@ -148,6 +149,14 @@ typedef struct SimRuntimeBackendReport {
     float runtime_solver_max_velocity_magnitude_post_clamp;
     float runtime_solver_max_velocity_displacement_cells_pre_clamp;
     float runtime_solver_max_velocity_displacement_cells_post_clamp;
+    float runtime_solver_max_abs_divergence_before_project;
+    float runtime_solver_pressure_residual_linf;
+    size_t runtime_transport_corrected_components;
+    size_t runtime_transport_limited_components;
+    size_t runtime_transport_fallback_components;
+    int runtime_projection_iterations_used;
+    size_t runtime_projection_unconverged_count;
+    SimRuntime3DConservation conservation;
     float runtime_solver_max_abs_divergence_after_project;
     bool debug_volume_view_3d_available;
     bool atmospheric_settings_available;

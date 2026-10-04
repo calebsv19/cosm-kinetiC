@@ -534,7 +534,44 @@ static bool test_wind_tunnel_inspector_snapshot_exposes_solver_fields(void) {
     return true;
 }
 
+static bool test_qualification_outlet_extrapolates_velocity(void) {
+    const WindTunnel3DFace faces[6]={WIND_TUNNEL_3D_FACE_LEFT,WIND_TUNNEL_3D_FACE_RIGHT,
+        WIND_TUNNEL_3D_FACE_BOTTOM,WIND_TUNNEL_3D_FACE_TOP,
+        WIND_TUNNEL_3D_FACE_FRONT,WIND_TUNNEL_3D_FACE_BACK};
+    for(int face=0;face<6;face++) {
+        AppConfig cfg=app_config_default();cfg.grid_w=16;cfg.grid_h=16;cfg.grid_d=16;
+        cfg.fluid_3d_disable_wind_heuristics=true;
+        SimModeRoute route={.simulation_mode=SIM_MODE_WIND_TUNNEL,.requested_space_mode=SPACE_MODE_3D,
+            .backend_lane=SIM_BACKEND_CONTROLLED_3D,.wind_tunnel_3d_active=true};
+        PhysicsSimRuntimeVisualBootstrap visual={0};visual.scene_domain.enabled=true;
+        visual.scene_domain_authored=true;visual.scene_domain.max=(CoreObjectVec3){2,2,2};
+        visual.wind_tunnel_authored=true;visual.wind_tunnel=wind_tunnel_3d_config_default(&cfg);
+        visual.wind_tunnel.inlet_face=faces[face^1];visual.wind_tunnel.outlet_face=faces[face];
+        SimRuntimeBackend *backend=sim_runtime_backend_create(&cfg,NULL,&route,&visual);
+        if(!backend)return false;
+        SceneState scene={.mode_route=route,.config=&cfg,.backend=backend,.runtime_visual=visual};
+        SimRuntimeBackend3DScaffoldTestView view={0};
+        if(!sim_runtime_backend_3d_test_view_refresh(backend,&view))return false;
+        int dims[3]={view.volume.desc.grid_w,view.volume.desc.grid_h,view.volume.desc.grid_d};
+        int q[3]={dims[0]/2,dims[1]/2,dims[2]/2};
+        int axis=face/2;q[axis]=(face%2)?dims[axis]-2:1;
+        if(!sim_runtime_backend_3d_test_write_cell(backend,q[0],q[1],q[2],.6,.37,-.22,.13,.4,0))return false;
+        sim_runtime_backend_apply_boundary_flows(backend,&scene,.01);
+        if(!sim_runtime_backend_3d_test_view_refresh(backend,&view))return false;
+        q[axis]=(face%2)?dims[axis]-1:0;
+        size_t i=sim_runtime_3d_volume_index(&view.volume.desc,q[0],q[1],q[2]);
+        bool ok=closef(view.volume.velocity_x[i],.37)&&closef(view.volume.velocity_y[i],-.22)&&
+            closef(view.volume.velocity_z[i],.13)&&closef(view.volume.density[i],.6);
+        sim_runtime_backend_destroy(backend);
+        if(!ok)return false;
+    }
+    return true;
+}
+
 int main(void) {
+    if(!test_qualification_outlet_extrapolates_velocity()) {
+        fprintf(stderr,"qualification outlet extrapolation failed\n");return 1;
+    }
     if (!test_wind_tunnel_boundary_writes_inlet_and_receive_outlet()) {
         fprintf(stderr, "sim_runtime_backend_3d_wind_tunnel_contract_test: inlet/outlet write failed\n");
         return 1;

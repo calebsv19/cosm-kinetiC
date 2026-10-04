@@ -47,6 +47,49 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
+	$(SRC_DIR)/app/cfd_channel.c \
+	$(SRC_DIR)/app/cfd_mac2d.c \
+	$(SRC_DIR)/app/cfd_mac2d_force_check.c \
+	$(SRC_DIR)/app/cfd_open2d.c \
+	$(SRC_DIR)/app/cfd_memory.c \
+	$(SRC_DIR)/app/cfd_sparse_mg.c \
+	$(SRC_DIR)/app/cfd_refined_mesh.c \
+	$(SRC_DIR)/app/cfd_refined_mesh_local.c \
+	$(SRC_DIR)/app/cfd_refined_diffusion.c \
+	$(SRC_DIR)/app/cfd_refined_transport.c \
+	$(SRC_DIR)/app/cfd_refined_mixed.c \
+	$(SRC_DIR)/app/cfd_refined_channel.c \
+	$(SRC_DIR)/app/cfd_open3d.c \
+	$(SRC_DIR)/app/cfd_open3d_observation.c \
+	$(SRC_DIR)/app/cfd_transient3d_observation.c \
+	$(SRC_DIR)/app/cfd_3d_harmonic.c \
+	$(SRC_DIR)/app/cfd_wall3d.c \
+	$(SRC_DIR)/app/cfd_wall3d_reference.c \
+	$(SRC_DIR)/app/cfd_startup3d.c \
+	$(SRC_DIR)/app/cfd_startup3d_reference.c \
+	$(SRC_DIR)/app/cfd_mixed3d.c \
+	$(SRC_DIR)/app/cfd_obstacle3d.c \
+	$(SRC_DIR)/app/cfd_obstacle3d_box.c \
+	$(SRC_DIR)/app/cfd_obstacle3d_pressure_trace.c \
+	$(SRC_DIR)/app/cfd_obstacle3d_reconstruction.c \
+	$(SRC_DIR)/app/cfd_obstacle3d_mixed.c \
+	$(SRC_DIR)/app/cfd_obstacle3d_observation.c \
+	$(SRC_DIR)/app/cfd_3d_session.c \
+	$(SRC_DIR)/app/cfd_3d_observation.c \
+	$(SRC_DIR)/app/cfd_cartesian3d.c \
+	$(SRC_DIR)/app/cfd_duct3d.c \
+	$(SRC_DIR)/app/cfd_periodic3d.c \
+	$(SRC_DIR)/app/cfd_refined_session.c \
+	$(SRC_DIR)/app/cfd_refined_observation.c \
+	$(SRC_DIR)/app/cfd_pressure_mg.c \
+	$(SRC_DIR)/app/cfd_open2d_force_check.c \
+	$(SRC_DIR)/app/cfd_open2d_observation.c \
+	$(SRC_DIR)/app/cfd_steady_monitor.c \
+	$(SRC_DIR)/app/cfd_surface_force.c \
+	$(SRC_DIR)/app/cfd_mac2d_observation.c \
+	$(SRC_DIR)/app/cfd_channel_observation.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_mesh_diagnostics.c \

@@ -126,6 +126,8 @@ ATMOSPHERIC_WARM_START_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -181,6 +183,8 @@ WATER_SURFACE_ARTIFACTS_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -228,6 +232,8 @@ SIM_RUNTIME_BACKEND_3D_EMITTER_TEST_SRCS := \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -256,6 +262,8 @@ SIM_RUNTIME_BACKEND_3D_ATTACHED_EMITTER_TEST_SRCS := \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -285,6 +293,8 @@ SIM_RUNTIME_BACKEND_3D_RUNTIME_MESH_EMITTER_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_mesh_accel.c \
@@ -322,6 +332,8 @@ SIM_RUNTIME_BACKEND_3D_OBSTACLE_TEST_SRCS := \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -352,6 +364,8 @@ SIM_RUNTIME_BACKEND_3D_WIND_TUNNEL_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -379,6 +393,8 @@ SIM_RUNTIME_BACKEND_3D_RETAINED_OBSTACLE_TEST_SRCS := \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -412,6 +428,8 @@ SIM_RUNTIME_BACKEND_REPORTING_TEST_SRCS := \
 		$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -441,6 +459,8 @@ SIM_RUNTIME_3D_SOLVER_TEST_SRCS := \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(CORE_SIM_DIR)/src/core_sim.c
@@ -472,6 +492,8 @@ MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c
 
 SCENE_MENU_LAYOUT_CONTRACT_TEST_SRCS := \
@@ -495,6 +517,8 @@ SCENE_MENU_LAYOUT_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/data_paths.c \
 	$(SRC_DIR)/app/sim_runtime_3d_domain.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c
 
 QUALITY_PROFILES_CONTRACT_TEST_SRCS := \
@@ -631,6 +655,8 @@ RUNTIME_SCENE_3D_TRUTH_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -1149,6 +1175,8 @@ VOLUME_FRAMES_3D_EXPORT_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -1199,6 +1227,8 @@ VOLUME_FRAMES_3D_TINY_PARITY_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_anchor.c \
 	$(SRC_DIR)/app/sim_runtime_3d_space.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver.c \
+	$(SRC_DIR)/app/sim_runtime_3d_projection.c \
+	$(SRC_DIR)/app/sim_runtime_3d_transport.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_core_sim.c \
 	$(SRC_DIR)/app/sim_runtime_emitter.c \
@@ -1258,3 +1288,11 @@ test-physics-sim-ui-button-contract: $(PHYSICS_SIM_UI_BUTTON_CONTRACT_TEST_SRCS)
 		-I$(CORE_THEME_DIR)/include -I$(CORE_FONT_DIR)/include -I$(CORE_BASE_DIR)/include \
 		-o $(BUILD_DIR)/physics_sim_ui_button_contract_test $(PHYSICS_SIM_UI_BUTTON_CONTRACT_TEST_SRCS) $(LIBS)
 	$(BUILD_DIR)/physics_sim_ui_button_contract_test
+
+.PHONY: test-cfd-refined-agent-session
+test-cfd-refined-agent-session: physics-sim-session-worker-optimized
+	PHYSICS_SIM_SESSION_WORKER="$(CURDIR)/build/cfd-optimized/physics_sim_session_worker" python3 tests/test_agent_refined.py
+
+.PHONY: test-cfd-cartesian3d-agent-session
+test-cfd-cartesian3d-agent-session: physics-sim-session-worker-optimized
+	PHYSICS_SIM_SESSION_WORKER="$(CURDIR)/build/cfd-optimized/physics_sim_session_worker" python3 tests/test_agent_cartesian3d.py

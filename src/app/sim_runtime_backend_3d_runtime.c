@@ -569,6 +569,13 @@ void backend_3d_scaffold_runtime_reset_metrics(SimRuntimeBackend3DScaffold *stat
     state->runtime_solver_max_velocity_magnitude_post_clamp = 0.0f;
     state->runtime_solver_max_velocity_displacement_cells_pre_clamp = 0.0f;
     state->runtime_solver_max_velocity_displacement_cells_post_clamp = 0.0f;
+    state->runtime_solver_max_abs_divergence_before_project = 0.0f;
+    state->runtime_solver_pressure_residual_linf = 0.0f;
+    state->runtime_transport_corrected_components = 0;
+    state->runtime_transport_limited_components = 0;
+    state->runtime_transport_fallback_components = 0;
+    state->runtime_projection_iterations_used = 0;
+    state->runtime_projection_unconverged_count = 0;
     state->runtime_solver_max_abs_divergence_after_project = 0.0f;
 }
 
@@ -614,6 +621,13 @@ bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
     state->runtime_solver_max_velocity_magnitude_post_clamp = 0.0f;
     state->runtime_solver_max_velocity_displacement_cells_pre_clamp = 0.0f;
     state->runtime_solver_max_velocity_displacement_cells_post_clamp = 0.0f;
+    state->runtime_solver_max_abs_divergence_before_project = 0.0f;
+    state->runtime_solver_pressure_residual_linf = 0.0f;
+    state->runtime_transport_corrected_components = 0;
+    state->runtime_transport_limited_components = 0;
+    state->runtime_transport_fallback_components = 0;
+    state->runtime_projection_iterations_used = 0;
+    state->runtime_projection_unconverged_count = 0;
     state->runtime_solver_max_abs_divergence_after_project = 0.0f;
     if (!sim_runtime_3d_brick_store_collect_active_clusters(&state->brick_store,
                                                             raw_regions,
@@ -621,6 +635,17 @@ bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
                                                             &raw_region_count,
                                                             &cluster_limit_reached)) {
         return true;
+    }
+    if (cfg->fluid_3d_disable_wind_heuristics && state->wind_tunnel_active) {
+        /* Elliptic pressure couples the complete tunnel. Never silently solve
+         * isolated clusters or skip an over-budget global qualification step. */
+        if (state->runtime_solver_region_cell_budget && state->volume.desc.cell_count >
+            state->runtime_solver_region_cell_budget) return false;
+        raw_regions[0] = (SimRuntime3DBrickRegion){.min_x=0, .min_y=0, .min_z=0,
+            .max_x=state->volume.desc.grid_w-1, .max_y=state->volume.desc.grid_h-1,
+            .max_z=state->volume.desc.grid_d-1};
+        raw_region_count = 1;
+        cluster_limit_reached = false;
     }
     state->runtime_solver_cluster_limit_reached = cluster_limit_reached;
     if (state->scene_up_valid) {
@@ -699,6 +724,21 @@ bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
         }
         {
             SimRuntime3DSolverStepMetrics solver_metrics = {0};
+            state->solver_scratch.boundary = (SimRuntime3DProjectionBoundary){0};
+            if (cfg->fluid_3d_disable_wind_heuristics && state->wind_tunnel_active) {
+                SimRuntime3DProjectionBoundary *boundary = &state->solver_scratch.boundary;
+                boundary->prescribed_inlet = true;
+                boundary->inflow_speed = state->wind_tunnel.inflow_speed;
+                switch (state->wind_tunnel.inlet_face) {
+                case WIND_TUNNEL_3D_FACE_LEFT: boundary->inlet_axis=0; break;
+                case WIND_TUNNEL_3D_FACE_RIGHT: boundary->inlet_axis=0; boundary->inlet_at_max=true; break;
+                case WIND_TUNNEL_3D_FACE_BOTTOM: boundary->inlet_axis=1; break;
+                case WIND_TUNNEL_3D_FACE_TOP: boundary->inlet_axis=1; boundary->inlet_at_max=true; break;
+                case WIND_TUNNEL_3D_FACE_FRONT: boundary->inlet_axis=2; break;
+                case WIND_TUNNEL_3D_FACE_BACK: boundary->inlet_axis=2; boundary->inlet_at_max=true; break;
+                default: return false;
+                }
+            }
             if (!sim_runtime_3d_solver_core_sim_step_first_pass(&state->solver_loop,
                                                                 &state->solver_volume,
                                                                 &state->solver_scratch,
@@ -711,6 +751,18 @@ bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
                                                                 &solver_metrics)) {
                 return false;
             }
+            state->runtime_solver_max_abs_divergence_before_project = fmaxf(
+                state->runtime_solver_max_abs_divergence_before_project,
+                solver_metrics.max_abs_divergence_before_project);
+            state->runtime_solver_pressure_residual_linf = fmaxf(
+                state->runtime_solver_pressure_residual_linf, solver_metrics.pressure_residual_linf);
+            state->runtime_transport_corrected_components += solver_metrics.transport_corrected_components;
+            state->runtime_transport_limited_components += solver_metrics.transport_limited_components;
+            state->runtime_transport_fallback_components += solver_metrics.transport_fallback_components;
+            if (solver_metrics.projection_iterations_used > state->runtime_projection_iterations_used)
+                state->runtime_projection_iterations_used = solver_metrics.projection_iterations_used;
+            if (cfg->fluid_3d_disable_wind_heuristics && !solver_metrics.projection_converged)
+                state->runtime_projection_unconverged_count++;
             state->runtime_last_solver_solved_cluster_count += 1u;
             state->runtime_solver_velocity_clamp_cell_count +=
                 solver_metrics.velocity_clamp_cell_count;
@@ -740,7 +792,8 @@ bool backend_3d_scaffold_runtime_step(SimRuntimeBackend *backend,
                     solver_metrics.max_abs_divergence_after_project;
             }
         }
-        backend_3d_scaffold_apply_wind_carrier_transport(state, dt);
+        if (!cfg->fluid_3d_disable_wind_heuristics)
+            backend_3d_scaffold_apply_wind_carrier_transport(state, dt);
         if (!sim_runtime_3d_brick_store_commit_region(&state->brick_store,
                                                       &clusters[i].solver_region,
                                                       &state->solver_volume)) {

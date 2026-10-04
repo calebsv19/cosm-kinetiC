@@ -62,6 +62,13 @@ typedef struct SimRuntimeBackend3DScaffold {
     float runtime_solver_max_velocity_magnitude_post_clamp;
     float runtime_solver_max_velocity_displacement_cells_pre_clamp;
     float runtime_solver_max_velocity_displacement_cells_post_clamp;
+    float runtime_solver_max_abs_divergence_before_project;
+    float runtime_solver_pressure_residual_linf;
+    size_t runtime_transport_corrected_components;
+    size_t runtime_transport_limited_components;
+    size_t runtime_transport_fallback_components;
+    int runtime_projection_iterations_used;
+    size_t runtime_projection_unconverged_count;
     float runtime_solver_max_abs_divergence_after_project;
     size_t debug_volume_active_density_cells;
     size_t debug_volume_solid_cells;

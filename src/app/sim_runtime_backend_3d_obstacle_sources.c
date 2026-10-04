@@ -223,6 +223,20 @@ void backend_3d_scaffold_rasterize_retained_object_obstacles(
     for (size_t i = 0; i < scene->preset->object_count && i < MAX_PRESET_OBJECTS; ++i) {
         const PresetObject *object = &scene->preset->objects[i];
         if (!object->is_static || emitter_on_object[i]) continue;
+        // The reduced preset carries a 2D box for every mesh instance. Its
+        // actual 3D occupancy is owned by the runtime mesh voxelizer; stamping
+        // both fills the mesh's empty corners and makes distinct shapes boxes.
+        bool runtime_mesh = false;
+        const PhysicsSimRuntimeMeshPreviewSet *meshes = &scene->runtime_visual.mesh_previews;
+        if (meshes->valid_contract) {
+            for (int m = 0; m < meshes->instance_count; m++) {
+                if (meshes->instances[m].scene_object_index == (int)i) {
+                    runtime_mesh = true;
+                    break;
+                }
+            }
+        }
+        if (runtime_mesh) continue;
         if (object->type == PRESET_OBJECT_CIRCLE) {
             float size_z = clamp_positive(object->size_z, object->size_x);
             int center_x = normalized_position_to_grid(object->position_x, state->volume.desc.grid_w);

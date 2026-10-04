@@ -181,3 +181,59 @@ bool sim_runtime_3d_sample_velocity_trilinear(const SimRuntime3DVolume *volume,
         volume->velocity_z, &volume->desc, x, y, z);
     return true;
 }
+
+
+bool sim_runtime_3d_diffuse_velocity_si(SimRuntime3DVolume *v,
+    SimRuntime3DSolverScratch *s, const uint8_t *solid, double nu, double dt) {
+    if (!v || !s || !isfinite(nu) || nu < 0 || !isfinite(dt) || dt <= 0 ||
+        v->desc.voxel_size <= 0 || v->desc.cell_count != s->desc.cell_count) return false;
+    double alpha = nu * dt / ((double)v->desc.voxel_size * v->desc.voxel_size);
+    if (!isfinite(alpha) || alpha > 1024.0 / 6.0) return false;
+    if (alpha == 0) return true;
+    int steps = (int)ceil(6.0 * alpha);
+    float a = (float)(alpha / steps);
+    float *out[] = {v->velocity_x, v->velocity_y, v->velocity_z};
+    float *tmp[] = {s->velocity_x_prev, s->velocity_y_prev, s->velocity_z_prev};
+    const int delta[6][3] = {{-1,0,0},{1,0,0},{0,-1,0},{0,1,0},{0,0,-1},{0,0,1}};
+    for (int n = 0; n < steps; n++) {
+        for (int c = 0; c < 3; c++) {
+            memcpy(tmp[c], out[c], v->desc.cell_count * sizeof(float));
+            for (int z = 0; z < v->desc.grid_d; z++)
+                for (int y = 0; y < v->desc.grid_h; y++)
+                    for (int x = 0; x < v->desc.grid_w; x++) {
+                        size_t i = sim_runtime_3d_volume_index(&v->desc,x,y,z);
+                        if (solid && solid[i]) {out[c][i] = 0; continue;}
+                        float lap = 0;
+                        for (int k = 0; k < 6; k++) {
+                            size_t j = sim_runtime_3d_volume_index_clamped(&v->desc,
+                                x+delta[k][0],y+delta[k][1],z+delta[k][2]);
+                            lap += (solid && solid[j] ? 0 : tmp[c][j]) - tmp[c][i];
+                        }
+                        out[c][i] = tmp[c][i] + a * lap;
+                    }
+        }
+    }
+    return true;
+}
+
+float sim_runtime_3d_pressure_residual(const SimRuntime3DVolume *v,
+    const SimRuntime3DSolverScratch *s, const uint8_t *solid) {
+    const int d[6][3] = {{-1,0,0},{1,0,0},{0,-1,0},{0,1,0},{0,0,-1},{0,0,1}};
+    float peak = 0, h = v->desc.voxel_size;
+    for (int z = 0; z < v->desc.grid_d; z++)
+        for (int y = 0; y < v->desc.grid_h; y++)
+            for (int x = 0; x < v->desc.grid_w; x++) {
+                size_t i = sim_runtime_3d_volume_index(&v->desc,x,y,z);
+                if (solid && solid[i]) continue;
+                float lap = 0;
+                for (int k = 0; k < 6; k++) {
+                    size_t j = sim_runtime_3d_volume_index_clamped(&v->desc,
+                        x+d[k][0],y+d[k][1],z+d[k][2]);
+                    lap += (solid && solid[j] ? v->pressure[i] : v->pressure[j]) - v->pressure[i];
+                }
+                float residual = fabsf(lap/(h*h) - s->divergence[i]);
+                if (!isfinite(residual)) return INFINITY;
+                if (residual > peak) peak = residual;
+            }
+    return peak;
+}

@@ -113,6 +113,7 @@ bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
     const SimRuntime3DDomainDesc *desc = NULL;
     SceneFluidVolumeExportView3D export_view = {0};
     WindTunnel3DAnalysisReport wind_analysis = {0};
+    SimRuntime3DConservation conservation = {0};
     if (!state || !out_report) return false;
     desc = &state->volume.desc;
     if (state->obstacle_volume_dirty) {
@@ -122,10 +123,21 @@ bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
     if (state->wind_tunnel_active &&
         backend_3d_scaffold_get_volume_export_view_3d(backend, &export_view)) {
         (void)wind_tunnel_3d_analyze_volume(&export_view, &state->wind_tunnel, &wind_analysis);
+        /* Bound snapshot cost. No extra dense materialization for this diagnostic. */
+        if (desc->cell_count <= 262144u)
+            (void)sim_runtime_3d_measure_conservation(desc, export_view.velocity_x,
+                export_view.velocity_y, export_view.velocity_z, export_view.solid_mask,
+                &conservation);
     }
 
     *out_report = (SimRuntimeBackendReport){
         .kind = SIM_RUNTIME_BACKEND_KIND_FLUID_3D_SCAFFOLD,
+        .conservation = conservation,
+        .runtime_transport_corrected_components = state->runtime_transport_corrected_components,
+        .runtime_transport_limited_components = state->runtime_transport_limited_components,
+        .runtime_transport_fallback_components = state->runtime_transport_fallback_components,
+        .runtime_projection_iterations_used = state->runtime_projection_iterations_used,
+        .runtime_projection_unconverged_count = state->runtime_projection_unconverged_count,
         .requested_major_axis_cells = desc->requested_major_axis_cells,
         .applied_major_axis_cells = desc->applied_major_axis_cells,
         .requested_depth_cells = desc->requested_depth_cells,
@@ -205,6 +217,8 @@ bool backend_3d_scaffold_get_report(const SimRuntimeBackend *backend,
             state->runtime_solver_max_velocity_displacement_cells_pre_clamp,
         .runtime_solver_max_velocity_displacement_cells_post_clamp =
             state->runtime_solver_max_velocity_displacement_cells_post_clamp,
+        .runtime_solver_max_abs_divergence_before_project = state->runtime_solver_max_abs_divergence_before_project,
+        .runtime_solver_pressure_residual_linf = state->runtime_solver_pressure_residual_linf,
         .runtime_solver_max_abs_divergence_after_project =
             state->runtime_solver_max_abs_divergence_after_project,
         .debug_volume_view_3d_available = true,

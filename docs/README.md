@@ -6,12 +6,91 @@ Public identity:
 - packaged desktop product: `kinetiC`
 - repository/program key: `physics_sim`
 
+Latest bounded CFD evidence:
+- [Usable stationary-box scenes, measured limits and finite CFD delivery](cfd_3d_box_checkpoint.md)
+- [Unforced 3D physical convergence, material scaling and independent cube trials](cfd_3d_unforced_accuracy_checkpoint.md)
+- [Native cube force convergence, integrated pressure diagnostic and improved paired reference](cfd_3d_cube_pressure_checkpoint.md)
+- [Passing nonzero cube-wall accuracy, selected pressure diagnostic and rejected viscous trace](cfd_3d_wall_accuracy_checkpoint.md)
+- [Local cube rejection, reproducible native accuracy regression and next physical tests](cfd_3d_local_accuracy_checkpoint.md)
+- [Current physical-accuracy assessment, rejected edge trial and genuine local refinement](cfd_3d_accuracy_physical_batch_assessment.md)
+- [Full native manufactured Stokes convergence and independent forcing controls](cfd_3d_native_manufactured_checkpoint.md)
+- [Useful four-interval pressure reconstruction diagnostic](cfd_3d_four_interval_checkpoint.md)
+- [Native pressure-gradient known answers and global pressure-load semantics](cfd_3d_native_pressure_gradient_checkpoint.md)
+- [Completed graded stress localization and next physical trial](cfd_3d_graded_stress_checkpoint.md)
+- [Graded force improvement, native pressure diagnosis and current next six steps](cfd_3d_graded_accuracy_assessment.md)
+- [Sealed graded reference pair and guarded local reference entrypoint](cfd_3d_accuracy_graded_checkpoint.md)
+- [Calibrated cubic pressure projection and native reconstruction bias](cfd_3d_cubic_projection_checkpoint.md)
+- [Current accuracy assessment, targeted geometry evidence and next six steps](cfd_3d_accuracy_next_steps.md)
+- [Accuracy-first fine cube tests, stress localization and remaining physical work](cfd_3d_accuracy_first_checkpoint.md)
+- [Packed velocity speedup, exact matched failure and measured next optimization](cfd_3d_packed_velocity_batch_assessment.md)
+- [Pressure/velocity diagnostics, rejected candidates and next force-testing gates](cfd_3d_pressure_velocity_batch_assessment.md)
+
 Command context:
 - from a standalone GitHub clone, run Make targets at the repo root, for
   example `make physics_sim_headless`
 - from the larger CodeWork workspace parent, use the equivalent
   `make -C physics_sim physics_sim_headless` form shown in many internal
   verification lists below
+
+- [Initial CFD reliability, traction diagnostics and revised development stages](cfd_3d_initial_improvements_checkpoint.md)
+- [Stronger CFD reference support, calibration and retained cube iteration failure](cfd_3d_reference_method_checkpoint.md)
+- [Cube preconditioner readiness, resumed force tests and next spatial accuracy gate](cfd_3d_preconditioner_checkpoint.md)
+- [Continued cube force tests, lower-memory reference backend and rejected pressure candidates](cfd_3d_spatial_checkpoint.md)
+- [Cube traction equilibrium attribution and rejected score-guided adaptive mesh](cfd_3d_equilibrium_checkpoint.md)
+- [Higher-order cube support, quadrature guard and retained force/memory failures](cfd_3d_quartic_checkpoint.md)
+- [Quartic stress attribution, pressure modes, rejected mesh controls and numerical publication fix](cfd_3d_graded_checkpoint.md)
+- [Exact condensation, coupled solver measurements and retained preconditioner failures](cfd_3d_condensed_checkpoint.md)
+- [Sparse symmetric factor, admitted finer force pair and remaining physical gap](cfd_3d_cholesky_checkpoint.md)
+- [Controlled domain sensitivity, phase resource checks and selective refinement gate](cfd_3d_domain_checkpoint.md)
+- [Selective outer refinement, failed accuracy control and body/corner next gate](cfd_3d_selective_checkpoint.md)
+- [Signed force-gap targeting, corner shape screening and finer-body resource target](cfd_3d_corner_checkpoint.md)
+- [Bounded exact assembly, admitted finer-body control and remaining force/stress gates](cfd_3d_bounded_checkpoint.md)
+- [Explicit triangle storage, finer force controls and exact memory stop](cfd_3d_triangle_checkpoint.md)
+- [Shared exact-factor input, matched L4/L8 controls and remaining setup peak](cfd_3d_shared_factor_checkpoint.md)
+- [Allocator pressure control, matched cost rejection and symbolic-factor next gate](cfd_3d_factor_peak_checkpoint.md)
+- [Exact shared-predictor storage potential and next physical-action/factor proof](cfd_3d_exact_prediction_checkpoint.md)
+- [Exact coefficient catalogue, preserved resource stop and negative storage bound](cfd_3d_coefficient_catalogue_checkpoint.md)
+- [Protected cycle collection, insufficient recovery and next lossless coefficient potential](cfd_3d_cycle_recovery_checkpoint.md)
+- [Exact residency, corrected operator census and fresh admission measurement](cfd_3d_residency_checkpoint.md)
+- [Useful paired pressure correction, preserved matched memory stop and next residency proof](cfd_3d_pressure_coarse_checkpoint.md)
+- [Balanced body grids, preserved local-quality rejections and next pressure correction](cfd_3d_balanced_body_checkpoint.md)
+- [Calibrated empty ducts, diagnostic obstacle excess and unchanged physical cube failures](cfd_3d_empty_baseline_checkpoint.md)
+- [Signed-edge geometry survey and retained local-quality rejections](cfd_3d_edge_star_checkpoint.md)
+- [Accepted matched cube, resumed force convergence and next physical gaps](cfd_3d_retained_margin_checkpoint.md)
+- [Exact bounded observation reuse and preserved L8 divergence rejection](cfd_3d_observation_reuse_checkpoint.md)
+- [Restart6 controls and the complete observation time barrier](cfd_3d_restart_six_checkpoint.md)
+- [Small restart memory admission and preserved whole-process time stop](cfd_3d_restart_small_checkpoint.md)
+- [Calibrated short flexible restarts, exact basis budgets and preserved matched force resource stop](cfd_3d_restart_checkpoint.md)
+- [Compensated preconditioner graph controls, matched cost rejection and pressure readback](cfd_3d_pruned_graph_checkpoint.md)
+- [Same-surface streamwise refinement, useful force-gap reduction and matched-domain memory gate](cfd_3d_second_normal_checkpoint.md)
+- [Transition limits, uniform cube solve and force/stress measurements](cfd_3d_force_transition_checkpoint.md)
+- [End-mesh resource stop, signed force attribution and local quality screen](cfd_3d_end_plateau_checkpoint.md)
+- [Precision-only preconditioning, measured batching and resumed blocked force refinement](cfd_3d_mixed_precision_checkpoint.md)
+- [Nodal basis preservation and measured target/cost rejection](cfd_3d_nodal_hierarchy_checkpoint.md)
+- [End-slab conditioning improvement and preserved exact-factor budget rejection](cfd_3d_end_slab_checkpoint.md)
+- [Matched longer normal tunnel, signed force gap and remaining physical gates](cfd_3d_normal_domain_checkpoint.md)
+- [Exact normal cube admission and resumed force tests](cfd_3d_factor_catalog_checkpoint.md)
+- [Bitwise FE metadata restoration and remaining normal guard gap](cfd_3d_factor_metadata_checkpoint.md)
+- [Explicit cycle collection rejection and FE metadata next gate](cfd_3d_collect_pressure_checkpoint.md)
+- [Lossless load residency and preserved normal live-budget rejection](cfd_3d_sparse_load_checkpoint.md)
+- [Complete vector storage improvement and remaining normal budget](cfd_3d_vector_storage_checkpoint.md)
+- [Exact caller-owned Cholesky base improvement and normal admission gap](cfd_3d_workspace_cholesky_checkpoint.md)
+- [Unit cubic/quartic split rejection and nodal complement next gate](cfd_3d_hierarchical_checkpoint.md)
+- [Additive cubic correction and incomplete refined publication gate](cfd_3d_additive_coarse_checkpoint.md)
+- [Macro-cubic correction, exact factor cost and refined time gate](cfd_3d_cubic_coarse_checkpoint.md)
+- [Macro-quadratic correction and refined time gate](cfd_3d_quadratic_coarse_checkpoint.md)
+- [Macro-linear balanced correction and measured cost rejection](cfd_3d_coarse_velocity_checkpoint.md)
+- [Exact two-block controls, refined time rejection and global coarse next gate](cfd_3d_block_cholesky_checkpoint.md)
+- [Fixed component sweeps and measured larger-run cost rejection](cfd_3d_component_cholesky_checkpoint.md)
+- [Exact symbolic cost, rejected ordering controls and coupled-sweep next gate](cfd_3d_symbolic_checkpoint.md)
+- [Bounded 3D CFD implementation and evidence](cfd_3d_completion.md)
+- [3D reference and acceptance contract](cfd_3d_goal.md)
+- [C3D-6 open straight duct evidence and stop boundary](cfd_open3d_completion.md)
+- [C3D-6 predeclared pressure, wall and energy gates](cfd_open3d_gate.md)
+- [C3D-7 predeclared full wall/transport/startup contract](cfd_wall3d_goal.md)
+- [C3D-7 verified wall/transport/startup and transient outlet evidence](cfd_wall3d_completion.md)
+- [C3D-7 historical numerical and runtime checkpoints](cfd_wall3d_checkpoint.md)
+- [2D staggered incompressible CFD verification](cfd_mac2d.md)
 
 ## Scaffold State
 - `docs/current_truth.md`: current runtime structure, truthful `3D` export state, and verification snapshot.
@@ -277,3 +356,121 @@ S2 adds three-plane live diagnostic slices, scalar/vector field inspection,
 world-coordinate MCP probes, bounded health history, fixed-range comparison, and
 native-density shared-font rendering in the agent workspace. See the S2 section
 of [agent_session.md](agent_session.md) for sampling limits and model caveats.
+
+- `docs/solver_qualification.md`: S3 numerical qualification, STL reference shapes, SI fluids, and reproducible comparison runs.
+
+- `docs/cfd_channel.md`: reduced incompressible channel verification, physical
+  pressure/shear semantics, local agent workflow, and remaining coupling scope.
+
+- [Nonuniform CFD transient refinement and open accuracy gate](cfd_mac2d_transient.md)
+
+The [manufactured transient campaign](cfd_mac2d_manufactured.md) now provides
+known-answer errors and separately controls transport, pressure timing and wall
+gradients. A verification-only limited flux reduces fine-grid velocity error
+about 22 times; production transport remains upwind pending boundedness and
+long-run qualification. Obstacles, outlets and forces remain unqualified.
+
+[Boundary traction and momentum qualification](cfd_boundary_forces.md) now
+calibrates physical surface forces and exposes MAC `boundary_force_budget`
+wall loads and explicit qualification status. Obstacle geometry, open outlets
+and body drag remain unsupported/unqualified, separate from channel wall proof.
+
+The [stationary obstacle projection](cfd_mac2d_obstacle.md) now implements
+matched solid-face pressure topology and measured pressure reaction. Leakage,
+known-pressure recovery and projection momentum tests pass. Full obstacle
+time stepping remains explicitly disabled pending viscous/advective wall
+momentum; agent obstacle authoring and open outlets remain unsupported.
+
+The [masked obstacle momentum extension](cfd_mac2d_obstacle_momentum.md) now
+advances complete stationary-obstacle steps and accounts for pressure/viscous
+reactions. It supersedes the pressure-only stepping restriction. Physical drag,
+agent obstacle authoring and open outlets remain unqualified/unavailable.
+
+The [surface-pressure correction and CFD assessment](cfd_boundary_pressure_correction.md)
+now reconstructs pressure at obstacle walls and recovers the .075 N baffle
+reference at all tested grids. Discrete reactions and unresolved boundary-volume
+drive remain separate; arbitrary drag and open outlets are still unqualified.
+This remains a 2D CFD core; the existing 3D Wind path is separate.
+
+The [active CFD baseline goal](cfd_baseline_goal_status.md) now has independent
+obstacle surface/control-volume force comparison and a true nonperiodic
+velocity-inlet/pressure-outlet prototype. Force accuracy is still failing its
+consistency gate; outlet qualification and agent-lab integration remain incomplete.
+
+CFD continuation: [agent lab](cfd_agent_lab.md) and [active baseline gates](cfd_baseline_goal_status.md) record the exploratory 2D obstacle interface, outlet-exit evidence, the corrected periodic-obstacle force gate, and remaining open-boundary/reference qualifications.
+
+[Open-boundary CFD prototype](cfd_open2d.md) documents stationary obstacle coupling and its transient force-consistency evidence.
+
+[Independent confined-flow reference](cfd_independent_reference.md) records the bounded low-Re total-drag comparison and its component/boundary limitations.
+
+- [Per-run CFD acceptance](cfd_run_acceptance.md): explicit numerical readiness gates.
+- [Component-force and obstacle-energy qualification](cfd_component_energy.md): current evidence and remaining 3D prerequisite.
+
+## Main Edit refined CFD verification
+
+- [Pre-3D resolution implementation and evidence](cfd_pre3d_resolution_goal.md)
+- [Local agent session, mesh budgets and accuracy assessment](agent_session.md)
+
+These development checks are separate from the public headless first-start
+workflow and do not establish installed Desktop package freshness.
+
+## C3D-8 stationary obstacle source checkpoint
+
+Main Edit now implements one creeping stationary aligned cube through the
+existing scene/session/MCP contract. Numerical/readback/control and fixed-spacing
+inlet/outlet distance tests pass. Corrected body-edge traction and strain energy
+pass finest physical momentum/energy budgets. Independent viscous-reference
+refinement and matched native pressure-force accuracy remain unqualified. See the
+[C3D-8 predeclared gate](cfd_obstacle3d_goal.md) and
+[historical implementation checkpoint](cfd_obstacle3d_checkpoint.md),
+[body-edge correction](cfd_obstacle3d_correction_checkpoint.md),
+[current reference robustness and pressure attribution](cfd_obstacle3d_reference_refinement_checkpoint.md)
+and [correction contract](cfd_obstacle3d_correction_goal.md).
+No commit, package or installed Desktop capability is implied.
+
+- [Exact encoded action and shared factor, scaling benefit and retained small cost failure](cfd_3d_encoded_operator_checkpoint.md)
+
+- [Completed workspace retirement, measured memory recovery and retained timing failures](cfd_3d_workspace_retirement_checkpoint.md)
+
+- [Coefficient-size policy, full numerical controls and retained general cost failures](cfd_3d_size_selected_checkpoint.md)
+
+- [Exact filled-cube full numerical field under original caps and remaining performance/force gates](cfd_3d_exact_target_checkpoint.md)
+
+- [Cubic global pressure correction, full small control and exact-cube time rejection](cfd_3d_pressure_cubic_checkpoint.md)
+
+- [Velocity inverse correction checkpoint](cfd_3d_velocity_refine_checkpoint.md)
+- [Pressure coverage diagnostic next goal](cfd_3d_velocity_refine_next_goal.md)
+
+- [Exact pressure coverage and mesh conditioning](cfd_3d_pressure_modes_checkpoint.md)
+
+- [Qualified exact-reference pressure recipe](cfd_3d_complement10_checkpoint.md)
+- [Resume bounded force convergence testing](cfd_3d_complement10_next_goal.md)
+
+- [Matched-domain full numerical readiness](cfd_3d_force_resume_checkpoint.md)
+
+- [Rejected edge-strip geometry screen](cfd_3d_edge_redistribution_checkpoint.md)
+
+- [Balanced finer surface geometry screen](cfd_3d_balanced_edge8_checkpoint.md)
+
+- [Minimum-width finer surface screen](cfd_3d_floor_edge8_checkpoint.md)
+
+- [Quality-passed fine mesh and memory admission rejection](cfd_3d_floor_balanced8_checkpoint.md)
+- [Next bounded velocity preconditioner investigation](cfd_3d_floor_balanced8_next_goal.md)
+
+- [Rejected fixed-pattern block IC0 velocity investigation](cfd_3d_block_ic0_checkpoint.md)
+- [Stable compensated-fill setup and rejected full convergence](cfd_3d_fillcomp_ic0_checkpoint.md)
+- [Rejected equal-central six-interval geometry](cfd_3d_equidistributed6_checkpoint.md)
+- [Resumed full-field cube force sensitivity test](cfd_3d_heldfloor6_checkpoint.md)
+- [Next controlled-fill velocity preconditioner investigation](cfd_3d_heldfloor6_next_goal.md)
+
+- [Controlled-fill factor with preserved physical operator](cfd_3d_bounded_fill1_checkpoint.md)
+- [Larger Arnoldi restart: measured benefit, strict convergence rejection](cfd_3d_fill1_restart30_checkpoint.md)
+- [Next distributed velocity correction investigation](cfd_3d_fill1_restart30_next_goal.md)
+
+- [Distributed P2 full residual and cost rejection](cfd_3d_distributed_p2_checkpoint.md)
+- [Distributed P3 strict field and cost rejection](cfd_3d_distributed_p3_checkpoint.md)
+- [Nonlinear inner CG pressure symmetry rejection](cfd_3d_distributed_p3_cg8_checkpoint.md)
+- [Fixed pressure proxy with flexible inner velocity solve](cfd_3d_distributed_p3_cg8_pressure_checkpoint.md)
+- [One-pass cubic coarse action and full numerical result](cfd_3d_p3_cg8_scalar_checkpoint.md)
+- [Sixteen-step inner correction and measured cost floor](cfd_3d_p3_cg16_scalar_checkpoint.md)
+- [Next bounded pressure proxy and mode coverage diagnostic](cfd_3d_p3_cg16_scalar_next_goal.md)

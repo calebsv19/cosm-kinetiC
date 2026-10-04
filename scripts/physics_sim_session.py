@@ -32,7 +32,7 @@ def serve(service):
                 version = proposed if proposed in ('2024-11-05','2025-03-26','2025-06-18','2025-11-25') else '2025-11-25'
                 result = {'protocolVersion':version,'capabilities':{'tools':{'listChanged':False}},
                           'serverInfo':{'name':'physics-sim-local','version':'0.1.0'},
-                          'instructions':'Trusted-local sessions. Discover capabilities, create and validate a Wind template, then start a run. Pause/step receipts are authoritative. Wind is approximate, not validated CFD.'}
+                          'instructions':'Trusted-local source sessions. Discover capabilities and templates, create and validate an immutable scene, then start a run. Control receipts and accepted snapshots are authoritative. Wind is approximate; CFD assessment is scoped to the declared model and reference.'}
             elif method == 'ping':
                 result = {}
             elif not initialized:

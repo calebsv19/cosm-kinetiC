@@ -52,6 +52,11 @@ typedef struct AppConfig {
     int    fluid_3d_solver_region_cell_budget; // 0 = runtime default
     float  fluid_3d_max_velocity_displacement_cells; // <=0 = runtime default
 
+    // Opt-in qualification controls; zero-initialized legacy modes are unchanged.
+    bool   fluid_3d_si_viscosity;
+    float  fluid_3d_kinematic_viscosity_m2_s;
+    bool   fluid_3d_disable_wind_heuristics;
+
     float  density_diffusion;  // how strongly density diffuses each step
     float  velocity_damping;   // multiplicative damping on velocity per step
     float  density_decay;      // fractional fade of density per second

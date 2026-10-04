@@ -901,6 +901,20 @@ SimRuntimeBackend *sim_runtime_backend_3d_scaffold_create(const AppConfig *cfg,
                                  ? runtime_visual->wind_tunnel
                                  : wind_tunnel_3d_config_default(cfg);
         state->wind_tunnel.active = state->wind_tunnel_active;
+        if (cfg->fluid_3d_disable_wind_heuristics) {
+            /* Qualification ports must not also be rasterized as solid walls. */
+            const WindTunnel3DFace faces[SIM_RUNTIME_BOUNDARY_FACE_COUNT] = {
+                WIND_TUNNEL_3D_FACE_LEFT, WIND_TUNNEL_3D_FACE_RIGHT,
+                WIND_TUNNEL_3D_FACE_BOTTOM, WIND_TUNNEL_3D_FACE_TOP,
+                WIND_TUNNEL_3D_FACE_FRONT, WIND_TUNNEL_3D_FACE_BACK
+            };
+            for (int face = 0; face < SIM_RUNTIME_BOUNDARY_FACE_COUNT; ++face) {
+                if (faces[face] == state->wind_tunnel.inlet_face ||
+                    faces[face] == state->wind_tunnel.outlet_face ||
+                    state->wind_tunnel.wall_policy == WIND_TUNNEL_3D_WALL_OPEN)
+                    state->obstacle_contract.domain_walls_enabled[face] = false;
+            }
+        }
     }
     if (runtime_visual && runtime_visual->scene_up.valid) {
         state->scene_up_valid = true;

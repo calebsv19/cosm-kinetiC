@@ -201,7 +201,7 @@ class SessionIntegration(unittest.TestCase):
             return r['structuredContent']
         try:
             self.assertIn('tools',rpc('initialize',{'protocolVersion':'2025-11-25'})['capabilities'])
-            self.assertEqual(len(rpc('tools/list')['tools']),9)
+            self.assertEqual(len(rpc('tools/list')['tools']),11)
             created=tool('scene_create',{'scene_id':'sphere','template':'wind_sphere'})
             revision=created['scene_revision']
             tool('scene_validate',{'scene_id':'sphere','scene_revision':revision})

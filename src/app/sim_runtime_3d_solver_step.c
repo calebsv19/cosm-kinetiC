@@ -633,6 +633,10 @@ int sim_runtime_3d_solver_iterations_for_requested(int requested_iterations) {
 }
 
 int sim_runtime_3d_solver_iterations_for_config(const AppConfig *cfg) {
+    if (cfg && cfg->fluid_3d_disable_wind_heuristics) {
+        int requested = cfg->fluid_solver_iterations;
+        return requested < 8 ? 8 : (requested > 512 ? 512 : requested);
+    }
     return sim_runtime_3d_solver_iterations_for_requested(
         cfg ? cfg->fluid_solver_iterations : 0);
 }
@@ -675,19 +679,34 @@ bool sim_runtime_3d_solver_step_first_pass(SimRuntime3DVolume *volume,
                                 &metrics);
 
     apply_solid_mask(volume, solid_mask);
-    advect_velocity(volume, scratch, solid_mask, dt_cells);
-    diffuse_velocity_fields(volume, scratch, solid_mask, viscosity_blend);
+    if (cfg->fluid_3d_disable_wind_heuristics)
+        sim_runtime_3d_advect_velocity_bounded(volume, scratch, solid_mask, dt_cells, &metrics);
+    else
+        advect_velocity(volume, scratch, solid_mask, dt_cells);
+    if (cfg->fluid_3d_si_viscosity) {
+        if (!sim_runtime_3d_diffuse_velocity_si(volume, scratch, solid_mask,
+                cfg->fluid_3d_kinematic_viscosity_m2_s, dt_seconds)) return false;
+    } else {
+        diffuse_velocity_fields(volume, scratch, solid_mask, viscosity_blend);
+    }
     apply_buoyancy(volume,
                    scratch,
                    solid_mask,
                    scene_up_axis,
                    cfg->fluid_buoyancy_force,
                    dt_seconds);
-    compute_divergence(volume, scratch, solid_mask);
-    project_velocity(volume, scratch, solid_mask, iterations);
-    enforce_no_through_wall_velocity(volume, solid_mask);
-    metrics.max_abs_divergence_after_project =
-        compute_max_abs_divergence_for_volume(volume, solid_mask);
+    if (cfg->fluid_3d_disable_wind_heuristics) {
+        if (!sim_runtime_3d_project_boundary(volume, solid_mask, iterations, &scratch->boundary, &metrics)) return false;
+    } else {
+        compute_divergence(volume, scratch, solid_mask);
+        metrics.max_abs_divergence_before_project =
+            compute_max_abs_divergence_for_volume(volume, solid_mask);
+        project_velocity(volume, scratch, solid_mask, iterations);
+        metrics.pressure_residual_linf = sim_runtime_3d_pressure_residual(volume, scratch, solid_mask);
+        enforce_no_through_wall_velocity(volume, solid_mask);
+        metrics.max_abs_divergence_after_project =
+            compute_max_abs_divergence_for_volume(volume, solid_mask);
+    }
     advect_density(volume,
                    scratch,
                    solid_mask,

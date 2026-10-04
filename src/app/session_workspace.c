@@ -256,12 +256,27 @@ static bool hit(SDL_Rect r, int x, int y) {
 }
 static const char *fields[] = {"speed",          "dye",        "solid",    "vx", "vy", "vz",
                                "pressure_proxy", "divergence", "vorticity"};
+/* Keep the inspector field slots stable while honoring each model's units. */
+static bool physical_cfd(const Workspace *w) {
+    return !strncmp(text(w->snapshot,"model"),"incompressible_",15);
+}
+static const char *selected_field(const Workspace *w) {
+    return physical_cfd(w)&&w->field==6?"pressure_pa":fields[w->field];
+}
+static int selected_column(const Workspace *w) {
+    return physical_cfd(w)&&w->field==6?9:w->field;
+}
+static double observed_divergence(struct json_object *o) {
+    struct json_object *health=get(o,"health");if(health)o=health;
+    struct json_object *v=get(o,"max_abs_divergence_s_inv");
+    if(!v)v=get(o,"max_divergence");return json_object_get_double(v);
+}
 static const char *planes[] = {"XY", "XZ", "YZ"};
 static struct json_object *current_preview(Workspace *w) {
     return w->inspection ? get(w->inspection, "preview") : get(w->snapshot, "preview");
 }
 static void range(Workspace *w, struct json_object *preview, double *lo, double *hi) {
-    struct json_object *stat = get(get(preview, "statistics"), fields[w->field]);
+    struct json_object *stat = get(get(preview, "statistics"), selected_field(w));
     *lo = stat ? json_object_get_double(get(stat, "min")) : 0;
     *hi = stat ? json_object_get_double(get(stat, "max"))
                : json_object_get_double(get(preview, "speed_max"));
@@ -309,7 +324,7 @@ static void draw_preview(SDL_Renderer *r, Workspace *w, SDL_Rect view) {
     for (int y = 0; y < rows; y++)
         for (int x = 0; x < cols; x++) {
             int index = y * cols + x;
-            struct json_object *cell = item(samples, index), *value = item(cell, w->field);
+            struct json_object *cell = item(samples, index), *value = item(cell, selected_column(w));
             bool solid = json_object_get_boolean(item(cell, 2));
             double t = (json_object_get_double(value) - lo) / (hi - lo);
             SDL_Color color = !value  ? (SDL_Color){255, 0, 255, 255}
@@ -380,11 +395,11 @@ static void history_plot(SDL_Renderer *renderer, struct json_object *history, SD
         return;
     double peak = 1e-12;
     for (size_t i = 0; i < n; i++)
-        peak = fmax(peak, json_object_get_double(get(item(history, i), "max_divergence")));
+        peak = fmax(peak, observed_divergence(item(history,i)));
     SDL_SetRenderDrawColor(renderer, 110, 185, 235, 255);
     for (size_t i = 1; i < n; i++) {
-        double a = json_object_get_double(get(item(history, i - 1), "max_divergence")),
-               b = json_object_get_double(get(item(history, i), "max_divergence"));
+        double a = observed_divergence(item(history,i-1)),
+               b = observed_divergence(item(history,i));
         SDL_RenderDrawLine(renderer, rect.x + (int)((i - 1) * rect.w / (n - 1)),
                            rect.y + rect.h - (int)(a / peak * rect.h),
                            rect.x + (int)(i * rect.w / (n - 1)),
@@ -654,7 +669,7 @@ int physics_sim_session_workspace_run(const char *root) {
                  json_object_get_double(get(w.snapshot, "step_ms")), w.revision);
         label(renderer, font, 24, 187, theme.text_muted, line);
         char field_label[64], plane_label[32];
-        snprintf(field_label, sizeof(field_label), "Field: %s", fields[w.field]);
+        snprintf(field_label, sizeof(field_label), "Field: %s", selected_field(&w));
         snprintf(plane_label, sizeof(plane_label), "%s", planes[w.plane]);
         const char *inspect_buttons[] = {field_label,
                                          plane_label,
@@ -674,7 +689,7 @@ int physics_sim_session_workspace_run(const char *root) {
             planes[w.plane], w.slice * 100, text(preview, "plane"),
             json_object_get_int(get(preview, "slice_index")),
             (long long)json_object_get_int64(get(w.inspection ? w.inspection : w.snapshot, "tick")),
-            fields[w.field]);
+            selected_field(&w));
         label(renderer, font, 24, 267, theme.text_primary, line);
         fill(renderer, view, (SDL_Color){12, 20, 36, 255});
         draw_preview(renderer, &w, view);
@@ -682,14 +697,26 @@ int physics_sim_session_workspace_run(const char *root) {
         struct json_object *health = get(w.snapshot, "health");
         label(renderer, font, side, 300, theme.text_primary, "Solver health");
         snprintf(line, sizeof(line), "Divergence %.4g",
-                 json_object_get_double(get(health, "max_divergence")));
+                 observed_divergence(health));
         label(renderer, font, side, 330, theme.text_muted, line);
-        snprintf(line, sizeof(line), "Clamped cells %lld",
+        if(physical_cfd(&w)) {
+            struct json_object *res=get(health,"linear_relative_residual");
+            if(res)snprintf(line,sizeof(line),"True residual %.3g",json_object_get_double(res));
+            else snprintf(line,sizeof(line),"True residual unavailable");
+        } else snprintf(line, sizeof(line), "Clamped cells %lld",
                  (long long)json_object_get_int64(get(health, "velocity_clamped_cells")));
         label(renderer, font, side, 358, theme.text_muted, line);
-        snprintf(line, sizeof(line), "Skipped regions %lld",
+        if(physical_cfd(&w)) {
+            struct json_object *cells=get(health,"fluid_cells");if(!cells)cells=get(health,"fluid_leaf_cells");
+            snprintf(line,sizeof(line),"Fluid cells %lld",(long long)json_object_get_int64(cells));
+        } else snprintf(line, sizeof(line), "Skipped regions %lld",
                  (long long)json_object_get_int64(get(health, "skipped_clusters")));
         label(renderer, font, side, 386, theme.text_muted, line);
+        if (get(health, "pressure_residual_linf_s_inv")) {
+            snprintf(line, sizeof(line), "Poisson residual %.3g /s",
+                     json_object_get_double(get(health, "pressure_residual_linf_s_inv")));
+            session_text_draw(font, renderer, 2, side, 407, theme.text_muted, line);
+        }
         session_text_draw(font, renderer, 2, side, 422, theme.text_muted,
                           "Divergence / last 128 publications");
         history_plot(renderer, get(w.snapshot, "history"), (SDL_Rect){side, 448, 280, 55});
@@ -700,12 +727,12 @@ int physics_sim_session_workspace_run(const char *root) {
         snprintf(line, sizeof(line), "%.3g to %.3g %s", lo, hi,
                  w.locked_range ? "(locked)" : "(auto)");
         label(renderer, font, side, 545, theme.text_primary, line);
-        const char *units = json_object_get_string(item(get(preview, "units"), w.field));
+        const char *units = json_object_get_string(item(get(preview, "units"), selected_column(&w)));
         label(renderer, font, side, 573, theme.text_muted, units ? units : "m/s");
         struct json_object *cell = w.probe >= 0 ? item(get(preview, "samples"), w.probe) : NULL;
         if (cell) {
             snprintf(line, sizeof(line), "Probe sample %d: %.5g", w.probe,
-                     json_object_get_double(item(cell, w.field)));
+                     json_object_get_double(item(cell, selected_column(&w))));
             label(renderer, font, side, 612, theme.text_primary, line);
             snprintf(line, sizeof(line), "v=(%.3g, %.3g, %.3g)",
                      json_object_get_double(item(cell, 3)), json_object_get_double(item(cell, 4)),
@@ -732,10 +759,17 @@ int physics_sim_session_workspace_run(const char *root) {
             session_text_draw(font, renderer, 2, side, 666, theme.text_muted, line);
         } else
             label(renderer, font, side, 612, theme.text_muted, "Right-click a cell to probe");
-        session_text_draw(font, renderer, 2, side, 682, theme.text_muted,
-                          "Pressure is a solver proxy.");
+        struct json_object *physics = get(w.snapshot, "physics");
+        if (get(physics, "kinematic_viscosity_m2_s")) {
+            snprintf(line, sizeof(line), "SI viscosity nu %.3g m2/s",
+                     json_object_get_double(get(physics, "kinematic_viscosity_m2_s")));
+            session_text_draw(font, renderer, 2, side, 682, theme.text_muted, line);
+        } else {
+            session_text_draw(font, renderer, 2, side, 682, theme.text_muted,
+                              "Legacy viscosity (not SI).");
+        }
         session_text_draw(font, renderer, 2, side, 706, theme.text_muted,
-                          "Derivatives are local diagnostics.");
+                          "Pressure proxy; drag unvalidated.");
         session_text_draw(font, renderer, 2, side, 730, theme.text_muted,
                           "White: solid | Magenta: nonfinite");
         if (*text(w.snapshot, "error"))
@@ -800,7 +834,7 @@ int physics_sim_session_workspace_run(const char *root) {
             json_object_object_add(proof, "inspection_plane",
                                    json_object_new_string(text(current_preview(&w), "plane")));
             json_object_object_add(proof, "inspection_field",
-                                   json_object_new_string(fields[w.field]));
+                                   json_object_new_string(selected_field(&w)));
             json_object_object_add(proof, "font_drawable_scale",
                                    json_object_new_double(font->scale));
             json_object_object_add(proof, "font_logical_size",
