@@ -1105,3 +1105,26 @@ test-evolving-atmosphere: $(ATMOSPHERE3D_WORKER) test-evolving-atmosphere-native
 .PHONY: test-coupled-atmosphere
 test-coupled-atmosphere: $(ATMOSPHERE3D_WORKER)
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_coupled_atmosphere.py -v
+
+OPEN_ATMOSPHERE3D_SRCS := src/app/cfd_open_atmosphere3d.c $(PASSIVE3D_SRCS)
+.PHONY: test-open-atmosphere-native test-open-atmosphere-sanitize
+test-open-atmosphere-native:
+	@mkdir -p build/open-atmosphere
+	$(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_open_atmosphere3d_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o build/open-atmosphere/contract-test
+	build/open-atmosphere/contract-test
+test-open-atmosphere-sanitize:
+	@mkdir -p build/open-atmosphere
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude tests/cfd_open_atmosphere3d_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o build/open-atmosphere/contract-sanitize
+	build/open-atmosphere/contract-sanitize
+OPEN_ATMOSPHERE3D_WORKER := build/open-atmosphere/physics_sim_open_atmosphere_worker
+$(OPEN_ATMOSPHERE3D_WORKER): src/tools/physics_sim_open_atmosphere_worker.c $(OPEN_ATMOSPHERE3D_SRCS) include/app/cfd_open_atmosphere3d.h $(ATMOSPHERE3D_HEADERS)
+	@mkdir -p build/open-atmosphere
+	$(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $$(pkg-config --cflags json-c) src/tools/physics_sim_open_atmosphere_worker.c $(OPEN_ATMOSPHERE3D_SRCS) $$(pkg-config --libs json-c) -lm -o $@
+.PHONY: open-atmosphere-worker
+open-atmosphere-worker: $(OPEN_ATMOSPHERE3D_WORKER)
+.PHONY: test-open-atmosphere
+test-open-atmosphere: $(OPEN_ATMOSPHERE3D_WORKER) test-open-atmosphere-native
+	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_open_atmosphere.py -v
+.PHONY: test-coupled-open-atmosphere
+test-coupled-open-atmosphere: $(OPEN_ATMOSPHERE3D_WORKER)
+	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_coupled_open_atmosphere.py -v

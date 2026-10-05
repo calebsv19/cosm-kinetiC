@@ -482,3 +482,5 @@ No commit, package or installed Desktop capability is implied.
 - [Transactional prescribed-flow checkpoints](coupled_passive_checkpoints.md).
 
 - [Native evolving atmosphere checkpoint and rollback](evolving_atmosphere.md)
+
+- [Open reservoirs, per-face thermal/smoke budgets and bounded buoyancy](open_atmosphere.md)

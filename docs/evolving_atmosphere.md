@@ -124,3 +124,8 @@ core_pack/core_memdb storage and generic shared thermal abstraction deferred:
 this is a synchronous bounded app-owned solver with existing SQLite publication.
 No shared APIs, library versions, package/release pointers or RayTracing sources
 change in this slice.
+
+The first open-reservoir and bounded buoyancy stages now have a separately named
+[open atmosphere model](open_atmosphere.md), with per-face scalar receipts and
+independent thermal/hydrostatic controls. This periodic model remains unchanged;
+no checkpoint migration or implicit boundary/feedback change is applied.

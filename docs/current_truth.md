@@ -2106,3 +2106,18 @@ momentum feedback are explicit. Source-driven GrowthSim export carries evolved
 velocity and solved pressure into the existing Fire-surface/VF3D scene contract.
 See [evolving_atmosphere.md](evolving_atmosphere.md) for proof/limits. Open boundary
 fluxes, buoyancy, GUI/MCP exposure and real-fire/visual acceptance remain open.
+
+## 2026-10-04: open atmosphere and bounded buoyancy
+
+The separately named xy_periodic_z_reservoir_projection3d_v1 model now implements
+open bottom/top reservoir policies, explicit per-face energy/smoke inflow and
+outflow, independent chunk/lifetime balances and native checkpoint continuation.
+Atomic source consumption includes these flux counters. Opt-in small-contrast
+Boussinesq feedback passes independent hydrostatic, thermal-response and parity
+controls; oversized contrast rejects the joint candidate. Real Fire-source
+transport demonstrates boundary outflow, and an explicitly authored synthetic
+high-heat-capacity control demonstrates Fire-driven flow from zero velocity.
+See [open_atmosphere.md](open_atmosphere.md) for meaning/proof/limits. This is a
+first-order pressure projection with reservoir closures, not a full natural
+traction or ground/real-fire-air model. Existing periodic lanes remain unchanged.
+GUI/MCP/package/visual acceptance and broader convergence remain subsequent work.
