@@ -478,3 +478,5 @@ No commit, package or installed Desktop capability is implied.
 - [Offline surface-source admission and allocation](surface_source_admission.md) — general fluid/atmosphere communication, conservative plans and unchanged-solver boundary.
 
 - [Qualified offline passive atmosphere transport](passive_atmosphere.md) — SI scalar fields, native worker, conservation/refinement and source experiment.
+
+- [Transactional prescribed-flow checkpoints](coupled_passive_checkpoints.md).

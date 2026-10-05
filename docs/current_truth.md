@@ -2081,3 +2081,16 @@ controls plus a twice-reproduced native GrowthSim source experiment pass.
 See [passive atmosphere runbook](passive_atmosphere.md). This is isolated offline
 transport: no coupled checkpoint restart, open atmosphere, rising plume, ash,
 MCP/install/release or renderer adoption claim.
+
+## Consuming checkpoint and combined renderer boundary (2026-10-04)
+
+The prescribed-flow passive receiving model now atomically checkpoints fields,
+accepted input history, source consumption and receipts. Copy/reopen, partial
+intervals, replay, stale revisions and failed publication are tested. It replays
+pinned native history and does not serialize the separate transient CFD backend.
+GrowthSim exports a contained runtime fire-surface scene with native VF3D attachment,
+SI/model field sidecars and same-clock checkpoint/source binding. Existing RayTracing
+preflight and a64x48 native render succeed without RayTracing source changes.
+Open boundaries, buoyancy, airborne ash, fire-field shading and installed/live
+adoption remain subsequent gates. See coupled_passive_checkpoints.md and GrowthSim
+docs/contracts/combined_fire_atmosphere_scene_v1.md.

@@ -1078,3 +1078,7 @@ test-passive-atmosphere-sanitize:
 	build/passive-atmosphere/contract-sanitize
 test-passive-atmosphere: $(PASSIVE3D_WORKER) test-passive-atmosphere-native
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_passive_atmosphere.py -v
+
+.PHONY: test-coupled-passive
+test-coupled-passive: $(PASSIVE3D_WORKER)
+	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_coupled_passive.py -v

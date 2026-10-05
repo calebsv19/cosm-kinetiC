@@ -86,8 +86,8 @@ result rather than treating it as a consuming restart. Existing output is preser
 
 The allocation journal still records plans, not consumption. Applying a copied
 plan in a fresh isolated experiment does not mark that journal physically applied.
-Results are not restartable checkpoints. Future coupled persistence must atomically
-include momentum/scalar histories, applied event identity and interval remainder.
+Results are not restartable checkpoints. Prescribed-flow coupled persistence is now available in coupled_passive_checkpoints.md.
+Native evolving-velocity integrator history still needs a separate checkpoint implementation.
 
 ## Independent qualification and acceptance
 
@@ -127,3 +127,5 @@ momentum/energy controls. Ash needs a separately specified particle/species mode
 Live MCP, installed packaging, distributed worker activation and renderer adoption
 remain distinct subsequent acceptance boundaries. Earlier obstacle startup/force
 research stays paused; body-free qualification does not certify obstacle behavior.
+
+Prescribed-flow atomic consumption/reopen is now available; see coupled_passive_checkpoints.md. It does not serialize the native transient CFD integrator.
