@@ -476,3 +476,5 @@ No commit, package or installed Desktop capability is implied.
 - [Next bounded pressure proxy and mode coverage diagnostic](cfd_3d_p3_cg16_scalar_next_goal.md)
 
 - [Offline surface-source admission and allocation](surface_source_admission.md) — general fluid/atmosphere communication, conservative plans and unchanged-solver boundary.
+
+- [Qualified offline passive atmosphere transport](passive_atmosphere.md) — SI scalar fields, native worker, conservation/refinement and source experiment.

@@ -1057,3 +1057,24 @@ test-agent-box3d: $(SESSION_WORKER_BIN)
 .PHONY: test-surface-source-receiver
 test-surface-source-receiver:
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_surface_source_receiver.py -v
+
+# Qualified body-free passive scalar lane; existing native momentum sources unchanged.
+PASSIVE3D_SRCS := src/app/cfd_passive3d.c src/app/cfd_cartesian3d.c src/app/cfd_sparse_mg.c src/app/cfd_memory.c
+PASSIVE3D_WORKER := build/passive-atmosphere/physics_sim_passive_worker
+$(PASSIVE3D_WORKER): src/tools/physics_sim_passive_worker.c $(PASSIVE3D_SRCS) include/app/cfd_passive3d.h include/app/cfd_cartesian3d.h include/app/cfd_memory.h include/app/cfd_sparse_mg.h
+	@mkdir -p build/passive-atmosphere
+	$(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $$(pkg-config --cflags json-c) src/tools/physics_sim_passive_worker.c $(PASSIVE3D_SRCS) $$(pkg-config --libs json-c) -lm -o $@
+.PHONY: passive-atmosphere-worker
+passive-atmosphere-worker: $(PASSIVE3D_WORKER)
+
+.PHONY: test-passive-atmosphere-native test-passive-atmosphere-sanitize test-passive-atmosphere
+test-passive-atmosphere-native:
+	@mkdir -p build/passive-atmosphere
+	$(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_passive3d_contract_test.c src/app/cfd_periodic3d.c $(PASSIVE3D_SRCS) -lm -o build/passive-atmosphere/contract-test
+	build/passive-atmosphere/contract-test
+test-passive-atmosphere-sanitize:
+	@mkdir -p build/passive-atmosphere
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude tests/cfd_passive3d_contract_test.c src/app/cfd_periodic3d.c $(PASSIVE3D_SRCS) -lm -o build/passive-atmosphere/contract-sanitize
+	build/passive-atmosphere/contract-sanitize
+test-passive-atmosphere: $(PASSIVE3D_WORKER) test-passive-atmosphere-native
+	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_passive_atmosphere.py -v

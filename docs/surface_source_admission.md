@@ -136,3 +136,8 @@ bundles/frames, admission/allocation receipts, SQLite journal and `acceptance.js
 Build evidence is ignored local output; regression fixtures and these instructions
 are committed source. This milestone is source-only; installed apps, existing MCP
 capability, and thermal/fluid physics qualification do not change.
+
+
+The next passive receiving batch is now implemented and qualified separately:
+[passive atmosphere transport](passive_atmosphere.md). Admission/allocation remain
+unchanged; their journal still does not record physically consumed source.

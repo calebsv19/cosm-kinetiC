@@ -128,3 +128,13 @@ checkpoint. The new source commit is a development checkpoint, not an installed
 package, release, universal CFD certificate or adoption of canonical release work.
 The report intentionally does not certify all historical reference experiments.
 Keep the CFD owner's earlier sealed results and failed cases unchanged.
+
+
+## Superseding body-free receiving direction
+
+The later user-selected general-atmosphere direction uses a body-free periodic
+passive transport qualification domain, rather than making masked obstacle startup
+a prerequisite. See surface_source_admission.md and passive_atmosphere.md for the
+completed offline batches. The earlier obstacle sequence above remains historical
+and applies when an actual receiving case introduces obstacles; it is not the
+current next gate for body-free transport.

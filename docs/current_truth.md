@@ -2069,3 +2069,15 @@ contract lane does not require a wind-tunnel scene and does not alter native sol
 fields, time, forces, live MCP capabilities or installed packages. See
 [commands and acceptance boundaries](surface_source_admission.md). Thermal state,
 physical injection, buoyancy and atomic fluid/source restart remain unimplemented.
+
+
+## Passive atmosphere source milestone (2026-10-04)
+
+The offline body-free periodic constant-property passive3d model is implemented
+and independently qualified in Main Edit source. It carries sensible energy J,
+smoke tracer kg, derived K/kg/m³ fields and explicit budgets; existing momentum,
+pressure, dye and buoyancy behavior is unchanged. Native/sanitizer and nine Python
+controls plus a twice-reproduced native GrowthSim source experiment pass.
+See [passive atmosphere runbook](passive_atmosphere.md). This is isolated offline
+transport: no coupled checkpoint restart, open atmosphere, rising plume, ash,
+MCP/install/release or renderer adoption claim.
