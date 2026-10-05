@@ -1,6 +1,6 @@
 # kinetiC Current Truth
 
-Last updated: 2026-09-24
+Last updated: 2026-10-04
 
 ## Persistent Main Edit Development Identity
 
@@ -23,8 +23,8 @@ Last updated: 2026-09-24
   worker-package line, release history, Registry state, publication, or remote
   runtime authority.
 - PhysicsSim source gives the headless worker an independently owned
-  `WORKER_VERSION` source surface. `VERSION` remains `0.3.2` while the current
-  worker release candidate reads `0.3.3`; Linux worker archive names and worker
+  `WORKER_VERSION` source surface. The approved preparation targets are
+  `VERSION=0.4.0` and `WORKER_VERSION=0.3.4`; Linux worker archive names and worker
   manifests resolve only from `WORKER_VERSION`, while package manifests retain
   `source_program_version` from `VERSION`.
 - `config/worker_release_contract.json` records the worker slug, supported
@@ -37,9 +37,9 @@ Last updated: 2026-09-24
   `package-linux-worker-x86_64-self-test` entrypoint while retaining
   `package-linux-worker-self-test` for the adopted aarch64/Pi route. Both
   package identities still derive from the single independent
-  `WORKER_VERSION`. The existing Linux PC installation remains worker `0.3.2`;
-  worker `0.3.3` is not installed or accepted until its separate executor
-  readback and targeted queue workload succeed.
+  `WORKER_VERSION`. Released desktop and registered worker remain `0.3.2`
+  and `0.3.3` until Decision 2. Installed host versions require fresh fixed-helper
+  readback; package registration is not activation or workload acceptance.
 
 ## Program Identity
 - Repository directory: `physics_sim/`

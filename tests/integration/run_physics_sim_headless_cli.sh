@@ -14,8 +14,10 @@ printf '%s' "$VERSION_JSON" | python3 -c '
 import json
 import platform
 import sys
+from pathlib import Path
 
 identity = json.load(sys.stdin)
+source_root = Path(sys.argv[1])
 expected_platform = {
     ("Darwin", "arm64"): "macOS-arm64",
     ("Darwin", "x86_64"): "macOS-x86_64",
@@ -25,11 +27,11 @@ expected_platform = {
 assert identity == {
     "program": "physics_sim",
     "worker_slug": "physics_sim_headless_worker",
-    "worker_version": "0.3.3",
-    "source_program_version": "0.3.2",
+    "worker_version": (source_root / "WORKER_VERSION").read_text().strip(),
+    "source_program_version": (source_root / "VERSION").read_text().strip(),
     "platform": expected_platform,
 }, identity
-'
+' "$PHYSICS_DIR"
 
 if [ ! -f "$RUNTIME_SCENE" ]; then
   echo "missing runtime scene fixture: $RUNTIME_SCENE" >&2
