@@ -2094,3 +2094,15 @@ preflight and a64x48 native render succeed without RayTracing source changes.
 Open boundaries, buoyancy, airborne ash, fire-field shading and installed/live
 adoption remain subsequent gates. See coupled_passive_checkpoints.md and GrowthSim
 docs/contracts/combined_fire_atmosphere_scene_v1.md.
+
+## 2026-10-04: evolving periodic atmosphere source lane
+
+`periodic_evolving_passive3d_v1` now advances the existing unforced periodic
+momentum solver and passive thermal energy/smoke together. Native checkpoint
+continuation restores BDF/warm-start/scalar state and executes only new steps;
+source consumption and that result publish atomically in a separately bound
+SQLite journal. Fixed momentum dt, body-free periodic boundaries and no thermal
+momentum feedback are explicit. Source-driven GrowthSim export carries evolved
+velocity and solved pressure into the existing Fire-surface/VF3D scene contract.
+See [evolving_atmosphere.md](evolving_atmosphere.md) for proof/limits. Open boundary
+fluxes, buoyancy, GUI/MCP exposure and real-fire/visual acceptance remain open.

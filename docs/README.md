@@ -480,3 +480,5 @@ No commit, package or installed Desktop capability is implied.
 - [Qualified offline passive atmosphere transport](passive_atmosphere.md) — SI scalar fields, native worker, conservation/refinement and source experiment.
 
 - [Transactional prescribed-flow checkpoints](coupled_passive_checkpoints.md).
+
+- [Native evolving atmosphere checkpoint and rollback](evolving_atmosphere.md)

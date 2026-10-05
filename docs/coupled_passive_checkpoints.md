@@ -51,6 +51,11 @@ operation and exports revision4 at0.1s with reconciled89624.811988J and0.0119499
 
 GrowthSim's run_coupled_scene.py links the readback to the fire-surface/VF3D carrier.
 Existing admission-only journals and original momentum/dye solvers are unchanged.
-Next remaining physics work is native evolving-velocity histories with joint
-candidate rollback, open boundary scalar flux budgets and buoyancy qualification.
-These require additional numerical cases and are not provided by SQLite persistence.
+Native evolving-velocity histories and joint candidate rollback are available in
+the separately named periodic model below. Open boundary scalar flux budgets and
+buoyancy still require additional numerical qualification beyond SQLite persistence.
+
+See the separate [native evolving periodic lane](evolving_atmosphere.md).
+This prescribed-flow history remains pinned to its original bytes/semantics; it is
+not implicitly migrated to an evolving-flow model. Open fluxes and buoyancy remain
+subsequent milestones.

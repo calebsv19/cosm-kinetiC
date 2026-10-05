@@ -87,7 +87,7 @@ result rather than treating it as a consuming restart. Existing output is preser
 The allocation journal still records plans, not consumption. Applying a copied
 plan in a fresh isolated experiment does not mark that journal physically applied.
 Results are not restartable checkpoints. Prescribed-flow coupled persistence is now available in coupled_passive_checkpoints.md.
-Native evolving-velocity integrator history still needs a separate checkpoint implementation.
+Native evolving-velocity state is now supported by the separately named periodic model in [evolving_atmosphere.md](evolving_atmosphere.md). This passive result remains an offline experiment artifact.
 
 ## Independent qualification and acceptance
 

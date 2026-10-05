@@ -1082,3 +1082,26 @@ test-passive-atmosphere: $(PASSIVE3D_WORKER) test-passive-atmosphere-native
 .PHONY: test-coupled-passive
 test-coupled-passive: $(PASSIVE3D_WORKER)
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_coupled_passive.py -v
+
+ATMOSPHERE3D_SRCS := src/app/cfd_atmosphere3d.c src/app/cfd_periodic3d.c $(PASSIVE3D_SRCS)
+ATMOSPHERE3D_WORKER := build/evolving-atmosphere/physics_sim_atmosphere_worker
+ATMOSPHERE3D_HEADERS := include/app/cfd_atmosphere3d.h include/app/cfd_periodic3d.h include/app/cfd_passive3d.h include/app/cfd_cartesian3d.h include/app/cfd_memory.h include/app/cfd_sparse_mg.h
+$(ATMOSPHERE3D_WORKER): src/tools/physics_sim_atmosphere_worker.c $(ATMOSPHERE3D_SRCS) $(ATMOSPHERE3D_HEADERS)
+	@mkdir -p build/evolving-atmosphere
+	$(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $$(pkg-config --cflags json-c) src/tools/physics_sim_atmosphere_worker.c $(ATMOSPHERE3D_SRCS) $$(pkg-config --libs json-c) -lm -o $@
+.PHONY: evolving-atmosphere-worker
+evolving-atmosphere-worker: $(ATMOSPHERE3D_WORKER)
+.PHONY: test-evolving-atmosphere-native test-evolving-atmosphere-sanitize test-evolving-atmosphere
+test-evolving-atmosphere-native:
+	@mkdir -p build/evolving-atmosphere
+	$(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_atmosphere3d_contract_test.c $(ATMOSPHERE3D_SRCS) -lm -o build/evolving-atmosphere/contract-test
+	build/evolving-atmosphere/contract-test
+test-evolving-atmosphere-sanitize:
+	@mkdir -p build/evolving-atmosphere
+	$(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude tests/cfd_atmosphere3d_contract_test.c $(ATMOSPHERE3D_SRCS) -lm -o build/evolving-atmosphere/contract-sanitize
+	build/evolving-atmosphere/contract-sanitize
+test-evolving-atmosphere: $(ATMOSPHERE3D_WORKER) test-evolving-atmosphere-native
+	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_evolving_atmosphere.py -v
+.PHONY: test-coupled-atmosphere
+test-coupled-atmosphere: $(ATMOSPHERE3D_WORKER)
+	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_coupled_atmosphere.py -v
