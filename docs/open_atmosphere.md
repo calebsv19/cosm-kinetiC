@@ -167,8 +167,10 @@ native ingestion proof, not artistic surface/flame/plume acceptance.
 
 ## Subsequent stages and reuse
 
-Next: broaden joint spatial/time convergence and pressure-driven open-flow cases,
-then optimize pressure/operator candidate reuse without weakening rollback.
+Bounded analytic momentum, heating-time and pressure/thermal superposition
+qualification is now complete; see the qualification section below. Stop further
+atmosphere expansion until a concrete consumer needs it. Pressure/operator reuse
+optimization requires measured cost evidence and must preserve rollback.
 Ground/body and thermal surface-flux policies, realistic air/large-temperature
 models, time-varying surface/volume scene sequences, surface materials/emission,
 GUI/MCP exposure and installed-product acceptance remain separate milestones.
@@ -180,3 +182,32 @@ services and core_pack/core_memdb storage are deferred for this synchronous app
 solver. Generic shared fluid policy is deferred until multiple qualified consumers
 need it. No shared API/version/adoption changes, release pointers, canonical writer
 edits or RayTracing source changes occur in this batch.
+
+## Bounded convergence qualification and stopping boundary
+
+Run `make test-open-atmosphere-convergence`. Three analytic controls produce
+`build/open-atmosphere/convergence/metrics.json` without changing worker or adapter
+bytes, existing journals, boundary policies or scene ABI.
+
+- An exact advected viscous shear solution satisfies the open Z closures and
+  isolates horizontal momentum advection/diffusion. At 8, 16 and 32 horizontal
+  cells, velocity RMS errors are 0.00481747, 0.00248429 and 0.00125281 m/s at
+  fixed dt 0.0025 s and end time 0.1 s. Ratios 0.5157 and 0.5043 support the
+  declared first-order spatial behavior for this solution.
+- Constant source heating at 3 K/s, beta 1/300 per K and deliberately small
+  gravity 0.001 m/s² has continuous velocity g beta heating t²/2. Errors at
+  dt 0.02, 0.01 and 0.005 s halve: 1e-8, 5e-9 and 2.5e-9 m/s. Boundary cooling
+  is separately bounded below 1e-8 K. This isolates source/force temporal lag;
+  it is not a realistic-gravity plume convergence test.
+- Authored pressure gradients oppose, cancel or reinforce uniform thermal force
+  at two resolutions/time steps. Independent analytic velocity and linear
+  pressure predictions agree to within 1e-11 m/s and 1e-10 Pa. Cancellation
+  qualifies hydrostatic rest; reinforcing pressure qualifies driven flow.
+
+These are targeted independent reference controls, not general nonlinear 3D
+plume, joint convergence or ground-surface acceptance. Existing pulse transport,
+restart, budget, hydrostatic and rollback controls remain required. No solver
+correction was needed. The useful next consumer milestone is bounded reusable
+coupling orchestration and synchronized scene sequences. Ground/body boundaries,
+real-air large contrasts and solver optimization should follow an explicit use
+case or measured limitation rather than expand this diagnostic lane indefinitely.

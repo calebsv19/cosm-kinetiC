@@ -2121,3 +2121,14 @@ See [open_atmosphere.md](open_atmosphere.md) for meaning/proof/limits. This is a
 first-order pressure projection with reservoir closures, not a full natural
 traction or ground/real-fire-air model. Existing periodic lanes remain unchanged.
 GUI/MCP/package/visual acceptance and broader convergence remain subsequent work.
+
+
+## Open atmosphere bounded convergence qualification
+
+Three additional independent controls qualify advected viscous shear spatial
+refinement, source-driven thermal temporal refinement and pressure/thermal-force
+superposition. Expected first-order error reduction and hydrostatic cancellation
+pass. Worker/adapter bytes and accepted journals remain unchanged. This is targeted
+analytic qualification, not general plume or joint 3D convergence. See
+[open_atmosphere.md](open_atmosphere.md). Prioritize reusable coupling orchestration
+next; ground/body policy needs a concrete surface consumer before implementation.

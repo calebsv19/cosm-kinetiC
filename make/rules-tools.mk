@@ -1128,3 +1128,7 @@ test-open-atmosphere: $(OPEN_ATMOSPHERE3D_WORKER) test-open-atmosphere-native
 .PHONY: test-coupled-open-atmosphere
 test-coupled-open-atmosphere: $(OPEN_ATMOSPHERE3D_WORKER)
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_coupled_open_atmosphere.py -v
+
+.PHONY: test-open-atmosphere-convergence
+test-open-atmosphere-convergence: $(OPEN_ATMOSPHERE3D_WORKER)
+	PYTHONDONTWRITEBYTECODE=1 python3 -B tests/test_open_atmosphere_convergence.py --report build/open-atmosphere/convergence/metrics.json
