@@ -100,3 +100,13 @@ untracked or ignored evidence needs retention, no process owns the checkout or
 development application, and every specialist registration remains
 unaffected. Never force-remove, prune, or destructively reset a lane as part of
 ordinary Main Edit work.
+
+## Main Edit icon packaging
+
+The existing product icon is retained at
+`tools/packaging/macos/local_app_icon/AppIcon.icns`; this file is deliberately
+excluded from the local-icon ignore rule so future source checkpoints and
+worktrees retain it. Main Edit packaging requires an icon input. Its self-test
+requires the bundled icon, the matching `CFBundleIconFile`, and byte equality
+with the selected `.icns` input. Missing icons must fail rather than silently
+produce a generic Desktop icon. Other local icon experiments remain ignored.

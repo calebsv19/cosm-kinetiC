@@ -17,7 +17,8 @@ vk_frame.ppm
 /vf2d_dataset_tool
 /vf2d_pack_tool
 /dist/
-tools/packaging/macos/local_app_icon/
+tools/packaging/macos/local_app_icon/*
+!tools/packaging/macos/local_app_icon/AppIcon.icns
 
 /physics_sim_session_worker
 __pycache__/
