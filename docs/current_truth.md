@@ -1,6 +1,18 @@
 # kinetiC Current Truth
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
+
+## Local corner Fire / 32³ atmosphere source qualification (2026-10-05)
+
+The separate [open-reservoir model](open_atmosphere.md#atomic-source-batches-and-32³-corner-receiving-qualification-2026-10-05)
+adds bounded atomic Python source-batch admission without changing the native
+solver. GrowthSim runs matched 32³/16³/disabled-feedback sources through 5 s:
+conservative J/kg, exact continuation and causal thermal flow pass. The original
+refinement's cp100000 applicability rejection is preserved; qualified runs declare
+an explicitly synthetic cp800000 material with the same source bytes. This is
+uncommitted Main Edit local CLI evidence, separate from releases, CFD obstacle
+qualification, physical ground closure, large-temperature fire-air behavior,
+64³ scaling and full-lit synchronized movie acceptance.
 
 ## Usable stationary-box source checkpoint (2026-10-04)
 
@@ -2132,3 +2144,44 @@ pass. Worker/adapter bytes and accepted journals remain unchanged. This is targe
 analytic qualification, not general plume or joint 3D convergence. See
 [open_atmosphere.md](open_atmosphere.md). Prioritize reusable coupling orchestration
 next; ground/body policy needs a concrete surface consumer before implementation.
+
+Grounded plume development, 2026-10-05: the explicit
+`solid_bottom_open_top` / `no_slip_bottom_zero_gradient_top` policy adds an
+impermeable stationary no-slip bottom to the existing all-fluid Cartesian plume
+lane. Mixed pressure projection, zero ground heat/smoke receipts, hydrostatics,
+restart and rejection are tested; see `docs/open_atmosphere.md` and
+`tests/test_ground_atmosphere.py`. The low-temperature-contrast envelope and
+periodic XY remain explicit limits. This is Main Edit source evidence, not an
+installed/released hot-fire model.
+
+### Local plume transport refinement candidate (2026-10-05)
+
+See `docs/plume_transport_refinement.md` for the opt-in MUSCL transport, explicit
+64-cube resource limits, pressure-operator reuse and unchanged numeric digest
+contract. Grounded/open/coupled/native rollback gates and independent transport
+controls qualify the local candidate. These source changes are in Main Edit;
+this entry does not establish installation, adoption or physical-fire acceptance.
+
+Full-duration local qualification, 2026-10-05:
+`docs/plume_full_duration_qualification.md` records the opt-in eight-second,
+3200-step sparse native runner and independently accepted binary64 samples.
+Exact dense/sparse controls and full-duration 32³/64³ legacy-state parity pass.
+The explicit work ceiling is one billion; ordinary resource defaults, 120-second
+adapter timeout and numerical gates remain unchanged. GrowthSim owns the plume
+time/grid/heat/diffusion comparison; these mechanics are Main Edit evidence.
+
+Native full-burn movie mechanics, 2026-10-05 start: the explicit `--sparse-movie`
+mode retains the existing solver with 32 s / 6400 steps / 160 binary64 sample
+bounds and an explicit two-billion scalar-work ceiling. Packet/configuration
+and sample bounds remain 64 MiB, numerical allocation 256 MiB for the 64³ case.
+Only movie mode permits a bounded four-hour wall allowance; ordinary and
+qualification limits remain unchanged. Compact movie fields pass the same
+independent numeric gates without ordinary checkpoint serialization; binary
+packet identity is distinct from canonical tagged-state identity. Six focused
+movie parity/rejection tests pass, including exact dense/compact data and
+separate wall-limit selection. GrowthSim's complete 32-second run passes its
+gates and exact 2/4/8-second prior candidate parity. This is duration/media
+qualification, not 32-second convergence or hot-fire/production acceptance.
+See `docs/plume_full_duration_qualification.md`.
+
+2026-10-06 explicit tall-domain qualification: `--sparse-domain-qualification` and Python `domain_qualification=True` admit up to 64×64×128 / 524,288 cells, retaining 8 s / 3200 steps / 3 samples / one-billion scalar work / 64 MiB packet bounds and an explicit numerical budget up to 512 MiB. Ordinary/movie admissions retain their previous caps. Optional physical-depth surface mapping preserves conserved horizontal/vertical overlap with explicit layer masks. See `docs/plume_domain_qualification.md`. Full-resolution 0.2-second source/ground/conservation and original-VF3D proof passes; no full-duration domain convergence or remote capability claim.

@@ -53,6 +53,17 @@ int main(void) {
     assert(s.time==time && s.steps==steps && s.input_j==inputs);j[0]=0;
     size_t live=memory.live_bytes;memory.limit_bytes=live;assert(!cfd_open_atmosphere3d_step(&s,j,kg));memory.limit_bytes=128*1024*1024;
     assert(memory.live_bytes==live && !memcmp(saved,s.velocity,accepted*sizeof(double)));assert(cfd_open_atmosphere3d_step(&s,j,kg));
+    cfd_open_atmosphere3d_destroy(&s);
+    /* Opt-in ground: localized heat creates motion, never bottom mass flux.
+     * A late contrast failure preserves the complete accepted grounded state. */
+    datum[0]=datum[1]=0;init(&s,8,.01,300,true,beta,datum);s.ground=true;
+    s.diffusivity=.002;j[0]=10;kg[0]=.001;
+    for(int tick=0;tick<20;tick++){assert(cfd_open_atmosphere3d_step(&s,j,kg));j[0]=0;kg[0]=0;}
+    for(int q=0;q<s.plane;q++)assert(s.velocity[2*n+q]==0);
+    for(int b=0;b<4;b++)for(int q=0;q<s.plane;q++)assert(s.flux[b*2*s.plane+q]==0);
+    memcpy(saved,s.velocity,accepted*sizeof(double));memcpy(saved+accepted,s.flux,8*s.plane*sizeof(double));
+    steps=s.steps;time=s.time;j[0]=1e9;assert(!cfd_open_atmosphere3d_step(&s,j,kg));
+    assert(s.steps==steps && s.time==time && !memcmp(saved,s.velocity,accepted*sizeof(double)) && !memcmp(saved+accepted,s.flux,8*s.plane*sizeof(double)));
     cfd_open_atmosphere3d_destroy(&s);free(j);free(kg);free(saved);assert(memory.live_bytes==0);cfd_memory_scope(prior);
     puts("open reservoir uniform/pulse/backflow budgets, hydrostatic buoyancy, joint rollback and memory controls passed");return 0;
 }

@@ -10,7 +10,7 @@ import sqlite3
 import subprocess
 from coupled_passive import Coupled as Prescribed
 from open_atmosphere import run,validate,SCHEMA,ROOT
-from surface_sources.receiver import policy_valid,source_frame,mapping,allocate
+from surface_sources.receiver import policy_valid,source_frame,mapping,allocate,_allocate_mapped
 from surface_sources.growth_fire_v1 import strict_load,canonical,digest,sealed,require,identifier,integer,number,keys
 
 def adapter_sha():
@@ -18,7 +18,8 @@ def adapter_sha():
     return hashlib.sha256(canonical({name:hashlib.sha256((ROOT/'scripts'/name).read_bytes()).hexdigest() for name in names})).hexdigest()
 
 class CoupledOpenAtmosphere(Prescribed):
-    def __init__(self,store,policy,properties,velocity,dt,boundary,buoyancy,worker):
+    def __init__(self,store,policy,properties,velocity,dt,boundary,buoyancy,worker,journal_budget_bytes=128*1024*1024,*,transport_scheme=None,resource_limits=None):
+        integer(journal_budget_bytes,16*1024*1024,512*1024*1024);self.journal_budget_bytes=journal_budget_bytes
         self.path=Path(store)/'coupled.sqlite3';self.worker=Path(worker).resolve()
         policy=policy_valid(policy);grid=policy['receiver']
         require(grid['origin_m']==[0,0,0] and all(grid['fluid_mask']) and policy['stream_start_tick']==0,'body-free zero-origin/start policy')
@@ -26,8 +27,10 @@ class CoupledOpenAtmosphere(Prescribed):
             'properties':properties,'momentum_dt_s':dt,'initial_face_velocity_m_s':velocity,
             'initial_energy_j':[0.]*math.prod(grid['dimensions']),'initial_smoke_kg':[0.]*math.prod(grid['dimensions']),
             'boundary_policy':boundary,'buoyancy':buoyancy}))
+        if transport_scheme is not None:self.base['transport_scheme']=transport_scheme
+        if resource_limits is not None:self.base['resource_limits']=json.loads(canonical(resource_limits))
         validate(dict(self.base,schema=SCHEMA,state=None,steps=[]))
-        self.binding=json.loads(canonical({'policy':policy,'configuration':self.base,'worker_sha256':hashlib.sha256(self.worker.read_bytes()).hexdigest(),'adapter_sha256':adapter_sha()}))
+        self.binding=json.loads(canonical({'policy':policy,'configuration':self.base,'resource_limits':{'journal_bytes':journal_budget_bytes},'worker_sha256':hashlib.sha256(self.worker.read_bytes()).hexdigest(),'adapter_sha256':adapter_sha()}))
         self.binding_digest=digest(self.binding)
     def initialize(self):
         with closing(self.db()) as db:
@@ -58,26 +61,42 @@ class CoupledOpenAtmosphere(Prescribed):
         return cp
 
     def admit(self,value):
+        return self.admit_many([value])[0]
+
+    def admit_many(self,values):
+        """Admit 1..256 intervals atomically; retries retain original receipts."""
         require(self.path.is_file(),'initialize receiving history first')
-        frame=source_frame(value);policy=self.binding['policy']
-        require(digest(frame['config'])==digest(policy['source_config']) and frame['producer']==policy['producer'],'source policy/provenance')
-        mapping(frame,policy)
+        require(type(values) in (list,tuple) and 1<=len(values)<=256,'bounded admission batch')
+        frames=[source_frame(value) for value in values];policy=self.binding['policy']
+        for frame in frames:
+            require(digest(frame['config'])==digest(policy['source_config']) and frame['producer']==policy['producer'],'source policy/provenance')
+            mapping(frame,policy)
         with closing(self.db()) as db:
             try:
-                db.execute('BEGIN IMMEDIATE');cp=self.bound(db);seq=frame['event']['sequence']
-                old=db.execute('SELECT frame,receipt FROM events WHERE sequence=?',(seq,)).fetchone()
-                if old:
-                    require(json.loads(old[0])['digest']==frame['digest'],'source event conflict');db.rollback();return json.loads(old[1])
-                last=db.execute('SELECT sequence,frame FROM events ORDER BY sequence DESC LIMIT 1').fetchone()
-                require(seq==(last[0]+1 if last else 0),'source sequence gap')
-                require(frame['interval']['start_tick']==(json.loads(last[1])['interval']['end_tick'] if last else 0),'source time gap')
-                ticks=0 if cp['result'] is None else cp['result']['state']['data']['steps']
-                clock=ticks*self.base['momentum_dt_s'];start=frame['interval']['start_s']
-                require(start>=clock or math.isclose(start,clock,rel_tol=1e-13,abs_tol=1e-15),'source behind physical history')
-                require(seq<256 and self.path.stat().st_size+2*len(canonical(frame))<128*1024*1024,'journal budget')
-                receipt=sealed({'schema':'physics_sim_coupled_source_admission/v1','event':frame['event'],'source_digest':frame['digest'],
-                    'binding_digest':self.binding_digest,'status':'admitted_not_consumed'})
-                db.execute('INSERT INTO events VALUES(?,?,?)',(seq,canonical(frame).decode(),canonical(receipt).decode()));db.commit();return receipt
+                db.execute('BEGIN IMMEDIATE');cp=self.bound(db);receipts=[];added=0
+                estimated=self.path.stat().st_size
+                for frame in frames:
+                    seq=frame['event']['sequence']
+                    old=db.execute('SELECT frame,receipt FROM events WHERE sequence=?',(seq,)).fetchone()
+                    if old:
+                        require(json.loads(old[0])['digest']==frame['digest'],'source event conflict')
+                        receipts.append(json.loads(old[1]));continue
+                    last=db.execute('SELECT sequence,frame FROM events ORDER BY sequence DESC LIMIT 1').fetchone()
+                    require(seq==(last[0]+1 if last else 0),'source sequence gap')
+                    require(frame['interval']['start_tick']==(json.loads(last[1])['interval']['end_tick'] if last else 0),'source time gap')
+                    ticks=0 if cp['result'] is None else cp['result']['state']['data']['steps']
+                    clock=ticks*self.base['momentum_dt_s'];start=frame['interval']['start_s']
+                    require(start>=clock or math.isclose(start,clock,rel_tol=1e-13,abs_tol=1e-15),'source behind physical history')
+                    receipt=sealed({'schema':'physics_sim_coupled_source_admission/v1','event':frame['event'],'source_digest':frame['digest'],
+                        'binding_digest':self.binding_digest,'status':'admitted_not_consumed'})
+                    payload=canonical(frame).decode();receipt_payload=canonical(receipt).decode()
+                    estimated+=2*(len(payload.encode())+len(receipt_payload.encode())+4096)
+                    require(seq<256 and estimated<self.journal_budget_bytes,'journal budget')
+                    db.execute('INSERT INTO events VALUES(?,?,?)',(seq,payload,receipt_payload));receipts.append(receipt);added+=1
+                require(adapter_sha()==self.binding['adapter_sha256'] and hashlib.sha256(self.worker.read_bytes()).hexdigest()==self.binding['worker_sha256'],'receiving bytes changed during admission')
+                if added:db.commit()
+                else:db.rollback()
+                return receipts
             except BaseException:db.rollback();raise
 
     def step(self,revision,operation_id,dt,source_mode='required'):
@@ -95,6 +114,9 @@ class CoupledOpenAtmosphere(Prescribed):
                 require(revision==cp['revision'] and revision<64,'stale revision/checkpoint bound')
                 state=None if cp['result'] is None else cp['result']['state'];start=0 if state is None else state['data']['steps']
                 n=math.prod(self.base['grid']);frames=[json.loads(row[0]) for row in db.execute('SELECT frame FROM events ORDER BY sequence')]
+                weights=mapping(frames[0],self.binding['policy']) if frames else None
+                for frame in frames:
+                    source_frame(frame);require(frame['config']==self.binding['policy']['source_config'] and frame['producer']==self.binding['policy']['producer'],'journal source binding')
                 steps=[];consumed=list(cp['consumed'])
                 for tick in range(start,start+count):
                     current=tick*h;end=(tick+1)*h;energy=[0.]*n;smoke=[0.]*n
@@ -103,7 +125,7 @@ class CoupledOpenAtmosphere(Prescribed):
                             require(not any(f['interval']['end_s']>current for f in frames),'cannot bypass admitted source');current=end;break
                         frame=next((f for f in frames if f['interval']['start_s']<=current<f['interval']['end_s']),None)
                         require(frame is not None,'source interval unavailable');until=min(end,frame['interval']['end_s'])
-                        plan=allocate(frame,self.binding['policy'],[current,until],operation_id)
+                        plan=_allocate_mapped(frame,self.binding['policy'],[current,until],operation_id,weights)
                         for cell in plan['steps'][0]['cells']:
                             q=cell['cell_index'];energy[q]+=cell['energy_transferred_j'];smoke[q]+=cell['smoke_transferred_kg']
                         consumed.append({'event':frame['event'],'source_digest':frame['digest'],'start_s':current,'end_s':until,
@@ -115,7 +137,7 @@ class CoupledOpenAtmosphere(Prescribed):
                     'time_s':result['fields']['time_s'],'result':result,'consumed':consumed,'parent_digest':cp['digest']})
                 receipt=sealed({'schema':'physics_sim_open_coupled_step/v1','operation_id':operation_id,'revision':revision+1,
                     'checkpoint_digest':next_cp['digest'],'time_s':next_cp['time_s'],'native_steps_advanced':count,'budgets':result['budgets'],'boundary_receipts':result['boundary_receipts'],'status':'applied_and_checkpointed'})
-                require(self.path.stat().st_size+2*(len(canonical(next_cp))+len(canonical(receipt))+4096)<128*1024*1024,'checkpoint byte budget')
+                require(self.path.stat().st_size+2*(len(canonical(next_cp))+len(canonical(receipt))+4096)<self.journal_budget_bytes,'checkpoint byte budget')
                 require(adapter_sha()==self.binding['adapter_sha256'] and hashlib.sha256(self.worker.read_bytes()).hexdigest()==self.binding['worker_sha256'],'receiving bytes changed during step')
                 db.execute('INSERT INTO checkpoints VALUES(?,?)',(revision+1,canonical(next_cp).decode()))
                 db.execute('INSERT INTO operations VALUES(?,?,?)',(operation_id,identity,canonical(receipt).decode()))
@@ -126,8 +148,8 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--config',type=Path,required=True);p.add_argument('--store',type=Path,required=True)
     sub=p.add_subparsers(dest='action',required=True);sub.add_parser('init');sub.add_parser('inspect');a=sub.add_parser('admit');a.add_argument('source',type=Path)
     a=sub.add_parser('step');a.add_argument('--revision',type=int,required=True);a.add_argument('--operation-id',required=True);a.add_argument('--dt',type=float,required=True);a.add_argument('--source-mode',choices=['required','none'],default='required')
-    args=p.parse_args();c=strict_load(args.config);keys(c,('policy','properties','initial_face_velocity_m_s','momentum_dt_s','boundary_policy','buoyancy','worker'))
-    receiver=CoupledOpenAtmosphere(args.store,c['policy'],c['properties'],c['initial_face_velocity_m_s'],c['momentum_dt_s'],c['boundary_policy'],c['buoyancy'],c['worker'])
+    args=p.parse_args();c=strict_load(args.config);keys(c,('policy','properties','initial_face_velocity_m_s','momentum_dt_s','boundary_policy','buoyancy','worker',*(("journal_budget_bytes",) if "journal_budget_bytes" in c else ())))
+    receiver=CoupledOpenAtmosphere(args.store,c['policy'],c['properties'],c['initial_face_velocity_m_s'],c['momentum_dt_s'],c['boundary_policy'],c['buoyancy'],c['worker'],c.get('journal_budget_bytes',128*1024*1024))
     result=receiver.initialize() if args.action=='init' else receiver.inspect() if args.action=='inspect' else receiver.admit(strict_load(args.source)) if args.action=='admit' else receiver.step(args.revision,args.operation_id,args.dt,args.source_mode)
     print(json.dumps(result,allow_nan=False))
 if __name__=='__main__':

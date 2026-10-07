@@ -26,7 +26,9 @@ def policy_valid(p):
     for h in p['producer'].values(): hash_valid(h)
     integer(p['stream_start_tick'], 0, 2**32-1)
     g = p['receiver']
-    keys(g, ('frame', 'origin_m', 'spacing_m', 'dimensions', 'layer', 'fluid_mask'))
+    support = 'injection_depth_m' in g
+    keys(g, ('frame', 'origin_m', 'spacing_m', 'dimensions', 'layer', 'fluid_mask',
+             *(('injection_depth_m', 'injection_fluid_mask') if support else ())))
     require(g['frame'] == 'right_handed_z_up_meters', 'receiver coordinate frame')
     for key in ('origin_m', 'spacing_m', 'dimensions'):
         require(type(g[key]) is list and len(g[key]) == 3, 'receiver vector dimensions')
@@ -34,11 +36,19 @@ def policy_valid(p):
     for v in g['spacing_m']: number(v, 1e-6, 1e6)
     for v in g['dimensions']: integer(v, 1, 256)
     nx, ny, nz = g['dimensions']
-    require(nx*ny*nz <= 262144, 'receiver cell admission budget')
+    require(nx*ny*nz <= 524288, 'receiver cell admission budget')
     integer(g['layer'], 0, nz-1)
     require(type(g['fluid_mask']) is list and len(g['fluid_mask']) == nx*ny,
             'receiver layer mask length')
     require(all(type(v) is int and v in (0,1) for v in g['fluid_mask']), 'receiver fluid mask')
+    if support:
+        number(g['injection_depth_m'], 1e-6, (nz-g['layer'])*g['spacing_m'][2])
+        layers = math.ceil(g['injection_depth_m']/g['spacing_m'][2])
+        mask = g['injection_fluid_mask']
+        require(type(mask) is list and len(mask) == layers*nx*ny,
+                'physical injection mask length')
+        require(all(type(v) is int and v in (0,1) for v in mask), 'physical injection mask')
+        require(mask[:nx*ny] == g['fluid_mask'], 'physical injection base mask identity')
     return p
 
 
@@ -53,6 +63,7 @@ def source_frame(value):
 
 def mapping(frame, policy):
     """Area intersections of clipped nodal dual rectangles with XY receiving cells."""
+    policy_valid(policy)
     c, g = frame['config'], policy['receiver']
     ox, oy, oz = g['origin_m']; dx, dy, dz = g['spacing_m']
     nx, ny, _ = g['dimensions']; layer = g['layer']
@@ -81,20 +92,39 @@ def mapping(frame, policy):
             fractions = [a/total for _,a in weights]
             fractions[-1] = 1-math.fsum(fractions[:-1])
             require(all(v > 0 for v in fractions), 'unresolved mapping precision')
-            rows.append([(cell,fraction) for (cell,_),fraction in zip(weights,fractions)])
-            entries += len(weights)
+            row = [(cell,fraction) for (cell,_),fraction in zip(weights,fractions)]
+            if 'injection_depth_m' in g:
+                depth = g['injection_depth_m']; expanded = []
+                for offset in range(math.ceil(depth/dz)):
+                    overlap = min(dz, depth-offset*dz)
+                    for cell,fraction in row:
+                        xy = cell % (nx*ny)
+                        require(g['injection_fluid_mask'][offset*nx*ny+xy] == 1,
+                                'physical injection overlaps declared solid')
+                        expanded.append((cell+offset*nx*ny, fraction*overlap/depth))
+                remainder = 1-math.fsum(fraction for _,fraction in expanded[:-1])
+                require(remainder > 0, 'physical injection precision')
+                expanded[-1] = (expanded[-1][0], remainder)
+                row = expanded
+            rows.append(row)
+            entries += len(row)
             require(entries <= MAX_ENTRIES, 'surface mapping resource limit')
     return rows
 
 
 def allocate(frame, policy, boundaries, plan_id):
+    return _allocate_mapped(frame,policy,boundaries,plan_id,mapping(frame,policy))
+
+
+def _allocate_mapped(frame, policy, boundaries, plan_id, weights):
+    """Internal adapter path: mapping prepared from its bound geometry policy."""
     identifier(plan_id)
     require(type(boundaries) is list and 2 <= len(boundaries) <= 257, '2..257 substep boundaries required')
     for t in boundaries: number(t,0)
     start,end = frame['interval']['start_s'],frame['interval']['end_s']
     require(start <= boundaries[0] < boundaries[-1] <= end and
             all(a < b for a,b in zip(boundaries,boundaries[1:])), 'ordered substeps inside half-open interval required')
-    weights = mapping(frame,policy); steps = []; count = 0
+    steps = []; count = 0
     for index,(a,b) in enumerate(zip(boundaries,boundaries[1:])):
         values = {}
         for node,row in enumerate(weights):

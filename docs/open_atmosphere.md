@@ -211,3 +211,84 @@ correction was needed. The useful next consumer milestone is bounded reusable
 coupling orchestration and synchronized scene sequences. Ground/body boundaries,
 real-air large contrasts and solver optimization should follow an explicit use
 case or measured limitation rather than expand this diagnostic lane indefinitely.
+
+
+## Atomic source batches and 32³ corner receiving qualification (2026-10-05)
+
+The importable `CoupledOpenAtmosphere.admit_many(values)` admits 1..256 source
+frames/bundles in one transaction, reusing every existing provenance, mapping,
+sequence, source-clock and byte-budget gate. Equal retries return original
+receipts. Mixed old/new intervals preserve their order; a late conflict or gap
+rolls back all newly inserted intervals. The worker and adapter identities are
+rechecked before commit. The existing `admit(value)` delegates a one-element
+batch and its response remains unchanged. This is a Python API used by the
+contained experiment runner; no new CLI subcommand is implied. Source admission
+alone does not consume quantities or advance a numerical state.
+
+The change avoids repeatedly decoding a large accepted 32³ checkpoint for every
+small source interval. Numerical equations, native worker, clock, projection and
+contrast gates remain unchanged. Adapter identity changes require the original
+adapter bytes for an existing journal; there is no implicit checkpoint migration.
+All numerical/journal limits above remain in force.
+
+GrowthSim's `scripts/fire_corner_plume.py` now runs an explicit native corner
+ignition, 100 one-tick intervals, and matched 32³/16³ buoyancy and 32³ disabled
+feedback lanes in a 2 m body-free cube. Source coordinates [0.5,0.5,0.25] m map
+to receiving centre [0.53125,0.53125,0.28125] m on the fine grid. The cp100000
+refinement candidate rejects; a separate explicitly synthetic cp800000 material
+is selected from a conservative source-energy bound, with identical source bytes.
+All eight samples through 5 s pass source clocks, lifetime/chunk conservation,
+projection, equal-operation replay, checkpoint reopen and exact partitioned
+native restart. Initial velocity is zero; disabled feedback stays exactly zero.
+The buoyant 32³ smoke centroid rises 0.07962 m, about 0.07741 m above the matching
+control at 5 s. Peak T is 309.804 K, within the authored small-contrast envelope.
+The early dt0.01→0.005 s comparison through 0.4 s changes the maximum velocity
+component by 0.1624%; this does not establish full temporal/spatial convergence.
+
+Focused open-atmosphere, transactional and analytic convergence gates pass;
+new batch controls cover consumption, replay, mixed retries, late rollback and
+bounds. Retained evidence lives in GrowthSim's ignored
+`build/fire-corner32-20261005/experiment-v2/`; the original rejection is retained
+in `experiment-v1/`. GrowthSim `docs/fire_corner_plume_qualification.md` owns the
+source/visual audit and model limitations. The VF3D render-only half-cell origin
+mapping preserves physical payload bytes; authoritative cell-centred arrays and
+physical origins remain unchanged. Body-free reservoirs, synthetic properties,
+visual flame proxies and authored optical normalization are not production hot
+fire-air physics or a solid-ground plume. Movie and 64³ qualification remain open.
+
+## Grounded plume policy (Main Edit, 2026-10-05)
+
+The additive `solid_bottom_open_top` vertical policy returns the separately named
+`xy_periodic_ground_open_top_projection3d_v1` model. Pair it with
+`predictor_velocity: no_slip_bottom_zero_gradient_top`. The existing two-open-end
+policy and its defaults remain available. Ground has no reservoir: bottom
+pressure datum must be zero, bottom ambient temperature must equal the reference,
+and bottom ambient smoke must be zero. The top retains the existing open
+pressure/reservoir policy. XY is still periodic; this is not a closed room.
+
+The stationary bottom uses odd-reflected tangential ghosts (no-slip), exactly zero
+normal face velocity, a homogeneous Neumann pressure-correction boundary, and
+zero advective/diffusive heat and smoke flux. The pressure operator reuses the
+Cartesian sparse multigrid path with a mixed-boundary extension. Scalars occupy
+cell centres above the floor; a ground Fire source deposits into layer zero.
+No clipping a previously projected normal velocity is used to conceal leakage.
+
+Native and independent Python admission reject nonzero bottom normal velocity or
+bottom cumulative flux. Ground hydrostatics, tangential wall dissipation, localized
+buoyant transport/diffusion, exact restart, invalid state rejection, and late
+failure rollback are covered by `tests/test_ground_atmosphere.py` and the native
+sanitizer test. Run `make test-open-atmosphere-sanitize` and
+`python3 -B -m unittest discover -s tests -p test_ground_atmosphere.py -v`.
+
+The low-contrast Boussinesq envelope is unchanged. This floor addition does not
+qualify flame-temperature air, thermal radiation, conjugate floor heat transfer,
+room side walls, variable density, turbulence closure, or hot reacting combustion.
+
+The coupled journal retains a default 128 MiB budget. A caller can explicitly
+request `journal_budget_bytes` between 16 and 512 MiB; the selected budget is
+bound into journal identity and cannot be changed on reopen. The grounded review
+uses 256 MiB to preserve fine source events and selected complete 32-cubed native
+checkpoints. Native request (64 MiB), event-count, one-second transaction and
+substep limits remain independent gates. An internal prepared-mapping allocation
+path reuses the validated source geometry per transaction; admitted source bytes,
+config and producer binding are checked before consumption.

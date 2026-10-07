@@ -70,6 +70,10 @@ void cfd_cartesian3d_linear_destroy(CfdCartesian3dLinear *s) {
 }
 CfdCartesian3dLinear *cfd_cartesian3d_linear_create(const CfdCartesian3d *g, const bool periodic[3],
                                                     double mass, double viscosity, bool pin) {
+    return cfd_cartesian3d_linear_create_mixed(g, periodic, NULL, mass, viscosity, pin);
+}
+CfdCartesian3dLinear *cfd_cartesian3d_linear_create_mixed(const CfdCartesian3d *g, const bool periodic[3],
+    const bool neumann[6], double mass, double viscosity, bool pin) {
     if (!g || !periodic || !isfinite(mass) || mass < 0 || !isfinite(viscosity) || viscosity <= 0 ||
         (pin && (mass != 0 || !periodic[0] || !periodic[1] || !periodic[2])) ||
         (!pin && mass == 0 && periodic[0] && periodic[1] && periodic[2]))
@@ -106,7 +110,7 @@ CfdCartesian3dLinear *cfd_cartesian3d_linear_create(const CfdCartesian3d *g, con
                 double k = viscosity / (g->h[a] * g->h[a]);
                 for (int d = -1; d <= 1; d += 2) {
                     if (!periodic[a] && (c + d < 0 || c + d >= g->n[a]))
-                        val[0] += 2 * k;
+                        val[0] += (neumann && neumann[2*a+(d>0)]) ? 0 : 2 * k;
                     else {
                         int t = cfd_cartesian3d_neighbor(g, q, a, d);
                         val[0] += k;

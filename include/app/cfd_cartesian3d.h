@@ -19,6 +19,10 @@ void cfd_cartesian3d_gradient(const CfdCartesian3d *g, const double *pressure, d
 typedef struct CfdCartesian3dLinear CfdCartesian3dLinear;
 CfdCartesian3dLinear *cfd_cartesian3d_linear_create(const CfdCartesian3d *g, const bool periodic[3],
                                                     double mass, double viscosity, bool pin);
+/* Mixed pressure boundaries: nonperiodic sides default to half-cell Dirichlet;
+ * selected homogeneous Neumann sides contribute no boundary diagonal. */
+CfdCartesian3dLinear *cfd_cartesian3d_linear_create_mixed(const CfdCartesian3d *g,
+    const bool periodic[3], const bool neumann[6], double mass, double viscosity, bool pin);
 void cfd_cartesian3d_linear_destroy(CfdCartesian3dLinear *s);
 bool cfd_cartesian3d_linear_solve(CfdCartesian3dLinear *s, const double *b, double *x,
                                   int *iterations, double *relative_residual);

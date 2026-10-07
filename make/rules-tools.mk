@@ -1117,7 +1117,7 @@ test-open-atmosphere-sanitize:
 	$(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude tests/cfd_open_atmosphere3d_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o build/open-atmosphere/contract-sanitize
 	build/open-atmosphere/contract-sanitize
 OPEN_ATMOSPHERE3D_WORKER := build/open-atmosphere/physics_sim_open_atmosphere_worker
-$(OPEN_ATMOSPHERE3D_WORKER): src/tools/physics_sim_open_atmosphere_worker.c $(OPEN_ATMOSPHERE3D_SRCS) include/app/cfd_open_atmosphere3d.h $(ATMOSPHERE3D_HEADERS)
+$(OPEN_ATMOSPHERE3D_WORKER): src/tools/physics_sim_open_atmosphere_worker.c src/tools/physics_sim_plume_qualification.h $(OPEN_ATMOSPHERE3D_SRCS) include/app/cfd_open_atmosphere3d.h $(ATMOSPHERE3D_HEADERS)
 	@mkdir -p build/open-atmosphere
 	$(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $$(pkg-config --cflags json-c) src/tools/physics_sim_open_atmosphere_worker.c $(OPEN_ATMOSPHERE3D_SRCS) $$(pkg-config --libs json-c) -lm -o $@
 .PHONY: open-atmosphere-worker

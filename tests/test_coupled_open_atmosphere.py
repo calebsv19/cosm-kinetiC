@@ -24,6 +24,38 @@ class JournalTests(unittest.TestCase):
         self.worker=ROOT/'build/open-atmosphere/physics_sim_open_atmosphere_worker';self.receiver=self.reopen();self.receiver.initialize();self.receiver.admit(self.frame)
     def tearDown(self):self.temp.cleanup()
     def reopen(self):return CoupledOpenAtmosphere(self.temp.name,self.policy,self.props,self.velocity,.01,self.boundary,self.buoyancy,self.worker)
+    def test_explicit_journal_budget_binding_and_bounds(self):
+        with tempfile.TemporaryDirectory() as root:
+            def receiver(budget):return CoupledOpenAtmosphere(root,self.policy,self.props,self.velocity,.01,self.boundary,self.buoyancy,self.worker,budget)
+            receiver(256*1024*1024).initialize()
+            self.assertEqual(receiver(256*1024*1024).inspect()['revision'],0)
+            with self.assertRaises(ValueError):receiver(128*1024*1024).initialize()
+            for bad in (True,0,513*1024*1024):
+                with self.assertRaises(ValueError):receiver(bad)
+
+    def test_atomic_batch_retry_and_late_failure(self):
+        second=copy.deepcopy(self.frame);second['event']['sequence']=1
+        second['interval'].update(start_tick=3,end_tick=6,start_s=.05,end_s=.1)
+        second=sealed(second)
+        third=copy.deepcopy(second);third['event']['sequence']=3
+        third['interval'].update(start_tick=6,end_tick=9,start_s=.1,end_s=.15)
+        before=self.receiver.path.read_bytes()
+        with self.assertRaises(ValueError):self.receiver.admit_many([second,sealed(third)])
+        self.assertEqual(before,self.receiver.path.read_bytes())
+        received=self.receiver.admit_many([self.frame,second])
+        self.assertEqual(received[0],self.receiver.admit(self.frame))
+        before=self.receiver.path.read_bytes()
+        self.assertEqual(received,self.reopen().admit_many([self.frame,second]))
+        self.assertEqual(before,self.receiver.path.read_bytes())
+        conflicting=copy.deepcopy(second);conflicting['diagnostics']['legacy_heat_generated_units']=123
+        with self.assertRaises(ValueError):self.receiver.admit_many([self.frame,sealed(conflicting)])
+        self.assertEqual(before,self.receiver.path.read_bytes())
+        for bad in ([],[self.frame]*257):
+            with self.assertRaises(ValueError):self.receiver.admit_many(bad)
+        self.receiver.step(0,'first-batch-half',.05)
+        self.receiver.step(1,'second-batch-half',.05)
+        self.assertAlmostEqual(self.receiver.inspect()['result']['budgets']['energy_j']['input'],12000)
+
     def test_restart_retry_consumption_and_native_increment(self):
         first=self.receiver.step(0,'first',.02);before=self.receiver.path.read_bytes()
         self.assertEqual(first,self.reopen().step(0,'first',.02));self.assertEqual(before,self.receiver.path.read_bytes())

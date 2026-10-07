@@ -2,6 +2,7 @@
   "owner": "growth_sim",
   "revision": "1e24d710f23d0532b964799c1567923069b41b04",
   "path": "scripts/fire_source/contract.py",
-  "sha256": "6e1aa6bf1fa72d0992480b0df08ecaa0494e2707e5f4bfe5d76e6e4c3bd8401d",
-  "policy": "byte-identical normative validator; update only with explicit contract review"
+  "sha256": "9a38522fc943b67aa55ac7047865f4b311c61dc79f0a11de7f031219b3361547",
+  "policy": "byte-identical normative validator; update only with explicit contract review",
+  "development_note": "Main Edit additive physical_rates_v1 config and native rate binding, 2026-10-05; upstream committed revision remains historical, local source is uncommitted"
 }

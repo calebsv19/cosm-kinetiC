@@ -100,7 +100,17 @@ def strict_load(path):
 
 
 def config_valid(c):
-    keys(c, ("run_id", "branch_id", "surface_id", "width", "height", "seed", "cell_size_m", "dt_s", "origin_m", "calibration"))
+    keys(c, ("run_id", "branch_id", "surface_id", "width", "height", "seed", "cell_size_m", "dt_s", "origin_m", "calibration", *(("evolution",) if "evolution" in c else ())))
+    if "evolution" in c:
+        e=c['evolution'];keys(e,('model','rates','ignition_rectangle_m'))
+        require(e['model']=='physical_rates_v1','unsupported Fire evolution')
+        keys(e['rates'],RULES)
+        for k,v in e['rates'].items():number(v,0,1 if k in ('burn_rate','heat_diffusion','heat_cooling','burn_cooling','smoke_transport','smoke_cooling') else 100)
+        require(all(e['rates'][k]==0 for k in ('heat_spread','moisture_cooling','fuel_reactivity','upward_bias','turbulence','smoke_transport','smoke_cooling')),'unused timed rates must be zero')
+        require(e['rates']['burn_rate']>0 and e['rates']['heat_diffusion']>0,'positive reaction/diffusion')
+        rectangle=e['ignition_rectangle_m'];require(type(rectangle) is list and len(rectangle)==4,'ignition rectangle')
+        for v in rectangle:number(v,0)
+        require(rectangle[0]<rectangle[2]<=(c['width']-1)*c['cell_size_m'] and rectangle[1]<rectangle[3]<=(c['height']-1)*c['cell_size_m'],'ignition region extent')
     for k in ("run_id", "branch_id", "surface_id"):
         identifier(c[k])
     integer(c["width"], 2, 256); integer(c["height"], 2, 256); integer(c["seed"], 0, 2**32-1)
@@ -215,6 +225,8 @@ def bundle_valid(b):
     require(sha(raw) == cp["native_state_sha256"], "native state digest")
     state = state_decode(raw)
     require(all(state[k] == c[k] for k in ("width", "height", "seed", "cell_size_m", "dt_s")) and state["origin_xy"] == c["origin_m"][:2], "checkpoint/native space disagreement")
+    if "evolution" in c:
+        require(state['rules']=={k:struct.unpack('<f',struct.pack('<f',v))[0] for k,v in c['evolution']['rates'].items()},'timed rate/checkpoint binding')
     if b["frame"] is not None:
         f = frame_valid(b["frame"])
         require(op["kind"] == "advance" and op["parent_digest"] is not None and op["ticks"] > 0, "frame operation")
