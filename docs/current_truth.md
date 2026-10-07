@@ -1,6 +1,15 @@
 # kinetiC Current Truth
 
-Last updated: 2026-10-05
+Last updated: 2026-10-06
+
+## Shared UI preparation and historical evidence gap (2026-10-06)
+
+The [shared UI rollout ledger](shared_ui_rollout.md) records preserved source
+checkpoints, canonical reconciliation and immutable shared import. UI adoption
+and clean consumer build remain unverified. A broad clean command mistakenly
+removed retained ignored CFD evidence before being stopped. Some historical
+field/receipt paths below are now unavailable; full recovery is unresolved.
+Source checkpoints survive, but source docs alone do not restore those proofs.
 
 ## Local corner Fire / 32³ atmosphere source qualification (2026-10-05)
 

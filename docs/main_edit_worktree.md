@@ -37,14 +37,18 @@ simplify topology.
 
 ## Checkpoint gate
 
-Run focused checks before the broad source/package ladder:
+Run focused checks before the broad source/package ladder. Never run broad
+`make clean` in the retained lane: ignored `build/` directories can contain
+irreplaceable numerical fields, audits and frozen workers. Use a fresh,
+task-owned `BUILD_DIR` for clean compilation. Inspect output placement before
+any cleanup; several specialized fixtures still use fixed build paths:
 
 ```sh
 git -C <workspace>/_worktrees/physics_sim_main_edit diff --check
 make -C <workspace>/_worktrees/physics_sim_main_edit \
   main-edit-package-contract-checks
-make -C <workspace>/_worktrees/physics_sim_main_edit clean
-make -C <workspace>/_worktrees/physics_sim_main_edit clang-build
+make -C <workspace>/_worktrees/physics_sim_main_edit \
+  BUILD_DIR=build/<fresh-task-proof> clang-build
 make -C <workspace>/_worktrees/physics_sim_main_edit test-fast
 make -C <workspace>/_worktrees/physics_sim_main_edit run-headless-smoke
 make -C <workspace>/_worktrees/physics_sim_main_edit package-desktop-self-test
