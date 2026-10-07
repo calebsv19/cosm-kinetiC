@@ -115,9 +115,9 @@ The bundle smoke also writes a shared report under
 
 Use this wording:
 
-- Public desktop current: `kinetiC 0.2.0` macOS arm64.
-- Source checkout program version: `physics_sim 0.3.2` from `VERSION`.
-- Worker source version: `physics_sim_headless_worker 0.3.3` from the
+- Public desktop current: `kinetiC 0.3.2` macOS arm64.
+- Source checkout program version: `physics_sim 0.4.0` from `VERSION`.
+- Worker source version: `physics_sim_headless_worker 0.3.4` from the
   independently owned `WORKER_VERSION` surface.
 - The worker-only transition leaves the source program version unchanged and
   preserves it in package provenance.
@@ -126,8 +126,10 @@ Use this wording:
 - Worker packages are internal/fleet package-root artifacts unless a future
   public release explicitly publishes them as downloads.
 - There is no public remote submission API in this contract.
+- Source versions above are preparation targets; released desktop and registered
+  worker remain `0.3.2` and `0.3.3` until Decision 2 completes.
 
-Do not describe PhysicsSim worker source `0.3.3` or program source `0.3.2` as
+Do not describe PhysicsSim worker source `0.3.4` or program source `0.4.0` as
 the public desktop current unless a future approved desktop release updates
 website metadata, production-registry state, and public readback.
 
