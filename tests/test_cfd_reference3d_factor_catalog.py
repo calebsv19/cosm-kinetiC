@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 import numpy as np
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_factor_catalog import CatalogMetadata
 from cfd_reference3d_shared_factor import BlockTriangle,storage_sha
 from cfd_reference3d_vector_storage import VectorTriangle
@@ -12,7 +13,7 @@ from cfd_reference3d_triangle_condensed import TriangleCondensedSystem
 from cfd_reference3d_condensed import full_action
 from test_cfd_reference3d_bounded_condensed import fixture
 from test_cfd_reference3d_coarse_velocity import system_fixture
-LIB=ROOT/'build/c3d-vector-storage/support/factor.dylib'
+LIB=library_path('build/c3d-vector-storage/support/factor.dylib')
 class Metadata(unittest.TestCase):
     def test_anisotropic_refined_bitwise_coordinate_mapping_index_and_owner_roundtrip(self):
         for refined in (False,True):

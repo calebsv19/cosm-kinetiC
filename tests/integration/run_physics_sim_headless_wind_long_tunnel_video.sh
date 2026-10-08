@@ -3,7 +3,9 @@ set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 RUNTIME_SCENE="${WIND_VIDEO_RUNTIME_SCENE:-$PHYSICS_DIR/tests/fixtures/runtime_scene_wind_tunnel_3d_long_box.json}"
-OUT_DIR="${WIND_VIDEO_OUT_DIR:-$PHYSICS_DIR/tmp/headless_wind_long_tunnel_video}"
+source "$PHYSICS_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$PHYSICS_DIR" "$0" "$@"
+OUT_DIR="$(physics_fixture_root "$PHYSICS_DIR" headless_wind_long_tunnel_video "${WIND_VIDEO_OUT_DIR:-${PHYSICS_SIM_TEST_ROOT:-$PHYSICS_DIR/tmp/tests}}")"
 SUMMARY="$OUT_DIR/run_summary.json"
 PROGRESS="$OUT_DIR/run_progress.json"
 TIMESERIES="$OUT_DIR/wind_analysis_timeseries.jsonl"
@@ -50,10 +52,9 @@ if ! command -v ffprobe >/dev/null 2>&1; then
   exit 1
 fi
 
-rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames "$FRAMES" \
   --sim-steps-per-frame "$STEPS_PER_FRAME" \

@@ -2,9 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PACK_CLI="$ROOT_DIR/third_party/codework_shared/core/core_pack/build/pack_cli"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+PACK_CLI="${PHYSICS_SIM_PACK_CLI_BIN:-$ROOT_DIR/third_party/codework_shared/core/core_pack/build/pack_cli}"
+if [[ -n "${PHYSICS_SIM_PACK_CLI_BIN:-}" && ! -x "$PACK_CLI" ]]; then
+    echo "provided pack inspector is not executable: $PACK_CLI" >&2
+    exit 2
+fi
+source "$ROOT_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$ROOT_DIR" "$0" "$@"
+TMP_DIR="$(physics_fixture_root "$ROOT_DIR" vf2d_pack_dataset_parity)"
 
 VF2D_PATH="$TMP_DIR/frame_000005.vf2d"
 PACK_PATH="$TMP_DIR/frame_000005.pack"
@@ -65,15 +70,17 @@ EOF
 cc -std=c11 -Wall -Wextra -Wpedantic -o "$TMP_DIR/gen_vf2d" "$TMP_DIR/gen_vf2d.c"
 "$TMP_DIR/gen_vf2d" "$VF2D_PATH"
 
-"$ROOT_DIR/vf2d_pack_tool" "$VF2D_PATH" "$PACK_PATH"
-"$ROOT_DIR/vf2d_dataset_tool" "$VF2D_PATH" "$DATASET_PATH"
+"${PHYSICS_SIM_VF2D_PACK_TOOL_BIN:-$ROOT_DIR/build/bin/vf2d_pack_tool}" "$VF2D_PATH" "$PACK_PATH"
+"${PHYSICS_SIM_VF2D_DATASET_TOOL_BIN:-$ROOT_DIR/build/bin/vf2d_dataset_tool}" "$VF2D_PATH" "$DATASET_PATH"
 
 if [[ ! -f "$PACK_PATH" || ! -f "$DATASET_PATH" ]]; then
     echo "vf2d pack/dataset parity test failed: expected artifacts missing"
     exit 10
 fi
 
-make -C "$ROOT_DIR/third_party/codework_shared/core/core_pack" tools >/dev/null
+if [[ -z "${PHYSICS_SIM_PACK_CLI_BIN:-}" ]]; then
+    make -C "$ROOT_DIR/third_party/codework_shared/core/core_pack" tools >/dev/null
+fi
 "$PACK_CLI" inspect "$PACK_PATH" > "$PACK_INSPECT"
 
 grep -q "chunk_count=4" "$PACK_INSPECT" || {

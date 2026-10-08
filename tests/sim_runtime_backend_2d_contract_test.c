@@ -1,6 +1,7 @@
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
 #include "import/shape_import.h"
+#include "import/shape_asset_input.h"
 #include "physics/fluid2d/fluid2d.h"
 #include "physics/objects/physics_object_builder.h"
 
@@ -23,6 +24,13 @@ bool import_compute_span_from_window(int cfg_w, int cfg_h, float *out_span_x, fl
     if (out_span_x) *out_span_x = 1.0f;
     if (out_span_y) *out_span_y = 1.0f;
     return true;
+}
+
+/* This backend contract deliberately has no asset lookup result. The real asset
+ * admission/raster path is covered by import_mask_admission_harness.c. */
+bool physics_sim_shape_asset_admitted(const ShapeAsset *asset) {
+    (void)asset;
+    return false;
 }
 
 bool shape_asset_bounds(const ShapeAsset *asset, ShapeAssetBounds *out_bounds) {
@@ -242,6 +250,7 @@ static bool test_object_motion_injects_velocity(void) {
     scene.preset = &preset;
     scene.objects.objects = &object;
     scene.objects.count = 1;
+    scene.objects.capacity = 1;
 
     backend->ops->inject_object_motion(backend, &scene);
     if (!backend->ops->get_fluid_view_2d(backend, &view)) {

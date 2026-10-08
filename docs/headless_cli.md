@@ -10,7 +10,7 @@ the same headless CLI.
 Inspect the exact compiled worker identity without starting a simulation:
 
 ```bash
-./physics_sim_headless --version
+./build/bin/physics_sim_headless --version
 ```
 
 The command prints one JSON object containing `program`, `worker_slug`,
@@ -31,9 +31,9 @@ make -C physics_sim physics_sim_headless
 ```
 
 Fresh external agents should start with the standalone clone form. Use
-`./physics_sim_headless` for direct commands and keep generated outputs under
+`./build/bin/physics_sim_headless` for direct commands and keep generated outputs under
 local roots such as `tmp/`. If you are operating from a CodeWork workspace
-parent, replace `./physics_sim_headless` with `physics_sim/physics_sim_headless`
+parent, replace `./build/bin/physics_sim_headless` with `physics_sim/build/bin/physics_sim_headless`
 and prefix repo-local fixture/output paths with `physics_sim/`.
 
 Smallest supported source-checkout proof:
@@ -51,7 +51,7 @@ desktop package download.
 Run a bounded retained-scene volume simulation:
 
 ```bash
-./physics_sim_headless \
+./build/bin/physics_sim_headless \
   --runtime-scene tests/fixtures/scene_project_cache_output_minimal/scene_runtime.json \
   --frames 2 \
   --sim-steps-per-frame 1 \
@@ -68,7 +68,7 @@ Run a scene project cache update:
 mkdir -p tmp
 cp -R tests/fixtures/scene_project_cache_output_minimal tmp/scene_project_cache_output_minimal
 PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-example-0001 \
-./physics_sim_headless \
+./build/bin/physics_sim_headless \
   --scene-project tmp/scene_project_cache_output_minimal \
   --frames 1 \
   --sim-steps-per-frame 1 \
@@ -100,7 +100,7 @@ generated cache into `assets/vf3d/active`, `assets/physics/active`, retained
 Run a standalone Water Basin simulation:
 
 ```bash
-./physics_sim_headless \
+./build/bin/physics_sim_headless \
   --water-mode \
   --frames 2 \
   --sim-steps-per-frame 1 \
@@ -588,7 +588,7 @@ When `--save-volume-frames` is enabled, long warm-up runs can avoid writing
 every intermediate VF3D/PACK frame by selecting retained exports directly:
 
 ```bash
-./physics_sim_headless \
+./build/bin/physics_sim_headless \
   --water-mode \
   --frames 1041 \
   --save-volume-frames \
@@ -752,3 +752,54 @@ present, default output reuse is rejected, `--overwrite` reruns, and
 `volume_frames/` exists. The detached runner smoke/policy/bundle lanes then
 validate submit/status/cancel, overwrite safety, shared bundle projection, and
 synthetic `stalled` classification.
+
+## Local numerical evidence lifecycle (2026-10-06)
+
+The active box/cube/native-accuracy retained runners now use configurable
+`data/experiments` storage outside normal cleanup roots; reference tools use
+`data/tools`. Current regressions and exact archive checks are separated in the
+first repaired slice. See [output and cleanup contract](cfd_evidence_lifecycle.md)
+and [validated repair status and remaining gaps](cfd_lifecycle_repair_status.md).
+Missing historical receipts do not block UI source work; fresh consumer and
+relevant compatibility/visual checks remain required.
+
+Local build outputs belong to `$(BUILD_DIR)/bin` (default `build/bin`). Make exports
+`PHYSICS_SIM_HEADLESS_BIN` and `PHYSICS_SIM_JOB_RUNNER_BIN` to fixtures. Direct
+fixture invocation defaults to build/bin and never searches legacy root binaries.
+
+Top-level builds hold cooperative ownership for their complete Make operation.
+A conflicting same-root build or cleanup fails with a hold; independent selected
+roots can build concurrently. Run `make clean` and build commands separately.
+`make status` reports live lock state separately from persistent lock files.
+
+Integration fixtures allocate `TEST_TMP_DIR/<fixture>-<unique>/work`, defaulting
+to tmp/tests. The ownership receipt and CLI logs sit outside work so deliberate
+overwrite checks preserve them. Job-runner fixtures use capsule-local job roots
+and fresh bundle IDs; they do not reset operational build/agent_runs records.
+Small CLI/job transport smokes declare an 8³ grid. The cancellation check uses a
+long declared workload with no frame export, canceled within its bounded wait.
+
+
+## Main Edit output lifecycle hardening
+
+In Main Edit, `--overwrite` retains an admitted completed native run in a fresh
+sibling slot instead of recursively deleting it. Unknown/legacy or incomplete
+roots are held; use a fresh output root. See `native_headless_output_lifecycle.md`.
+Canonical and released binaries retain their recorded behavior until adoption.
+
+Main Edit also admits summary/progress paths before output mutation and claims
+fresh descriptor-bound sidecars. Existing external sidecars and duplicate, linked
+or protected destinations are held. See `native_headless_sidecar_lifecycle.md`.
+
+## Main Edit trusted-local publication recovery
+
+A retained job-pair publication hold blocks later runner operations. Inspect it
+with `python3 -B scripts/job_pair_recovery.py --job-root /absolute/generated/jobs/JOB`.
+The default is read-only. Explicit `--rollback` restores retained old bytes or
+absences; `--forward` installs retained new bytes only with a verified v2 producer
+inventory. Both require `--expected-plan-sha256 DIGEST_FROM_PLAN` from the complete
+reviewed plan. Once a durable intent selects a direction, resume that direction
+with a fresh exact plan after interruption. Preserve the hold and failed stages.
+See `native_job_pair_recovery.md`, `native_job_pair_producer_digests.md` and
+`native_job_pair_forward.md`. Worker restart and fresh outcome/provenance checks
+remain separate; canonical and released tools keep their recorded behavior.

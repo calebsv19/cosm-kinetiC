@@ -2,19 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-BUILD_ROOT="$ROOT_DIR/build/$(uname -m)"
-RUNNER="$BUILD_ROOT/tools/cli/physics_sim_job_runner"
-if [[ ! -x "$RUNNER" ]]; then
-  RUNNER="$ROOT_DIR/build/tools/cli/physics_sim_job_runner"
-fi
-if [[ ! -x "$RUNNER" ]]; then
-  RUNNER="$ROOT_DIR/physics_sim_job_runner"
-fi
+RUNNER="${PHYSICS_SIM_JOB_RUNNER_BIN:-$ROOT_DIR/build/bin/physics_sim_job_runner}"
 
 DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
 RUNTIME_SCENE="${PHYSICS_SIM_HEADLESS_RUNTIME_SCENE:-$DEFAULT_RUNTIME_SCENE}"
-JOBS_ROOT="$ROOT_DIR/build/agent_runs/jobs"
-RUN_ROOT="$ROOT_DIR/build/agent_runs/physics_sim/job_runner_smoke"
+source "$ROOT_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$ROOT_DIR" "$0" "$@"
+RUN_ROOT="$(physics_fixture_root "$ROOT_DIR" job_runner_smoke)"
+JOBS_ROOT="$RUN_ROOT/jobs"
 REQUEST="$RUN_ROOT/request.json"
 OUTPUT_ROOT="$RUN_ROOT/output"
 
@@ -25,13 +20,13 @@ if [[ ! -f "$RUNTIME_SCENE" ]]; then
 fi
 
 mkdir -p "$JOBS_ROOT" "$RUN_ROOT"
-rm -rf "$OUTPUT_ROOT"
 
 cat >"$REQUEST" <<EOF
 {
   "schema_version": "physics_sim_headless_request_v1",
   "runtime_scene_path": "$RUNTIME_SCENE",
   "output_root": "$OUTPUT_ROOT",
+  "grid": "8x8x8",
   "frames": 1,
   "sim_steps_per_frame": 2,
   "progress_interval": 1,

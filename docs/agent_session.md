@@ -444,3 +444,18 @@ includes hierarchy preparation. Unavailable phases are null. Snapshot
 `runtime_cost` separately reports monotonic wall milliseconds for the previous
 completed snapshot/preview publication and final full-field export, with zero
 before measurement. CPU and wall costs must not be summed as if equivalent.
+
+## Diagnostic preservation
+
+Main Edit preserves retired live samples and request identities in verified
+operational history before removing active copies. Pending requests are held
+regardless of age. See [session_sample_retention.md](session_sample_retention.md)
+for request limits, retries and remaining lifecycle requirements.
+
+Session root, lock, asset and JSON admission is documented in
+[session_path_admission.md](session_path_admission.md). These are trusted-local
+source controls; public upload sandboxing remains unsupported.
+
+Authoring and validation retain requests, stage files and bounded worker logs in
+fresh attempt identities. See [session_worker_attempts.md](session_worker_attempts.md)
+for failure, reuse and recovery boundaries.

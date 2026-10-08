@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse import csr_matrix
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_mixed_workspace import MixedWorkspaceCholesky,numeric_stage_admission
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_shared_factor import BlockTriangle,storage_sha
@@ -12,7 +13,7 @@ from cfd_reference3d_flexible import flexible_gmres,basis_reservation
 from cfd_reference3d_condensed import full_action
 from cfd_reference3d_quartic_pair import assemble_quartic
 from test_cfd_reference3d_coarse_velocity import system_fixture
-LIB=ROOT/'build/c3d-mixed-precision/support/factor.dylib'
+LIB=library_path('build/c3d-mixed-precision/support/factor.dylib')
 
 def triangle(A):return VectorTriangle(csr_matrix(np.triu(A)),LIB)
 

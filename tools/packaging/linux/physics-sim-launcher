@@ -13,13 +13,66 @@ LOG_DIR_DEFAULT="$STATE_HOME/PhysicsSim/logs"
 LOG_DIR="${PHYSICS_SIM_LOG_DIR:-$LOG_DIR_DEFAULT}"
 LOG_FILE="$LOG_DIR/package_launcher.log"
 
-mkdir -p "$LOG_DIR" 2>/dev/null || true
-if ! touch "$LOG_FILE" 2>/dev/null; then
-    LOG_DIR="${TMPDIR:-/tmp}/PhysicsSim/logs"
-    LOG_FILE="$LOG_DIR/package_launcher.log"
-    mkdir -p "$LOG_DIR" 2>/dev/null || true
-    touch "$LOG_FILE" 2>/dev/null || true
+export VK_RENDERER_SHADER_ROOT="${VK_RENDERER_SHADER_ROOT:-$RUNTIME_DIR}"
+export SHAPE_ASSET_DIR="${SHAPE_ASSET_DIR:-$RUNTIME_DIR/config/objects}"
+export PHYSICS_SIM_TIMER_HUD="${PHYSICS_SIM_TIMER_HUD:-0}"
+export PHYSICS_SIM_TIMER_HUD_OVERLAY="${PHYSICS_SIM_TIMER_HUD_OVERLAY:-0}"
+export PHYSICS_SIM_TIMER_HUD_VISUAL_MODE="${PHYSICS_SIM_TIMER_HUD_VISUAL_MODE:-hybrid}"
+
+if [ "${1:-}" = "--print-config" ]; then
+    printf '%s\n' "PACKAGE_ROOT=$PACKAGE_ROOT"
+    printf '%s\n' "RES_DIR=$RES_DIR"
+    printf '%s\n' "LOG_FILE=$LOG_FILE"
+    printf '%s\n' "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD_OVERLAY=$PHYSICS_SIM_TIMER_HUD_OVERLAY"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=$PHYSICS_SIM_TIMER_HUD_VISUAL_MODE"
+    printf '%s\n' "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
+    printf '%s\n' "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
+    printf '%s\n' "CONFIG_INSPECTION_READ_ONLY=1"
+    printf '%s\n' "CONFIG_PATH_SCOPE=requested_without_writability_probe"
+    exit 0
 fi
+
+# Validate configured destinations before any initialization. These checks protect
+# cooperating local use; they are not a sandbox against concurrent path swaps.
+launcher_hold() {
+    printf '%s\n' "$1" >&2
+    exit 1
+}
+admit_directory() {
+    selected="$1"
+    case "$selected" in /*) ;; *) launcher_hold "launcher requires absolute destination: $selected";; esac
+    case "$selected/" in /|//|*'/../'*|*'/./'*|*'//'*) launcher_hold "launcher refuses ambiguous/root destination: $selected";; esac
+    case "$selected" in *'
+'*) launcher_hold 'launcher destination contains newline';; esac
+    [ "${#selected}" -le 4096 ] || launcher_hold 'launcher destination exceeds path bound'
+    if printf '%s' "$selected" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+        launcher_hold 'launcher destination contains control characters'
+    fi
+    current="$selected"
+    while [ "$current" != / ]; do
+        if [ -L "$current" ]; then
+            case "$current:$(readlink "$current")" in
+                /tmp:private/tmp|/tmp:/private/tmp|/var:private/var|/var:/private/var) ;;
+                *) launcher_hold "launcher refuses linked destination: $current";;
+            esac
+        fi
+        if [ -e "$current" ] && [ ! -d "$current" ]; then
+            launcher_hold "launcher destination is not a directory: $current"
+        fi
+        current="${current%/*}"
+        [ -n "$current" ] || current=/
+    done
+}
+admit_file() {
+    filename="$1"
+    admit_directory "${filename%/*}"
+    [ ! -L "$filename" ] || launcher_hold "launcher refuses linked file: $filename"
+    if [ -e "$filename" ] && [ ! -f "$filename" ]; then
+        launcher_hold "launcher file is not regular: $filename"
+    fi
+}
 
 copy_lane_once() {
     lane="$1"
@@ -35,16 +88,6 @@ copy_lane_once() {
 }
 
 setup_runtime_root() {
-    mkdir -p "$RUNTIME_DIR" 2>/dev/null || true
-    if [ ! -d "$RUNTIME_DIR" ]; then
-        RUNTIME_DIR="${TMPDIR:-/tmp}/PhysicsSim/runtime"
-        mkdir -p "$RUNTIME_DIR" 2>/dev/null || true
-    fi
-    if [ ! -d "$RUNTIME_DIR" ]; then
-        echo "failed to create writable runtime directory" >&2
-        exit 1
-    fi
-
     mkdir -p "$RUNTIME_DIR/data/runtime" "$RUNTIME_DIR/data/snapshots"
     copy_lane_once config
     copy_lane_once shared
@@ -52,45 +95,36 @@ setup_runtime_root() {
     copy_lane_once vk_renderer
 }
 
+# All selected initialization roots are admitted before the first write.
+admit_directory "$RUNTIME_DIR"
+admit_directory "$RUNTIME_DIR/data/runtime"
+admit_directory "$RUNTIME_DIR/data/snapshots"
+admit_directory "$LOG_DIR"
+admit_file "$LOG_FILE"
+case "$RUNTIME_DIR/" in "$PACKAGE_ROOT/"*) launcher_hold 'runtime destination overlaps package';; esac
+case "$LOG_DIR/" in "$PACKAGE_ROOT/"*) launcher_hold 'log destination overlaps package';; esac
+mkdir -p "$LOG_DIR"
+touch "$LOG_FILE"
 setup_runtime_root
 
-export VK_RENDERER_SHADER_ROOT="${VK_RENDERER_SHADER_ROOT:-$RUNTIME_DIR}"
-export SHAPE_ASSET_DIR="${SHAPE_ASSET_DIR:-$RUNTIME_DIR/config/objects}"
-export PHYSICS_SIM_TIMER_HUD="${PHYSICS_SIM_TIMER_HUD:-0}"
-export PHYSICS_SIM_TIMER_HUD_OVERLAY="${PHYSICS_SIM_TIMER_HUD_OVERLAY:-0}"
-export PHYSICS_SIM_TIMER_HUD_VISUAL_MODE="${PHYSICS_SIM_TIMER_HUD_VISUAL_MODE:-hybrid}"
-
-if [ "${1:-}" = "--print-config" ]; then
-    echo "PACKAGE_ROOT=$PACKAGE_ROOT"
-    echo "RES_DIR=$RES_DIR"
-    echo "LOG_FILE=$LOG_FILE"
-    echo "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
-    echo "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
-    echo "PHYSICS_SIM_TIMER_HUD_OVERLAY=$PHYSICS_SIM_TIMER_HUD_OVERLAY"
-    echo "PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=$PHYSICS_SIM_TIMER_HUD_VISUAL_MODE"
-    echo "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
-    echo "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
-    exit 0
-fi
-
 if [ "${1:-}" = "--self-test" ]; then
-    [ -x "$SCRIPT_DIR/physics-sim-bin" ] || { echo "missing: physics-sim-bin" >&2; exit 1; }
-    [ -f "$RUNTIME_DIR/config/app.json" ] || { echo "missing: config/app.json" >&2; exit 1; }
-    [ -f "$RUNTIME_DIR/config/custom_preset.txt" ] || { echo "missing: config/custom_preset.txt" >&2; exit 1; }
-    [ -f "$RUNTIME_DIR/config/structural_scene.txt" ] || { echo "missing: config/structural_scene.txt" >&2; exit 1; }
-    [ -f "$RUNTIME_DIR/config/objects/Hexagon.asset.json" ] || { echo "missing: bundled shape assets" >&2; exit 1; }
-    [ -d "$RUNTIME_DIR/data/runtime" ] || { echo "missing: runtime dir" >&2; exit 1; }
-    [ -d "$RUNTIME_DIR/data/snapshots" ] || { echo "missing: snapshots dir" >&2; exit 1; }
-    [ -f "$RUNTIME_DIR/vk_renderer/shaders/textured.vert.spv" ] || { echo "missing: bundled vk_renderer shader" >&2; exit 1; }
-    [ -f "$RUNTIME_DIR/shaders/textured.vert.spv" ] || { echo "missing: bundled runtime shader" >&2; exit 1; }
-    echo "self-test: ok"
-    echo "LOG_FILE=$LOG_FILE"
-    echo "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
-    echo "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
-    echo "PHYSICS_SIM_TIMER_HUD_OVERLAY=$PHYSICS_SIM_TIMER_HUD_OVERLAY"
-    echo "PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=$PHYSICS_SIM_TIMER_HUD_VISUAL_MODE"
-    echo "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
-    echo "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
+    [ -x "$SCRIPT_DIR/physics-sim-bin" ] || { printf '%s\n' "missing: physics-sim-bin" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/app.json" ] || { printf '%s\n' "missing: config/app.json" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/custom_preset.txt" ] || { printf '%s\n' "missing: config/custom_preset.txt" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/structural_scene.txt" ] || { printf '%s\n' "missing: config/structural_scene.txt" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/objects/Hexagon.asset.json" ] || { printf '%s\n' "missing: bundled shape assets" >&2; exit 1; }
+    [ -d "$RUNTIME_DIR/data/runtime" ] || { printf '%s\n' "missing: runtime dir" >&2; exit 1; }
+    [ -d "$RUNTIME_DIR/data/snapshots" ] || { printf '%s\n' "missing: snapshots dir" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/vk_renderer/shaders/textured.vert.spv" ] || { printf '%s\n' "missing: bundled vk_renderer shader" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/shaders/textured.vert.spv" ] || { printf '%s\n' "missing: bundled runtime shader" >&2; exit 1; }
+    printf '%s\n' "self-test: ok"
+    printf '%s\n' "LOG_FILE=$LOG_FILE"
+    printf '%s\n' "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD_OVERLAY=$PHYSICS_SIM_TIMER_HUD_OVERLAY"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=$PHYSICS_SIM_TIMER_HUD_VISUAL_MODE"
+    printf '%s\n' "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
+    printf '%s\n' "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
     exit 0
 fi
 

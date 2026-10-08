@@ -15,6 +15,7 @@
 #include "app/quality_profiles.h"
 #include "config/config_loader.h"
 #include "geo/shape_library.h"
+#include "import/shape_library_input.h"
 #include "physics_sim/physics_sim_app_main.h"
 #include "physics_sim/physics_sim_vulkan_rollout.h"
 #include "render/timer_hud_adapter.h"
@@ -148,10 +149,10 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
                                                                  sizeof(shape_dir_buffer));
     }
 
-    ShapeAssetLibrary shape_lib;
-    bool loaded_shapes = shape_library_load_dir(shape_dir, &shape_lib);
+    ShapeAssetLibrary shape_lib = {0};
+    bool loaded_shapes = physics_sim_shape_library_load(shape_dir, &shape_lib);
     if (!loaded_shapes) {
-        fprintf(stderr, "[shape] No ShapeAssets loaded from %s\n", shape_dir);
+        fprintf(stderr, "[shape] ShapeAsset directory unavailable or refused: %s\n", shape_dir);
         memset(&shape_lib, 0, sizeof(shape_lib));
     }
 
@@ -234,8 +235,12 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
                              output_dir,
                              &headless_opts);
 
-        preset_library_save(preset_save_path, &library);
-        config_loader_save(&cfg, config_save_path);
+        bool presets_saved = preset_library_save(preset_save_path, &library);
+        bool config_saved = config_loader_save(&cfg, config_save_path);
+        if (!presets_saved || !config_saved) {
+            fprintf(stderr, "[runtime] Save unconfirmed: presets=%s config=%s; inspect retained attempts before retrying.\n",
+                    presets_saved ? "confirmed" : "unconfirmed", config_saved ? "confirmed" : "unconfirmed");
+        }
         shape_library_free(&shape_lib);
         preset_library_shutdown(&library);
         ts_shutdown();
@@ -246,7 +251,7 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
         if (SDL_WasInit(SDL_INIT_VIDEO)) {
             SDL_Quit();
         }
-        return 0;
+        return presets_saved && config_saved ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 
     while (scene_menu_run(&cfg, &preset_state, &selection, &library, &shape_lib)) {
@@ -287,8 +292,14 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
              sizeof(cfg.retained_runtime_scene_path),
              "%s",
              selection.retained_runtime_scene_path);
-    preset_library_save(preset_save_path, &library);
-    config_loader_save(&cfg, config_save_path);
+    bool presets_saved = preset_library_save(preset_save_path, &library);
+    bool config_saved = config_loader_save(&cfg, config_save_path);
+    if (!presets_saved || !config_saved) {
+        fprintf(stderr, "[runtime] Save unconfirmed: presets=%s config=%s; inspect retained attempts before retrying.\n",
+                presets_saved ? "confirmed" : "unconfirmed", config_saved ? "confirmed" : "unconfirmed");
+        (void)SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Settings save unconfirmed",
+            "Some settings could not be confirmed saved. Retained save attempts need inspection before retrying.", NULL);
+    }
     shape_library_free(&shape_lib);
     preset_library_shutdown(&library);
 
@@ -301,7 +312,7 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
         SDL_Quit();
     }
 
-    return 0;
+    return presets_saved && config_saved ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 int main(int argc, char **argv) {

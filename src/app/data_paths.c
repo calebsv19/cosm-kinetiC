@@ -1,8 +1,15 @@
+#define _DARWIN_C_SOURCE
+#define _DEFAULT_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#define _XOPEN_SOURCE 700
 #include "app/data_paths.h"
 
 #include <dirent.h>
 #include <errno.h>
 #include <limits.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -212,18 +219,93 @@ size_t physics_sim_runtime_scene_catalog_roots(const char *configured_input_root
     return count;
 }
 
-bool physics_sim_ensure_runtime_dirs(void) {
-    if (mkdir("data", 0755) != 0 && errno != EEXIST) {
-        return false;
+/* Fixed app-owned directory graph. Validate every existing slot before mkdir. */
+static bool runtime_same_directory(int parent, const char *name, int descriptor) {
+    struct stat named, opened;
+    return descriptor >= 0 && fstat(descriptor, &opened) == 0 &&
+        fstatat(parent, name, &named, AT_SYMLINK_NOFOLLOW) == 0 &&
+        S_ISDIR(named.st_mode) && named.st_dev == opened.st_dev && named.st_ino == opened.st_ino;
+}
+
+static bool runtime_root_current(const char *path, int descriptor) {
+    struct stat named, opened;
+    return lstat(path, &named) == 0 && S_ISDIR(named.st_mode) &&
+        fstat(descriptor, &opened) == 0 && named.st_dev == opened.st_dev && named.st_ino == opened.st_ino;
+}
+
+static bool runtime_root_admitted(char *path, size_t size) {
+    if (!getcwd(path, size)) return false;
+    const char *protected[] = {"/System", "/usr", "/bin", "/sbin", "/etc", "/private/etc",
+        "/Library", "/Applications", "/dev", "/proc", "/sys"};
+    if (strcmp(path, "/") == 0) return false;
+    const char *home = getenv("HOME");
+    if (home) {
+        char resolved_home[PATH_MAX];
+        if (!realpath(home, resolved_home) || strcmp(path, resolved_home) == 0) return false;
     }
-    if (mkdir("data/runtime", 0755) != 0 && errno != EEXIST) {
-        return false;
+    for (size_t i = 0; i < sizeof(protected) / sizeof(protected[0]); ++i) {
+        size_t n = strlen(protected[i]);
+        if (strncmp(path, protected[i], n) == 0 && (path[n] == 0 || path[n] == '/')) return false;
     }
-    if (mkdir("data/runtime/scenes", 0755) != 0 && errno != EEXIST) {
-        return false;
-    }
-    if (mkdir("data/snapshots", 0755) != 0 && errno != EEXIST) {
-        return false;
+    char ancestor[PATH_MAX];
+    if (snprintf(ancestor, sizeof(ancestor), "%s", path) >= (int)sizeof(ancestor)) return false;
+    for (;;) {
+        char marker[PATH_MAX]; struct stat st;
+        if (snprintf(marker, sizeof(marker), "%s/.git", ancestor) >= (int)sizeof(marker)) return false;
+        int marker_result = lstat(marker, &st);
+        if (marker_result == 0 && strcmp(ancestor, path) != 0) return false;
+        if (marker_result != 0 && errno != ENOENT && errno != ENOTDIR) return false;
+        char *slash = strrchr(ancestor, '/');
+        if (!slash || slash == ancestor) break;
+        *slash = 0;
     }
     return true;
+}
+
+bool physics_sim_ensure_runtime_dirs(void) {
+    static const char *names[] = {"data", "runtime", "scenes", "snapshots"};
+    static const int parents[] = {-1, 0, 1, 0};
+    int descriptors[] = {-1, -1, -1, -1};
+    char path[PATH_MAX];
+    if (!runtime_root_admitted(path, sizeof(path))) return false;
+    int root = open(".", O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+    bool valid = root >= 0 && runtime_root_current(path, root);
+    /* Missing ancestors imply missing descendants. Existing invalid leaves hold
+       the whole operation before any directory is allocated. */
+    for (size_t i = 0; valid && i < 4; ++i) {
+        int parent = parents[i] < 0 ? root : descriptors[parents[i]];
+        if (parent < 0) continue;
+        struct stat st;
+        if (fstatat(parent, names[i], &st, AT_SYMLINK_NOFOLLOW) != 0) {
+            valid = errno == ENOENT;
+            continue;
+        }
+        if (!S_ISDIR(st.st_mode)) { valid = false; break; }
+        descriptors[i] = openat(parent, names[i], O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+        valid = runtime_same_directory(parent, names[i], descriptors[i]);
+    }
+    for (size_t i = 0; valid && i < 4; ++i) {
+        valid = runtime_root_current(path, root);
+        for (size_t j = 0; valid && j < 4; ++j) {
+            if (descriptors[j] < 0) continue;
+            int parent = parents[j] < 0 ? root : descriptors[parents[j]];
+            valid = runtime_same_directory(parent, names[j], descriptors[j]);
+        }
+        if (!valid) break;
+        int parent = parents[i] < 0 ? root : descriptors[parents[i]];
+        if (descriptors[i] < 0) {
+            valid = mkdirat(parent, names[i], 0700) == 0 || errno == EEXIST;
+            if (valid) descriptors[i] = openat(parent, names[i], O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+        }
+        valid = valid && runtime_same_directory(parent, names[i], descriptors[i]) &&
+            fsync(descriptors[i]) == 0 && fsync(parent) == 0;
+    }
+    valid = valid && runtime_root_current(path, root);
+    for (size_t i = 0; valid && i < 4; ++i) {
+        int parent = parents[i] < 0 ? root : descriptors[parents[i]];
+        valid = runtime_same_directory(parent, names[i], descriptors[i]);
+    }
+    for (size_t i = 0; i < 4; ++i) if (descriptors[i] >= 0) close(descriptors[i]);
+    if (root >= 0) close(root);
+    return valid;
 }

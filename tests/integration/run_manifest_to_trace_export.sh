@@ -2,9 +2,14 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-PACK_CLI="$ROOT_DIR/third_party/codework_shared/core/core_pack/build/pack_cli"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+PACK_CLI="${PHYSICS_SIM_PACK_CLI_BIN:-$ROOT_DIR/third_party/codework_shared/core/core_pack/build/pack_cli}"
+if [[ -n "${PHYSICS_SIM_PACK_CLI_BIN:-}" && ! -x "$PACK_CLI" ]]; then
+    echo "provided pack inspector is not executable: $PACK_CLI" >&2
+    exit 2
+fi
+source "$ROOT_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$ROOT_DIR" "$0" "$@"
+TMP_DIR="$(physics_fixture_root "$ROOT_DIR" manifest_to_trace_export)"
 
 VF2D_PATH="$TMP_DIR/frame_000042.vf2d"
 MANIFEST_PATH="$TMP_DIR/manifest.json"
@@ -70,13 +75,15 @@ EOF
 cc -std=c11 -Wall -Wextra -Wpedantic -o "$TMP_DIR/gen_trace_fixture" "$TMP_DIR/gen_trace_fixture.c"
 "$TMP_DIR/gen_trace_fixture" "$VF2D_PATH" "$MANIFEST_PATH"
 
-"$ROOT_DIR/physics_trace_tool" "$MANIFEST_PATH" "$TRACE_PATH" 24
+"${PHYSICS_SIM_PHYSICS_TRACE_TOOL_BIN:-$ROOT_DIR/build/bin/physics_trace_tool}" "$MANIFEST_PATH" "$TRACE_PATH" 24
 if [[ ! -f "$TRACE_PATH" ]]; then
     echo "manifest trace export test failed: missing trace pack at $TRACE_PATH"
     exit 10
 fi
 
-make -C "$ROOT_DIR/third_party/codework_shared/core/core_pack" tools >/dev/null
+if [[ -z "${PHYSICS_SIM_PACK_CLI_BIN:-}" ]]; then
+    make -C "$ROOT_DIR/third_party/codework_shared/core/core_pack" tools >/dev/null
+fi
 "$PACK_CLI" inspect "$TRACE_PATH" > "$INSPECT_LOG"
 
 grep -q "chunk_count=3" "$INSPECT_LOG" || {

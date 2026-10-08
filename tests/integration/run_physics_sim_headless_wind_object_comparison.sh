@@ -2,7 +2,9 @@
 set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT_DIR="${WIND_OBJECT_COMPARISON_OUT_DIR:-$PHYSICS_DIR/tmp/headless_wind_object_comparison}"
+source "$PHYSICS_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$PHYSICS_DIR" "$0" "$@"
+OUT_DIR="$(physics_fixture_root "$PHYSICS_DIR" headless_wind_object_comparison "${WIND_OBJECT_COMPARISON_OUT_DIR:-${PHYSICS_SIM_TEST_ROOT:-$PHYSICS_DIR/tmp/tests}}")"
 REPORT="$OUT_DIR/object_comparison_summary.txt"
 JSON_SUMMARY="$OUT_DIR/object_comparison_summary.json"
 MODE="${WIND_OBJECT_COMPARISON_MODE:-volume_speed_deficit}"
@@ -10,7 +12,6 @@ FRAMES="${WIND_OBJECT_COMPARISON_FRAMES:-24}"
 STEPS_PER_FRAME="${WIND_OBJECT_COMPARISON_SIM_STEPS_PER_FRAME:-2}"
 GRID="${WIND_OBJECT_COMPARISON_GRID:-96x24x24}"
 
-rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
 cases=(
@@ -24,7 +25,7 @@ for entry in "${cases[@]}"; do
   scene="${entry#*:}"
   case_dir="$OUT_DIR/$name"
   mkdir -p "$case_dir"
-  "$PHYSICS_DIR/physics_sim_headless" \
+  "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
     --runtime-scene "$scene" \
     --frames "$FRAMES" \
     --sim-steps-per-frame "$STEPS_PER_FRAME" \

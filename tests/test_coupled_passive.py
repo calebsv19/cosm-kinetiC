@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from passive_atmosphere import atmosphere_worker_path
 from coupled_passive import Coupled
 from surface_sources.growth_fire_v1 import strict_load,sealed
 class CoupledTests(unittest.TestCase):
@@ -16,7 +17,7 @@ class CoupledTests(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.frame=strict_load(ROOT/'tests/fixtures/surface_sources/prescribed-patch.json')
         self.policy=strict_load(ROOT/'tests/fixtures/surface_sources/prescribed-policy.json');self.policy['receiver']['dimensions'][2]=4
         self.props={'density_kg_m3':1,'heat_capacity_j_kg_k':1000,'reference_temperature_k':300,'conductivity_w_m_k':0,'tracer_diffusivity_m2_s':0}
-        self.worker=ROOT/'build/passive-atmosphere/physics_sim_passive_worker'
+        self.worker=atmosphere_worker_path('passive')
         self.receiver=self.reopen();self.receiver.initialize()
     def tearDown(self):self.temp.cleanup()
     def reopen(self):return Coupled(self.temp.name,self.policy,self.props,[0,0,0],self.worker)

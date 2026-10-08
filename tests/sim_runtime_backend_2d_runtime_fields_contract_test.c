@@ -175,6 +175,8 @@ static bool test_zero_dt_does_not_inject_fields(void) {
 
     state.fluid = fluid2d_create(cfg.grid_w, cfg.grid_h);
     if (!state.fluid) return false;
+    state.allocation_w = cfg.grid_w;
+    state.allocation_h = cfg.grid_h;
     backend.impl = &state;
     scene.backend = &backend;
     scene.config = &cfg;
@@ -224,6 +226,8 @@ static bool test_free_velocity_jet_injects_density_and_velocity(void) {
 
     state.fluid = fluid2d_create(cfg.grid_w, cfg.grid_h);
     if (!state.fluid) return false;
+    state.allocation_w = cfg.grid_w;
+    state.allocation_h = cfg.grid_h;
     backend.impl = &state;
     scene.backend = &backend;
     scene.config = &cfg;
@@ -282,6 +286,8 @@ static bool test_attached_object_velocity_jet_injects_density_and_velocity(void)
 
     state.fluid = fluid2d_create(cfg.grid_w, cfg.grid_h);
     if (!state.fluid) return false;
+    state.allocation_w = cfg.grid_w;
+    state.allocation_h = cfg.grid_h;
     backend.impl = &state;
     scene.backend = &backend;
     scene.config = &cfg;
@@ -337,6 +343,8 @@ static bool test_dynamic_circle_obstacle_writes_mask_and_velocity(void) {
     object.body.radius = 18.0f;
     object.body.is_static = 0;
 
+    state.allocation_w = cfg.grid_w;
+    state.allocation_h = cfg.grid_h;
     backend.impl = &state;
     scene.backend = &backend;
     scene.config = &cfg;

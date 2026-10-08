@@ -6,9 +6,10 @@ import math
 from pathlib import Path
 import re
 import subprocess
-from run_cfd_native_accuracy_regression import execute, require, save, sha
+from cfd_run_support import compile_probe, execute, require, save, sha
 ROOT=Path(__file__).resolve().parents[1]
-FILES=('scripts/run_cfd_native_cube_pressure.py','scripts/run_cfd_native_accuracy_regression.py',
+from cfd_evidence import experiment_root, seal_bundle, portable_paths, resolve_artifact, verify_bundle
+FILES=('scripts/cfd_run_support.py','scripts/cfd_evidence.py','scripts/check_clean_root.py','scripts/run_cfd_native_cube_pressure.py','scripts/run_cfd_native_accuracy_regression.py',
     'tests/cfd_obstacle3d_cube_pressure_probe.c','tests/cfd_obstacle3d_wall_pressure_candidate.h',
     'src/app/cfd_obstacle3d.c','src/app/cfd_obstacle3d_mixed.c','src/app/cfd_obstacle3d_reconstruction.c',
     'src/app/cfd_cartesian3d.c','src/app/cfd_sparse_mg.c','src/app/cfd_memory.c',
@@ -18,10 +19,11 @@ FILES=('scripts/run_cfd_native_cube_pressure.py','scripts/run_cfd_native_accurac
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--name',required=True)
     p.add_argument('--n',type=int,choices=(16,32,64,80),required=True);p.add_argument('--length',type=int,choices=(4,8),required=True)
+    p.add_argument('--experiment-root',type=Path,default=experiment_root(ROOT))
     args=p.parse_args();require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}',args.name),'Invalid run name')
     require(args.length*args.n**3//2<=1048576,'Native Cartesian cell admission')
     source={q:sha(ROOT/q) for q in FILES};bundle=hashlib.sha256(json.dumps(source,sort_keys=True).encode()).hexdigest()
-    directory=ROOT/'build/c3d-native-cube-pressure/runs'/bundle/args.name;directory.mkdir(parents=True,exist_ok=False)
+    directory=experiment_root(ROOT,args.experiment_root)/'c3d-native-cube-pressure/runs'/bundle/args.name;directory.mkdir(parents=True,exist_ok=False)
     frozen=directory/'source'
     for q,h in source.items():
         file=frozen/q;file.parent.mkdir(parents=True,exist_ok=True);file.write_bytes((ROOT/q).read_bytes());require(sha(file)==h,'Freeze drift')
@@ -42,7 +44,7 @@ def main():
                  str(frozen/'tests/cfd_obstacle3d_cube_pressure_probe.c')]
         command += [str(frozen/'src/app'/q) for q in ('cfd_obstacle3d_mixed.c','cfd_obstacle3d_reconstruction.c','cfd_cartesian3d.c','cfd_sparse_mg.c','cfd_memory.c')]
         command += ['-lm','-o',str(directory/'probe')]
-        result['processes']['compile']=execute(command,directory,'compile',60,1024**3)
+        result['processes']['compile']=compile_probe(command,directory,'compile',60,1024**3)
         print(f'Running unchanged pressure-driven cube L{args.length}/n{args.n}',flush=True)
         result['processes']['field']=execute([str(directory/'probe'),str(args.n),str(args.length),str(args.length/2),str(directory/'field.bin')],directory,'field',630,1536*1024**2)
         row=json.loads((directory/'field.stdout').read_text())
@@ -57,6 +59,6 @@ def main():
         result['status']='completed_native_cube_pressure_comparison'
     except Exception as error:result['failure']=str(error)
     result['artifact_sha256']={str(q.relative_to(directory)):sha(q) for q in sorted(directory.rglob('*')) if q.is_file()}
-    save(directory/'receipt.json',result);print(json.dumps(dict(status=result['status'],receipt=str(directory/'receipt.json'),sha256=sha(directory/'receipt.json'))),flush=True)
+    save(directory/'receipt.json',portable_paths(result,directory));seal_bundle(directory);print(json.dumps(dict(status=result['status'],receipt=str(directory/'receipt.json'),sha256=sha(directory/'receipt.json'))),flush=True)
     return 0 if result['status'].startswith('completed') else 1
 if __name__=='__main__':raise SystemExit(main())

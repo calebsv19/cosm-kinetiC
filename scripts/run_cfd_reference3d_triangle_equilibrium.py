@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """One bounded snapshot observer with frozen source, caps and immutable receipt."""
 import argparse
+import importlib.util
+import re
 import hashlib
 import json
 import os
@@ -11,58 +13,46 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 DATA=ROOT/'build/c3d-triangle/observer-runs'
 SOURCES=('cfd_reference3d_cholesky_equilibrium_probe.py','cfd_reference3d_quartic_equilibrium.py','cfd_reference3d_p4.py','cfd_reference3d_p3.py','cfd_reference3d_quartic_pair.py','cfd_reference3d_chunked.py','cfd_reference3d_preconditioner.py','cfd_reference3d_mesh.py','cfd_reference3d_traction.py')
+SOURCES=(*SOURCES,'cfd_run_support.py')
 
+
+def require(condition,message):
+    if not condition:raise ValueError(message)
 
 def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
-def run(stem,arguments):
-    hashes={name:sha(ROOT/'scripts'/name) for name in SOURCES}
-    digest=hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest()
-    directory=DATA/digest;directory.mkdir(parents=True,exist_ok=True)
-    supervisor_root=DATA.parent/'supervisor-source';supervisor_root.mkdir(exist_ok=True)
-    supervisor_digest=sha(Path(__file__));supervisor_path=supervisor_root/(supervisor_digest+'.py')
-    if not supervisor_path.exists():shutil.copy2(Path(__file__),supervisor_path)
-    assert sha(supervisor_path)==supervisor_digest
-    frozen=directory/'source';frozen.mkdir(exist_ok=True)
-    for name in SOURCES:
-        p=frozen/name
-        if not p.exists():shutil.copy2(ROOT/'scripts'/name,p)
-        assert sha(p)==hashes[name]
+def _run_owned(stem,arguments):
+    if not isinstance(stem,str) or not re.fullmatch('[A-Za-z0-9][A-Za-z0-9_-]{0,95}',stem):
+        raise ValueError('Invalid reference case name')
+    bootstrap_path=Path(__file__).with_name('cfd_run_support.py')
+    if (any(part.is_symlink() for part in (bootstrap_path,*bootstrap_path.parents))
+            or not bootstrap_path.is_file() or bootstrap_path.stat().st_size>1048576):
+        raise ValueError('Reference bootstrap helper unadmitted')
+    bootstrap_spec=importlib.util.spec_from_file_location('reference_bootstrap',bootstrap_path)
+    bootstrap=importlib.util.module_from_spec(bootstrap_spec);bootstrap_spec.loader.exec_module(bootstrap)
+    hashes,digest,directory,frozen=bootstrap.reference_prepare(ROOT,DATA,SOURCES,Path(__file__))
+    helper_path=frozen/'cfd_run_support.py'
+    if helper_path.is_symlink() or sha(helper_path)!=hashes['cfd_run_support.py']:
+        raise ValueError('Frozen reference supervisor changed')
+    spec=importlib.util.spec_from_file_location('frozen_reference_supervision',helper_path)
+    support=importlib.util.module_from_spec(spec);spec.loader.exec_module(support)
     output=directory/(stem+'.json')
     receipt_path=directory/(stem+'-receipt.json');log_path=directory/(stem+'.log')
     command=[str(ROOT/'build/cfd-reference-venv/bin/python'),str(frozen/SOURCES[0]),*arguments,
         '--output',str(output)]
     if receipt_path.exists():
-        receipt=json.loads(receipt_path.read_text());assert receipt['command']==command
-        for p,h in receipt['artifact_sha256'].items():assert sha(Path(p))==h
+        receipt=support.reference_receipt(receipt_path,directory,command,hashes,expected_paths=(log_path, output));require(receipt['command']==command,'Reference source/evidence admission failed')
         print(json.dumps({'retained':str(receipt_path),'returncode':receipt['returncode']}),flush=True)
-        return receipt['returncode']==0 and receipt['stop_reason'] is None
-    assert not any(p.exists() for p in (output,log_path))
+        return receipt['returncode']==0 and receipt['stop_reason'] is None and receipt.get('diagnostic_failure') is None
+    require(not any(p.exists() for p in (output,log_path)),'Reference source/evidence admission failed')
     start=time.monotonic();peak=0;reason=None
-    with log_path.open('x') as log:
-        child=subprocess.Popen(command,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT,
-            env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1',OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1'))
-        try:
-            while child.poll() is None:
-                text=subprocess.run(['/bin/ps','-o','rss=','-p',str(child.pid)],capture_output=True,text=True).stdout.strip()
-                peak=max(peak,int(text or 0)*1024)
-                if peak>1800*1024**2 or time.monotonic()-start>180:
-                    reason='reference RSS/time cap';child.terminate();break
-                time.sleep(.2)
-        finally:
-            if child.poll() is None:
-                try:child.wait(timeout=5)
-                except subprocess.TimeoutExpired:child.kill();child.wait()
-    progress=[]
-    for line in log_path.read_text().splitlines():
-        try:
-            item=json.loads(line)
-            if isinstance(item,dict) and ('phase' in item or 'iteration' in item):progress.append(item)
-        except json.JSONDecodeError:pass
-    result=json.loads(output.read_text()) if output.exists() else {}
+    child,reason,peak,supervision=support.reference_execute(command,directory,log_path,180,1800*1024**2,
+        cwd=ROOT,env=dict(os.environ,PYTHONDONTWRITEBYTECODE='1',OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1'))
+    progress=support.reference_progress(log_path)
+    result=support.factor_json(output,16777216) if output.exists() else {}
     failure=None
-    if reason:failure={'kind':'resource_cap','detail':reason}
+    if reason:failure={'kind':'resource_cap' if reason.startswith('reference resource cap:') else 'supervision_hold','detail':reason}
     elif child.returncode!=0:failure={'kind':'observer_error','returncode':child.returncode}
     elif not result.get('diagnostic_accepted'):failure={'kind':'missing_diagnostic_acceptance'}
     receipt=dict(schema='physics_sim_c3d_quartic_equilibrium_receipt_v1',
@@ -71,11 +61,26 @@ def run(stem,arguments):
         wall_s=time.monotonic()-start,peak_observed_rss_bytes=peak,mesh_cap=50000,
         rss_cap_bytes=1800*1024**2,wall_cap_s=180,input_solver_iteration_cap=3000,
         environment={'OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1','PYTHONDONTWRITEBYTECODE':'1'},
-        artifact_sha256={str(p):sha(p) for p in (log_path,output) if p.exists()})
-    receipt_path.write_text(json.dumps(receipt,indent=2)+'\n')
+        artifact_sha256=support.reference_artifact_hashes(directory,(log_path, output)))
+    receipt['supervision']=supervision
+    support.complete_reference_receipt(receipt,directory,(log_path, output))
+    support.publish_reference_receipt(receipt_path,receipt)
     print(json.dumps({'receipt':str(receipt_path),'returncode':child.returncode,
         'wall_s':receipt['wall_s'],'rss_mib':peak/1024**2,'stop_reason':reason}),flush=True)
-    return child.returncode==0 and reason is None and failure is None
+    return child.returncode==0 and reason is None and failure is None and receipt.get('diagnostic_failure') is None
+
+
+def run(stem,arguments):
+    if not isinstance(stem,str) or not re.fullmatch('[A-Za-z0-9][A-Za-z0-9_-]{0,95}',stem):
+        raise ValueError('Invalid reference case name')
+    bootstrap_path=Path(__file__).with_name('cfd_run_support.py')
+    if (any(part.is_symlink() for part in (bootstrap_path,*bootstrap_path.parents))
+            or not bootstrap_path.is_file() or bootstrap_path.stat().st_size>1048576):
+        raise ValueError('Reference bootstrap helper unadmitted')
+    spec=importlib.util.spec_from_file_location('reference_owner_bootstrap',bootstrap_path)
+    support=importlib.util.module_from_spec(spec);spec.loader.exec_module(support)
+    with support.reference_ownership(ROOT,DATA):
+        return _run_owned(stem,arguments)
 
 
 if __name__=='__main__':

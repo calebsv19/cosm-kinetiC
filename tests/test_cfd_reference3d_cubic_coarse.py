@@ -1,5 +1,5 @@
 """Exact nested coarse space, balanced SPD action and unchanged FE equations."""
-import sys,json
+import os,sys,json
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -7,6 +7,7 @@ import numpy as np
 from scipy.sparse import csr_matrix
 from skfem import MeshTet
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_p3 import alfeld_split
 from cfd_reference3d_triangle import SymmetricTriangle
 from cfd_reference3d_triangle_condensed import TriangleCondensedSystem
@@ -15,7 +16,7 @@ from cfd_reference3d_cubic_coarse import scalar_macro_cubic_interpolation,macro_
 from cfd_reference3d_condensed import CondensedSystem,full_action
 from cfd_reference3d_quartic_pair import assemble_quartic
 from test_cfd_reference3d_bounded_condensed import fixture
-LIB=ROOT/'build/c3d-cholesky/support/factor.dylib'
+LIB=library_path('build/c3d-cholesky/support/factor.dylib')
 
 
 def system_fixture():

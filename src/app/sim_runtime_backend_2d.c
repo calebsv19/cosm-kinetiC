@@ -1,6 +1,7 @@
 #include <fisics/extensions.h>
 
 #include "app/sim_runtime_backend.h"
+#include "app/physics_sim_persistence.h"
 #include "app/sim_runtime_backend_2d_internal.h"
 
 #include <math.h>
@@ -13,6 +14,7 @@
 #include "app/shape_lookup.h"
 #include "geo/shape_asset.h"
 #include "import/shape_import.h"
+#include "import/shape_asset_input.h"
 #include "physics/fluid2d/fluid2d.h"
 #include "physics/fluid2d/fluid2d_boundary.h"
 #include "physics/objects/physics_object_builder.h"
@@ -64,11 +66,13 @@ static void backend_2d_destroy(SimRuntimeBackend *backend) {
 
 static bool backend_2d_valid(const SimRuntimeBackend *backend) {
     const SimRuntimeBackend2D *state = backend_2d_state_const(backend);
+    if (!backend_2d_storage_grid_valid(state)) return false;
     return state && state->fluid;
 }
 
 static void backend_2d_clear(SimRuntimeBackend *backend) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_storage_grid_valid(state)) return;
     if (!state || !state->fluid) return;
     fluid2d_clear(state->fluid);
 }
@@ -107,6 +111,9 @@ static void backend_2d_window_to_grid(const AppConfig *cfg,
     float sx = (float)win_x / (float)(cfg->window_w > 0 ? cfg->window_w : 1);
     float sy = (float)win_y / (float)(cfg->window_h > 0 ? cfg->window_h : 1);
 
+    /* Clamp in float space before conversion, including extreme native ints. */
+    sx = fminf(fmaxf(sx, 0.0f), 1.0f);
+    sy = fminf(fmaxf(sy, 0.0f), 1.0f);
     int gx = (int)(sx * (float)cfg->grid_w);
     int gy = (int)(sy * (float)cfg->grid_h);
 
@@ -123,7 +130,11 @@ static bool backend_2d_apply_brush_sample(SimRuntimeBackend *backend,
                                           const AppConfig *cfg,
                                           const StrokeSample *sample) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
-    if (!state || !state->fluid || !cfg || !sample) return false;
+    if (!backend_2d_config_grid_matches(state, cfg)) return false;
+    if (!state || !state->fluid || !cfg || !sample || cfg->window_w <= 0 || cfg->window_h <= 0 ||
+        !isfinite(sample->vx) || !isfinite(sample->vy) ||
+        (sample->mode != BRUSH_MODE_DENSITY && sample->mode != BRUSH_MODE_VELOCITY) ||
+        !state->fluid->density || !state->fluid->velX || !state->fluid->velY) return false;
 
     int gx = 0;
     int gy = 0;
@@ -133,6 +144,20 @@ static bool backend_2d_apply_brush_sample(SimRuntimeBackend *backend,
     float inv_h = (float)(cfg->window_h > 0 ? cfg->window_h : 1);
     float vx = (sample->vx / inv_w) * BRUSH_VEL_SCALE;
     float vy = (sample->vy / inv_h) * BRUSH_VEL_SCALE;
+
+    float effective_vx = sample->mode == BRUSH_MODE_VELOCITY ? vx : vx * 0.25f;
+    float effective_vy = sample->mode == BRUSH_MODE_VELOCITY ? vy : vy * 0.25f;
+    float density = sample->mode == BRUSH_MODE_VELOCITY ? BRUSH_VELOCITY_DENSITY : BRUSH_DENSITY;
+    /* Match Fluid2D's interior-cell clamp, including its two-cell edge case. */
+    int cell_x = gx < 1 ? 1 : gx, cell_y = gy < 1 ? 1 : gy;
+    if (cell_x > state->fluid->w - 2) cell_x = state->fluid->w - 2;
+    if (cell_y > state->fluid->h - 2) cell_y = state->fluid->h - 2;
+    size_t id = (size_t)cell_y * (size_t)state->fluid->w + (size_t)cell_x;
+    if (!isfinite(effective_vx) || !isfinite(effective_vy) ||
+        !isfinite(state->fluid->density[id]) || !isfinite(state->fluid->velX[id]) ||
+        !isfinite(state->fluid->velY[id]) || !isfinite(state->fluid->density[id] + density) ||
+        !isfinite(state->fluid->velX[id] + effective_vx) ||
+        !isfinite(state->fluid->velY[id] + effective_vy)) return false;
 
     switch (sample->mode) {
     case BRUSH_MODE_VELOCITY:
@@ -180,8 +205,14 @@ bool backend_2d_rasterize_import_to_mask(const SceneState *scene,
 
     int w = scene->config->grid_w;
     int h = scene->config->grid_h;
-    if (w <= 1 || h <= 1) return false;
-    memset(out_mask, 0, mask_count);
+    const size_t max_cells = 64u * 1024u * 1024u;
+    if (w <= 1 || h <= 1 || (size_t)w > max_cells / (size_t)h ||
+        mask_count != (size_t)w * (size_t)h ||
+        !memchr(imp->path, '\0', sizeof(imp->path)) || !imp->path[0] ||
+        !isfinite(imp->position_x) || !isfinite(imp->position_y) ||
+        !isfinite(imp->rotation_deg) || !isfinite(imp->scale)) return false;
+    if (scene->shape_library && (scene->shape_library->count > 1024 ||
+        (scene->shape_library->count && !scene->shape_library->assets))) return false;
 
     float span_x = 1.0f;
     float span_y = 1.0f;
@@ -196,7 +227,7 @@ bool backend_2d_rasterize_import_to_mask(const SceneState *scene,
 
     const ShapeAsset *asset = shape_lookup_from_path(scene->shape_library, imp->path);
     bool raster_ok = false;
-    if (asset) {
+    if (asset && physics_sim_shape_asset_admitted(asset)) {
         ShapeAssetBounds bounds;
         if (shape_asset_bounds(asset, &bounds) && bounds.valid) {
             float max_dim = backend_2d_shape_bounds_max_dim(&bounds);
@@ -231,8 +262,10 @@ bool backend_2d_rasterize_import_to_mask(const SceneState *scene,
     }
 
     if (!raster_ok) {
-        ShapeDocument doc;
-        if (!shape_import_load(imp->path, &doc) || doc.shapeCount == 0) {
+        ShapeDocument doc = {0};
+        if (!shape_import_load(imp->path, &doc)) return false;
+        if (doc.shapeCount == 0 || !doc.shapes) {
+            ShapeDocument_Free(&doc);
             return false;
         }
 
@@ -259,7 +292,12 @@ bool backend_2d_rasterize_import_to_mask(const SceneState *scene,
                 .scale = raster_scale,
                 .center_fit = false,
             };
-            raster_ok = shape_import_rasterize(shape, w, h, &opts, out_mask);
+            uint8_t *candidate = (uint8_t *)calloc(mask_count, sizeof(uint8_t));
+            if (candidate) {
+                raster_ok = shape_import_rasterize(shape, w, h, &opts, candidate);
+                if (raster_ok) memcpy(out_mask, candidate, mask_count);
+                free(candidate);
+            }
         }
         ShapeDocument_Free(&doc);
     }
@@ -361,6 +399,7 @@ static void backend_2d_apply_static_preset(const SceneState *scene,
 
 static void backend_2d_apply_static_imports(SimRuntimeBackend *backend, SceneState *scene) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     if (!scene || !scene->config || !state || !state->static_mask) return;
 
     int w = scene->config->grid_w;
@@ -404,6 +443,7 @@ static void backend_2d_mark_obstacles_dirty(SimRuntimeBackend *backend) {
 static void backend_2d_build_static_obstacles(SimRuntimeBackend *backend,
                                               SceneState *scene) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     if (!scene || !scene->config || !state || !state->static_mask) return;
 
     int w = scene->config->grid_w;
@@ -440,6 +480,7 @@ static void backend_2d_mark_emitters_dirty(SimRuntimeBackend *backend) {
 
 void backend_2d_compute_obstacle_distance(const SceneState *scene,
                                           SimRuntimeBackend2D *state) {
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     if (!scene || !scene->config || !state || !state->obstacle_distance) return;
     int w = scene->config->grid_w;
     int h = scene->config->grid_h;
@@ -547,6 +588,7 @@ void backend_2d_compute_obstacle_distance(const SceneState *scene,
 
 static void backend_2d_build_obstacles(SimRuntimeBackend *backend, SceneState *scene) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     if (!scene || !scene->config || !state) return;
 
     int w = scene->config->grid_w;
@@ -578,6 +620,7 @@ static void backend_2d_apply_boundary_flows(SimRuntimeBackend *backend,
                                             SceneState *scene,
                                             double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     double zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0;
     if (!scene || !scene->preset || !state || !state->fluid) return;
     if (dt <= zero_seconds) return;
@@ -600,6 +643,7 @@ static void backend_2d_apply_boundary_flows(SimRuntimeBackend *backend,
 static void backend_2d_enforce_boundary_flows(SimRuntimeBackend *backend,
                                               SceneState *scene) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     if (!scene || !scene->preset || !state || !state->fluid) return;
     if (scene->config && scene->config->sim_mode == SIM_MODE_WIND_TUNNEL) {
         fluid2d_boundary_enforce_wind(scene->config, scene->preset, state->fluid);
@@ -611,6 +655,7 @@ static void backend_2d_enforce_boundary_flows(SimRuntimeBackend *backend,
 static void backend_2d_enforce_obstacles(SimRuntimeBackend *backend,
                                          SceneState *scene) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     if (!scene || !state || !state->fluid) return;
     backend_2d_rasterize_dynamic_obstacles(backend, scene);
     fluid2d_enforce_solid_mask(state->fluid,
@@ -624,6 +669,7 @@ static void backend_2d_step(SimRuntimeBackend *backend,
                             const AppConfig *cfg,
                             double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene) || !backend_2d_config_grid_matches(state, cfg)) return;
     const BoundaryFlow *flows = NULL;
     double zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0;
     if (!scene || !cfg || !state || !state->fluid) return;
@@ -638,45 +684,78 @@ static void backend_2d_step(SimRuntimeBackend *backend,
                  state->obstacle_vel_y);
 }
 
+typedef struct MotionCellUpdate {
+    size_t cell;
+    size_t order;
+    int x;
+    int y;
+    float velocity_x;
+    float velocity_y;
+} MotionCellUpdate;
+
+static int motion_update_compare(const void *left, const void *right) {
+    const MotionCellUpdate *a = left, *b = right;
+    if (a->cell != b->cell) return a->cell < b->cell ? -1 : 1;
+    return a->order < b->order ? -1 : a->order > b->order;
+}
+
 static void backend_2d_inject_object_motion(SimRuntimeBackend *backend,
                                             const SceneState *scene) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
-    if (!scene || !scene->config || !state || !state->fluid) return;
-
+    if (!backend_2d_scene_grid_matches(state, scene) || !state->fluid ||
+        !state->fluid->velX || !state->fluid->velY) return;
     const AppConfig *cfg = scene->config;
-    if (cfg->window_w <= 0 || cfg->window_h <= 0 || cfg->grid_w <= 0 || cfg->grid_h <= 0) return;
-
-    {
-        const float vel_scale = 0.01f;
-        for (int i = 0; i < scene->objects.count; ++i) {
-            SceneObject *obj = &scene->objects.objects[i];
-            if (!obj) continue;
-            if (obj->body.is_static || obj->body.locked) continue;
-
-            float sx = obj->body.position.x / (float)cfg->window_w;
-            float sy = obj->body.position.y / (float)cfg->window_h;
-            int gx = (int)lroundf(sx * (float)cfg->grid_w);
-            int gy = (int)lroundf(sy * (float)cfg->grid_h);
-            if (gx < 0) gx = 0;
-            if (gx >= cfg->grid_w) gx = cfg->grid_w - 1;
-            if (gy < 0) gy = 0;
-            if (gy >= cfg->grid_h) gy = cfg->grid_h - 1;
-            {
-                float object_velocity_x FISICS_DIM(velocity)
-                                        FISICS_UNIT(meter_per_second) =
-                    obj->body.velocity.x;
-                float object_velocity_y FISICS_DIM(velocity)
-                                        FISICS_UNIT(meter_per_second) =
-                    obj->body.velocity.y;
-                backend_2d_inject_velocity_sample(state->fluid,
-                                                  gx,
-                                                  gy,
-                                                  object_velocity_x,
-                                                  object_velocity_y,
-                                                  vel_scale);
-            }
-        }
+    const ObjectManager *mgr = &scene->objects;
+    const int w = state->allocation_w, h = state->allocation_h;
+    const int window_w = cfg->window_w, window_h = cfg->window_h;
+    if (window_w <= 0 || window_h <= 0 || mgr->count < 0 || mgr->capacity < mgr->count ||
+        mgr->capacity < 0 || mgr->count > 65536 || (mgr->count && !mgr->objects)) return;
+    if (!mgr->count) return;
+    MotionCellUpdate *updates = malloc((size_t)mgr->count * sizeof(*updates));
+    if (!updates) return;
+    size_t count = 0;
+    for (int i = 0; i < mgr->count; ++i) {
+        const SceneObject *obj = &mgr->objects[i];
+        if (obj->body.is_static || obj->body.locked) continue;
+        if (!isfinite(obj->body.position.x) || !isfinite(obj->body.position.y) ||
+            !isfinite(obj->body.velocity.x) || !isfinite(obj->body.velocity.y)) goto refused;
+        float sx = obj->body.position.x / (float)window_w;
+        float sy = obj->body.position.y / (float)window_h;
+        sx = fminf(fmaxf(sx, 0.0f), 1.0f);
+        sy = fminf(fmaxf(sy, 0.0f), 1.0f);
+        int x = (int)lroundf(sx * (float)w), y = (int)lroundf(sy * (float)h);
+        /* Match Fluid2D's interior clamp, including a two-cell grid. */
+        if (x < 1) x = 1;
+        if (y < 1) y = 1;
+        if (x > w - 2) x = w - 2;
+        if (y > h - 2) y = h - 2;
+        updates[count++] = (MotionCellUpdate){
+            .cell = (size_t)y * (size_t)w + (size_t)x, .order = (size_t)i,
+            .x = x, .y = y, .velocity_x = obj->body.velocity.x,
+            .velocity_y = obj->body.velocity.y,
+        };
     }
+    qsort(updates, count, sizeof(*updates), motion_update_compare);
+    /* Sorting groups cells while preserving original addition order per cell.
+     * Validate every group before the first actual fluid write. */
+    for (size_t i = 0; i < count;) {
+        size_t cell = updates[i].cell;
+        float vx = state->fluid->velX[cell], vy = state->fluid->velY[cell];
+        if (!isfinite(vx) || !isfinite(vy)) goto refused;
+        do {
+            float dx = updates[i].velocity_x * 0.01f;
+            float dy = updates[i].velocity_y * 0.01f;
+            vx = vx + dx;
+            vy = vy + dy;
+            if (!isfinite(vx) || !isfinite(vy)) goto refused;
+            ++i;
+        } while (i < count && updates[i].cell == cell);
+    }
+    for (size_t i = 0; i < count; ++i)
+        backend_2d_inject_velocity_sample(state->fluid, updates[i].x, updates[i].y,
+                                          updates[i].velocity_x, updates[i].velocity_y, 0.01f);
+refused:
+    free(updates);
 }
 
 static void backend_2d_reset_transient_state(SimRuntimeBackend *backend) {
@@ -689,6 +768,7 @@ static void backend_2d_seed_uniform_velocity_2d(SimRuntimeBackend *backend,
                                                 float velocity_x,
                                                 float velocity_y) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_storage_grid_valid(state)) return;
     if (!state || !state->fluid) return;
 
     size_t count = (size_t)state->fluid->w * (size_t)state->fluid->h;
@@ -702,43 +782,45 @@ static bool backend_2d_export_snapshot(const SimRuntimeBackend *backend,
                                        double time,
                                        const char *path) {
     const SimRuntimeBackend2D *state = backend_2d_state_const(backend);
-    if (!state || !state->fluid || !path) return false;
-
-    {
-        FILE *f = fopen(path, "wb");
-        if (!f) {
-            perror("fopen snapshot");
-            return false;
-        }
-
-        {
-            uint32_t magic = ('P' << 24) | ('S' << 16) | ('2' << 8) | ('D');
-            uint32_t version = 1;
-            uint32_t grid_w = (uint32_t)state->fluid->w;
-            uint32_t grid_h = (uint32_t)state->fluid->h;
-            size_t count = (size_t)grid_w * (size_t)grid_h;
-
-            if (fwrite(&magic, sizeof(magic), 1, f) != 1 ||
-                fwrite(&version, sizeof(version), 1, f) != 1 ||
-                fwrite(&grid_w, sizeof(grid_w), 1, f) != 1 ||
-                fwrite(&grid_h, sizeof(grid_h), 1, f) != 1 ||
-                fwrite(&time, sizeof(time), 1, f) != 1 ||
-                fwrite(state->fluid->density, sizeof(float), count, f) != count ||
-                fwrite(state->fluid->velX, sizeof(float), count, f) != count ||
-                fwrite(state->fluid->velY, sizeof(float), count, f) != count) {
-                fclose(f);
-                return false;
-            }
-        }
-
-        fclose(f);
+    if (!backend_2d_storage_grid_valid(state)) return false;
+    if (!state || !state->fluid || !path || !isfinite(time) ||
+        state->fluid->w <= 0 || state->fluid->h <= 0 || !state->fluid->density ||
+        !state->fluid->velX || !state->fluid->velY) return false;
+    const uint64_t limit = UINT64_C(8) * 1024 * 1024 * 1024;
+    uint32_t grid_w = (uint32_t)state->fluid->w;
+    uint32_t grid_h = (uint32_t)state->fluid->h;
+    uint64_t cells = (uint64_t)grid_w * grid_h;
+    uint64_t header_bytes = 4 * sizeof(uint32_t) + sizeof(double);
+    if (cells > (limit - header_bytes) / (3 * sizeof(float)) || cells > SIZE_MAX) return false;
+    size_t count = (size_t)cells;
+    uint64_t expected_bytes = header_bytes + cells * 3 * sizeof(float);
+    PhysicsSimPersistence save;
+    FILE *file = physics_sim_persistence_begin_bounded(path, limit, &save);
+    if (!file) return false;
+    uint32_t magic = ('P' << 24) | ('S' << 16) | ('2' << 8) | ('D');
+    uint32_t version = 1;
+    bool valid = fwrite(&magic, sizeof(magic), 1, file) == 1 &&
+        fwrite(&version, sizeof(version), 1, file) == 1 &&
+        fwrite(&grid_w, sizeof(grid_w), 1, file) == 1 &&
+        fwrite(&grid_h, sizeof(grid_h), 1, file) == 1 &&
+        fwrite(&time, sizeof(time), 1, file) == 1 &&
+        fwrite(state->fluid->density, sizeof(float), count, file) == count &&
+        fwrite(state->fluid->velX, sizeof(float), count, file) == count &&
+        fwrite(state->fluid->velY, sizeof(float), count, file) == count;
+    struct stat staged;
+    valid = valid && fflush(file) == 0 && fstat(save.sidecar.pending_descriptor, &staged) == 0 &&
+        staged.st_size >= 0 && (uint64_t)staged.st_size == expected_bytes;
+    if (!valid) {
+        physics_sim_persistence_abort(&save, file);
+        return false;
     }
-    return true;
+    return physics_sim_persistence_finish(&save, file);
 }
 
 static bool backend_2d_get_fluid_view_2d(const SimRuntimeBackend *backend,
                                          SceneFluidFieldView2D *out_view) {
     const SimRuntimeBackend2D *state = backend_2d_state_const(backend);
+    if (!backend_2d_storage_grid_valid(state)) return false;
     if (!state || !state->fluid || !out_view) return false;
 
     out_view->width = state->fluid->w;
@@ -754,6 +836,7 @@ static bool backend_2d_get_fluid_view_2d(const SimRuntimeBackend *backend,
 static bool backend_2d_get_obstacle_view_2d(const SimRuntimeBackend *backend,
                                             SceneObstacleFieldView2D *out_view) {
     const SimRuntimeBackend2D *state = backend_2d_state_const(backend);
+    if (!backend_2d_storage_grid_valid(state)) return false;
     if (!state || !state->fluid || !out_view) return false;
 
     out_view->width = state->fluid->w;
@@ -783,6 +866,7 @@ static bool backend_2d_get_volume_export_view_3d(const SimRuntimeBackend *backen
 static bool backend_2d_get_report(const SimRuntimeBackend *backend,
                                   SimRuntimeBackendReport *out_report) {
     const SimRuntimeBackend2D *state = backend_2d_state_const(backend);
+    if (!backend_2d_storage_grid_valid(state)) return false;
     if (!state || !state->fluid || !out_report) return false;
 
     *out_report = (SimRuntimeBackendReport){
@@ -827,6 +911,7 @@ static bool backend_2d_get_compatibility_slice_activity(const SimRuntimeBackend 
                                                         bool *out_has_fluid,
                                                         bool *out_has_obstacles) {
     const SimRuntimeBackend2D *state = backend_2d_state_const(backend);
+    if (!backend_2d_storage_grid_valid(state)) return false;
     size_t cell_count = 0;
     if (!state || !state->fluid || slice_z != 0) return false;
     if (out_has_fluid) *out_has_fluid = false;
@@ -877,6 +962,19 @@ static const SimRuntimeBackendOps g_backend_2d_ops = {
     .get_compatibility_slice_activity = backend_2d_get_compatibility_slice_activity,
 };
 
+/* Construction storage only: seven Fluid2D float fields, two masks and three
+ * auxiliary float fields. Keep this accounting paired with allocation tests. */
+bool backend_2d_initial_storage_bytes(int w, int h, size_t *out_bytes) {
+    const size_t limit = 256u * 1024u * 1024u;
+    const size_t fixed = sizeof(SimRuntimeBackend) + sizeof(SimRuntimeBackend2D) + sizeof(Fluid2D);
+    const size_t per_cell = 10u * sizeof(float) + 2u * sizeof(uint8_t);
+    if (!out_bytes || w < 2 || h < 2 || fixed >= limit) return false;
+    size_t max_cells = (limit - fixed) / per_cell;
+    if ((size_t)w > max_cells / (size_t)h) return false;
+    *out_bytes = fixed + (size_t)w * (size_t)h * per_cell;
+    return true;
+}
+
 SimRuntimeBackend *sim_runtime_backend_2d_create(const AppConfig *cfg,
                                                  const FluidScenePreset *preset,
                                                  const SimModeRoute *mode_route,
@@ -888,7 +986,11 @@ SimRuntimeBackend *sim_runtime_backend_2d_create(const AppConfig *cfg,
     (void)mode_route;
     (void)runtime_visual;
 
+    size_t initial_bytes = 0;
     if (!cfg) return NULL;
+    const int grid_w = cfg->grid_w, grid_h = cfg->grid_h;
+    if (!backend_2d_initial_storage_bytes(grid_w, grid_h, &initial_bytes)) return NULL;
+    (void)initial_bytes;
 
     backend = (SimRuntimeBackend *)calloc(1, sizeof(*backend));
     state = (SimRuntimeBackend2D *)calloc(1, sizeof(*state));
@@ -898,20 +1000,27 @@ SimRuntimeBackend *sim_runtime_backend_2d_create(const AppConfig *cfg,
         return NULL;
     }
 
-    state->fluid = fluid2d_create(cfg->grid_w, cfg->grid_h);
+    backend->impl = state;
+    state->allocation_w = grid_w;
+    state->allocation_h = grid_h;
+    state->fluid = fluid2d_create(grid_w, grid_h);
     if (!state->fluid) {
-        free(state);
-        free(backend);
+        backend_2d_destroy(backend);
         return NULL;
     }
 
-    mask_count = (size_t)cfg->grid_w * (size_t)cfg->grid_h;
+    mask_count = (size_t)grid_w * (size_t)grid_h;
     if (mask_count > 0) {
         state->static_mask = (uint8_t *)calloc(mask_count, sizeof(uint8_t));
         state->obstacle_mask = (uint8_t *)calloc(mask_count, sizeof(uint8_t));
         state->obstacle_vel_x = (float *)calloc(mask_count, sizeof(float));
         state->obstacle_vel_y = (float *)calloc(mask_count, sizeof(float));
         state->obstacle_distance = (float *)calloc(mask_count, sizeof(float));
+    }
+    if (!state->static_mask || !state->obstacle_mask || !state->obstacle_vel_x ||
+        !state->obstacle_vel_y || !state->obstacle_distance) {
+        backend_2d_destroy(backend);
+        return NULL;
     }
     state->obstacle_mask_dirty = true;
     state->emitter_masks_dirty = true;

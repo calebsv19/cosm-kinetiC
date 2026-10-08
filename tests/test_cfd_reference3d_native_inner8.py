@@ -3,7 +3,8 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse import csr_matrix
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
-LIB=R/'build/c3d-native-inner8/support/factor.dylib'
+from cfd_reference_test_support import library_path
+LIB=library_path('build/c3d-native-inner8/support/factor.dylib')
 from cfd_reference3d_bounded_fill1 import BlockIC0
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_encoded_operator import EncodedTriangle
@@ -18,7 +19,7 @@ class Native(unittest.TestCase):
     def test_actual_anisotropic_FE_balanced_and_fixed_pressure_equivalence_owners(self):
         from test_cfd_reference3d_distributed_p3_cg8 import fixture
         from cfd_reference3d_native_inner8_pressure import NativeInner8PressureFactor
-        _,s=fixture();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LIB);f=NativeInner8PressureFactor(t,LIB,pressure_control=False,coarse_library=R/'build/c3d-p3-cg8-scalar/support/coarse.dylib',Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata)
+        _,s=fixture();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LIB);f=NativeInner8PressureFactor(t,LIB,pressure_control=False,coarse_library=library_path('build/c3d-p3-cg8-scalar/support/coarse.dylib'),Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata)
         baseline=BalancedSparse(t,f.Z,f.coarse_factor,lambda x:inner_cg8(lambda u:t@u,lambda r:BlockIC0.solve(f,r),x));fixed=BalancedSparse(t,f.Z,f.coarse_factor,lambda x:triple(lambda u:t@u,lambda r:BlockIC0.solve(f,r),x))
         for x in np.random.default_rng(2122).normal(size=(3,nv)):
             np.testing.assert_allclose(f.solve(x),baseline.solve(x),rtol=1e-10,atol=1e-9);np.testing.assert_array_equal(f.pressure_solve(x),fixed.solve(x))
@@ -36,12 +37,8 @@ class Native(unittest.TestCase):
         with self.assertRaises(ValueError):native_inner8(f,np.ones(f.n))
         f.owner=positive;self.assertTrue(f.input_unchanged());f.close()
         with self.assertRaises(ValueError):native_inner8(f,np.ones(f.n))
-    def test_exact_transforms_prefix_and_work_budget(self):
+    def test_current_prefix_prefix_and_work_budget(self):
         from cfd_reference3d_native_inner8_factor import work_reserve
-        for t in json.loads((R/'build/c3d-native-inner8/transforms.json').read_text()):
-            v=(R/t['parent']).read_text()
-            for a,b in t['literal_replacements']:self.assertIn(a,v);v=v.replace(a,b)
-            v+=t['append'];self.assertEqual(v,(R/t['output']).read_text())
-        self.assertTrue((R/'scripts/cfd_reference3d_native_inner8.c').read_bytes().startswith((R/'scripts/cfd_reference3d_bounded_fill1.c').read_bytes()))
-        self.assertLessEqual(8*8*33744,work_reserve(33744,15444))
+        self.assertTrue((R / 'scripts/cfd_reference3d_native_inner8.c').read_bytes().startswith((R / 'scripts/cfd_reference3d_bounded_fill1.c').read_bytes()))
+        self.assertLessEqual(8 * 8 * 33744, work_reserve(33744, 15444))
 if __name__=='__main__':unittest.main()

@@ -1,4 +1,5 @@
 #include "app/app_config.h"
+#include "app/physics_sim_headless_output.h"
 #include "app/physics_sim_cli_helpers.h"
 #include "app/physics_sim_json_helpers.h"
 #include "app/scene_project_cache_output.h"
@@ -376,75 +377,10 @@ static bool parse_args(int argc, char **argv, PhysicsSimHeadlessCliOptions *out)
            out->frames > 0;
 }
 
-static bool ensure_dir(const char *path) {
-    char tmp[PHYSICS_SIM_HEADLESS_PATH_MAX];
-    size_t len = 0;
-    if (!path || !path[0]) return false;
-    if (snprintf(tmp, sizeof(tmp), "%s", path) >= (int)sizeof(tmp)) return false;
-    len = strlen(tmp);
-    while (len > 1u && tmp[len - 1u] == '/') {
-        tmp[len - 1u] = '\0';
-        --len;
-    }
-    for (char *p = tmp + 1; *p; ++p) {
-        if (*p == '/') {
-            *p = '\0';
-            if (mkdir(tmp, 0775) != 0 && errno != EEXIST) return false;
-            *p = '/';
-        }
-    }
-    return mkdir(tmp, 0775) == 0 || errno == EEXIST;
-}
-
 static bool path_exists(const char *path) {
     struct stat st;
     if (!path || !path[0]) return false;
     return stat(path, &st) == 0;
-}
-
-static bool dir_is_empty(const char *path) {
-    DIR *dir = NULL;
-    struct dirent *entry = NULL;
-    if (!path || !path[0]) return false;
-    dir = opendir(path);
-    if (!dir) return false;
-    while ((entry = readdir(dir)) != NULL) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        closedir(dir);
-        return false;
-    }
-    closedir(dir);
-    return true;
-}
-
-static bool remove_tree(const char *path) {
-    struct stat st;
-    DIR *dir = NULL;
-    struct dirent *entry = NULL;
-    if (!path || !path[0] || strcmp(path, "/") == 0 || strlen(path) < 8u) return false;
-    if (lstat(path, &st) != 0) return errno == ENOENT;
-    if (!S_ISDIR(st.st_mode)) return remove(path) == 0;
-
-    dir = opendir(path);
-    if (!dir) return false;
-    while ((entry = readdir(dir)) != NULL) {
-        char child[PHYSICS_SIM_HEADLESS_PATH_MAX];
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-        if (!join_path(child, sizeof(child), path, entry->d_name)) {
-            closedir(dir);
-            return false;
-        }
-        if (!remove_tree(child)) {
-            closedir(dir);
-            return false;
-        }
-    }
-    closedir(dir);
-    return rmdir(path) == 0;
 }
 
 static bool join_path(char *out, size_t out_size, const char *dir, const char *name) {
@@ -564,6 +500,9 @@ static int volume_export_count_for_options(const PhysicsSimHeadlessCliOptions *o
     return count;
 }
 
+static PhysicsSimHeadlessSidecar progress_sidecar = {.descriptor = -1, .parent_descriptor = -1};
+static PhysicsSimHeadlessSidecar summary_sidecar = {.descriptor = -1, .parent_descriptor = -1};
+
 static bool write_progress_json(const char *progress_path,
                                 const PhysicsSimHeadlessCliOptions *opts,
                                 const HeadlessProgressInfo *progress,
@@ -574,9 +513,10 @@ static bool write_progress_json(const char *progress_path,
     if (!progress_path || !progress_path[0] || !opts || !progress || !status) return false;
     progress_ratio = progress_ratio_for(progress);
     if (!utc_now_string(updated_at_utc, sizeof(updated_at_utc))) return false;
-    f = fopen(progress_path, "wb");
+    f = physics_sim_headless_sidecar_stream(&progress_sidecar);
     if (!f) return false;
     fputs("{\n", f);
+    fputs("  \"artifact_class\": \"operational_job\",\n", f);
     fputs("  \"schema\": \"physics_sim_headless_run_progress_v2\",\n", f);
     fputs("  \"runtime_scene\": ", f);
     json_write_escaped(f, opts->runtime_scene_path);
@@ -638,7 +578,7 @@ static bool write_progress_json(const char *progress_path,
     fprintf(f, ",\n  \"status\": ");
     json_write_escaped(f, status);
     fputs("\n}\n", f);
-    return fclose(f) == 0;
+    return physics_sim_headless_sidecar_publish(&progress_sidecar, f);
 }
 
 static bool write_wind_shot_manifest(const char *manifest_path,
@@ -1039,9 +979,10 @@ static bool write_run_summary(const char *summary_path,
                               int result_code) {
     FILE *f = NULL;
     if (!summary_path || !summary_path[0] || !opts) return false;
-    f = fopen(summary_path, "wb");
+    f = physics_sim_headless_sidecar_stream(&summary_sidecar);
     if (!f) return false;
     fputs("{\n", f);
+    fputs("  \"artifact_class\": \"operational_job\",\n", f);
     fputs("  \"schema\": \"physics_sim_headless_run_summary_v1\",\n", f);
     fputs("  \"runtime_scene\": ", f);
     json_write_escaped(f, opts->runtime_scene_path);
@@ -1146,7 +1087,7 @@ static bool write_run_summary(const char *summary_path,
         fputc('\n', f);
     }
     fputs("}\n", f);
-    return fclose(f) == 0;
+    return physics_sim_headless_sidecar_publish(&summary_sidecar, f);
 }
 
 int main(int argc, char **argv) {
@@ -1229,46 +1170,28 @@ int main(int argc, char **argv) {
         }
         opts.output_root = scene_project_output_root;
     }
-    if (path_exists(opts.output_root)) {
-        if (opts.output_policy == PHYSICS_SIM_HEADLESS_OUTPUT_FAIL_IF_EXISTS &&
-            !dir_is_empty(opts.output_root)) {
-            print_pre_run_error("prepare_output",
-                                "output root already exists and is not empty",
-                                "output_root",
-                                opts.output_root,
-                                "choose a new output root or pass --overwrite");
-            return 1;
-        }
-        if (opts.output_policy == PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE &&
-            !remove_tree(opts.output_root)) {
-            fprintf(stderr,
-                    "[physics_sim_headless] ERROR: failed to clear output root for overwrite: %s\n",
-                    opts.output_root);
-            return 1;
-        }
-    }
-    if (!ensure_dir(opts.output_root)) {
-        fprintf(stderr, "[physics_sim_headless] ERROR: failed to create output root: %s\n", opts.output_root);
+    PhysicsSimHeadlessOutputOwner output_owner;
+    char output_error[256];
+    bool overwrite = opts.output_policy == PHYSICS_SIM_HEADLESS_OUTPUT_OVERWRITE;
+    if (!physics_sim_headless_sidecar_plan(opts.output_root, opts.runtime_scene_path,
+            opts.summary_path, "run_summary.json", overwrite, summary_path, sizeof(summary_path), output_error, sizeof(output_error)) ||
+        !physics_sim_headless_sidecar_plan(opts.output_root, opts.runtime_scene_path,
+            opts.progress_path, "run_progress.json", overwrite, progress_path, sizeof(progress_path), output_error, sizeof(output_error)) ||
+        strcmp(summary_path, progress_path) == 0) {
+        print_pre_run_error("prepare_sidecars", "summary/progress plan held", "output_root", opts.output_root,
+                            "choose distinct fresh admitted sidecar paths");
         return 1;
     }
-    summary_path[0] = '\0';
-    if (opts.summary_path && opts.summary_path[0]) {
-        if (snprintf(summary_path, sizeof(summary_path), "%s", opts.summary_path) >= (int)sizeof(summary_path)) {
-            fprintf(stderr, "[physics_sim_headless] ERROR: summary path too long\n");
-            return 1;
-        }
-    } else if (!join_path(summary_path, sizeof(summary_path), opts.output_root, "run_summary.json")) {
-        fprintf(stderr, "[physics_sim_headless] ERROR: default summary path too long\n");
+    if (!physics_sim_headless_output_prepare(opts.output_root, opts.runtime_scene_path,
+            overwrite, &output_owner, output_error, sizeof(output_error))) {
+        print_pre_run_error("prepare_output", output_error, "output_root", opts.output_root,
+                            "choose a new output root or pass --overwrite");
         return 1;
     }
-    progress_path[0] = '\0';
-    if (opts.progress_path && opts.progress_path[0]) {
-        if (snprintf(progress_path, sizeof(progress_path), "%s", opts.progress_path) >= (int)sizeof(progress_path)) {
-            fprintf(stderr, "[physics_sim_headless] ERROR: progress path too long\n");
-            return 1;
-        }
-    } else if (!join_path(progress_path, sizeof(progress_path), opts.output_root, "run_progress.json")) {
-        fprintf(stderr, "[physics_sim_headless] ERROR: default progress path too long\n");
+    opts.output_root = output_owner.root;
+    if (!physics_sim_headless_sidecar_claim(summary_path, &summary_sidecar) ||
+        !physics_sim_headless_sidecar_claim(progress_path, &progress_sidecar)) {
+        fprintf(stderr, "[physics_sim_headless] sidecar claim held; allocated attempt retained\n");
         return 1;
     }
     opts.progress_path = progress_path;
@@ -1437,6 +1360,12 @@ int main(int argc, char **argv) {
         SDL_Quit();
     }
 
+    if (!physics_sim_headless_sidecar_check(&summary_sidecar) ||
+        !physics_sim_headless_sidecar_check(&progress_sidecar) ||
+        !physics_sim_headless_output_finish(&output_owner)) {
+        fprintf(stderr, "[physics_sim_headless] output ownership completion held\n");
+        result = result == 0 ? 1 : result;
+    }
     if (result == 0) {
         printf("[physics_sim_headless] PASS\n");
     } else {
@@ -1447,5 +1376,8 @@ int main(int argc, char **argv) {
     printf("[physics_sim_headless] output:  %s\n", opts.output_root);
     printf("[physics_sim_headless] summary: %s\n", summary_path);
     printf("[physics_sim_headless] progress: %s\n", progress_path);
+    physics_sim_headless_sidecar_close(&summary_sidecar);
+    physics_sim_headless_sidecar_close(&progress_sidecar);
+    physics_sim_headless_output_close(&output_owner);
     return result;
 }

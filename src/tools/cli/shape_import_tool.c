@@ -1,9 +1,12 @@
 #include <errno.h>
+#include <limits.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/physics_sim_persistence.h"
 #include "ShapeLib/shape_core.h"
 #include "ShapeLib/shape_json.h"
 #include "import/shape_import.h"
@@ -25,15 +28,16 @@ typedef struct {
 
 static void usage(const char *exe) {
     fprintf(stderr,
-            "Usage: %s [--grid W H] [--margin cells] [--stroke cells] [--max-error e] [--pos x y] [--rot deg] [--scale s] [--no-fit] [--out file.pgm] <shape.json>\n",
+            "Usage: %s [--grid W H (positive, <=67108864 cells)] [--margin cells] [--stroke cells] [--max-error e] [--pos x y] [--rot deg] [--scale s] [--no-fit] [--out file.pgm] <shape.json>\n",
             exe);
 }
 
 static int parse_int(const char *s, int *out) {
     if (!s || !out) return 0;
     char *end = NULL;
+    errno = 0;
     long v = strtol(s, &end, 10);
-    if (end == s || *end != '\0') return 0;
+    if (errno || end == s || *end != '\0' || v < INT_MIN || v > INT_MAX) return 0;
     *out = (int)v;
     return 1;
 }
@@ -41,8 +45,9 @@ static int parse_int(const char *s, int *out) {
 static int parse_float(const char *s, float *out) {
     if (!s || !out) return 0;
     char *end = NULL;
+    errno = 0;
     float v = strtof(s, &end);
-    if (end == s || *end != '\0') return 0;
+    if (errno || end == s || *end != '\0' || !isfinite(v)) return 0;
     *out = v;
     return 1;
 }
@@ -122,6 +127,19 @@ static int parse_args(int argc, char **argv, Args *out) {
     if (!a.input_path) {
         return 0;
     }
+    /* Bound the one-byte-per-cell CLI mask before input I/O or allocation. */
+    const size_t max_mask_cells = 64u * 1024u * 1024u;
+    if (a.grid_w <= 0 || a.grid_h <= 0 ||
+        (size_t)a.grid_w > max_mask_cells / (size_t)a.grid_h) {
+        fprintf(stderr, "Invalid --grid: positive dimensions and at most 67108864 cells required\n");
+        return 0;
+    }
+    if (a.margin < 0.0f || a.stroke <= 0.0f || a.max_error <= 0.0f ||
+        a.scale <= 0.0f || a.pos_x < 0.0f || a.pos_x > 1.0f ||
+        a.pos_y < 0.0f || a.pos_y > 1.0f) {
+        fprintf(stderr, "Invalid shape options: margin >= 0; stroke, max-error, scale > 0; pos in [0,1] required\n");
+        return 0;
+    }
     *out = a;
     return 1;
 }
@@ -136,20 +154,19 @@ static void print_shape_summary(const ShapeDocument *doc) {
 }
 
 static bool write_pgm(const char *path, const uint8_t *mask, int w, int h) {
-    if (!path || !mask || w <= 0 || h <= 0) return false;
-    FILE *f = fopen(path, "wb");
-    if (!f) {
-        fprintf(stderr, "Failed to open %s: %s\n", path, strerror(errno));
+    if (!path || !mask || w <= 0 || h <= 0 ||
+        (size_t)w > (64u * 1024u * 1024u) / (size_t)h) return false;
+    PhysicsSimPersistence save;
+    FILE *stream = physics_sim_persistence_begin_bounded(path,
+        UINT64_C(64) * 1024 * 1024 + 64, &save);
+    if (!stream) return false;
+    size_t cells = (size_t)w * (size_t)h;
+    if (fprintf(stream, "P5\n%d %d\n255\n", w, h) < 0 ||
+        fwrite(mask, 1, cells, stream) != cells) {
+        physics_sim_persistence_abort(&save, stream);
         return false;
     }
-    fprintf(f, "P5\n%d %d\n255\n", w, h);
-    size_t n = (size_t)w * (size_t)h;
-    if (fwrite(mask, 1, n, f) != n) {
-        fclose(f);
-        return false;
-    }
-    fclose(f);
-    return true;
+    return physics_sim_persistence_finish(&save, stream);
 }
 
 int main(int argc, char **argv) {
@@ -200,15 +217,24 @@ int main(int argc, char **argv) {
 
     printf("Rasterized to %dx%d mask.\n", args.grid_w, args.grid_h);
 
+    int result = 0;
     if (args.output_path) {
-        if (write_pgm(args.output_path, mask, args.grid_w, args.grid_h)) {
+        struct stat input, output;
+        bool overlaps_input = stat(args.input_path, &input) == 0 &&
+            lstat(args.output_path, &output) == 0 &&
+            input.st_dev == output.st_dev && input.st_ino == output.st_ino;
+        if (overlaps_input) {
+            fprintf(stderr, "Failed to write %s: output aliases shape input\n", args.output_path);
+            result = 1;
+        } else if (write_pgm(args.output_path, mask, args.grid_w, args.grid_h)) {
             printf("Wrote %s\n", args.output_path);
         } else {
             fprintf(stderr, "Failed to write %s\n", args.output_path);
+            result = 1;
         }
     }
 
     free(mask);
     ShapeDocument_Free(&doc);
-    return 0;
+    return result;
 }

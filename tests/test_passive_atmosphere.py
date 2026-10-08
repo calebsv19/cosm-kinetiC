@@ -8,8 +8,9 @@ import subprocess
 import tempfile
 import unittest
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from passive_atmosphere import atmosphere_worker_path,worker_subprocess_descriptors
 from passive_atmosphere import run,validate,SCHEMA
-WORKER=ROOT/'build/passive-atmosphere/physics_sim_passive_worker'
+WORKER=atmosphere_worker_path('passive')
 
 def request(n=8,dt=.01,steps=1,velocity=(0,0,0),diffusion=0):
     count=n**3;zero=[0.]*count
@@ -101,11 +102,11 @@ class PassiveTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);src=root/'request.json';out=root/'result.json';src.write_text(json.dumps(request()))
             cmd=[sys.executable,'-B',str(ROOT/'scripts/passive_atmosphere.py'),'--request',str(src),'--output',str(out)]
-            accepted=subprocess.run(cmd,capture_output=True,text=True);self.assertEqual(accepted.returncode,0,accepted.stderr)
-            before=out.read_bytes();retry=subprocess.run(cmd,capture_output=True,text=True)
+            accepted=subprocess.run(cmd,capture_output=True,text=True,pass_fds=worker_subprocess_descriptors());self.assertEqual(accepted.returncode,0,accepted.stderr)
+            before=out.read_bytes();retry=subprocess.run(cmd,capture_output=True,text=True,pass_fds=worker_subprocess_descriptors())
             self.assertNotEqual(retry.returncode,0);self.assertEqual(before,out.read_bytes())
             src.write_text(src.read_text().replace('"dt_s": 0.01','"dt_s": true'))
-            rejected=subprocess.run(cmd[:-1]+[str(root/'rejected.json')],capture_output=True,text=True)
+            rejected=subprocess.run(cmd[:-1]+[str(root/'rejected.json')],capture_output=True,text=True,pass_fds=worker_subprocess_descriptors())
             self.assertNotEqual(rejected.returncode,0);self.assertFalse((root/'rejected.json').exists())
 
     def test_malformed_and_native_rejection(self):

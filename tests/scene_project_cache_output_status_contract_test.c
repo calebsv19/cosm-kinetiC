@@ -1,4 +1,5 @@
 #include "app/scene_project_cache_output.h"
+#include "export/volume_frame_vf3d_contract.h"
 
 #include "physics_sim_test_support.h"
 
@@ -16,12 +17,19 @@ static void cleanup_project(const char *root) {
     char path[512];
     snprintf(path, sizeof(path), "%s/assets/physics/active/scene_bundle.json", root);
     physics_sim_test_remove_file_if_exists(path);
+    snprintf(path, sizeof(path), "%s/assets/physics/active/manifest.json", root);
+    physics_sim_test_remove_file_if_exists(path);
     snprintf(path, sizeof(path), "%s/assets/physics/active", root);
     physics_sim_test_remove_dir_if_exists(path);
     snprintf(path, sizeof(path), "%s/assets/physics", root);
     physics_sim_test_remove_dir_if_exists(path);
     snprintf(path, sizeof(path), "%s/assets/vf3d/active/manifest.json", root);
     physics_sim_test_remove_file_if_exists(path);
+    for (int i = 0; i < 3; ++i) {
+        snprintf(path, sizeof(path), "%s/assets/vf3d/active/frame_%06d.vf3d", root, 2+i*4);
+        physics_sim_test_remove_file_if_exists(path);
+    }
+
     snprintf(path, sizeof(path), "%s/assets/vf3d/active", root);
     physics_sim_test_remove_dir_if_exists(path);
     snprintf(path, sizeof(path), "%s/assets/vf3d", root);
@@ -70,20 +78,30 @@ static bool create_minimal_project(const char *root) {
 
 static bool create_active_cache_artifact_dirs(const char *root) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/assets", root);
-    if (!ensure_dir_existing_ok(path)) return false;
-    snprintf(path, sizeof(path), "%s/assets/vf3d", root);
-    if (!ensure_dir_existing_ok(path)) return false;
-    snprintf(path, sizeof(path), "%s/assets/vf3d/active", root);
-    if (!ensure_dir_existing_ok(path)) return false;
+    const char *dirs[] = {"assets", "assets/vf3d", "assets/vf3d/active", "assets/physics", "assets/physics/active"};
+    for (size_t i = 0; i < sizeof(dirs)/sizeof(dirs[0]); ++i) {
+        snprintf(path, sizeof(path), "%s/%s", root, dirs[i]); if (!ensure_dir_existing_ok(path)) return false;
+    }
+    const char *manifest = "{\"manifest_version\":2,\"frame_contract\":\"vf3d\",\"space_mode\":\"3d\",\"grid_w\":1,\"grid_h\":1,\"grid_d\":1,\"frames\":[{\"frame_index\":2,\"path\":\"frame_000002.vf3d\",\"frame_contract\":\"vf3d\"},{\"frame_index\":6,\"path\":\"frame_000006.vf3d\",\"frame_contract\":\"vf3d\"},{\"frame_index\":10,\"path\":\"frame_000010.vf3d\",\"frame_contract\":\"vf3d\"}]}";
     snprintf(path, sizeof(path), "%s/assets/vf3d/active/manifest.json", root);
-    if (!physics_sim_test_write_text_file(path, "{\n  \"frame_count\": 3\n}\n")) return false;
-    snprintf(path, sizeof(path), "%s/assets/physics", root);
-    if (!ensure_dir_existing_ok(path)) return false;
-    snprintf(path, sizeof(path), "%s/assets/physics/active", root);
-    if (!ensure_dir_existing_ok(path)) return false;
+    if (!physics_sim_test_write_text_file(path, manifest)) return false;
+    snprintf(path, sizeof(path), "%s/assets/physics/active/manifest.json", root);
+    if (!physics_sim_test_write_text_file(path, manifest)) return false;
     snprintf(path, sizeof(path), "%s/assets/physics/active/scene_bundle.json", root);
-    return physics_sim_test_write_text_file(path, "{\n  \"schema\": \"scene_bundle_v1\"\n}\n");
+    if (!physics_sim_test_write_text_file(path, "{\"bundle_type\":\"physics_scene_bundle_v1\",\"bundle_version\":1,\"fluid_source\":{\"kind\":\"manifest\",\"path\":\"manifest.json\",\"contract\":\"vf3d\"}}")) return false;
+    for (int i = 0; i < 3; ++i) {
+        VolumeFrameHeaderVf3dV1 header = {0}; header.magic = 0x56463344; header.version = 1;
+        header.grid_w = header.grid_h = header.grid_d = 1; header.frame_index = (uint64_t)(2+i*4);
+        header.solid_mask_crc32 = UINT32_C(2166136261)*UINT32_C(16777619);
+        header.dt_seconds = 1.0/60.0; header.voxel_size = header.scene_up_z = 1;
+        unsigned char payload[21] = {0};
+        snprintf(path, sizeof(path), "%s/assets/vf3d/active/frame_%06d.vf3d", root, 2+i*4);
+        FILE *file = fopen(path, "wb"); if (!file) return false;
+        bool ok = fwrite(&header, sizeof(header), 1, file) == 1 && fwrite(payload, sizeof(payload), 1, file) == 1;
+        if (fclose(file) != 0) ok = false;
+        if (!ok) return false;
+    }
+    return true;
 }
 
 static bool test_project_without_cache_reports_command(void) {

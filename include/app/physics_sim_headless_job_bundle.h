@@ -4,6 +4,7 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdio.h>
 
 #include "core_headless_job.h"
 
@@ -26,6 +27,10 @@ bool physics_sim_headless_job_bundle_write(const char *job_json_path,
                                            const CoreHeadlessJobEnvelope *envelope,
                                            char *out_diagnostics,
                                            size_t out_diagnostics_size);
+/* Serialize to a caller-owned stream; no flush, close or destination mutation. */
+bool physics_sim_headless_job_report_serialize(FILE *file,
+    const CoreHeadlessJobReport *report, const CoreHeadlessJobArtifact *artifacts,
+    size_t artifact_count);
 bool physics_sim_headless_job_report_write(const char *report_path,
                                            const CoreHeadlessJobReport *report,
                                            const CoreHeadlessJobArtifact *artifacts,

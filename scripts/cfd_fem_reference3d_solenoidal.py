@@ -8,7 +8,6 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse.linalg import LinearOperator, minres
 from skfem import MeshTet, FacetBasis, LinearForm, asm
-from pyamg import smoothed_aggregation_solver
 from cfd_reference3d_p3 import alfeld_split
 from cfd_reference3d_stokes_pair import assemble_pair, mixed_matrix
 from cfd_reference3d_traction import traction
@@ -73,6 +72,7 @@ def reference(length=4.,body=True,count=2,split=False,n=4,mesh_only=False,snapsh
     def inlet(v,w):return v
     f=asm(inlet,FacetBasis(mesh,ub.elem,facets=mesh.boundaries['inlet'],intorder=6))
     rhs=np.r_[f[free],np.zeros(2*len(free)+pb.N)];rhs_norm=np.linalg.norm(rhs)
+    from pyamg import smoothed_aggregation_solver
     pc=smoothed_aggregation_solver(A[free][:,free],max_coarse=100,symmetry='symmetric',
         presmoother=('gauss_seidel',{'sweep':'symmetric'}),
         postsmoother=('gauss_seidel',{'sweep':'symmetric'})).aspreconditioner()

@@ -114,16 +114,20 @@ bool ShapeDocument_SaveToJsonFile(const ShapeDocument* doc,
     return n == len;
 }
 
-bool ShapeDocument_LoadFromJsonFile(const char* path,
-                                    ShapeDocument* outDoc) {
+bool ShapeDocument_LoadFromJsonFile(const char* path, ShapeDocument* outDoc) {
     if (!path || !outDoc) return false;
     memset(outDoc, 0, sizeof(*outDoc));
-
     char* text = ReadWholeFile(path);
     if (!text) return false;
-
-    cJSON* root = cJSON_Parse(text);
+    bool loaded = ShapeDocument_LoadFromJsonText(text, outDoc);
     free(text);
+    return loaded;
+}
+
+bool ShapeDocument_LoadFromJsonText(const char* text, ShapeDocument* outDoc) {
+    if (!text || !outDoc) return false;
+    memset(outDoc, 0, sizeof(*outDoc));
+    cJSON* root = cJSON_Parse(text);
     if (!root) return false;
 
     cJSON* verItem = cJSON_GetObjectItem(root, "version");

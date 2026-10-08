@@ -2,7 +2,9 @@
 set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT_DIR="${WIND_ORIENTATION_PROBE_OUT_DIR:-$PHYSICS_DIR/tmp/headless_wind_orientation_probe}"
+source "$PHYSICS_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$PHYSICS_DIR" "$0" "$@"
+OUT_DIR="$(physics_fixture_root "$PHYSICS_DIR" headless_wind_orientation_probe "${WIND_ORIENTATION_PROBE_OUT_DIR:-${PHYSICS_SIM_TEST_ROOT:-$PHYSICS_DIR/tmp/tests}}")"
 SCENE="${WIND_ORIENTATION_PROBE_SCENE:-$PHYSICS_DIR/tests/fixtures/runtime_scene_wind_tunnel_3d_mesh_wedge_wide.json}"
 OBJECT_ID="${WIND_ORIENTATION_PROBE_OBJECT_ID:-mesh_wedge_wide}"
 FRAMES="${WIND_ORIENTATION_PROBE_FRAMES:-12}"
@@ -14,7 +16,7 @@ python3 "$PHYSICS_DIR/tools/wind_orientation_probe.py" \
   --runtime-scene "$SCENE" \
   --object-id "$OBJECT_ID" \
   --output-root "$OUT_DIR" \
-  --headless-bin "$PHYSICS_DIR/physics_sim_headless" \
+  --headless-bin "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
   --frames "$FRAMES" \
   --sim-steps-per-frame "$STEPS_PER_FRAME" \
   --grid "$GRID" \

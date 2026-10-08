@@ -5,21 +5,22 @@ SHAPE_MASK_TOOL_SRC   := $(SRC_DIR)/tools/cli/shape_import_tool.c
 SHAPE_ASSET_TOOL_SRC  := $(SRC_DIR)/tools/cli/shape_asset_tool.c
 SHAPE_SANITY_TOOL_SRC := $(SRC_DIR)/tools/cli/shape_sanity_tool.c
 VF2D_PACK_TOOL_SRC := $(SRC_DIR)/tools/cli/vf2d_pack_tool.c
-VF2D_PACK_TOOL_BIN := vf2d_pack_tool
+VF2D_PACK_TOOL_BIN := $(BIN_DIR)/vf2d_pack_tool
 VF2D_DATASET_TOOL_SRC := $(SRC_DIR)/tools/cli/vf2d_dataset_tool.c
-VF2D_DATASET_TOOL_BIN := vf2d_dataset_tool
+VF2D_DATASET_TOOL_BIN := $(BIN_DIR)/vf2d_dataset_tool
 PHYSICS_TRACE_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_trace_tool.c
-PHYSICS_TRACE_TOOL_BIN := physics_trace_tool
+PHYSICS_TRACE_TOOL_BIN := $(BIN_DIR)/physics_trace_tool
 PHYSICS_SIM_HEADLESS_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_sim_headless.c
-PHYSICS_SIM_HEADLESS_TOOL_BIN := physics_sim_headless
+PHYSICS_SIM_HEADLESS_TOOL_BIN := $(BIN_DIR)/physics_sim_headless
 PHYSICS_SIM_JOB_RUNNER_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_sim_job_runner.c
-PHYSICS_SIM_JOB_RUNNER_TOOL_BIN := physics_sim_job_runner
-RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN := runtime_scene_emitter_diag_tool
+PHYSICS_SIM_JOB_RUNNER_TOOL_BIN := $(BIN_DIR)/physics_sim_job_runner
+RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN := $(BIN_DIR)/runtime_scene_emitter_diag_tool
 RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/tools/cli/runtime_scene_emitter_diag_tool.c \
 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
 	$(SRC_DIR)/import/runtime_scene_bridge.c \
 	$(SRC_DIR)/import/runtime_mesh_preview_bridge.c \
+	$(SRC_DIR)/import/runtime_mesh_preview_path_resolver.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_domain.c \
 	$(SRC_DIR)/import/runtime_scene_solver_projection_objects.c \
@@ -104,7 +105,7 @@ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
 	$(SRC_DIR)/physics/rigid/rigid2d.c \
 	$(SRC_DIR)/physics/rigid/rigid2d_collision.c \
 	$(CORE_SCENE_DIR)/src/core_scene.c \
-	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
+	$(CORE_SCENE_COMPILE_SRCS) \
 	$(CORE_SIM_DIR)/src/core_sim.c \
 	$(CORE_MESH_PREVIEW_DIR)/src/core_mesh_preview.c \
 	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
@@ -161,3 +162,24 @@ SHAPE_SHARED_SRCS := \
 	$(SRC_DIR)/import/shape_import.c \
 	$(SRC_DIR)/geo/shape_asset.c \
 	$(TIMER_HUD_DIR)/external/cJSON.c
+
+SHAPE_SANITY_TOOL_BIN := $(BIN_DIR)/shape_sanity_tool
+SHAPE_MASK_TOOL_BIN := $(BIN_DIR)/shape_mask_tool
+SHAPE_ASSET_TOOL_BIN := $(BIN_DIR)/shape_asset_tool
+export PHYSICS_SIM_VF2D_PACK_TOOL_BIN := $(abspath $(VF2D_PACK_TOOL_BIN))
+export PHYSICS_SIM_VF2D_DATASET_TOOL_BIN := $(abspath $(VF2D_DATASET_TOOL_BIN))
+export PHYSICS_SIM_PHYSICS_TRACE_TOOL_BIN := $(abspath $(PHYSICS_TRACE_TOOL_BIN))
+export PHYSICS_SIM_HEADLESS_BIN := $(abspath $(PHYSICS_SIM_HEADLESS_TOOL_BIN))
+export PHYSICS_SIM_JOB_RUNNER_BIN := $(abspath $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN))
+export PHYSICS_SIM_RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN := $(abspath $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN))
+export PHYSICS_SIM_SESSION_WORKER := $(abspath $(SESSION_WORKER_BIN))
+
+# Effective tool compile commands also participate in configuration identity.
+VF2D_PACK_TOOL_CFLAGS = $(CSTD) $(WARN) $(DEBUG) $(CORE_PACK_TOOL_INCS)
+VF2D_DATASET_TOOL_CFLAGS = $(CSTD) $(WARN) $(DEBUG) $(VF2D_DATASET_TOOL_INCS)
+PHYSICS_TRACE_TOOL_CFLAGS = $(CSTD) $(WARN) $(DEBUG) $(PHYSICS_TRACE_TOOL_INCS)
+
+RUNTIME_SCENE_EMITTER_DIAG_TOOL_CFLAGS = $(CFLAGS) \
+    -I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+    -I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/../../shape/external -I$(CORE_IO_DIR)/include \
+    -I/opt/homebrew/Cellar/json-c/0.18/include -I/opt/homebrew/Cellar/json-c/0.18/include/json-c

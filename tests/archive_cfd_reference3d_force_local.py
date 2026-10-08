@@ -8,7 +8,8 @@ from cfd_reference3d_adaptive_mesh import mirror
 from cfd_reference3d_p3 import alfeld_split
 from cfd_reference3d_corner_local_mesh import shape_inverse
 from cfd_reference3d_mesh import edge_distance
-DIAGNOSTIC=next((ROOT/'build/c3d-end-plateau/observer-runs').glob('*/L8-body6-normal-held-outer2-signed-force.json'))
+import os
+DIAGNOSTIC=Path(os.environ["PHYSICS_SIM_FORCE_DIAGNOSTIC"])
 
 class ForceLocal(unittest.TestCase):
     def test_signed_macro_aggregation_and_actual_symmetric_pairs(self):

@@ -2,7 +2,9 @@
 set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT_DIR="$PHYSICS_DIR/tmp/headless_water_object_quality_compare"
+source "$PHYSICS_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$PHYSICS_DIR" "$0" "$@"
+OUT_DIR="$(physics_fixture_root "$PHYSICS_DIR" headless_water_object_quality_compare)"
 SUMMARY_JSON="$OUT_DIR/wtr65_quality_compare_summary.json"
 SUMMARY_TXT="$OUT_DIR/wtr65_quality_compare_summary.txt"
 
@@ -16,7 +18,6 @@ WATER_LEVEL="${WTR65_WATER_LEVEL:-0.58}"
 MAX_OBJECT_ZONE_STDDEV_M="${WTR65_MAX_OBJECT_ZONE_STDDEV_M:-0.010}"
 MAX_OBJECT_ZONE_SLOPE="${WTR65_MAX_OBJECT_ZONE_SLOPE:-0.050}"
 
-rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
 run_profile() {
@@ -26,7 +27,7 @@ run_profile() {
   local steps="$4"
   local profile_root="$OUT_DIR/$label"
 
-  "$PHYSICS_DIR/physics_sim_headless" \
+  "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
     --water-mode \
     --frames "$frames" \
     --sim-steps-per-frame "$steps" \

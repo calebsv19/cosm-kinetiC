@@ -2,6 +2,7 @@ import unittest,sys
 from pathlib import Path
 import numpy as np
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_pressure_column_proxy import columns,stage_admission,diagnostic_reserve,select_scale
 from cfd_reference3d_pressure_complement10 import BalancedPressure
 from cfd_reference3d_pressure_coverage import projected
@@ -23,7 +24,7 @@ class Diagnostic(unittest.TestCase):
   from cfd_reference3d_mixed_workspace import MixedWorkspaceCholesky
   from cfd_reference3d_distributed_p2 import ExactCoarse
   from scipy.sparse import csr_matrix,triu
-  rng,A,_,_=dense_fixture();upper=triu(csr_matrix(A),format='csr');triangle=VectorTriangle(upper,LOCAL);f=MixedWorkspaceCholesky(triangle,LOCAL,pressure_control=False);d=ExactCoarse(upper,R/'build/c3d-distributed-p2/support/coarse.dylib');rhs=rng.normal(size=24);np.testing.assert_allclose(A@d.solve(rhs),rhs,rtol=1e-11,atol=1e-11);self.assertLess(np.linalg.norm(A@f.solve(rhs)-rhs)/np.linalg.norm(rhs),1e-5);self.assertTrue(f.input_unchanged() and d.input_unchanged());f.close();d.close()
+  rng,A,_,_=dense_fixture();upper=triu(csr_matrix(A),format='csr');triangle=VectorTriangle(upper,LOCAL);f=MixedWorkspaceCholesky(triangle,LOCAL,pressure_control=False);d=ExactCoarse(upper,library_path('build/c3d-distributed-p2/support/coarse.dylib'));rhs=rng.normal(size=24);np.testing.assert_allclose(A@d.solve(rhs),rhs,rtol=1e-11,atol=1e-11);self.assertLess(np.linalg.norm(A@f.solve(rhs)-rhs)/np.linalg.norm(rhs),1e-5);self.assertTrue(f.input_unchanged() and d.input_unchanged());f.close();d.close()
  def test_nonlinear_coarse_not_averaged_and_invalid_columns(self):
   Z=np.eye(10);W=np.eye(10);W[0,1]=.1
   with self.assertRaises(ValueError):BalancedPressure(Z,W,np.ones(10))

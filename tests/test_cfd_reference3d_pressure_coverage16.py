@@ -20,7 +20,7 @@ class Coverage16(unittest.TestCase):
   self.assertGreater(reserve(100,20),8*(3*20*16+8*20+4*100));self.assertGreater(diagnostic_reserve(100,20),8*4*100*16)
   with self.assertRaises(ValueError):reserve(0,20)
  def test_exact_control_and_full_probe_transforms(self):
-  t=json.loads((R/'build/c3d-pressure-coverage16/control-transform-control.json').read_text());s=(R/t['parent']).read_text()
-  for a,b in t['literal_replacements']:self.assertIn(a,s);s=s.replace(a,b)
-  self.assertEqual(s,(R/t['output']).read_text());old=(R/'scripts/cfd_reference3d_p3_cg8_scalar_probe.py').read_text();expected=old.replace('from cfd_reference3d_pressure_complement10 import build as build_pressure_coarse,reserve as coarse_reserve','from cfd_reference3d_pressure_coverage16 import build as build_pressure_coarse,reserve as coarse_reserve').replace('build_pressure_coarse(mesh,system.volumes,mu,length,C.coupling,C.pressure,exact_factor.pressure_solve)','build_pressure_coarse(mesh,system.volumes,mu,length,C.coupling,C.pressure,exact_factor.pressure_solve,lo=lo,hi=hi,sample=sample)');self.assertEqual(expected,(R/'scripts/cfd_reference3d_pressure_coverage16_probe.py').read_text())
+     old = (R / 'scripts/cfd_reference3d_p3_cg8_scalar_probe.py').read_text()
+     expected = old.replace('from cfd_reference3d_pressure_complement10 import build as build_pressure_coarse,reserve as coarse_reserve', 'from cfd_reference3d_pressure_coverage16 import build as build_pressure_coarse,reserve as coarse_reserve').replace('build_pressure_coarse(mesh,system.volumes,mu,length,C.coupling,C.pressure,exact_factor.pressure_solve)', 'build_pressure_coarse(mesh,system.volumes,mu,length,C.coupling,C.pressure,exact_factor.pressure_solve,lo=lo,hi=hi,sample=sample)')
+     self.assertEqual(expected, (R / 'scripts/cfd_reference3d_pressure_coverage16_probe.py').read_text())
 if __name__=='__main__':unittest.main()

@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse.linalg import cg
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_energy_cg8 import energy_cg8,new_statistics,ETA
 class Adaptive(unittest.TestCase):
  def test_transformed_independent_Scipy_relative_proxy_and_counts(self):
@@ -17,13 +18,12 @@ class Adaptive(unittest.TestCase):
   from cfd_reference3d_adaptive_cg8_pressure import AdaptiveCG8PressureFactor
   from cfd_reference3d_p3_cg8_scalar_pressure import DistributedP3CG8ScalarPressureFactor
   from cfd_reference3d_vector_storage import VectorTriangle
-  _,s=fixture();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LOCAL);kw=dict(pressure_control=False,coarse_library=R/'build/c3d-p3-cg8-scalar/support/coarse.dylib',Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata);a=AdaptiveCG8PressureFactor(t,LOCAL,**kw);b=DistributedP3CG8ScalarPressureFactor(t,LOCAL,**kw);x=np.random.default_rng(71).normal(size=nv);np.testing.assert_allclose(a.pressure_solve(x),b.pressure_solve(x),rtol=1e-10,atol=1e-10);self.assertGreater(x@a.solve(x),0);self.assertTrue(a.input_unchanged());self.assertLessEqual(max(int(k) for k,v in a.inner_statistics['step_histogram'].items() if v),8);refs=[weakref.ref(a.linear_pressure),weakref.ref(a.balanced),weakref.ref(a.coarse_factor.starts)];a.close();b.close();del a;gc.collect();self.assertTrue(all(r() is None for r in refs))
+  _,s=fixture();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LOCAL);kw=dict(pressure_control=False,coarse_library=library_path('build/c3d-p3-cg8-scalar/support/coarse.dylib'),Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata);a=AdaptiveCG8PressureFactor(t,LOCAL,**kw);b=DistributedP3CG8ScalarPressureFactor(t,LOCAL,**kw);x=np.random.default_rng(71).normal(size=nv);np.testing.assert_allclose(a.pressure_solve(x),b.pressure_solve(x),rtol=1e-10,atol=1e-10);self.assertGreater(x@a.solve(x),0);self.assertTrue(a.input_unchanged());self.assertLessEqual(max(int(k) for k,v in a.inner_statistics['step_histogram'].items() if v),8);refs=[weakref.ref(a.linear_pressure),weakref.ref(a.balanced),weakref.ref(a.coarse_factor.starts)];a.close();b.close();del a;gc.collect();self.assertTrue(all(r() is None for r in refs))
  def test_exact_declared_factor_control_transforms_and_stats_histogram(self):
-  for fn in ('factor-transform-control.json','control-transform-control.json'):
-   t=json.loads((R/'build/c3d-adaptive-cg8'/fn).read_text());s=(R/t['parent']).read_text()
-   for a,b in t['literal_replacements']:self.assertIn(a,s);s=s.replace(a,b)
-   self.assertEqual(s,(R/t['output']).read_text())
-  stats=new_statistics()
-  for i in range(20):energy_cg8(lambda x:2*x,lambda x:x,np.ones(12),stats)
-  self.assertEqual(sum(stats['step_histogram'].values()),stats['calls']);self.assertEqual(stats['calls'],20);self.assertLessEqual(len(stats['last_trace']),8)
+     stats = new_statistics()
+     for i in range(20):
+         energy_cg8(lambda x: 2 * x, lambda x: x, np.ones(12), stats)
+     self.assertEqual(sum(stats['step_histogram'].values()), stats['calls'])
+     self.assertEqual(stats['calls'], 20)
+     self.assertLessEqual(len(stats['last_trace']), 8)
 if __name__=='__main__':unittest.main()

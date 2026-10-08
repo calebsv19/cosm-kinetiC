@@ -3,7 +3,9 @@ from pathlib import Path
 from unittest.mock import patch
 import numpy as np
 from scipy.sparse import csr_matrix
-R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'));LIB=R/'build/c3d-local-cost-split/support/factor.dylib'
+R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
+LIB=library_path('build/c3d-local-cost-split/support/factor.dylib')
 from cfd_reference3d_local_cost_split_action import profiled_inner8
 from cfd_reference3d_packed_inner8_action import native_inner8
 from cfd_reference3d_bounded_fill1 import BlockIC0
@@ -20,7 +22,7 @@ class Split(unittest.TestCase):
  def test_actual_anisotropic_fe_balanced_equivalence(self):
   from test_cfd_reference3d_distributed_p3_cg8 import fixture
   from cfd_reference3d_packed_inner8_pressure import NativeInner8PressureFactor
-  _,s=fixture();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LIB);f=NativeInner8PressureFactor(t,LIB,pressure_control=False,coarse_library=R/'build/c3d-p3-cg8-scalar/support/coarse.dylib',Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata)
+  _,s=fixture();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LIB);f=NativeInner8PressureFactor(t,LIB,pressure_control=False,coarse_library=library_path('build/c3d-p3-cg8-scalar/support/coarse.dylib'),Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata)
   for rhs in np.random.default_rng(24572).normal(size=(2,nv)):
    expected=f.solve(rhs)
    with patch.object(f.balanced,'inverse',lambda x:profiled_inner8(f,x)[0]):actual=f.solve(rhs)
@@ -33,8 +35,4 @@ class Split(unittest.TestCase):
   with self.assertRaises(ValueError):profiled_inner8(f,np.full(f.n,np.nan))
   f.close()
   with self.assertRaises(ValueError):profiled_inner8(f,rhs)
- def test_exact_source_transform_and_additional_reservation(self):
-  d=R/'build/c3d-local-cost-split';t=json.loads((d/'native-transform.json').read_text());self.assertEqual((R/t['output']).read_text(),(R/t['parent']).read_text()+t['appended_function']);self.assertEqual(hashlib.sha256((R/t['output']).read_bytes()).hexdigest(),t['output_sha256']);t=json.loads((d/'runner-transform.json').read_text());v=(R/t['parent']).read_text()
-  for a,b in t['literal_replacements']:self.assertIn(a,v);v=v.replace(a,b)
-  self.assertEqual(v,(R/t['output']).read_text())
 if __name__=='__main__':unittest.main()

@@ -1,0 +1,75 @@
+{
+  "schema": "physics_sim_retention_policy_v1",
+  "version": 2,
+  "age_alone_permits_pruning": false,
+  "classes": {
+    "disposable_build": {
+      "lifetime": "rebuildable",
+      "route": "exact owned clean-plan, then guarded clean"
+    },
+    "fixture_scratch": {
+      "lifetime": "explicit retirement",
+      "route": "verify fixture identity, terminal ownership and exact contents before retirement"
+    },
+    "fixture_visual_output": {
+      "lifetime": "retained",
+      "route": "archive exact payload, read back and review retention eligibility"
+    },
+    "retained_evidence": {
+      "lifetime": "retained",
+      "route": "verify sealed inventory, archive exact payload and rehearse recovery"
+    },
+    "semantic_proof": {
+      "lifetime": "retained",
+      "route": "verify sealed inventory, archive exact payload and rehearse recovery"
+    },
+    "retained_compiler_output": {
+      "lifetime": "retained",
+      "route": "verify sealed inventory, archive exact payload and rehearse recovery"
+    },
+    "retained_contract_proof": {
+      "lifetime": "retained",
+      "route": "verify sealed inventory, archive exact payload and rehearse recovery"
+    },
+    "reference_environment": {
+      "lifetime": "retained prefix",
+      "route": "retain original prefix and require explicit profile retirement and recovery proof"
+    },
+    "tool_storage": {
+      "lifetime": "held",
+      "route": "establish environment/tool ownership and recovery requirements"
+    },
+    "operational_job": {
+      "lifetime": "retained operational",
+      "route": "owner-controlled terminal reconciliation and exact archive coverage"
+    },
+    "package_proof": {
+      "lifetime": "retained",
+      "route": "package/release owner reviews exact archive coverage and recovery"
+    },
+    "local_package_staging": {
+      "lifetime": "retained transaction",
+      "route": "transaction owner resolves publication/recovery state before retirement"
+    },
+    "release_artifact": {
+      "lifetime": "release controlled",
+      "route": "release-control owner decides archive and retirement"
+    },
+    "authenticated_package": {
+      "lifetime": "release controlled",
+      "route": "release-control owner decides authenticated retention"
+    },
+    "installed_package_predecessor": {
+      "lifetime": "recovery controlled",
+      "route": "desktop replacement owner verifies replacement and rollback before retirement"
+    },
+    "unclassified": {
+      "lifetime": "held",
+      "route": "establish ownership and classify exact artifacts; never guess from age or suffix"
+    },
+    "fixture_session": {
+      "lifetime": "retained supervision",
+      "route": "retain invocation and terminal records; reconcile capsule owners and external descendants before retirement"
+    }
+  }
+}

@@ -6,7 +6,12 @@ CORE_IO_SRCS := $(CORE_IO_DIR)/src/core_io.c
 CORE_DATA_SRCS := $(CORE_DATA_DIR)/src/core_data.c
 CORE_PACK_SRCS := $(CORE_PACK_DIR)/src/core_pack.c $(CORE_PACK_DIR)/src/core_pack_vf2d.c $(CORE_PACK_DIR)/src/core_pack_vf3d.c
 CORE_SCENE_SRCS := $(CORE_SCENE_DIR)/src/core_scene.c
-CORE_SCENE_COMPILE_SRCS := $(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c
+CORE_SCENE_COMPILE_SRCS := $(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile.c \
+	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile_dependencies.c \
+	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile_digest.c \
+	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile_payload.c \
+	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile_bundle.c \
+	$(CORE_SCENE_COMPILE_DIR)/src/core_scene_compile_verify.c
 CORE_SCENE_VIEW_SRCS := $(CORE_SCENE_VIEW_DIR)/src/core_scene_view.c
 CORE_MESH_ASSET_SRCS := \
 	$(CORE_MESH_ASSET_DIR)/src/core_mesh_asset.c \
@@ -26,6 +31,7 @@ CORE_HEADLESS_JOB_SRCS := $(CORE_HEADLESS_JOB_DIR)/src/core_headless_job.c
 KIT_VIZ_SRCS := $(KIT_VIZ_DIR)/src/kit_viz.c
 KIT_RENDER_SRCS := \
 	$(KIT_RENDER_DIR)/src/kit_render.c \
+	$(KIT_RENDER_DIR)/src/kit_render_command_validation.c \
 	$(KIT_RENDER_DIR)/src/kit_render_external_text.c \
 	$(KIT_RENDER_DIR)/src/kit_render_backend_null.c \
 	$(KIT_RENDER_DIR)/src/kit_render_backend_vk.c

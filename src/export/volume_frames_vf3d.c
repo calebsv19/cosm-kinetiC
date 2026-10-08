@@ -10,13 +10,8 @@ static const uint32_t VOLUME_VF3D_MAGIC = ('V' << 24) | ('F' << 16) | ('3' << 8)
 static const uint32_t VOLUME_VF3D_VERSION_V1 = 1u;
 
 static uint32_t solid_mask_crc32_fnv1a(const uint8_t *solid_mask, size_t count) {
-    uint32_t hash = 2166136261u;
     if (!solid_mask) return 0u;
-    for (size_t i = 0; i < count; ++i) {
-        hash ^= (uint32_t)solid_mask[i];
-        hash *= 16777619u;
-    }
-    return hash;
+    return volume_frame_vf3d_mask_hash_update(VOLUME_FRAME_VF3D_MASK_HASH_INITIAL, solid_mask, count);
 }
 
 static void json_set_number(cJSON *obj, const char *name, double value) {

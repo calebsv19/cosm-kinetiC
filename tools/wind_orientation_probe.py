@@ -5,11 +5,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
-import subprocess
+import math
+import io
+import time
 import sys
 from pathlib import Path
 from typing import Any
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / 'scripts'))
+from check_clean_root import read_json, json_structure_admitted, unique_object, finite_float, bounded_integer, finite_constant
+from cfd_evidence import admitted_path
+from agent_session.sample_retention import regular
+from agent_session.owned_command import execute
+from wind_probe_lifecycle import attempt, output_parent, record
 
 
 DEFAULT_ORIENTATIONS = (
@@ -54,13 +63,15 @@ def parse_orientation(value: str) -> tuple[str, dict[str, float]]:
         raise argparse.ArgumentTypeError(
             f"orientation {name!r} rotation values must be numeric"
         ) from exc
+    if not all(math.isfinite(v) for v in (x, y, z)):
+        raise argparse.ArgumentTypeError("orientation rotation must be finite")
     return name, {"x": x, "y": y, "z": z}
 
 
 def safe_case_name(name: str) -> str:
     out = []
     for ch in name:
-        if ch.isalnum() or ch in ("-", "_"):
+        if ch.isascii() and (ch.isalnum() or ch in ("-", "_")):
             out.append(ch)
         else:
             out.append("_")
@@ -69,8 +80,8 @@ def safe_case_name(name: str) -> str:
 
 
 def load_json(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+    path = admitted_path(path)
+    data = read_json(path, 2097152)
     if not isinstance(data, dict):
         raise SystemExit(f"{path}: runtime scene root must be an object")
     return data
@@ -247,12 +258,12 @@ def write_oriented_scene(
     if isinstance(base_scene_id, str) and base_scene_id:
         scene["scene_id"] = f"{base_scene_id}_{safe_case_name(orientation_name)}"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(scene, indent=2) + "\n", encoding="utf-8")
+    with output_path.open("x", encoding="utf-8") as stream:
+        stream.write(json.dumps(scene, indent=2, allow_nan=False) + "\n")
     return str(target.get("object_id", "")), applied_rotation
 
 
-def run_headless(args: argparse.Namespace, scene_path: Path, case_dir: Path) -> None:
-    case_dir.mkdir(parents=True, exist_ok=True)
+def run_headless(args: argparse.Namespace, scene_path: Path, case_dir: Path, capsule: Path, descriptors: tuple[int, ...], deadline: float) -> dict[str, Any]:
     cmd = [
         str(args.headless_bin),
         "--runtime-scene",
@@ -273,29 +284,47 @@ def run_headless(args: argparse.Namespace, scene_path: Path, case_dir: Path) -> 
         str(case_dir / "run_summary.json"),
         "--progress",
         str(case_dir / "run_progress.json"),
-        "--overwrite",
         "--save-render-frames",
         "--save-wind-projection-frames",
     ]
-    log_path = case_dir / "headless.log"
-    with log_path.open("w", encoding="utf-8") as log:
-        result = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, check=False)
-    if result.returncode != 0:
-        raise SystemExit(f"headless failed for {scene_path}; see {log_path}")
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise ValueError('Probe whole-workflow wall cap reached')
+    try:
+        outcome = execute(cmd, REPO, capsule / 'logs', case_dir.name, descriptors,
+                          min(remaining, args.wall_cap), args.log_cap)
+    except BaseException as error:
+        record(capsule / 'logs' / (case_dir.name + '.outcome.json'),
+               {'status': 'failed', 'failure': str(error)[:4096], 'command': cmd,
+                'terminal_verification_scope': getattr(error, 'terminal_verification_scope', None),
+                'all_external_descendants_verified_terminal': False})
+        raise
+    record(capsule / 'logs' / (case_dir.name + '.outcome.json'), outcome)
+    return outcome
 
 
 def read_final_metrics(case_dir: Path, frames: int) -> dict[str, Any]:
     timeseries = case_dir / "wind_analysis_timeseries.jsonl"
     if not timeseries.is_file():
         raise SystemExit(f"missing Wind analysis timeseries: {timeseries}")
-    rows = [
-        json.loads(line)
-        for line in timeseries.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
+    rows = []
+    text = regular(admitted_path(timeseries), 8388608).decode('utf-8')
+    for line in io.StringIO(text):
+        if not line.strip():
+            continue
+        if len(rows) >= 10000:
+            raise ValueError('Wind timeseries row bound held')
+        json_structure_admitted(line)
+        row = json.loads(line, object_pairs_hook=unique_object, parse_float=finite_float,
+                         parse_int=bounded_integer, parse_constant=finite_constant)
+        if not isinstance(row, dict) or type(row.get('frame_index')) is not int or not 0 <= row['frame_index'] < frames:
+            raise ValueError('Wind timeseries row/frame schema held')
+        rows.append(row)
     if not rows:
         raise SystemExit(f"empty Wind analysis timeseries: {timeseries}")
     final = max(rows, key=lambda row: int(row.get("frame_index", -1)))
+    if final["frame_index"] != frames - 1:
+        raise ValueError("Wind final frame does not match requested work")
     if not final.get("available"):
         raise SystemExit(f"final Wind analysis row unavailable in {timeseries}")
     if not final.get("object_drag_available"):
@@ -303,9 +332,9 @@ def read_final_metrics(case_dir: Path, frames: int) -> dict[str, Any]:
 
     render_frame = case_dir / "render_frames" / f"frame_{frames - 1:06d}.bmp"
     projection_frame = case_dir / "wind_projection_frames" / f"frame_{frames - 1:06d}.bmp"
-    if not render_frame.is_file() or render_frame.stat().st_size <= 0:
+    if not regular(admitted_path(render_frame), 67108864):
         raise SystemExit(f"missing nonempty final render frame: {render_frame}")
-    if not projection_frame.is_file() or projection_frame.stat().st_size <= 0:
+    if not regular(admitted_path(projection_frame), 67108864):
         raise SystemExit(f"missing nonempty final Wind projection frame: {projection_frame}")
 
     metrics = {
@@ -327,7 +356,7 @@ def read_final_metrics(case_dir: Path, frames: int) -> dict[str, Any]:
         "outlet_throughput",
         "object_drag_pressure_proxy",
     ):
-        if abs(float(metrics[key] or 0.0)) <= 1.0e-8:
+        if not math.isfinite(float(metrics[key] or 0.0)) or abs(float(metrics[key] or 0.0)) <= 1.0e-8:
             raise SystemExit(f"{case_dir.name}: metric {key} is zero/unavailable")
     return metrics
 
@@ -337,6 +366,7 @@ def write_reports(
     results: list[dict[str, Any]],
     report_path: Path,
     json_path: Path,
+    source_scene: dict[str, Any],
 ) -> None:
     payload = {
         "schema": "physics_sim_wind_orientation_probe_v1",
@@ -349,10 +379,11 @@ def write_reports(
         "wind_visual_mode": args.wind_visual_mode,
         "wind_shot_camera": args.wind_shot_camera,
         "rotation_mode": args.rotation_mode,
-        "object_candidates": discover_probe_objects(load_json(args.runtime_scene)),
+        "object_candidates": discover_probe_objects(source_scene),
         "results": results,
     }
-    json_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    with json_path.open("x", encoding="utf-8") as stream:
+        stream.write(json.dumps(payload, indent=2, allow_nan=False) + "\n")
 
     lines = [
         "PhysicsSim Wind orientation probe",
@@ -384,7 +415,8 @@ def write_reports(
             f"{row['wind_projection_frame']}"
         )
     lines.extend(["", f"json_summary: {json_path}"])
-    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    with report_path.open("x", encoding="utf-8") as stream:
+        stream.write("\n".join(lines) + "\n")
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -392,7 +424,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--runtime-scene", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
     parser.add_argument("--object-id", default=None)
-    parser.add_argument("--headless-bin", default="./physics_sim_headless", type=Path)
+    parser.add_argument("--headless-bin", default=REPO / "build/bin/physics_sim_headless", type=Path)
     parser.add_argument("--frames", default=12, type=int)
     parser.add_argument("--sim-steps-per-frame", default=2, type=int)
     parser.add_argument("--grid", default="96x24x24")
@@ -427,12 +459,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Fail unless the runtime scene has active extensions.physics_sim.wind_tunnel.",
     )
-    parser.add_argument("--keep-existing", action="store_true")
+    parser.add_argument("--keep-existing", action="store_true", help="Deprecated compatibility flag; all runs preserve existing attempts.")
+    parser.add_argument("--wall-cap", type=float, default=900)
+    parser.add_argument("--log-cap", type=int, default=67108864)
     args = parser.parse_args(argv)
-    if args.frames <= 0:
-        parser.error("--frames must be positive")
-    if args.sim_steps_per_frame <= 0:
-        parser.error("--sim-steps-per-frame must be positive")
+    if not 1 <= args.frames <= 10000:
+        parser.error("--frames must be between 1 and 10000")
+    if not 1 <= args.sim_steps_per_frame <= 100000:
+        parser.error("--sim-steps-per-frame must be between 1 and 100000")
     if not args.runtime_scene.is_file():
         parser.error(f"--runtime-scene not found: {args.runtime_scene}")
     if not args.list_objects and not args.headless_bin.is_file():
@@ -441,22 +475,24 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         args.orientation = [
             parse_orientation(value) for value in ORIENTATION_PRESETS[args.preset]
         ]
+    if not math.isfinite(args.wall_cap) or not 0 < args.wall_cap <= 3600:
+        parser.error("--wall-cap must be finite, positive and at most 3600 seconds")
+    if not 1 <= args.log_cap <= 67108864:
+        parser.error("--log-cap must be between 1 byte and 64 MiB per case")
+    if not 1 <= len(args.orientation) <= 32:
+        parser.error("one to 32 orientations are required")
+    names = [safe_case_name(name) for name, _ in args.orientation]
+    if len(set(names)) != len(names) or any(len(name) > 64 for name in names):
+        parser.error("orientation names must have unique normalized names of at most 64 characters")
+    args.runtime_scene = admitted_path(args.runtime_scene)
+    args.headless_bin = admitted_path(args.headless_bin)
     return args
 
 
-def main(argv: list[str]) -> int:
-    args = parse_args(argv)
-    source_scene = load_json(args.runtime_scene)
-    if args.list_objects:
-        print(format_object_listing(discover_probe_objects(source_scene)))
-        return 0
-    if args.require_wind_tunnel:
-        require_wind_tunnel(source_scene, args.runtime_scene)
-    if args.output_root.exists() and not args.keep_existing:
-        shutil.rmtree(args.output_root)
-    args.output_root.mkdir(parents=True, exist_ok=True)
-
-    scene_dir = args.output_root / "runtime_scenes"
+def execute_probe(args: argparse.Namespace, source_scene: dict[str, Any], capsule: Path, state: dict[str, Any], descriptors: tuple[int, ...]) -> int:
+    deadline = time.monotonic() + args.wall_cap
+    args.output_root = capsule / 'work'
+    scene_dir = capsule / "runtime_scenes"
     results: list[dict[str, Any]] = []
     for orientation_name, rotation in args.orientation:
         case_name = safe_case_name(orientation_name)
@@ -471,7 +507,7 @@ def main(argv: list[str]) -> int:
             args.rotation_mode,
         )
         case_dir = args.output_root / case_name
-        run_headless(args, scene_path, case_dir)
+        state["commands"].append(run_headless(args, scene_path, case_dir, capsule, descriptors, deadline))
         metrics = read_final_metrics(case_dir, args.frames)
         row = {
             "orientation": orientation_name,
@@ -492,11 +528,37 @@ def main(argv: list[str]) -> int:
 
     report_path = args.output_root / "orientation_probe_summary.txt"
     json_path = args.output_root / "orientation_probe_summary.json"
-    write_reports(args, results, report_path, json_path)
-    print(report_path.read_text(encoding="utf-8"), end="")
-    print(f"physics_sim Wind orientation probe passed: {report_path}")
+    write_reports(args, results, report_path, json_path, source_scene)
     return 0
 
 
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    source_bytes = regular(args.runtime_scene, 2097152)
+    source_scene = load_json(args.runtime_scene)
+    if regular(args.runtime_scene, 2097152) != source_bytes:
+        raise ValueError('Probe scene changed during admission')
+    if args.list_objects:
+        print(format_object_listing(discover_probe_objects(source_scene)))
+        return 0
+    output_parent(REPO, args.output_root)
+    target = find_target_object(source_scene, args.object_id)
+    if args.object_id and sum(isinstance(obj, dict) and obj.get('object_id') == args.object_id for obj in source_scene['objects']) != 1:
+        raise ValueError('Ambiguous probe object identity')
+    if args.rotation_mode == 'relative' and not all(math.isfinite(v) for v in object_rotation(target).values()):
+        raise ValueError('Source rotation must be finite')
+    if args.require_wind_tunnel:
+        require_wind_tunnel(source_scene, args.runtime_scene)
+    with attempt(REPO, args, source_bytes) as (capsule, state, descriptors):
+        result = execute_probe(args, source_scene, capsule, state, descriptors)
+    report_path = args.output_root / 'orientation_probe_summary.txt'
+    print(report_path.read_text(encoding='utf-8'), end='')
+    print(f'physics_sim Wind orientation probe passed: {report_path}')
+    return result
+
+
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    try:
+        raise SystemExit(main(sys.argv[1:]))
+    except (ValueError, OSError) as error:
+        raise SystemExit("Wind probe held: " + str(error))

@@ -5,6 +5,8 @@
 #include "geo/shape_asset.h"
 #include "physics/objects/scene_object_base.h"
 
+// Output must be initialized with mask == NULL. Failure leaves it unchanged.
+// Admission bounds grid allocation, typed geometry and total raster work.
 // Build a PhysicsObject from a ShapeAsset and SceneObjectBase transform.
 // Assumes base.position is normalized (0..1) in grid space and rotation is radians.
 // extra_opts can override margin/stroke/center_fit; position/rotation/scale

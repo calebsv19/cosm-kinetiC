@@ -21,8 +21,8 @@ make -C physics_sim physics_sim_headless
 
 Expected output:
 
-- standalone clone: `physics_sim_headless`
-- CodeWork workspace parent: `physics_sim/physics_sim_headless`
+- standalone clone: `build/bin/physics_sim_headless`
+- CodeWork workspace parent: `physics_sim/build/bin/physics_sim_headless`
 
 This proves the local source checkout can build the supported headless
 entrypoint. It does not prove desktop packaging, notarization, website
@@ -43,7 +43,7 @@ make -C physics_sim test-physics-sim-headless-water-mode
 Equivalent direct command shape in a standalone clone:
 
 ```bash
-./physics_sim_headless \
+./build/bin/physics_sim_headless \
   --water-mode \
   --frames 2 \
   --sim-steps-per-frame 1 \
@@ -55,21 +55,23 @@ Equivalent direct command shape in a standalone clone:
 ```
 
 From the CodeWork workspace parent, the binary path is
-`physics_sim/physics_sim_headless` and the output root is
+`physics_sim/build/bin/physics_sim_headless` and the output root is
 `physics_sim/tmp/headless_water_mode`.
 
-Expected files:
+Make smoke outputs are retained in the printed directory
+`tmp/tests/headless_water_mode-<unique>/work` (or below TEST_TMP_DIR).
+The owner receipt is one level above work. Expected files below that directory:
 
-- `tmp/headless_water_mode/run_summary.json`
-- `tmp/headless_water_mode/run_progress.json`
-- `tmp/headless_water_mode/volume_frames/Water Basin/manifest.json`
-- `tmp/headless_water_mode/volume_frames/Water Basin/scene_bundle.json`
-- `tmp/headless_water_mode/volume_frames/Water Basin/water_manifest_v1.json`
-- `tmp/headless_water_mode/volume_frames/Water Basin/water_surface_000000.json`
-- `tmp/headless_water_mode/volume_frames/Water Basin/frame_000000.vf3d`
-- `tmp/headless_water_mode/volume_frames/Water Basin/frame_000000.pack`
+- `run_summary.json`
+- `run_progress.json`
+- `volume_frames/Water Basin/manifest.json`
+- `volume_frames/Water Basin/scene_bundle.json`
+- `volume_frames/Water Basin/water_manifest_v1.json`
+- `volume_frames/Water Basin/water_surface_000000.json`
+- `volume_frames/Water Basin/frame_000000.vf3d`
+- `volume_frames/Water Basin/frame_000000.pack`
 
-From the CodeWork workspace parent these paths are under `physics_sim/tmp/`.
+From the CodeWork workspace parent fixture capsules are under `physics_sim/tmp/tests/`.
 
 Required checks:
 
@@ -114,7 +116,7 @@ Equivalent direct command shape in a standalone clone:
 mkdir -p tmp
 cp -R tests/fixtures/scene_project_cache_output_minimal tmp/scene_project_cache_output_minimal
 PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-test-0001 \
-./physics_sim_headless \
+./build/bin/physics_sim_headless \
   --scene-project tmp/scene_project_cache_output_minimal \
   --frames 1 \
   --grid 8x8x8 \
@@ -122,7 +124,8 @@ PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-test-0001 \
   --overwrite
 ```
 
-The Make fixture copies those inputs to a generated temp project before running
+The Make fixture copies those inputs to a fresh invocation directory below
+TEST_TMP_DIR before running
 the same cache-output shape, so source fixtures are not modified.
 
 Expected files:
@@ -185,3 +188,19 @@ submission path. There is no public remote submission API in this contract.
 
 Do not switch to desktop packaging, worker packages, website deploys, registry
 edits, or remote hosts to debug these first-start proofs.
+
+Fixture lifecycle: every invocation allocates a new owned capsule. Existing
+parents are preserved, and job smokes store jobs inside their own capsule rather
+than build/agent_runs. Diagnostics remain after failures. Normal clean does not
+prune fixture capsules. Explicit output-directory overrides select a parent for a
+new child; scratch parents must stay inside checkout/tmp. Long visual proofs have
+separate resource requirements and are not first-start checks.
+
+
+## Optional read-only setup preflight
+
+In the hardened Main Edit source lane, use `make BUILD_DIR=build/my-current-proof doctor`
+to inspect prerequisite and cleanup readiness before building. See
+[local doctor](local_doctor.md) for the reference profile and interpretation.
+Doctor installs nothing and does not replace the three first-proof commands.
+The canonical checkout has not adopted this command yet.

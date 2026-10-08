@@ -9,6 +9,7 @@
 #include "import/runtime_scene_bridge.h"
 #include "render/retained_runtime_scene_overlay_geom.h"
 
+#include <errno.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdbool.h>
@@ -48,6 +49,21 @@ SimRuntimeBackend *sim_runtime_backend_2d_create(const AppConfig *cfg,
 
 static void usage(const char *argv0) {
     fprintf(stderr, "usage: %s <runtime_scene.json> [emitter_index]\n", argv0);
+}
+
+/* Bound syntax and range before any scene/configuration work. */
+static bool parse_emitter_index(const char *text, int *out_index) {
+    char *end = NULL;
+    unsigned long value;
+    if (!text || !text[0] || !out_index) return false;
+    for (size_t i = 0; text[i] != '\0'; ++i) {
+        if (i >= 32 || text[i] < '0' || text[i] > '9') return false;
+    }
+    errno = 0;
+    value = strtoul(text, &end, 10);
+    if (errno != 0 || !end || *end != '\0' || value >= MAX_FLUID_EMITTERS) return false;
+    *out_index = (int)value;
+    return true;
 }
 
 static double axis_span(double world_min, double world_max) {
@@ -361,10 +377,10 @@ int main(int argc, char **argv) {
     int emitter_index = 0;
     RuntimeSceneBridgePreflight summary = {0};
     char bootstrap_diagnostics[256];
-    AppConfig cfg = app_config_default();
+    AppConfig cfg = {0};
     FluidScenePreset preset = {0};
     FluidScenePreset selected_preset = {0};
-    const FluidScenePreset *base = scene_presets_get_default();
+    const FluidScenePreset *base = NULL;
     PhysicsSimRuntimeVisualBootstrap visual = {0};
     SimModeRoute route = {
         .backend_lane = SIM_BACKEND_CONTROLLED_3D,
@@ -394,10 +410,14 @@ int main(int argc, char **argv) {
         return 1;
     }
     runtime_scene_path = argv[1];
-    if (argc == 3) {
-        emitter_index = atoi(argv[2]);
+    if (argc == 3 && !parse_emitter_index(argv[2], &emitter_index)) {
+        fprintf(stderr, "runtime_scene_emitter_diag_tool: invalid emitter_index; expected decimal 0..%d (at most 32 digits)\n",
+                MAX_FLUID_EMITTERS - 1);
+        return 1;
     }
 
+    cfg = app_config_default();
+    base = scene_presets_get_default();
     preset = base ? *base : (FluidScenePreset){0};
     ok = runtime_scene_bridge_apply_file(runtime_scene_path, &cfg, &preset, &summary);
     if (!ok) {

@@ -4,21 +4,25 @@ import json
 from pathlib import Path
 import struct
 import numpy as np
-from run_cfd_native_accuracy_regression import execute,require,save,sha
+from cfd_run_support import compile_probe, execute,require,save,sha
 ROOT=Path(__file__).resolve().parents[1]
-FILES=('scripts/check_cfd_native_cube_readback.py','scripts/run_cfd_native_accuracy_regression.py',
+from cfd_evidence import experiment_root, seal_bundle, verify_bundle, portable_paths
+import shutil
+FILES=('scripts/check_cfd_native_cube_readback.py','scripts/cfd_run_support.py','scripts/cfd_evidence.py','scripts/check_clean_root.py',
  'tests/cfd_obstacle3d_cube_readback_probe.c','tests/cfd_obstacle3d_wall_pressure_candidate.h',
  'src/app/cfd_obstacle3d_mixed.c','src/app/cfd_obstacle3d.c','src/app/cfd_obstacle3d_reconstruction.c',
  'src/app/cfd_cartesian3d.c','src/app/cfd_sparse_mg.c','src/app/cfd_memory.c',
  'include/app/cfd_obstacle3d.h','include/app/cfd_mixed3d.h','include/app/cfd_cartesian3d.h','include/app/cfd_sparse_mg.h','include/app/cfd_memory.h')
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('receipt',type=Path);args=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('receipt',type=Path);p.add_argument('--output',type=Path,required=True);args=p.parse_args()
  receipt=args.receipt.resolve();row=json.loads(receipt.read_text());require(row['status']=='completed_native_cube_pressure_comparison','Successful terminal field')
- c=row['control'];directory=receipt.parent/'readback';directory.mkdir(exist_ok=False);frozen=directory/'source'
+ verify_bundle(receipt.parent)
+ c=row['control'];directory=experiment_root(ROOT,args.output);require(not directory.is_relative_to(receipt.parent),'Readback output cannot mutate input bundle');directory.mkdir(parents=True,exist_ok=False);frozen=directory/'source'
  sources={q:sha(ROOT/q) for q in FILES}
  for q,h in sources.items():
   file=frozen/q;file.parent.mkdir(parents=True,exist_ok=True);file.write_bytes((ROOT/q).read_bytes());require(sha(file)==h,'Freeze drift')
- binary=receipt.parent/'field.bin';require(sha(binary)==row['artifact_sha256']['field.bin'],'Field identity')
+ shutil.copy2(receipt,directory/'input-receipt.json');shutil.copy2(receipt.parent/'field.bin',directory/'field.bin')
+ binary=directory/'field.bin';require(sha(binary)==row['artifact_sha256']['field.bin'],'Field identity')
  contract=dict(source_sha256=sources,input_receipt_sha256=sha(receipt),input_binary_sha256=sha(binary),owned_cap_bytes=1024**3,
   rss_cap_bytes=1536*1024**2,wall_cap_s=180,complete_momentum_max=1e-11,divergence_max=1e-8,flux_max=1e-9,discrete_momentum_max=1e-9,discrete_energy_max=1e-9)
  save(directory/'contract.json',contract);result=dict(status='failed',processes={},native_operator_changed=False,physical_accuracy_certified=False)
@@ -26,7 +30,7 @@ def main():
   command=['clang','-std=c11','-O2','-Wall','-Wextra','-Werror','-DCFD_MIXED3D_VERIFY','-I'+str(frozen/'include'),str(frozen/'tests/cfd_obstacle3d_cube_readback_probe.c')]
   command += [str(frozen/'src/app'/q) for q in ('cfd_obstacle3d_reconstruction.c','cfd_cartesian3d.c','cfd_sparse_mg.c','cfd_memory.c')]
   command += ['-lm','-o',str(directory/'probe')]
-  result['processes']['compile']=execute(command,directory,'compile',60,1024**3)
+  result['processes']['compile']=compile_probe(command,directory,'compile',60,1024**3)
   result['processes']['readback']=execute([str(directory/'probe'),str(c['n']),str(c['length']),repr(c['pressure_drop_pa']),str(binary),str(directory/'control.json')],directory,'readback',180,1536*1024**2)
   observed=json.loads((directory/'control.json').read_text())
   for key in ('pressure_force_n','viscous_force_n','candidate_pressure_force_n'):np.testing.assert_allclose(observed[key],c[key],rtol=0,atol=1e-13)
@@ -46,6 +50,6 @@ def main():
   result['status']='passed_complete_native_cube_readback'
  except Exception as error:result['failure']=str(error)
  result['artifact_sha256']={str(p.relative_to(directory)):sha(p) for p in sorted(directory.rglob('*')) if p.is_file()}
- save(directory/'receipt.json',result);print(json.dumps(dict(status=result['status'],receipt=str(directory/'receipt.json'),failure=result.get('failure'))))
+ save(directory/'receipt.json',portable_paths(result,directory));seal_bundle(directory);print(json.dumps(dict(status=result['status'],receipt=str(directory/'receipt.json'),failure=result.get('failure'))))
  return 0 if result['status'].startswith('passed') else 1
 if __name__=='__main__':raise SystemExit(main())

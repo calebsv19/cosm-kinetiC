@@ -1,4 +1,5 @@
 """Independent dense inverse, lifecycle and invalid physical-matrix controls."""
+import os
 import sys
 import json
 import hashlib
@@ -7,9 +8,10 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse import csc_matrix,diags
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_accelerate import CholeskyFactor
 ROOT=Path(__file__).resolve().parents[1]
-LIB=ROOT/'build/c3d-cholesky/support/factor.dylib'
+LIB=library_path('build/c3d-cholesky/support/factor.dylib')
 
 
 class SparseCholesky(unittest.TestCase):
@@ -69,5 +71,5 @@ if __name__=='__main__':
     receipt=dict(schema='physics_sim_c3d_cholesky_support_tests_v1',tests_run=result.testsRun,
         successful=result.wasSuccessful(),source_sha256={str(path):digest(path) for path in sources},
         library_path=str(LIB),library_sha256=digest(LIB))
-    (ROOT/'build/c3d-cholesky/support-test-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
+    (LIB.parent.parent/'support-test-receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
     raise SystemExit(0 if result.wasSuccessful() else 1)

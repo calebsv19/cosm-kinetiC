@@ -2,15 +2,16 @@
 set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-OUT_DIR="$PHYSICS_DIR/tmp/headless_water_mode"
+source "$PHYSICS_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$PHYSICS_DIR" "$0" "$@"
+OUT_DIR="$(physics_fixture_root "$PHYSICS_DIR" headless_water_mode)"
 SUMMARY="$OUT_DIR/run_summary.json"
 PROGRESS="$OUT_DIR/run_progress.json"
 RUN_DIR="$OUT_DIR/volume_frames/Water Basin"
 MANIFEST="$RUN_DIR/manifest.json"
 WATER_MANIFEST="$RUN_DIR/water_manifest_v1.json"
 
-rm -rf "$OUT_DIR"
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
   --water-mode \
   --frames 2 \
   --sim-steps-per-frame 1 \

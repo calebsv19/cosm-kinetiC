@@ -36,6 +36,8 @@ const char *physics_sim_resolve_snapshot_output_dir(const char *configured_dir);
 size_t physics_sim_runtime_scene_catalog_roots(const char *configured_input_root,
                                                const char ***out_roots);
 
+/* Fixed runtime graph: existing links/special slots hold before allocation.
+ * Descriptor-relative creation retains partial directories on failure. */
 bool physics_sim_ensure_runtime_dirs(void);
 
 #endif // PHYSICS_SIM_APP_DATA_PATHS_H

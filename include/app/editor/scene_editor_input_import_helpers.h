@@ -12,6 +12,7 @@ bool scene_editor_input_convert_import_to_asset(const char *import_path,
                                                 size_t out_sz);
 bool scene_editor_input_path_contains_import_segment(const char *path, const char *configured_root);
 bool scene_editor_input_add_import_from_picker(SceneEditorState *state, int row);
+bool scene_editor_input_drop_import_from_picker(SceneEditorState *state, int row, float x, float y);
 void scene_editor_input_remove_import_at(SceneEditorState *state, int index);
 
 #endif // SCENE_EDITOR_INPUT_IMPORT_HELPERS_H

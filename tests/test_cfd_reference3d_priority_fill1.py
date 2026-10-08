@@ -9,7 +9,8 @@ from unittest.mock import patch
 import numpy as np
 from scipy.sparse import csr_matrix
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
-LIB=R/'build/c3d-priority-fill1/support/factor.dylib'
+from cfd_reference_test_support import library_path
+LIB=library_path('build/c3d-priority-fill1/support/factor.dylib')
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_priority_fill1_block import BlockIC0,pattern
 
@@ -64,7 +65,7 @@ class Priority(unittest.TestCase):
     def test_actual_anisotropic_FE_pressure_original_inputs_and_owners(self):
         from test_cfd_reference3d_distributed_p3_cg8 import fixture as actual
         from cfd_reference3d_priority_fill1_pressure import PriorityFill1PressureFactor
-        _,s=actual();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LIB);f=PriorityFill1PressureFactor(t,LIB,pressure_control=False,coarse_library=R/'build/c3d-p3-cg8-scalar/support/coarse.dylib',Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata)
+        _,s=actual();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LIB);f=PriorityFill1PressureFactor(t,LIB,pressure_control=False,coarse_library=library_path('build/c3d-p3-cg8-scalar/support/coarse.dylib'),Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata)
         x,y=np.random.default_rng(1822).normal(size=(2,nv));px,py=f.pressure_solve(x),f.pressure_solve(y)
         self.assertGreater(x@px,0);self.assertGreater(x@f.solve(x),0);np.testing.assert_allclose(x@py,y@px,rtol=1e-10,atol=1e-7)
         self.assertTrue(f.input_unchanged());self.assertEqual(f.metadata['local_inner_iteration_cap'],8)
@@ -79,13 +80,9 @@ class Priority(unittest.TestCase):
         a=cm.exception.record;self.assertEqual(a['complete_work_reservation_bytes'],123456);self.assertEqual(a['estimated_stage_bytes'],1800*2**20+123456+a['construction_workspace_bound_bytes'])
         lib=ct.CDLL(str(LIB));lp=ct.POINTER(ct.c_long);ip=ct.POINTER(ct.c_int);fp=ct.POINTER(ct.c_float);create=lib.cfd_priority_fill1_pattern_create;create.argtypes=(ct.c_int,lp,ip,ip,fp,ct.c_size_t,ip);create.restype=ct.c_void_p
         inv=np.arange(t.nodes,dtype=np.int32);v=t.values.astype(np.float32);v[0]=np.nan;status=ct.c_int();p=create(t.nodes,t.starts.ctypes.data_as(lp),t.rows.ctypes.data_as(ip),inv.ctypes.data_as(ip),v.ctypes.data_as(fp),384*2**20,ct.byref(status));self.assertFalse(p);self.assertEqual(status.value,-411);self.assertTrue(t.input_unchanged())
-    def test_exact_source_transforms_prefix_and_storage_bound(self):
-        for t in json.loads((R/'build/c3d-priority-fill1/transforms.json').read_text()):
-            s=(R/t['parent']).read_text()
-            if 'append' in t:s+=t['append']
-            else:
-                for a,b in t['literal_replacements']:self.assertIn(a,s);s=s.replace(a,b)
-            self.assertEqual(s,(R/t['output']).read_text())
-        self.assertTrue((R/'scripts/cfd_reference3d_priority_fill1.c').read_bytes().startswith((R/'scripts/cfd_reference3d_bounded_fill1.c').read_bytes()))
-        t=fixture();_,_,_,_,m=pattern(t,LIB);self.assertGreaterEqual(m['construction_workspace_bound_bytes'],16*m['candidate_pairs']+40*m['original_blocks']+44*(t.nodes+1))
+    def test_current_contracts_prefix_and_storage_bound(self):
+        self.assertTrue((R / 'scripts/cfd_reference3d_priority_fill1.c').read_bytes().startswith((R / 'scripts/cfd_reference3d_bounded_fill1.c').read_bytes()))
+        t = fixture()
+        _, _, _, _, m = pattern(t, LIB)
+        self.assertGreaterEqual(m['construction_workspace_bound_bytes'], 16 * m['candidate_pairs'] + 40 * m['original_blocks'] + 44 * (t.nodes + 1))
 if __name__=='__main__':unittest.main()

@@ -39,11 +39,11 @@ The reference environment is local verification tooling, not a runtime or public
 first-start dependency. The recorded run used Python 3.14.6. From Main Edit:
 
 ```sh
-python3 -m venv build/cfd-reference-venv
-build/cfd-reference-venv/bin/python -m pip install -r scripts/requirements-cfd-reference.txt
-build/cfd-reference-venv/bin/python scripts/cfd_fem_reference.py --output build/s3-independent-reference/stokes.json
-build/cfd-reference-venv/bin/python scripts/cfd_fem_reference.py --grids 128 --output build/s3-independent-reference/stokes-128.json
-build/cfd-reference-venv/bin/python scripts/cfd_fem_reference.py --grids 64 --length 8 --output build/s3-independent-reference/stokes-long.json
+python3 -m venv data/tools/cfd-reference-venv
+data/tools/cfd-reference-venv/bin/python -m pip install -r scripts/requirements-cfd-reference.txt
+data/tools/cfd-reference-venv/bin/python scripts/cfd_fem_reference.py --output build/s3-independent-reference/stokes.json
+data/tools/cfd-reference-venv/bin/python scripts/cfd_fem_reference.py --grids 128 --output build/s3-independent-reference/stokes-128.json
+data/tools/cfd-reference-venv/bin/python scripts/cfd_fem_reference.py --grids 64 --length 8 --output build/s3-independent-reference/stokes-long.json
 make test-cfd-open2d-force-check test-cfd-open2d-obstacle
 make test-cfd-open2d-reference > build/s3-independent-reference/corrected-mac.log
 build/cfd_open2d_reference_test 64 .001 > build/s3-independent-reference/half-re.log

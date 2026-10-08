@@ -4,13 +4,14 @@ import unittest
 from pathlib import Path
 import numpy as np
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_sparse_load import SparseLoad
 from cfd_reference3d_shared_factor import storage_sha,BlockTriangle
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_vector_workspace import VectorWorkspaceCholesky
 from cfd_reference3d_condensed import full_action
 from test_cfd_reference3d_coarse_velocity import system_fixture
-LIB=ROOT/'build/c3d-vector-storage/support/factor.dylib'
+LIB=library_path('build/c3d-vector-storage/support/factor.dylib')
 class Load(unittest.TestCase):
     def test_sparse_dense_signed_zero_tiny_and_all_zero_bits(self):
         rng=np.random.default_rng(1551)

@@ -1,3 +1,4 @@
+#include "app/physics_sim_job_file.h"
 #include "app/physics_sim_job_runner_internal.h"
 
 #include "app/physics_sim_diagnostic_helpers.h"
@@ -5,6 +6,9 @@
 #include "app/physics_sim_json_helpers.h"
 
 #include <stdint.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include "app/physics_sim_headless_output.h"
 #include <string.h>
 #include <unistd.h>
 
@@ -41,7 +45,7 @@ bool read_text_file(const char *path, char **out_text) {
 }
 
 bool write_text_file(const char *path, const char *text) {
-    return physics_sim_write_text_file(path, text);
+    return physics_sim_job_file_text(path, text);
 }
 
 void json_write_string(FILE *file, const char *value) {
@@ -111,26 +115,45 @@ bool build_jobs_root(const char *argv0,
                      const char *jobs_root_override,
                      char *out_jobs_root,
                      size_t out_jobs_root_size) {
-    char resolved[PATH_MAX];
+    char selected[PATH_MAX];
     if (jobs_root_override && jobs_root_override[0]) {
-        if (jobs_root_override[0] == '/') {
-            return copy_string(out_jobs_root, out_jobs_root_size, jobs_root_override);
-        }
-        if (!resolve_real_path(jobs_root_override, resolved, sizeof(resolved))) {
-            return copy_string(out_jobs_root, out_jobs_root_size, jobs_root_override);
-        }
-        return copy_string(out_jobs_root, out_jobs_root_size, resolved);
+        return physics_sim_headless_storage_directory(jobs_root_override, out_jobs_root, out_jobs_root_size);
     }
-    return physics_sim_job_runner_default_jobs_root(argv0, out_jobs_root, out_jobs_root_size);
+    if (!physics_sim_job_runner_default_jobs_root(argv0, selected, sizeof(selected))) return false;
+    return physics_sim_headless_storage_directory(selected, out_jobs_root, out_jobs_root_size);
 }
 
-void build_job_paths(const char *jobs_root,
+static bool local_job_id(const char *id) {
+    if (!id || !id[0]) return false;
+    for (size_t i = 0; ; ++i) {
+        unsigned char c = (unsigned char)id[i];
+        if (!c) return i > 0;
+        if (i >= CORE_HEADLESS_JOB_MAX_ID_LENGTH) return false;
+        bool alphanumeric = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9');
+        if (!alphanumeric && (i == 0 || (c != '-' && c != '_' && c != '.'))) return false;
+    }
+}
+
+static bool metadata_slot(const char *path) {
+    char parent[PATH_MAX], normalized_parent[PATH_MAX]; struct stat st;
+    if (!parent_dir_of(path, parent, sizeof(parent)) ||
+        !physics_sim_headless_storage_directory(parent, normalized_parent, sizeof(normalized_parent)) ||
+        strcmp(parent, normalized_parent) != 0) return false;
+    if (lstat(path, &st) != 0) return errno == ENOENT;
+    return S_ISREG(st.st_mode) && st.st_nlink == 1;
+}
+
+bool build_job_paths(const char *jobs_root,
                      const char *job_id,
                      PhysicsSimDetachedJobPaths *out_paths) {
-    if (!jobs_root || !job_id || !out_paths) return;
+    if (!jobs_root || !local_job_id(job_id) || !out_paths ||
+        strlen(jobs_root) + strlen(job_id) + 64 >= 1024) return false;
     memset(out_paths, 0, sizeof(*out_paths));
     snprintf(out_paths->jobs_root, sizeof(out_paths->jobs_root), "%s", jobs_root);
     snprintf(out_paths->job_root, sizeof(out_paths->job_root), "%s/%s", jobs_root, job_id);
+    char admitted_root[PATH_MAX];
+    if (!physics_sim_headless_storage_directory(out_paths->job_root, admitted_root, sizeof(admitted_root)) ||
+        strcmp(out_paths->job_root, admitted_root) != 0) return false;
     snprintf(out_paths->job_request_path,
              sizeof(out_paths->job_request_path),
              "%s/job_request.json",
@@ -168,6 +191,13 @@ void build_job_paths(const char *jobs_root,
              sizeof(out_paths->result_summary_path),
              "%s/result_summary.json",
              out_paths->job_root);
+    const char *slots[] = {out_paths->job_request_path, out_paths->job_status_path,
+        out_paths->shared_job_path, out_paths->shared_report_path, out_paths->progress_path,
+        out_paths->stdout_log_path, out_paths->stderr_log_path, out_paths->pid_path,
+        out_paths->cancel_request_path, out_paths->result_summary_path};
+    for (size_t i = 0; i < sizeof(slots)/sizeof(slots[0]); ++i)
+        if (!metadata_slot(slots[i])) return false;
+    return true;
 }
 
 bool generate_job_id(char *out_job_id, size_t out_job_id_size) {

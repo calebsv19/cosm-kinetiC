@@ -14,9 +14,10 @@ from pathlib import Path
 import sys
 sys.dont_write_bytecode=True
 ROOT=Path(__file__).resolve().parents[1]
+from cfd_evidence import experiment_root, seal_bundle, portable_paths, resolve_artifact, verify_bundle
 sys.path.insert(0,str(ROOT/'scripts/agent_session'))
 from preview import image_content
-from run_cfd_native_accuracy_regression import require,save,sha
+from cfd_run_support import require,save,sha
 
 
 def inspect(fields,status):
@@ -60,18 +61,19 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--receipt',type=Path,required=True)
     p.add_argument('--output',type=Path,required=True);a=p.parse_args()
     receipt=json.loads(a.receipt.read_text())
+    if (a.receipt.parent/'bundle_manifest.json').exists():verify_bundle(a.receipt.parent)
     require(receipt['status']=='completed_local_stationary_box_scene_and_full_equation_readback','Completed box workflow')
     for q,h in receipt['artifact_sha256'].items():require(sha(a.receipt.parent/q)==h,'Retained artifact identity '+q)
     a.output.mkdir(parents=True,exist_ok=False);summaries=[];cards=[]
     for case in receipt['cases']:
         status=case['status'];name=case['run_id'];artifact=next(x for x in case['result']['artifacts'] if x['path'].endswith('channel_fields.json'))
-        require(sha(Path(artifact['path']))==artifact['sha256'],'Exact exported field identity')
-        fields=json.loads(Path(artifact['path']).read_text())['cartesian_fields']
+        require(sha(resolve_artifact(a.receipt.parent,artifact['path']))==artifact['sha256'],'Exact exported field identity')
+        fields=json.loads(resolve_artifact(a.receipt.parent,artifact['path']).read_text())['cartesian_fields']
         preview,probes=inspect(fields,status);pngs={}
         for field in ('speed','pressure_pa'):
             preview['field']=field;image=image_content({'preview':preview})
             target=a.output/(name+'-'+field+'.png');target.write_bytes(base64.b64decode(image['data']))
-            pngs[field]=dict(path=str(target.resolve()),sha256=sha(target),display_range=preview['display_range'].copy())
+            pngs[field]=dict(path=target.name,sha256=sha(target),display_range=preview['display_range'].copy())
         summary=dict(run_id=name,grid=case['grid'],worker_sha256=receipt['worker_sha256'],field_sha256=artifact['sha256'],
                      snapshot=status['physics'],force=status['boundary_force_budget'],assessment=case['assessment'],
                      slice_statistics=preview['statistics'],slice_z_m=preview['slice_z_m'],probes=probes,images=pngs,
@@ -89,6 +91,6 @@ def main():
     (a.output/'index.html').write_text(document)
     result=dict(status='passed_retained_box_field_inspection',source_sha256={q:sha(ROOT/q) for q in ('scripts/inspect_cfd_box_scene.py','scripts/agent_session/preview.py')},receipt=str(a.receipt.resolve()),receipt_sha256=sha(a.receipt),cases=summaries,
                 physical_accuracy_certified=False,artifact_sha256={str(q.relative_to(a.output)):sha(q) for q in a.output.rglob('*') if q.is_file()})
-    save(a.output/'receipt.json',result);print(json.dumps(dict(status=result['status'],report=str((a.output/'index.html').resolve()))))
+    save(a.output/'receipt.json',result);seal_bundle(a.output);print(json.dumps(dict(status=result['status'],report=str((a.output/'index.html').resolve()))))
 
 if __name__=='__main__':main()

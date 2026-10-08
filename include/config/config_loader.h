@@ -10,9 +10,11 @@ typedef struct ConfigLoadOptions {
     bool        allow_missing; // if true, missing file falls back to defaults silently
 } ConfigLoadOptions;
 
-// Loads the simulation configuration from disk.
-// For now, the loader simply seeds the AppConfig with defaults and logs whether
-// the requested file was found. The JSON parser hook will live here later.
+/* Seeds defaults, then consumes an admitted bounded regular configuration file.
+ * allow_missing accepts only actual absence after full path syntax admission.
+ * Linked/special/hardlinked/empty/oversized/changed/NUL-containing inputs hold.
+ * Strict bounded JSON object and optional known-field representations are checked.
+ * Application physical ranges and cross-field relations remain separate. */
 bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts);
 bool config_loader_save(const AppConfig *cfg, const char *path);
 

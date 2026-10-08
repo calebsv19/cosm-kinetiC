@@ -4,11 +4,12 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse import csr_matrix,csc_matrix,triu
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_scalar_workspace import scalar_input,ScalarWorkspaceCholesky
 from cfd_reference3d_shared_factor import storage_sha
 from cfd_reference3d_mixed_workspace import numeric_stage_admission
-LIB=R/'build/c3d-second-normal/scalar-support-factor.dylib'
+LIB=library_path('build/c3d-second-normal/scalar-support-factor.dylib')
 
 def fixture():
     rng=np.random.default_rng(41216);M=rng.normal(size=(12,12));A=M@M.T+12*np.eye(12)

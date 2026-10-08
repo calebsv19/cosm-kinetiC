@@ -1,0 +1,82 @@
+# Picker asset input admission
+
+Main Edit's picker now calls physics_sim_shape_asset_load instead of the legacy
+shared path loader. The host reuses physics_sim_job_json_read: 16 MiB bounded
+nofollow/nonblocking regular single-link reads, admitted ancestors/known macOS
+aliases, size and identity checks, then strict object JSON with 64 levels and
+100,000 structural values. Duplicate decoded keys, NUL, invalid UTF8, trailing
+bytes and nonfinite tokens refuse. Source assets remain supported read inputs.
+This is trusted-local admission, not a hard I/O deadline, public upload sandbox
+or proof against hostile concurrent ancestor substitution.
+
+Typed app policy admits optional integer schema 1 and optional string name up to
+1 MiB, required paths array, path objects with optional boolean closed and required
+points arrays, and point objects with two finite float-representable numeric x/y
+coordinates. Explicit null and consumed key case aliases refuse. Unknown metadata
+remains supported under whole-JSON limits. At most 1,024 paths and 10,000 total
+points reach the legacy indexed-list decoder, bounding its allocations/traversal.
+Empty paths and absent optional fields remain compatible. Failed load leaves
+empty output; callers must supply empty storage. Finite coordinates alone do not
+qualify every downstream raster/transform calculation.
+
+An additive shape_asset_from_json_text API in the local vendored unversioned
+non-core shape module borrows NUL-terminated text and reuses the existing decoder.
+The file API wraps it, preserving legacy parse semantics. The host serializes its
+admitted json-c object and calls the text seam without reopening the filename.
+No second shape wire decoder was added. The shared seam itself remains permissive
+and unbounded; strict policy belongs to PhysicsSim. Its header/implementation
+must be adopted together during future managed vendor reconciliation.
+
+Reuse decision: reuse-extend existing non-core shape decoding; reuse-adopt existing
+PhysicsSim strict JSON reader. core_io read-all lacks this bounded strict contract;
+core_data containers and core_scene schemas do not own this legacy shape grammar;
+presentation kits are irrelevant. No core/kit module API/version changed, no shape
+VERSION was invented, and no ecosystem minimum or accepted upstream release is
+claimed. Canonical shared source/header SHA checks pass unchanged. Local vendored
+README/current-state/compatibility/gap notes record this development candidate.
+
+SHAPE_INPUT_OBJS declares the new ordinary host object for both shape links,
+including content-forced dependency propagation. Native Make fixtures prove a
+preserved-time asset-input header mutation changes both dependent executable
+results and then repeats without writes. App source discovery owns the same
+object; no raw source final-link shortcut was introduced.
+
+Old native reader countertests have 31 failed subcases and one FIFO timeout across
+17 methods. The direct FIFO child was killed/reaped by subprocess timeout; the
+countergate is terminal. Legacy behavior includes linked/oversize admission,
+trailing/duplicate/type/case/numeric/name failures. Not every malformed case was
+accepted; the failed subcases, rather than the number of methods, describe that
+counterevidence. Temporary fixtures preserve real source assets.
+
+Final validation passes 75 distinct methods: 17 actual input, six shared file/text
+decoder compatibility, four serializer, 26 actual picker/drop, 15 CLI publication
+and seven Make/link. Compatibility includes normal/Unicode/empty assets, legacy
+schema/name/closed/case behavior and invalid input. Host tests exercise unsafe
+files, byte/structure/schema/numeric and path/point cardinality bounds, including
+accepted exact cardinality boundaries. Actual picker tests now refuse FIFO and
+linked reimports without working-scene/cache mutation. Serializer allocation and
+late-close contracts remain passing. UI callbacks and allocation faults use the
+previous documented observation/fault seams; full GUI acceptance is not claimed.
+
+Fresh asset-input-admission-20261007 builds both tools and three affected editor
+translation units. Ordinary mask/asset bytes match unchanged retained baseline;
+source remains unchanged. Matching repeat preserves 20 object/binary/manifest
+outputs. Read-only clean preview admits 38 owned files; no cleanup applies.
+All current build/test/proof sessions are terminal. Older raster sanitizer workers
+remain unresolved in earlier retained observations; this slice does not claim
+reaping or restart them.
+
+Startup still calls shared shape_library_load_dir and needs the same host input
+migration. Writer/reader limits also need reconciliation: the converter's output
+policy remains 64 MiB with its earlier flatten limits, while this reader uses
+16 MiB/1,024 paths/10,000 points. A sufficiently large generated asset can therefore
+be published then refused by picker loading; generated bytes remain retained.
+The next slice should align admitted producer output and startup directory input,
+not silently claim all consumers are hardened. Legacy file APIs remain available
+for compatibility. Full recovery, quotas, retirement, canonical/upstream adoption
+and independent newer backup coverage remain open. This packet lies outside the
+frozen seventy-packet backup. No commit, canonical mutation, version change,
+install, release, remote transfer or user-evidence deletion occurred. The full
+TL01-TL13 goal remains incomplete.
+
+Evidence: data/experiments/lifecycle-validation/20261007-asset-input-admission.

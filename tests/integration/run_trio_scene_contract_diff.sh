@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+source "$REPO/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$REPO" "$0" "$@"
 SHARED="$REPO/third_party/codework_shared"
 DIFF_DIR="$SHARED/core/core_scene_compile"
 FIX_DIR="$SHARED/assets/scenes/trio_contract"
 make -C "$DIFF_DIR" scene-contract-diff >/dev/null
 DIFF_BIN="$DIFF_DIR/build/scene_contract_diff"
 "$DIFF_BIN" "$FIX_DIR/scene_runtime_min.json" "$FIX_DIR/scene_runtime_min_reordered.json" >/dev/null
-actual="$(mktemp -t physics_scene_contract).json"
-trap 'rm -f "$actual"' EXIT
+SCRATCH="$(physics_fixture_root "$REPO" trio_scene_contract_diff)"
+actual="$SCRATCH/actual.json"
 python3 - "$FIX_DIR/scene_runtime_min.json" "$actual" <<'PYTHON'
 import json,sys
 value=json.load(open(sys.argv[1]));value['space_mode_default']='3d'

@@ -37,7 +37,6 @@ KIT_UI_OBJS := $(patsubst $(KIT_UI_DIR)/src/%.c,$(BUILD_DIR)/kit_ui/%.o,$(KIT_UI
 
 OBJS := $(OBJS) $(TIMER_HUD_OBJS) $(TIMER_HUD_EXTERNAL_OBJS)
 OBJS += $(CORE_BASE_OBJS) $(CORE_IO_OBJS) $(CORE_DATA_OBJS) $(CORE_PACK_OBJS) $(CORE_SCENE_OBJS) $(CORE_SCENE_COMPILE_OBJS) $(CORE_SCENE_VIEW_OBJS) $(CORE_MESH_ASSET_OBJS) $(CORE_MESH_PREVIEW_OBJS) $(CORE_OBJECT_OBJS) $(CORE_UNITS_OBJS) $(CORE_VIEWPORT2D_OBJS) $(CORE_SCREEN_PICK_OBJS) $(CORE_PANE_OBJS) $(CORE_SIM_OBJS) $(CORE_THEME_OBJS) $(CORE_FONT_OBJS) $(CORE_HEADLESS_JOB_OBJS) $(KIT_VIZ_OBJS) $(KIT_RENDER_OBJS) $(KIT_PANE_OBJS) $(KIT_UI_OBJS)
-DEPS := $(OBJS:.o=.d)
 PHYSICS_SIM_APP_OBJS_NO_MAIN := $(filter-out $(BUILD_DIR)/main.o,$(OBJS))
 PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/app/session_workspace.c \
@@ -88,6 +87,7 @@ PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/app/editor/scene_editor_input_common.c \
 	$(SRC_DIR)/app/editor/scene_editor_input_hit_helpers.c \
 	$(SRC_DIR)/app/editor/scene_editor_input_import_helpers.c \
+	$(SRC_DIR)/app/editor/scene_editor_import_conversion.c \
 	$(SRC_DIR)/app/editor/scene_editor_model.c \
 	$(SRC_DIR)/app/editor/scene_editor_pane_host.c \
 	$(SRC_DIR)/app/editor/scene_editor_panel.c \
@@ -136,11 +136,22 @@ PHYSICS_SIM_HEADLESS_WORKER_OBJS := \
 	$(PHYSICS_SIM_HEADLESS_KIT_RENDER_STUB_OBJ)
 
 SHAPE_MASK_TOOL_OBJ   := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_MASK_TOOL_SRC))
+SHAPE_INPUT_OBJS := $(BUILD_DIR)/import/shape_asset_input.o $(BUILD_DIR)/app/physics_sim_job_json.o
+SHAPE_OUTPUT_OBJS := $(BUILD_DIR)/import/shape_asset_output.o $(BUILD_DIR)/app/physics_sim_persistence.o $(BUILD_DIR)/app/physics_sim_headless_output.o
 SHAPE_ASSET_TOOL_OBJ  := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_ASSET_TOOL_SRC))
 SHAPE_SANITY_TOOL_OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SANITY_TOOL_SRC))
 PHYSICS_SIM_HEADLESS_TOOL_OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(PHYSICS_SIM_HEADLESS_TOOL_SRC))
 PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(PHYSICS_SIM_JOB_RUNNER_TOOL_SRC))
 SHAPE_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SHARED_SRCS))
+SHAPE_SHARED_OBJS := $(patsubst $(TIMER_HUD_DIR)/external/%.c,$(BUILD_DIR)/timer_hud_external/%.o,$(SHAPE_SHARED_OBJS))
+
+# Tool-private objects preserve each direct CLI's existing compile flags.
+VF2D_PACK_TOOL_OBJS := $(patsubst %.c,$(BUILD_DIR)/tools/vf2d_pack/%.o,$(CORE_PACK_TOOL_SRCS))
+VF2D_DATASET_TOOL_OBJS := $(patsubst %.c,$(BUILD_DIR)/tools/vf2d_dataset/%.o,$(VF2D_DATASET_TOOL_SRCS))
+PHYSICS_TRACE_TOOL_OBJS := $(patsubst %.c,$(BUILD_DIR)/tools/physics_trace/%.o,$(PHYSICS_TRACE_TOOL_SRCS))
+
+# Normalize source dot components so Make rebuild targets and receipt paths agree.
+RUNTIME_SCENE_EMITTER_DIAG_TOOL_OBJS := $(foreach source,$(RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS),$(BUILD_DIR)/tools/emitter_diag/$(patsubst $(CURDIR)/%,%,$(abspath $(source:.c=.o))))
 
 $(PHYSICS_SIM_HEADLESS_TOOL_OBJ): $(RELEASE_VERSION_FILE) $(WORKER_VERSION_FILE)
 $(PHYSICS_SIM_HEADLESS_TOOL_OBJ): CFLAGS += \
@@ -153,5 +164,12 @@ FISICS_OBJS := $(patsubst $(BUILD_DIR)/%,$(FISICS_BUILD_DIR)/%,$(OBJS))
 FISICS_VK_RENDERER_SDL_COMPAT_OBJS := $(patsubst $(BUILD_DIR)/%,$(FISICS_BUILD_DIR)/%,$(VK_RENDERER_SDL_COMPAT_OBJS))
 $(FISICS_VK_RENDERER_SDL_COMPAT_OBJS): FISICS_COMPILE_FLAGS += $(VK_RENDERER_SDL_COMPAT_CFLAGS)
 
-# Standalone CLI objects are outside OBJS; still track their header dependencies.
-DEPS += $(PHYSICS_SIM_HEADLESS_TOOL_OBJ:.o=.d) $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ:.o=.d) $(BUILD_DIR)/tools/cli/physics_sim_session_worker.d
+# One declared Clang object set owns dependency admission and config invalidation.
+# Shape support reuses the existing external-object compile/dependency graph.
+CLANG_DEPENDENCY_OBJECTS := $(sort $(filter %.o, \
+    $(OBJS) $(VK_RENDERER_SDL_COMPAT_OBJS) $(SHAPE_SHARED_OBJS) $(SHAPE_OUTPUT_OBJS) $(SHAPE_INPUT_OBJS) \
+    $(VF2D_PACK_TOOL_OBJS) $(VF2D_DATASET_TOOL_OBJS) $(PHYSICS_TRACE_TOOL_OBJS) $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_OBJS) \
+    $(SHAPE_SANITY_TOOL_OBJ) $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_ASSET_TOOL_OBJ) \
+    $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) \
+    $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(BUILD_DIR)/tools/cli/physics_sim_session_worker.o))
+DEPS := $(CLANG_DEPENDENCY_OBJECTS:.o=.d)

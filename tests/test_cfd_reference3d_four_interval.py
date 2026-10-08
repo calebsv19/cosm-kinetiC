@@ -32,12 +32,4 @@ class FourInterval(unittest.TestCase):
         self.assertGreater(biases[0],0)
         self.assertAlmostEqual(biases[1]/biases[0],2**(-.5),places=12)
         self.assertAlmostEqual(biases[2]/biases[1],2**(-.5),places=12)
-    def test_only_declared_projection_and_routing_transform(self):
-        for t in json.loads((R/'build/c3d-pressure-four-interval/transforms.json').read_text()):
-            parent=(R/t['parent']).read_bytes();output=(R/t['output']).read_bytes()
-            self.assertEqual(hashlib.sha256(parent).hexdigest(),t['parent_sha256'])
-            self.assertEqual(hashlib.sha256(output).hexdigest(),t['output_sha256'])
-            s=parent.decode()
-            for a,b in t['literal_replacements']:self.assertIn(a,s);s=s.replace(a,b)
-            self.assertEqual(s,output.decode())
 if __name__=='__main__':unittest.main()

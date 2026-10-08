@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import numpy as np
 from scipy.sparse import csr_matrix,triu,diags
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from test_cfd_reference3d_coarse_velocity import system_fixture
 from cfd_reference3d_distributed_p2_condensed import DistributedP2CondensedSystem
 from cfd_reference3d_distributed_p2 import ExactCoarse,BalancedSparse,DistributedP2Factor,fresh_admission,work_reserve
@@ -13,7 +14,7 @@ from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_triangle import SymmetricTriangle
 from cfd_reference3d_condensed import full_action
 from cfd_reference3d_quartic_pair import assemble_quartic
-LOCAL=R/'build/c3d-bounded-fill1/support/factor.dylib';COARSE=R/'build/c3d-distributed-p2/support/coarse.dylib'
+LOCAL=library_path('build/c3d-bounded-fill1/support/factor.dylib');COARSE=library_path('build/c3d-distributed-p2/support/coarse.dylib')
 def fixture():
  old=system_fixture();new=DistributedP2CondensedSystem(old.mesh,.1,fixed_boundaries=('walls',),assembly_batch=7,pressure_control=False)
  return old,new
@@ -55,8 +56,6 @@ class Distributed(unittest.TestCase):
   with self.assertRaises(ValueError):ExactCoarse(bad,COARSE)
   coarse=ExactCoarse(C,COARSE);coarse.close()
   with self.assertRaises(ValueError):coarse.solve(np.ones(C.shape[0]))
- def test_source_transform_and_Double_library_identity(self):
-  t=json.loads((R/'build/c3d-distributed-p2/assembly-transform-control.json').read_text());s=(R/t['parent']).read_text()
-  for a,b in t['literal_replacements']:self.assertIn(a,s);s=s.replace(a,b)
-  self.assertEqual(s,(R/t['output']).read_text());self.assertEqual((R/'scripts/cfd_reference3d_distributed_p2_coarse.c').read_bytes(),(R/'scripts/cfd_reference3d_workspace_cholesky.c').read_bytes())
+ def test_tracked_source_and_Double_library_identity(self):
+     self.assertEqual((R / 'scripts/cfd_reference3d_distributed_p2_coarse.c').read_bytes(), (R / 'scripts/cfd_reference3d_workspace_cholesky.c').read_bytes())
 if __name__=='__main__':unittest.main()

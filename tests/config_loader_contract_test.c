@@ -2,11 +2,16 @@
 #include "config/config_loader.h"
 
 #include <stdbool.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
 static bool test_grid_depth_roundtrip_and_fallback(void) {
-    const char *path = "/private/tmp/physics_sim_config_loader_contract_test.json";
+    char path[] = "/private/tmp/physics-config-contract-XXXXXX";
+    int descriptor = mkstemp(path);
+    if (descriptor < 0) return false;
+    if (close(descriptor) != 0) return false;
     AppConfig saved = app_config_default();
     AppConfig loaded = {0};
     ConfigLoadOptions opts = {

@@ -1,17 +1,31 @@
 #include "app/preset_io_internal.h"
 
 #include <stdio.h>
+#include <string.h>
+#include "app/physics_sim_persistence.h"
 
 static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
 static const int PRESET_FILE_VERSION = 15;
 
 bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
-    if (!path || !lib) return false;
-    FILE *f = fopen(path, "w");
+    if (!path || !lib || lib->slot_count < 0 || lib->slot_capacity < lib->slot_count ||
+        (lib->slot_count > 0 && !lib->slots)) return false;
+    for (int i = 0; i < lib->slot_count; ++i) {
+        const CustomPresetSlot *slot = &lib->slots[i];
+        if (slot->preset.object_count > MAX_PRESET_OBJECTS ||
+            !memchr(slot->name, 0, sizeof(slot->name)) ||
+            !memchr(slot->preset.structural_scene_path, 0, sizeof(slot->preset.structural_scene_path))) return false;
+        size_t shapes = slot->preset.import_shape_count;
+        if (shapes > MAX_IMPORTED_SHAPES) shapes = MAX_IMPORTED_SHAPES;
+        for (size_t j = 0; j < shapes; ++j) {
+            if (!memchr(slot->preset.import_shapes[j].path, 0, sizeof(slot->preset.import_shapes[j].path))) return false;
+        }
+    }
+    PhysicsSimPersistence save;
+    FILE *f = physics_sim_persistence_begin(path, &save);
     if (!f) return false;
 
     int count = lib->slot_count;
-    if (count < 0) count = 0;
     fprintf(f, "%d %d %d\n", PRESET_FILE_VERSION, lib->active_slot, count);
     for (int i = 0; i < count; ++i) {
         const CustomPresetSlot *slot = &lib->slots[i];
@@ -139,6 +153,5 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         }
     }
 
-    fclose(f);
-    return true;
+    return physics_sim_persistence_finish(&save, f);
 }

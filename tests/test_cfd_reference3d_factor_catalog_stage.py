@@ -5,10 +5,11 @@ from unittest.mock import patch
 from pathlib import Path
 import numpy as np
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from cfd_reference_test_support import library_path
 import cfd_reference3d_factor_catalog_stage_probe as stage
 from cfd_reference3d_allocator_pressure import release_free_pages
 from test_cfd_reference3d_coarse_velocity import system_fixture
-LIB=ROOT/'build/c3d-vector-storage/support/factor.dylib'
+LIB=library_path('build/c3d-vector-storage/support/factor.dylib')
 
 
 class Stage(unittest.TestCase):

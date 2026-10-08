@@ -100,6 +100,7 @@ Command context:
 - `docs/future_intent.md`: next public direction, including the runtime mesh
   validation/authoring boundary and deferred downstream `ray_tracing` `3D`
   ingest/render handoff.
+- Semantic attempts now use [fresh retained proof capsules](semantic_proof_lifecycle.md); fixed `SEMA_*` output paths are legacy hints.
 - migration-friendly verification gates:
   - `make -C physics_sim clang-build`
   - `make -C physics_sim fisics-build`
@@ -484,3 +485,58 @@ No commit, package or installed Desktop capability is implied.
 - [Native evolving atmosphere checkpoint and rollback](evolving_atmosphere.md)
 
 - [Open reservoirs, per-face thermal/smoke budgets and bounded buoyancy](open_atmosphere.md)
+
+## Local numerical evidence lifecycle (2026-10-06)
+
+The active box/cube/native-accuracy retained runners now use configurable
+`data/experiments` storage outside normal cleanup roots; reference tools use
+`data/tools`. Current regressions and exact archive checks are separated in the
+first repaired slice. See [output and cleanup contract](cfd_evidence_lifecycle.md)
+and [validated repair status and remaining gaps](cfd_lifecycle_repair_status.md).
+Missing historical receipts do not block UI source work; fresh consumer and
+relevant compatibility/visual checks remain required.
+
+Local lifecycle and hardening:
+- [Top-level hardening progress and remaining acceptance](top_level_hardening.md)
+
+
+- [Local doctor](local_doctor.md): read-only prerequisite, selected-output and
+  lifecycle preflight in the hardened Main Edit lane; installed/physical acceptance
+  and canonical adoption remain separate.
+
+### Main Edit lifecycle hardening
+
+- [Pilot top-level lifecycle specification](top_level_lifecycle_spec.md): required behavior, owning evidence and open coverage.
+- [Native contract proof lifecycle](native_contract_proof_lifecycle.md): fresh retained box, periodic JSONL and mixed-refinement contract attempts with failure readback.
+- [Implementation progress](top_level_hardening.md): Main Edit proofs and remaining adoption work.
+
+- [Artifact retention policy and audit](artifact_retention_policy.md): read-only bounded inventory, class-specific holds and remaining retirement requirements.
+
+- [Fixture session lifecycle](fixture_session_lifecycle.md): kernel ownership, separate terminal records and remaining retirement gates.
+
+- [Independent archive restore rehearsal](archive_restore_rehearsal.md): exact prepared snapshot recovery and coverage limits.
+
+- `docs/retained_report_lifecycle.md`: fresh convergence report capsules, bounded supervision, exclusive direct report output and retained failure/readback contract.
+
+- [Retained release app transformations](release_app_stage_lifecycle.md): tested
+  copy-on-transform foundation; complete legacy release-pipeline cutover pending.
+
+- [Retained notarization journal](release_notary_lifecycle.md): exact source-level
+  archive/signing binding and same-ID reconciliation; complete pipeline cutover pending.
+
+- [Notary archive and bound stapling](release_notary_archive_lifecycle.md):
+  connected source helpers; complete Make controller and export cutover pending.
+
+- [Bounded ZIP payload verification](release_zip_validation.md): ordinary content
+  and native metadata structure checked before archive publication/notarization.
+
+- [Final artifact and bound refresh](release_final_artifact_lifecycle.md): tested
+  source helpers with fake SDK tools; legacy release entrypoint cutover pending.
+
+Receipt-bound source release Make lifecycle: [release_pipeline_lifecycle.md](release_pipeline_lifecycle.md).
+
+Local session diagnostic preservation: [session_sample_retention.md](session_sample_retention.md).
+
+Trusted-local session storage admission: [session_path_admission.md](session_path_admission.md).
+
+Retained local worker authoring/validation: [session_worker_attempts.md](session_worker_attempts.md).

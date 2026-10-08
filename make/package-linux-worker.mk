@@ -65,12 +65,24 @@ package-linux-worker-host-check:
 	fi
 
 package-linux-worker-clean:
-	@rm -rf "$(LINUX_WORKER_DIR)" "$(LINUX_WORKER_ARCHIVE)" "$(LINUX_WORKER_SHA256)" "$(LINUX_WORKER_ARTIFACT_MANIFEST)"
-	@echo "Removed Linux worker package artifacts: $(LINUX_WORKER_BASENAME)"
+	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(LINUX_WORKER_DIR)" --file "$(LINUX_WORKER_ARCHIVE)" --file "$(LINUX_WORKER_SHA256)" --file "$(LINUX_WORKER_ARTIFACT_MANIFEST)"
+	@echo "No existing Linux worker artifacts selected for removal"
 
 package-linux-worker: package-linux-worker-host-check physics_sim_headless physics-sim-job-runner
+	+@python3 -B scripts/package_transaction.py --root "$(RELEASE_DIR)" \
+		--directory "LINUX_WORKER_DIR=$(LINUX_WORKER_DIR)" \
+		--file "LINUX_WORKER_ARCHIVE=$(LINUX_WORKER_ARCHIVE)" --file "LINUX_WORKER_SHA256=$(LINUX_WORKER_SHA256)" --file "LINUX_WORKER_ARTIFACT_MANIFEST=$(LINUX_WORKER_ARTIFACT_MANIFEST)" \
+		--map "LINUX_WORKER_BIN_DIR=$(LINUX_WORKER_BIN_DIR)" --map "LINUX_WORKER_CONFIG_DIR=$(LINUX_WORKER_CONFIG_DIR)" --map "LINUX_WORKER_DOCS_DIR=$(LINUX_WORKER_DOCS_DIR)" \
+		--map "LINUX_WORKER_MANIFEST_JSON=$(LINUX_WORKER_MANIFEST_JSON)" --map "LINUX_WORKER_MANIFEST=$(LINUX_WORKER_MANIFEST)" \
+		--identity "worker=$(WORKER_VERSION)" --identity "program=$(RELEASE_VERSION)" --identity "platform=$(LINUX_WORKER_PLATFORM)" --identity "slug=$(LINUX_WORKER_SLUG)" --identity "glibc=$(LINUX_WORKER_MAX_GLIBC)" --identity "program-key=$(RELEASE_PROGRAM_KEY)" --identity "capability=$(LINUX_WORKER_PLATFORM_CAPABILITY)" \
+		--input "$(PHYSICS_SIM_HEADLESS_TOOL_BIN)" --input "$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)" --input "$(LINUX_WORKER_ARTIFACT_MANIFEST_WRITER)" --input makefile --input make --input scripts --input tools/packaging --input config --input docs --input README.md --input VERSION --input WORKER_VERSION \
+		--tool "$(SHELL)" --tool tar --tool sha256sum --tool cp --tool chmod --tool python3 \
+		-- $(MAKE) -f makefile _package-linux-worker-assemble
+
+.PHONY: _package-linux-worker-assemble
+_package-linux-worker-assemble:
 	@echo "Preparing Linux worker package..."
-	@rm -rf "$(LINUX_WORKER_DIR)"
+	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(LINUX_WORKER_DIR)" --file "$(LINUX_WORKER_ARCHIVE)" --file "$(LINUX_WORKER_SHA256)" --file "$(LINUX_WORKER_ARTIFACT_MANIFEST)" --declare
 	@mkdir -p "$(LINUX_WORKER_BIN_DIR)" "$(LINUX_WORKER_CONFIG_DIR)" "$(LINUX_WORKER_DOCS_DIR)"
 	@cp "$(PHYSICS_SIM_HEADLESS_TOOL_BIN)" "$(LINUX_WORKER_BIN_DIR)/physics_sim_headless"
 	@cp "$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)" "$(LINUX_WORKER_BIN_DIR)/physics_sim_job_runner"
@@ -118,7 +130,7 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 	@printf '}\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@mkdir -p "$(RELEASE_DIR)"
 	@tar -czf "$(LINUX_WORKER_ARCHIVE)" -C "$(RELEASE_DIR)" "$(LINUX_WORKER_BASENAME)"
-	@sha256sum "$(LINUX_WORKER_ARCHIVE)" > "$(LINUX_WORKER_SHA256)"
+	@cd "$(RELEASE_DIR)" && sha256sum "$(notdir $(LINUX_WORKER_ARCHIVE))" > "$(notdir $(LINUX_WORKER_SHA256))"
 	@python3 "$(LINUX_WORKER_ARTIFACT_MANIFEST_WRITER)" \
 		--archive "$(LINUX_WORKER_ARCHIVE)" \
 		--checksum "$(LINUX_WORKER_SHA256)" \
@@ -132,6 +144,11 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
 	@echo "Linux worker package ready: $(LINUX_WORKER_ARCHIVE)"
 
 package-linux-worker-self-test: package-linux-worker
+	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name linux-worker-self-test --input "$(LINUX_WORKER_DIR)" --input "$(LINUX_WORKER_ARCHIVE)" --input "$(LINUX_WORKER_SHA256)" --input "$(LINUX_WORKER_ARTIFACT_MANIFEST)" -- $(MAKE) -f makefile _package-linux-worker-proof
+
+.PHONY: _package-linux-worker-proof
+_package-linux-worker-proof:
+	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public worker proof target"; exit 2)
 	@test -x "$(LINUX_WORKER_BIN_DIR)/physics_sim_headless" || (echo "Missing physics_sim_headless"; exit 1)
 	@test -x "$(LINUX_WORKER_BIN_DIR)/physics_sim_job_runner" || (echo "Missing physics_sim_job_runner"; exit 1)
 	@test -x "$(LINUX_WORKER_BIN_DIR)/run_worker.sh" || (echo "Missing run_worker.sh"; exit 1)
@@ -162,6 +179,11 @@ package-linux-worker-x86_64-self-test:
 	@$(MAKE) LINUX_WORKER_PLATFORM=linux-x86_64 package-linux-worker-self-test
 
 package-linux-worker-dry-run: package-linux-worker-self-test
+	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name linux-worker-dry-run --input "$(LINUX_WORKER_DIR)" --input "$(LINUX_WORKER_ARCHIVE)" --input "$(LINUX_WORKER_SHA256)" --input "$(LINUX_WORKER_ARTIFACT_MANIFEST)" -- $(MAKE) -f makefile _package-linux-worker-dry-proof
+
+.PHONY: _package-linux-worker-dry-proof
+_package-linux-worker-dry-proof:
+	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public worker proof target"; exit 2)
 	@python3 "$(LINUX_WORKER_PACKAGE_VALIDATOR)" \
 		--stage-dir "$(LINUX_WORKER_DIR)" \
 		--archive "$(LINUX_WORKER_ARCHIVE)" \

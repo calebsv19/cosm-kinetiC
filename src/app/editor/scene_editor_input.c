@@ -388,44 +388,8 @@ void editor_pointer_up(void *user, const InputPointerState *ptr) {
             state->dragging_import_index < state->import_file_count &&
             scene_editor_input_point_in_rect(&(SDL_Rect){state->canvas_x, state->canvas_y, state->canvas_width, state->canvas_height},
                           state->pointer_x, state->pointer_y)) {
-            char full_path[256];
-            snprintf(full_path, sizeof(full_path), "%s", state->import_files[state->dragging_import_index]);
-            bool exists = false;
-            for (size_t i = 0; i < state->working.import_shape_count; ++i) {
-                if (strcmp(state->working.import_shapes[i].path, full_path) == 0) {
-                    exists = true;
-                    scene_editor_select_import(state, (int)i);
-                    break;
-                }
-            }
-            if (!exists && state->working.import_shape_count < MAX_IMPORTED_SHAPES) {
-                const char *selected_path = full_path;
-                char asset_path[512] = {0};
-                if (scene_editor_input_path_contains_import_segment(selected_path, state->cfg.input_root)) {
-                    if (scene_editor_input_convert_import_to_asset(selected_path,
-                                                                   state->cfg.input_root,
-                                                                   asset_path,
-                                                                   sizeof(asset_path))) {
-                        selected_path = asset_path;
-                        scene_editor_refresh_import_files(state);
-                    }
-                }
-                ImportedShape *imp = &state->working.import_shapes[state->working.import_shape_count++];
-                memset(imp, 0, sizeof(*imp));
-                snprintf(imp->path, sizeof(imp->path), "%s", selected_path);
-                imp->shape_id = -1;
-                imp->position_x = state->import_drag_pos_x;
-                imp->position_y = state->import_drag_pos_y;
-                imp->position_z = 0.0f;
-                imp->scale = 1.0f;
-                imp->rotation_deg = 0.0f;
-                imp->density = 1.0f;
-                imp->friction = 0.2f;
-                imp->is_static = true;
-                imp->enabled = true;
-                scene_editor_select_import(state, (int)state->working.import_shape_count - 1);
-                set_dirty(state);
-            }
+            scene_editor_input_drop_import_from_picker(state, state->dragging_import_index,
+                                                       state->import_drag_pos_x, state->import_drag_pos_y);
         }
         state->dragging_import_index = -1;
     }

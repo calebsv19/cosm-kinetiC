@@ -4,12 +4,13 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse import csr_matrix,triu
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_pruned_graph import strength_data,compensated_input,THRESHOLDS
 from cfd_reference3d_pruned_workspace import PrunedWorkspaceCholesky
 from cfd_reference3d_mixed_workspace import numeric_stage_admission
 from cfd_reference3d_shared_factor import storage_sha
-LIB=R/'build/c3d-pruned-graph/support-factor.dylib'
+LIB=library_path('build/c3d-pruned-graph/support-factor.dylib')
 
 def fixture():
     n=5;rng=np.random.default_rng(997);A=np.zeros((3*n,3*n));weights=np.zeros(n)

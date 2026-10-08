@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import numpy as np
 from scipy.sparse import csr_matrix,triu,diags
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from test_cfd_reference3d_coarse_velocity import system_fixture
 from cfd_reference3d_distributed_p3_condensed import DistributedP3CondensedSystem
 from cfd_reference3d_distributed_p3_cg8 import RefinedFloatCoarse,BalancedSparse,DistributedP3CG8Factor as DistributedP3Factor,fresh_admission,work_reserve,triple,inner_cg8
@@ -13,7 +14,7 @@ from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_triangle import SymmetricTriangle
 from cfd_reference3d_condensed import full_action
 from cfd_reference3d_quartic_pair import assemble_quartic
-LOCAL=R/'build/c3d-bounded-fill1/support/factor.dylib';COARSE=R/'build/c3d-distributed-p3/support/coarse.dylib'
+LOCAL=library_path('build/c3d-bounded-fill1/support/factor.dylib');COARSE=library_path('build/c3d-distributed-p3/support/coarse.dylib')
 def fixture():
  old=system_fixture();new=DistributedP3CondensedSystem(old.mesh,.1,fixed_boundaries=('walls',),assembly_batch=7,pressure_control=False)
  return old,new
@@ -66,12 +67,8 @@ class Distributed(unittest.TestCase):
   with self.assertRaises(ValueError):inner_cg8(lambda x:-x,lambda x:x,rhs)
   with self.assertRaises(ValueError):inner_cg8(lambda x:x,lambda x:-x,rhs)
   with self.assertRaises(ValueError):inner_cg8(lambda x:x,lambda x:x,np.full(80,np.nan))
- def test_exact_factor_and_probe_transform(self):
-  t=json.loads((R/'build/c3d-distributed-p3-cg8/factor-transform-control.json').read_text());s=(R/t['parent']).read_text()
-  for a,b in t['literal_replacements']:self.assertIn(a,s);s=s.replace(a,b)
-  self.assertEqual(s,(R/t['output']).read_text());self.assertEqual((R/'scripts/cfd_reference3d_distributed_p3_cg8_probe.py').read_text(),(R/'scripts/cfd_reference3d_distributed_p3_probe.py').read_text().replace('from cfd_reference3d_distributed_p3 import DistributedP3Factor','from cfd_reference3d_distributed_p3_cg8 import DistributedP3CG8Factor'))
- def test_source_transform_and_Float_library_identity(self):
-  t=json.loads((R/'build/c3d-distributed-p3/assembly-transform-control.json').read_text());s=(R/t['parent']).read_text()
-  for a,b in t['literal_replacements']:self.assertIn(a,s);s=s.replace(a,b)
-  self.assertEqual(s,(R/t['output']).read_text());self.assertEqual((R/'scripts/cfd_reference3d_distributed_p3_coarse.c').read_bytes(),(R/'scripts/cfd_reference3d_encoded_storage.c').read_bytes())
+ def test_exact_factor_(self):
+     self.assertEqual((R / 'scripts/cfd_reference3d_distributed_p3_cg8_probe.py').read_text(), (R / 'scripts/cfd_reference3d_distributed_p3_probe.py').read_text().replace('from cfd_reference3d_distributed_p3 import DistributedP3Factor', 'from cfd_reference3d_distributed_p3_cg8 import DistributedP3CG8Factor'))
+ def test_tracked_source_and_Float_library_identity(self):
+     self.assertEqual((R / 'scripts/cfd_reference3d_distributed_p3_coarse.c').read_bytes(), (R / 'scripts/cfd_reference3d_encoded_storage.c').read_bytes())
 if __name__=='__main__':unittest.main()

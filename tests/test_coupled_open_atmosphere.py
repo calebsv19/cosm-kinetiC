@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from passive_atmosphere import atmosphere_worker_path
 from coupled_open_atmosphere import CoupledOpenAtmosphere
 from open_atmosphere import run,SCHEMA
 from surface_sources.growth_fire_v1 import strict_load,sealed
@@ -21,7 +22,7 @@ class JournalTests(unittest.TestCase):
         self.velocity=[.2+.05*math.cos(2*math.pi*((q//nx)%ny+.5)/ny) for q in range(n)]+[.05]*n+[.1]*(n+nx*ny)
         self.boundary={'schema':'physics_sim_open_reservoir_boundary/v1','horizontal':'periodic_xy','vertical':'open_bottom_and_top','predictor_velocity':'zero_normal_gradient','pressure_datum_pa':[0,0],'inflow_temperature_k':[300,300],'inflow_smoke_concentration_kg_m3':[0,0],'scalar_diffusion':'zero_normal_flux'}
         self.buoyancy={'enabled':False,'gravity_m_s2':9.81,'expansion_per_k':1/300,'max_temperature_contrast_fraction':.1}
-        self.worker=ROOT/'build/open-atmosphere/physics_sim_open_atmosphere_worker';self.receiver=self.reopen();self.receiver.initialize();self.receiver.admit(self.frame)
+        self.worker=atmosphere_worker_path('open');self.receiver=self.reopen();self.receiver.initialize();self.receiver.admit(self.frame)
     def tearDown(self):self.temp.cleanup()
     def reopen(self):return CoupledOpenAtmosphere(self.temp.name,self.policy,self.props,self.velocity,.01,self.boundary,self.buoyancy,self.worker)
     def test_explicit_journal_budget_binding_and_bounds(self):

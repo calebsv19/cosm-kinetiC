@@ -33,7 +33,8 @@ static bool restore(CfdOpenAtmosphere3d *s,struct json_object *state) {
 }
 int main(int argc,char **argv) {
     bool movie=argc==6 && !strcmp(argv[2],"--sparse-movie") && !strcmp(argv[4],"--samples-root");
-    bool domain=argc==6 && !strcmp(argv[2],"--sparse-domain-qualification") && !strcmp(argv[4],"--samples-root");
+    bool domain_movie=argc==6 && !strcmp(argv[2],"--sparse-domain-movie") && !strcmp(argv[4],"--samples-root");
+    bool domain=domain_movie || (argc==6 && !strcmp(argv[2],"--sparse-domain-qualification") && !strcmp(argv[4],"--samples-root"));
     bool qualification=domain || movie || (argc==6 && !strcmp(argv[2],"--sparse-qualification") && !strcmp(argv[4],"--samples-root"));
     struct stat st;if((argc!=2 && !qualification) || stat(argv[1],&st) || st.st_size<=0 || st.st_size>256*1024*1024)return 2;
     struct json_object *r=json_object_from_file(argv[1]),*result=NULL;CfdOpenAtmosphere3d s={0};double *input=NULL;int status=1;
@@ -44,7 +45,7 @@ int main(int argc,char **argv) {
     double max_cells=32768,max_work=100000000;
     struct json_object *limits=get(r,"resource_limits");
     if(limits && (!num(get(limits,"max_cells"),&max_cells) || !num(get(limits,"scalar_work_cells"),&max_work) ||
-        floor(max_cells)!=max_cells || max_cells<32768 || max_cells>(domain?524288:262144) || floor(max_work)!=max_work || max_work<100000000 || max_work>(movie?2000000000.:1000000000.)))goto done;
+        floor(max_cells)!=max_cells || max_cells<32768 || max_cells>(domain?524288:262144) || floor(max_work)!=max_work || max_work<100000000 || max_work>(domain_movie?8000000000.:movie?2000000000.:1000000000.)))goto done;
     struct json_object *bytes=get(limits,"numerical_bytes");double numerical_bytes=128*1024*1024;
     if(bytes && (!num(bytes,&numerical_bytes) || floor(numerical_bytes)!=numerical_bytes || numerical_bytes<128*1024*1024 || numerical_bytes>512*1024*1024))goto done;
     memory.limit_bytes=(size_t)numerical_bytes;
@@ -87,8 +88,8 @@ int main(int argc,char **argv) {
     }
     if(qualification) {
         double peaks[4];
-        if(json_object_array_length(steps)!=0 || !plume_sparse_qualification(&s,input,argv[3],argv[5],peaks,movie))goto done;
-        printf("{\"schema\":\"%s\",\"steps\":%d,\"time_s\":%.17g,\"numerical_peak_bytes\":%zu,\"peak_temperature_k\":%.17g,\"peak_velocity_component_m_s\":%.17g,\"peak_divergence_s_inv\":%.17g,\"peak_projection_relative_residual\":%.17g}\n",domain?"physics_sim_sparse_domain_receipt/v1":movie?"physics_sim_sparse_movie_receipt/v1":"physics_sim_sparse_qualification_receipt/v1",s.steps,s.time,memory.peak_bytes,peaks[0],peaks[1],peaks[2],peaks[3]);
+        if(json_object_array_length(steps)!=0 || !plume_sparse_qualification(&s,input,argv[3],argv[5],peaks,movie,domain_movie))goto done;
+        printf("{\"schema\":\"%s\",\"steps\":%d,\"time_s\":%.17g,\"numerical_peak_bytes\":%zu,\"peak_temperature_k\":%.17g,\"peak_velocity_component_m_s\":%.17g,\"peak_divergence_s_inv\":%.17g,\"peak_projection_relative_residual\":%.17g}\n",domain_movie?"physics_sim_sparse_domain_movie_receipt/v1":domain?"physics_sim_sparse_domain_receipt/v1":movie?"physics_sim_sparse_movie_receipt/v1":"physics_sim_sparse_qualification_receipt/v1",s.steps,s.time,memory.peak_bytes,peaks[0],peaks[1],peaks[2],peaks[3]);
         status=0;goto done;
     }
     result=json_object_new_object();json_object_object_add(result,"schema",json_object_new_string("physics_sim_open_atmosphere_fields/v1"));

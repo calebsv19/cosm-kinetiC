@@ -1,6 +1,6 @@
 # PhysicsSim shared UI rollout
 
-Status: preparation checkpoint; UI integration blocked by retained-evidence loss.
+Status: preparation checkpoint; UI integration requires fresh shared consumer and owner qualification. Historical CFD recovery is a separate evidence obligation.
 Date: 2026-10-06 Pacific.
 
 ## Source and preservation
@@ -35,8 +35,9 @@ exist; full recovery is not established. No UI implementation, native capture,
 consumer clean-build acceptance, package rebuild or Desktop refresh occurred.
 Canonical/stable product source and bundles were not changed by this task.
 Maintainer incident and survivor manifest are held in the task evidence directory
-named by the private PhysicsSim work-status entry. Recover retained CFD evidence
-before continuing UI integration. The Main Edit runbook now prohibits broad clean
+named by the private PhysicsSim work-status entry. Preserve surviving evidence and track historical gaps separately. Missing old
+CFD receipts do not block UI integration; require fresh shared consumer build
+and relevant owner compatibility checks. The Main Edit runbook now prohibits broad clean
 and requires fresh task-owned build output.
 
 ## Region acceptance ledger
@@ -68,7 +69,8 @@ authoring takeover, and retain app-owned continuous gestures. Thin visible
 slider/divider geometry must stay independent of input bounds. Queued text
 must have frame-lived backing storage.
 
-After evidence recovery, use a fresh task-owned output directory:
+Use a fresh task-owned output directory and inspect specialized target output
+placement first; not all targets honor BUILD_DIR:
 
 ```sh
 make BUILD_DIR=build/<fresh-task-proof> clang-build
@@ -87,3 +89,8 @@ kinetiC.app, and refuse refresh of a running Main Edit bundle.
 Stop after startup/settings actual-owner and visual checks pass, or at a real
 ownership/enforcement/recovery blocker. Editor/HUD/panes/text adoption remains
 later ledger work. No canonical promotion, release, push or remote worker work.
+
+Build/test/storage repair and fresh qualification are recorded in
+[cfd_lifecycle_repair_status.md](cfd_lifecycle_repair_status.md). The shared
+source import is present; build qualification does not establish UI ownership or
+visual acceptance.

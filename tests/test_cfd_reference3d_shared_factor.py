@@ -1,4 +1,5 @@
 """Full original FE action, symmetric storage and exact prefix inverse proofs."""
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -6,6 +7,7 @@ import numpy as np
 from scipy.sparse import csr_matrix,triu
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
+from cfd_reference_test_support import library_path
 from test_cfd_reference3d_bounded_condensed import fixture
 from cfd_reference3d_condensed import CondensedSystem,full_action
 from cfd_reference3d_bounded_condensed import BoundedCondensedSystem
@@ -13,7 +15,7 @@ from cfd_reference3d_triangle_condensed import TriangleCondensedSystem
 from cfd_reference3d_shared_factor import BlockTriangle,SharedTriangleFactor
 from cfd_reference3d_triangle import SymmetricTriangle
 from cfd_reference3d_quartic_pair import assemble_quartic
-LIB=ROOT/'build/c3d-cholesky/support/factor.dylib'
+LIB=library_path('build/c3d-cholesky/support/factor.dylib')
 
 
 class SharedFactor(unittest.TestCase):

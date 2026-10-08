@@ -122,6 +122,10 @@ Linux desktop package / GUI proof boundary:
 kinetiC-<version>-linux-x86_64-desktop-stable/
   bin/physics-sim-launcher
   bin/physics-sim-bin
+  share/install-desktop-entry.sh
+  share/install-desktop-entry.py
+  share/applications/kinetic.desktop
+  share/icons/hicolor/scalable/apps/kinetic.svg
   resources/config/
   resources/shared/
   resources/shaders/
@@ -310,3 +314,51 @@ new `Contents/MacOS/physics_sim_session_worker` executable as well as the main
 app, launcher and bundled libraries. A clean user launch environment and a real
 packaged desktop/MCP shared-run check remain required release acceptance gates.
 This does not certify the approximate Wind model as physically validated CFD.
+
+## Local staging lifetime hardening (uncommitted Main Edit)
+
+Initial package assembly requires fresh declared output paths and retains any
+predecessor or failed attempt. Output reservations stay outside the app payload.
+Existing staging must be recovered or superseded through the release-control
+attempt contract; local clean does not silently delete it. Installed/Desktop
+replacement and full release-stage transaction qualification remain open.
+
+Desktop refresh source safety and predecessor retention are described in
+[Desktop replacement preservation](desktop_replacement.md). This Main Edit
+implementation has disposable filesystem/recipe proof; real installed-package
+acceptance and canonical adoption remain separate.
+
+The Main Edit Linux assembly lifetime and exact completed reuse contract is
+documented in [retained local package transactions](package_transaction.md).
+Native package and installed acceptance remain separate from its local
+filesystem and disposable recipe proofs.
+
+Package self-test and process-audit output retention now follows the Main Edit
+[package proof lifecycle](package_proof_lifecycle.md). Every invocation preserves
+a fresh capsule; its passed command state is separate from installed acceptance.
+
+
+## Retained per-user Linux desktop installation
+
+The optional installer requires Python 3 and packages a standalone stdlib helper.
+Run `share/install-desktop-entry.sh --plan` to inspect without writes; ordinary
+installation preserves previous entries/icons and publishes one atomic entry
+referencing a verified content-addressed icon generation. Interrupted attempts
+remain under `${XDG_DATA_HOME:-$HOME/.local/share}/PhysicsSim/desktop-entry-installs`;
+resume one exact attempt with `share/install-desktop-entry.sh --recover ID`.
+User edits or mismatched source/snapshots are held. There is no automatic pruning.
+See `linux_desktop_installer_lifecycle.md` for limits and portable fixture evidence.
+This source change is not a fresh Linux package/deployment or desktop-session proof.
+
+
+## Packaged launcher inspection scope
+
+`bin/physics-sim-launcher --print-config` on Linux and
+`Contents/MacOS/physics-sim-launcher --print-config` on macOS inspect requested
+configuration without creating runtime/log/resource/ICD state. Output includes
+`CONFIG_INSPECTION_READ_ONLY=1` and requested-path scope; it does not prove
+writability or a successful launch. Initialization refuses unsafe/blocked
+configured roots rather than silently choosing shared temporary storage. macOS
+ICD generations are fresh and preserve prior files and operator overrides.
+See `package_launcher_lifecycle.md` for source-fixture proof and remaining
+resource-copy/link ownership and installed-platform limitations.

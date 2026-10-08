@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Independent analytic surface-stress and exact affine volume-clipping tests."""
 import json
+import tempfile
 import sys
 import unittest
 from pathlib import Path
@@ -69,7 +70,10 @@ class ReferenceMeasurement(unittest.TestCase):
                     for name,total in [('pressure_force_n',face['pressure_force_n']),('raw_viscous_force_n',face['raw_viscous_force_n'])]:
                         self.assertLess(np.max(np.abs(np.sum([b[name] for b in face['edge_bands']],axis=0)-total)),1e-12)
                 records.append({'length':length,'quadrature_order':order,'pressure_force_n':row['pressure_force_n'],'raw_viscous_force_n':row['raw_viscous_force_n']})
-        path=ROOT/'build/c3d-obstacle/refinement-v2/measurement-known-answer.json'
-        path.write_text(json.dumps({'passed':True,'records':records,'scope':'exact P2 planar shear, affine pressure, analytic closed loads and independent affine clipped-volume controls; Y planes are no-slip'},indent=2)+'\n')
+        with tempfile.TemporaryDirectory(prefix='physics-measurement-') as directory:
+            path=Path(directory)/'measurement-known-answer.json'
+            payload={'passed':True,'records':records,'scope':'exact P2 planar shear, affine pressure, analytic closed loads and independent affine clipped-volume controls; Y planes are no-slip'}
+            path.write_text(json.dumps(payload,indent=2)+'\n')
+            self.assertEqual(json.loads(path.read_text()),payload)
 
 if __name__=='__main__':unittest.main()

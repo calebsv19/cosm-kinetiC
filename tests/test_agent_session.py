@@ -181,6 +181,13 @@ class SessionIntegration(unittest.TestCase):
         for i in range(36):
             self.assertEqual(self.service.run_sample('run',f'extra{i}',resolution=4,wait_ms=5000)['status'],'ready')
         self.assertLessEqual(len(list((self.service.run_dir('run')/'sample_ids').glob('*.json'))),32)
+        history=self.service.run_dir('run')/'sample_history'
+        self.assertEqual(len(list(history.iterdir())),8)
+        self.assertEqual(self.service.run_sample('run','sample0',position=0,wait_ms=5000)['status'],'ready')
+        with self.assertRaises(SessionError):self.service.run_sample('run','sample0',resolution=4)
+        self.control('cancel')
+        result=self.service.run_result('run')
+        self.assertEqual(sum('/sample_history/' in item['path'] for item in result['artifacts']),24)
 
     def test_protocol_end_to_end(self):
         p=subprocess.Popen([sys.executable,str(ROOT/'scripts/physics_sim_session.py'),'--root',self.tmp.name,'--mcp'],

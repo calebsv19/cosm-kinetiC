@@ -2194,3 +2194,13 @@ qualification, not 32-second convergence or hot-fire/production acceptance.
 See `docs/plume_full_duration_qualification.md`.
 
 2026-10-06 explicit tall-domain qualification: `--sparse-domain-qualification` and Python `domain_qualification=True` admit up to 64×64×128 / 524,288 cells, retaining 8 s / 3200 steps / 3 samples / one-billion scalar work / 64 MiB packet bounds and an explicit numerical budget up to 512 MiB. Ordinary/movie admissions retain their previous caps. Optional physical-depth surface mapping preserves conserved horizontal/vertical overlap with explicit layer masks. See `docs/plume_domain_qualification.md`. Full-resolution 0.2-second source/ground/conservation and original-VF3D proof passes; no full-duration domain convergence or remote capability claim.
+
+## Local numerical evidence lifecycle (2026-10-06)
+
+The active box/cube/native-accuracy retained runners now use configurable
+`data/experiments` storage outside normal cleanup roots; reference tools use
+`data/tools`. Current regressions and exact archive checks are separated in the
+first repaired slice. See [output and cleanup contract](cfd_evidence_lifecycle.md)
+and [validated repair status and remaining gaps](cfd_lifecycle_repair_status.md).
+Missing historical receipts do not block UI source work; fresh consumer and
+relevant compatibility/visual checks remain required.

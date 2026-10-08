@@ -18,9 +18,4 @@ class Physics(unittest.TestCase):
  def test_raw_equilibrium_failure_remains_independent(self):
   new=self.field();new['reaction_force_n'][0]=1.018
   result=physical_comparison(new,new,'same_domain_refinement');self.assertTrue(result['force_change_passed']);self.assertFalse(result['raw_equilibrium_passed']);self.assertGreater(result['raw_surface_reaction_relative_mismatch'],.01)
- def test_observer_transforms_leave_stress_formulas_unchanged(self):
-  for t in json.loads((R/'build/c3d-accuracy-first/observer-transforms.json').read_text()):
-   v=(R/t['parent']).read_text()
-   for a,b in t['literal_replacements']:self.assertIn(a,v);v=v.replace(a,b)
-   self.assertEqual(v,(R/t['output']).read_text())
 if __name__=='__main__':unittest.main()

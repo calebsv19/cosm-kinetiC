@@ -2,22 +2,17 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-BUILD_ROOT="$ROOT_DIR/build/$(uname -m)"
-RUNNER="$BUILD_ROOT/tools/cli/physics_sim_job_runner"
-if [[ ! -x "$RUNNER" ]]; then
-  RUNNER="$ROOT_DIR/build/tools/cli/physics_sim_job_runner"
-fi
-if [[ ! -x "$RUNNER" ]]; then
-  RUNNER="$ROOT_DIR/physics_sim_job_runner"
-fi
+RUNNER="${PHYSICS_SIM_JOB_RUNNER_BIN:-$ROOT_DIR/build/bin/physics_sim_job_runner}"
 
 DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
 RUNTIME_SCENE="${PHYSICS_SIM_HEADLESS_RUNTIME_SCENE:-$DEFAULT_RUNTIME_SCENE}"
-JOBS_ROOT="$ROOT_DIR/build/agent_runs/jobs"
-RUN_ROOT="$ROOT_DIR/build/agent_runs/physics_sim/job_runner_policy"
+source "$ROOT_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$ROOT_DIR" "$0" "$@"
+RUN_ROOT="$(physics_fixture_root "$ROOT_DIR" job_runner_policy)"
+JOBS_ROOT="$RUN_ROOT/jobs"
 REQUEST="$RUN_ROOT/request.json"
 OUTPUT_ROOT="$RUN_ROOT/output"
-ERR_DIR="/private/tmp/physics_sim_job_runner_policy"
+ERR_DIR="$RUN_ROOT/errors"
 
 if [[ ! -f "$RUNTIME_SCENE" ]]; then
   echo "missing runtime scene fixture: $RUNTIME_SCENE" >&2
@@ -51,13 +46,13 @@ submit_job() {
 }
 
 mkdir -p "$JOBS_ROOT" "$RUN_ROOT" "$ERR_DIR"
-rm -rf "$OUTPUT_ROOT"
 
 cat >"$REQUEST" <<EOF
 {
   "schema_version": "physics_sim_headless_request_v1",
   "runtime_scene_path": "$RUNTIME_SCENE",
   "output_root": "$OUTPUT_ROOT",
+  "grid": "8x8x8",
   "frames": 1,
   "sim_steps_per_frame": 2,
   "progress_interval": 1,
@@ -115,7 +110,8 @@ cat >"$REQUEST" <<EOF
   "schema_version": "physics_sim_headless_request_v1",
   "runtime_scene_path": "$RUNTIME_SCENE",
   "output_root": "$OUTPUT_ROOT",
-  "frames": 12,
+  "grid": "8x8x8",
+  "frames": 100000,
   "sim_steps_per_frame": 40,
   "progress_interval": 1,
   "save_volume_frames": false,
@@ -144,8 +140,15 @@ test -f "$JOBS_ROOT/$JOB_ID/cancel_requested.flag"
 
 FAKE_JOB_ID="psjob_fake_stalled"
 FAKE_JOB_ROOT="$JOBS_ROOT/$FAKE_JOB_ID"
-rm -rf "$FAKE_JOB_ROOT"
 mkdir -p "$FAKE_JOB_ROOT"
+python3 - "$REQUEST" "$FAKE_JOB_ROOT/job_request.json" <<'PYTHON'
+import json, sys
+with open(sys.argv[1]) as stream:
+    request = json.load(stream)
+request.update(frames=2, sim_steps_per_frame=2)
+with open(sys.argv[2], 'x') as stream:
+    json.dump(request, stream)
+PYTHON
 
 sleep 30 &
 FAKE_PID=$!
@@ -155,11 +158,11 @@ cat >"$FAKE_JOB_ROOT/pid.txt" <<EOF
 $FAKE_PID
 EOF
 
-cat >"$FAKE_JOB_ROOT/run_progress.json" <<'EOF'
+cat >"$FAKE_JOB_ROOT/run_progress.json" <<EOF
 {
   "schema": "physics_sim_headless_run_progress_v2",
   "runtime_scene": "fake_scene_runtime.json",
-  "output_root": "/tmp/fake_output",
+  "output_root": "$OUTPUT_ROOT",
   "frames_requested": 2,
   "frames_completed": 1,
   "frame_index": 1,
@@ -182,7 +185,7 @@ cat >"$FAKE_JOB_ROOT/job_status.json" <<EOF
   "job_id": "$FAKE_JOB_ID",
   "state": "running",
   "stage": "simulating_frame",
-  "request_path": "$REQUEST",
+  "request_path": "$FAKE_JOB_ROOT/job_request.json",
   "output_root": "$OUTPUT_ROOT",
   "progress_path": "$FAKE_JOB_ROOT/run_progress.json",
   "summary_path": "$FAKE_JOB_ROOT/result_summary.json",

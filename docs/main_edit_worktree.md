@@ -1,6 +1,6 @@
 # PhysicsSim Persistent Main Edit Worktree
 
-Last updated: 2026-09-03
+Last updated: 2026-10-06
 
 ## Lane identities
 
@@ -41,7 +41,11 @@ Run focused checks before the broad source/package ladder. Never run broad
 `make clean` in the retained lane: ignored `build/` directories can contain
 irreplaceable numerical fields, audits and frozen workers. Use a fresh,
 task-owned `BUILD_DIR` for clean compilation. Inspect output placement before
-any cleanup; several specialized fixtures still use fixed build paths:
+any cleanup; several specialized fixtures still use fixed build paths. The new
+clean preflight refuses retained artifacts and overlapping protected roots.
+Retained numerical experiments belong in data/experiments, reference tools in
+data/tools. See [evidence lifecycle](cfd_evidence_lifecycle.md). Prove cleanup
+in a disposable fixture, not the survivor build root:
 
 ```sh
 git -C <workspace>/_worktrees/physics_sim_main_edit diff --check

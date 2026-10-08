@@ -405,7 +405,34 @@ done:
     return ok;
 }
 
+static bool test_invalid_save_preserves_predecessor(void) {
+    char path[] = "/tmp/physics-preset-admission-XXXXXX";
+    int fd = mkstemp(path);
+    if (fd < 0) return false;
+    if (write(fd, "original", 8) != 8 || close(fd) != 0) return false;
+    CustomPresetSlot slot = {0};
+    CustomPresetLibrary lib = {.slots = &slot, .slot_count = 1, .slot_capacity = 1};
+    slot.preset.object_count = MAX_PRESET_OBJECTS + 1;
+    bool valid = !preset_library_save(path, &lib);
+    slot.preset.object_count = 0;
+    memset(slot.name, 'x', sizeof(slot.name));
+    valid = valid && !preset_library_save(path, &lib);
+    memset(slot.name, 0, sizeof(slot.name));
+    lib.slot_capacity = 0;
+    valid = valid && !preset_library_save(path, &lib);
+    FILE *file = fopen(path, "rb");
+    char bytes[9] = {0};
+    valid = valid && file && fread(bytes, 1, 9, file) == 8 && strcmp(bytes, "original") == 0;
+    if (file) fclose(file);
+    unlink(path);
+    return valid;
+}
+
 int main(void) {
+    if (!test_invalid_save_preserves_predecessor()) {
+        fprintf(stderr, "preset invalid save preservation failed\n");
+        return 1;
+    }
     if (!test_legacy_omitted_z_fallback()) {
         fprintf(stderr, "preset_io_dimensional_contract_test: legacy fallback failed\n");
         return 1;

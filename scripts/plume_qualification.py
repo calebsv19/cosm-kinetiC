@@ -6,6 +6,8 @@ qualification mode keeps 8 seconds/3200 steps/3 samples. Every decoded sample
 passes the ordinary independent physical acceptance gates.
 Separate domain qualification retains the eight-second envelope while admitting
 up to 128 vertical cells and 524288 total cells.
+Explicit domain movie mode admits 40 seconds/8000 steps/200 samples on that
+tall grid, with a separately bounded forcing file and scalar-work budget.
 """
 import array
 import hashlib
@@ -27,14 +29,14 @@ LIMIT = 64*1024*1024
 def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
-def write_schedule(path, request, steps, sample_steps, *, movie=False,domain_qualification=False):
+def write_schedule(path, request, steps, sample_steps, *, movie=False,domain_qualification=False,domain_movie=False):
     """Encode verified sparse allocations; preserve each binary64 amount exactly."""
-    validate(dict(request, state=None, steps=[]),movie=movie,domain_qualification=domain_qualification)
-    integer(len(steps), 1, 6400 if movie else 3200)
-    require(1 <= len(sample_steps) <= (160 if movie else 3) and sample_steps[-1] == len(steps), 'samples')
+    validate(dict(request, state=None, steps=[]),movie=movie,domain_qualification=domain_qualification,domain_movie=domain_movie)
+    integer(len(steps), 1, 8000 if domain_movie else 6400 if movie else 3200)
+    require(1 <= len(sample_steps) <= (200 if domain_movie else 160 if movie else 3) and sample_steps[-1] == len(steps), 'samples')
     require(sample_steps == sorted(set(sample_steps)), 'ordered unique samples')
     for value in sample_steps: integer(value, 1, len(steps))
-    require(len(steps)*request['momentum_dt_s'] <= (32 if movie else 8), 'physical duration bound')
+    require(len(steps)*request['momentum_dt_s'] <= (40 if domain_movie else 32 if movie else 8), 'physical duration bound')
     n = math.prod(request['grid']); totals = []; accumulated = [[], []]
     with Path(path).open('xb') as file:
         file.write(FORCING.pack(b'PSQUAL01', *request['grid'], len(steps),
@@ -55,13 +57,13 @@ def write_schedule(path, request, steps, sample_steps, *, movie=False,domain_qua
             for q in range(2): accumulated[q].append(math.fsum(amounts[q]))
             totals.append({'energy_j': math.fsum(accumulated[0]),
                            'smoke_kg': math.fsum(accumulated[1])})
-            require(file.tell() <= LIMIT, 'sparse forcing byte bound')
+            require(file.tell() <= (4*LIMIT if domain_movie else LIMIT), 'sparse forcing byte bound')
     return totals
 
-def run_sparse(request, worker, schedule, output, *, timeout_s=3600,movie=False,domain_qualification=False):
+def run_sparse(request, worker, schedule, output, *, timeout_s=3600,movie=False,domain_qualification=False,domain_movie=False):
     """Closed qualification/movie selection; ordinary run keeps its 120s cap."""
-    validate(dict(request, state=None, steps=[]),movie=movie,domain_qualification=domain_qualification)
-    require(type(timeout_s) is int and 1 <= timeout_s <= (14400 if movie else 7200), 'qualification/movie timeout')
+    validate(dict(request, state=None, steps=[]),movie=movie,domain_qualification=domain_qualification,domain_movie=domain_movie)
+    require(type(timeout_s) is int and 1 <= timeout_s <= (21600 if domain_movie else 14400 if movie else 7200), 'qualification/movie timeout')
     output = Path(output).resolve(); output.mkdir()
     worker = Path(worker).resolve(); worker_sha = sha(worker); forcing_sha = sha(schedule)
     configuration = output/'request.json'
@@ -70,14 +72,14 @@ def run_sparse(request, worker, schedule, output, *, timeout_s=3600,movie=False,
     require(configuration.stat().st_size <= LIMIT, 'qualification config byte bound')
     started = time.monotonic()
     with (output/'stdout.json').open('wb') as stdout, (output/'stderr.log').open('wb') as stderr:
-        completed = subprocess.run([str(worker), str(configuration), '--sparse-domain-qualification' if domain_qualification else '--sparse-movie' if movie else '--sparse-qualification',
+        completed = subprocess.run([str(worker), str(configuration), '--sparse-domain-movie' if domain_movie else '--sparse-domain-qualification' if domain_qualification else '--sparse-movie' if movie else '--sparse-qualification',
             str(Path(schedule).resolve()), '--samples-root', str(output)],
             stdout=stdout, stderr=stderr, timeout=timeout_s)
     require(sha(worker) == worker_sha and sha(schedule) == forcing_sha, 'pinned inputs changed')
     require(completed.returncode == 0, 'native exit '+str(completed.returncode)+': '+
             (output/'stderr.log').read_text()[-3000:])
     receipt = native_strict_load(output/'stdout.json', 64*1024)
-    require(receipt['schema'] == ('physics_sim_sparse_domain_receipt/v1' if domain_qualification else 'physics_sim_sparse_movie_receipt/v1' if movie else 'physics_sim_sparse_qualification_receipt/v1'), 'native receipt')
+    require(receipt['schema'] == ('physics_sim_sparse_domain_movie_receipt/v1' if domain_movie else 'physics_sim_sparse_domain_receipt/v1' if domain_qualification else 'physics_sim_sparse_movie_receipt/v1' if movie else 'physics_sim_sparse_qualification_receipt/v1'), 'native receipt')
     with Path(schedule).open('rb') as file:
         header = FORCING.unpack(file.read(FORCING.size))
     require(receipt['steps'] == header[4] and receipt['time_s'] == header[4]*header[6],
@@ -90,7 +92,7 @@ def run_sparse(request, worker, schedule, output, *, timeout_s=3600,movie=False,
                    native_elapsed_s=time.monotonic()-started)
     return receipt
 
-def read_sample(path, request, worker_sha, source_totals, *, numerical_peak_bytes=0,movie=False,compact=False,domain_qualification=False):
+def read_sample(path, request, worker_sha, source_totals, *, numerical_peak_bytes=0,movie=False,compact=False,domain_qualification=False,domain_movie=False):
     """Convert a lossless native packet into the existing accepted result schema."""
     path = Path(path); require(path.stat().st_size <= LIMIT, 'sample byte bound')
     raw = path.read_bytes(); require(len(raw) >= SAMPLE.size, 'sample header')
@@ -117,4 +119,4 @@ def read_sample(path, request, worker_sha, source_totals, *, numerical_peak_byte
         'temperature_k':[props['reference_temperature_k']+v/capacity for v in data['energy_j']],
         'smoke_concentration_kg_m3':[v/volume for v in data['smoke_kg']]}
     return accept_fields(dict(request,state=None,steps=[]), fields, worker_sha,
-                         new_step_count=count, source_totals=source_totals,movie=movie,compact=compact,domain_qualification=domain_qualification)
+                         new_step_count=count, source_totals=source_totals,movie=movie,compact=compact,domain_qualification=domain_qualification,domain_movie=domain_movie)

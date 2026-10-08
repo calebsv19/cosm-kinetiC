@@ -7,8 +7,10 @@
 #include "app/shape_lookup.h"
 #include "geo/shape_asset.h"
 #include "import/shape_import.h"
+#include "import/shape_asset_input.h"
 
 #include <stdbool.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,110 +21,44 @@ static bool path_starts_with(const char *s, const char *prefix) {
     return strncmp(s, prefix, len) == 0;
 }
 
-static void to_asset_basename(const char *import_path, char *out_name, size_t out_sz) {
-    if (!out_name || out_sz == 0) return;
-    out_name[0] = '\0';
-    if (!import_path) return;
-    const char *base = strrchr(import_path, '/');
-    base = base ? base + 1 : import_path;
-    const char *dot = strrchr(base, '.');
-    size_t len = dot && dot > base ? (size_t)(dot - base) : strlen(base);
-    if (len >= out_sz) len = out_sz - 1;
-    memcpy(out_name, base, len);
-    out_name[len] = '\0';
-}
+/* Library slots are model indices. Refresh in place to preserve existing IDs. */
+#define PICKER_MAX_ASSETS 1024u
+static int load_shape_for_picker(SceneEditorState *state, const char *asset_path) {
+    if (!state || !asset_path || !state->shape_library) return -1;
+    ShapeAssetLibrary *lib = (ShapeAssetLibrary *)state->shape_library;
+    if (lib->count > PICKER_MAX_ASSETS || (lib->count && !lib->assets)) return -1;
+    const ShapeAsset *previous = shape_lookup_from_path(lib, asset_path);
+    size_t index = previous ? (size_t)(previous - lib->assets) : lib->count;
+    if (!previous && lib->count >= PICKER_MAX_ASSETS) return -1;
 
-static void resolve_import_shape_id(SceneEditorState *state, ImportedShape *imp) {
-    if (!state || !imp || !state->shape_library) return;
-    const ShapeAsset *asset = shape_lookup_from_path(state->shape_library, imp->path);
-    if (!asset) {
-        fprintf(stderr, "[editor] No asset match for import path: %s\n", imp->path);
-        imp->shape_id = -1;
-        return;
-    }
-    for (size_t si = 0; si < state->shape_library->count; ++si) {
-        if (&state->shape_library->assets[si] == asset) {
-            imp->shape_id = (int)si;
-            fprintf(stderr, "[editor] Resolved import '%s' to shape_id=%d (name=%s)\n",
-                    imp->path, imp->shape_id, asset->name ? asset->name : "(unnamed)");
-            return;
-        }
-    }
-    imp->shape_id = -1;
-}
-
-static bool ensure_shape_loaded(SceneEditorState *state, const char *asset_path) {
-    if (!state || !asset_path || !state->shape_library) return false;
-    if (shape_lookup_from_path(state->shape_library, asset_path)) {
-        return true;
-    }
-    // Append into the shared library so the newly converted asset is available immediately.
-    ShapeAsset asset = (ShapeAsset){0};
-    if (!shape_asset_load_file(asset_path, &asset)) {
-        fprintf(stderr, "[editor] Failed to load asset %s\n", asset_path);
-        return false;
-    }
-    ShapeAssetLibrary *lib = (ShapeAssetLibrary *)state->shape_library; // editor owns the lifetime
-    ShapeAsset *tmp = (ShapeAsset *)realloc(lib->assets, (lib->count + 1) * sizeof(ShapeAsset));
-    if (!tmp) {
+    ShapeAsset asset = {0};
+    if (!physics_sim_shape_asset_load(asset_path, &asset)) {
         shape_asset_free(&asset);
-        fprintf(stderr, "[editor] Failed to grow shape library for %s\n", asset_path);
-        return false;
+        fprintf(stderr, "[editor] Failed to load asset %s\n", asset_path);
+        return -1;
     }
-    lib->assets = tmp;
-    lib->assets[lib->count] = asset;
-    lib->count += 1;
-    fprintf(stderr, "[editor] Appended asset to library: %s (count=%zu)\n", asset_path, lib->count);
-    return true;
-}
-
-bool scene_editor_input_convert_import_to_asset(const char *import_path,
-                                                const char *configured_root,
-                                                char *out_asset_path,
-                                                size_t out_sz) {
-    char objects_dir[512];
-    const char *objects_root = NULL;
-    if (!import_path || !out_asset_path || out_sz == 0) return false;
-    out_asset_path[0] = '\0';
-
-    char name[256];
-    to_asset_basename(import_path, name, sizeof(name));
-    if (name[0] == '\0') return false;
-
-    objects_root = physics_sim_resolve_shape_asset_dir_for_root(configured_root,
-                                                                objects_dir,
-                                                                sizeof(objects_dir));
-    char asset_path[512];
-    snprintf(asset_path, sizeof(asset_path), "%s/%s.asset.json", objects_root, name);
-
-    FILE *f = fopen(asset_path, "rb");
-    if (f) {
-        fclose(f);
-        snprintf(out_asset_path, out_sz, "%s", asset_path);
-        return true;
+    /* Persisted path lookup must resolve the candidate after a later reload too. */
+    ShapeAssetLibrary candidate = { .assets = &asset, .count = 1 };
+    if (shape_lookup_from_path(&candidate, asset_path) != &asset) {
+        shape_asset_free(&asset);
+        fprintf(stderr, "[editor] Asset identity does not match path %s\n", asset_path);
+        return -1;
     }
-
-    ShapeDocument doc;
-    if (!shape_import_load(import_path, &doc) || doc.shapeCount == 0) {
-        return false;
-    }
-
-    ShapeAsset asset;
-    bool ok = shape_asset_from_shapelib_shape(&doc.shapes[0], 0.5f, &asset);
-    if (ok) {
-        if (asset.name) free(asset.name);
-        asset.name = (char *)malloc(strlen(name) + 1);
-        if (asset.name) {
-            memcpy(asset.name, name, strlen(name) + 1);
+    if (previous) {
+        shape_asset_free(&lib->assets[index]);
+        lib->assets[index] = asset;
+    } else {
+        ShapeAsset *grown = realloc(lib->assets, (lib->count + 1) * sizeof(*grown));
+        if (!grown) {
+            shape_asset_free(&asset);
+            fprintf(stderr, "[editor] Failed to grow shape library for %s\n", asset_path);
+            return -1;
         }
-        ok = shape_asset_save_file(&asset, asset_path);
+        lib->assets = grown;
+        lib->assets[index] = asset;
+        lib->count++;
     }
-    shape_asset_free(&asset);
-    ShapeDocument_Free(&doc);
-    if (ok) {
-        snprintf(out_asset_path, out_sz, "%s", asset_path);
-    }
-    return ok;
+    return (int)index;
 }
 
 bool scene_editor_input_path_contains_import_segment(const char *path, const char *configured_root) {
@@ -138,43 +74,67 @@ bool scene_editor_input_path_contains_import_segment(const char *path, const cha
     return path_starts_with(path, "import/");
 }
 
-bool scene_editor_input_add_import_from_picker(SceneEditorState *state, int row) {
-    if (!state || row < 0 || row >= state->import_file_count) return false;
-    const char *selected_path = state->import_files[row];
-    char asset_path[512] = {0};
+static bool add_import_at(SceneEditorState *state, int row, float x, float y) {
+    if (!isfinite(x) || !isfinite(y)) return false;
+    if (!state || !state->shape_library || row < 0 ||
+        state->import_file_count < 0 || state->import_file_count > MAX_IMPORT_FILES ||
+        row >= state->import_file_count ||
+        state->working.import_shape_count >= MAX_IMPORTED_SHAPES) return false;
+    if (state->shape_library->count > PICKER_MAX_ASSETS ||
+        (state->shape_library->count && !state->shape_library->assets)) return false;
+    char selected_path[sizeof(state->import_files[0])];
+    size_t selected_length = strnlen(state->import_files[row], sizeof(selected_path));
+    if (!selected_length || selected_length >= sizeof(selected_path)) return false;
+    memcpy(selected_path, state->import_files[row], selected_length + 1);
+    char asset_path[sizeof(((ImportedShape *)0)->path)] = {0};
     const char *store_path = selected_path;
-    if (scene_editor_input_path_contains_import_segment(selected_path, state->cfg.input_root)) {
-        if (scene_editor_input_convert_import_to_asset(selected_path,
-                                                       state->cfg.input_root,
-                                                       asset_path,
-                                                       sizeof(asset_path))) {
-            store_path = asset_path;
-            scene_editor_refresh_import_files(state);
+    bool converted = scene_editor_input_path_contains_import_segment(selected_path, state->cfg.input_root);
+    if (converted) {
+        if (!scene_editor_input_convert_import_to_asset(selected_path, state->cfg.input_root,
+                                                       asset_path, sizeof(asset_path))) return false;
+        store_path = asset_path;
+    }
+    if (strlen(store_path) >= sizeof(((ImportedShape *)0)->path)) return false;
+    int shape_id = load_shape_for_picker(state, store_path);
+    if (shape_id < 0) return false;
+
+    ImportedShape *imp = &state->working.import_shapes[state->working.import_shape_count];
+    memset(imp, 0, sizeof(*imp));
+    memcpy(imp->path, store_path, strlen(store_path) + 1);
+    imp->shape_id = shape_id;
+    imp->position_x = x;
+    imp->position_y = y;
+    imp->scale = 1.0f;
+    imp->density = 1.0f;
+    imp->friction = 0.2f;
+    imp->is_static = true;
+    imp->enabled = true;
+    state->working.import_shape_count++;
+    scene_editor_select_import(state, (int)state->working.import_shape_count - 1);
+    set_dirty(state);
+    state->showing_import_picker = false;
+    if (converted) scene_editor_refresh_import_files(state);
+    return true;
+}
+
+bool scene_editor_input_add_import_from_picker(SceneEditorState *state, int row) {
+    return add_import_at(state, row, 0.5f, 0.5f);
+}
+
+bool scene_editor_input_drop_import_from_picker(SceneEditorState *state, int row, float x, float y) {
+    if (!state || !isfinite(x) || !isfinite(y) || row < 0 ||
+        state->import_file_count < 0 || state->import_file_count > MAX_IMPORT_FILES ||
+        row >= state->import_file_count || state->working.import_shape_count > MAX_IMPORTED_SHAPES) return false;
+    size_t length = strnlen(state->import_files[row], sizeof(state->import_files[0]));
+    if (!length || length >= sizeof(state->import_files[0])) return false;
+    for (size_t i = 0; i < state->working.import_shape_count; ++i) {
+        if (strncmp(state->working.import_shapes[i].path, state->import_files[row],
+                    sizeof(state->working.import_shapes[i].path)) == 0) {
+            scene_editor_select_import(state, (int)i);
+            return true;
         }
     }
-    ensure_shape_loaded(state, store_path);
-    if (state->working.import_shape_count < MAX_IMPORTED_SHAPES) {
-        ImportedShape *imp = &state->working.import_shapes[state->working.import_shape_count++];
-        memset(imp, 0, sizeof(*imp));
-        snprintf(imp->path, sizeof(imp->path), "%s", store_path);
-        imp->shape_id = -1;
-        imp->position_x = 0.5f;
-        imp->position_y = 0.5f;
-        imp->position_z = 0.0f;
-        imp->scale = 1.0f;
-        imp->rotation_deg = 0.0f;
-        imp->density = 1.0f;
-        imp->friction = 0.2f;
-        imp->is_static = true;
-        imp->enabled = true;
-        scene_editor_select_import(state, (int)state->working.import_shape_count - 1);
-        fprintf(stderr, "[editor] Added import row %zu: %s\n",
-                state->working.import_shape_count - 1, store_path);
-        resolve_import_shape_id(state, imp);
-        set_dirty(state);
-    }
-    state->showing_import_picker = false;
-    return true;
+    return add_import_at(state, row, x, y);
 }
 
 void scene_editor_input_remove_import_at(SceneEditorState *state, int index) {

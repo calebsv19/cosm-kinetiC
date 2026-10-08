@@ -3,7 +3,9 @@ set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 FIXTURE_DIR="$PHYSICS_DIR/tests/fixtures/scene_project_cache_output_minimal"
-TMP_ROOT="$PHYSICS_DIR/tmp/scene_project_cache_output"
+source "$PHYSICS_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$PHYSICS_DIR" "$0" "$@"
+TMP_ROOT="$(physics_fixture_root "$PHYSICS_DIR" headless_scene_project_cache_output)"
 PROJECT_DIR="$TMP_ROOT/project"
 RUN_ID="physics-run-test-0001"
 RUN_ROOT="$PROJECT_DIR/physics_sim/runs/$RUN_ID"
@@ -11,14 +13,13 @@ ACTIVE_MANIFEST="$PROJECT_DIR/physics_sim/active_cache_manifest.json"
 AUTHORING_BEFORE="$TMP_ROOT/scene_authoring.before"
 AUTHORING_AFTER="$PROJECT_DIR/scene_authoring.json"
 
-rm -rf "$TMP_ROOT"
 mkdir -p "$PROJECT_DIR"
 cp "$FIXTURE_DIR/scene_project.json" "$PROJECT_DIR/scene_project.json"
 cp "$FIXTURE_DIR/scene_authoring.json" "$PROJECT_DIR/scene_authoring.json"
 cp "$FIXTURE_DIR/scene_runtime.json" "$PROJECT_DIR/scene_runtime.json"
 cp "$PROJECT_DIR/scene_authoring.json" "$AUTHORING_BEFORE"
 
-PHYSICS_SIM_PROJECT_CACHE_RUN_ID="$RUN_ID" "$PHYSICS_DIR/physics_sim_headless" \
+PHYSICS_SIM_PROJECT_CACHE_RUN_ID="$RUN_ID" "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
   --scene-project "$PROJECT_DIR" \
   --frames 1 \
   --grid 8x8x8 \

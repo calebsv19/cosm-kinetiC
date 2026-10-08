@@ -5,10 +5,11 @@ from unittest.mock import patch
 import numpy as np
 from scipy.sparse import csr_matrix
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_size_selected import select,decision,THRESHOLD_BYTES
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_shared_factor import storage_sha
-LIB=R/'build/c3d-encoded-operator/support/factor.dylib'
+LIB=library_path('build/c3d-encoded-operator/support/factor.dylib')
 class Selected(unittest.TestCase):
  def test_below_threshold_original_identity_action_and_no_encoding_or_guard(self):
   t=VectorTriangle(csr_matrix(np.eye(6)),LIB);h=t.input_sha256;x=np.arange(6.)

@@ -19,7 +19,7 @@ package-desktop-refresh-authority:
 
 package-desktop: $(PACKAGE_SOURCE_BIN) physics_sim_session_worker
 	@echo "Preparing desktop package..."
-	@rm -rf "$(PACKAGE_APP_DIR)"
+	@python3 -B scripts/package_outputs.py --root "$(DIST_DIR)" --directory "$(PACKAGE_APP_DIR)" --declare
 	@mkdir -p "$(PACKAGE_MACOS_DIR)" "$(PACKAGE_RESOURCES_DIR)" "$(PACKAGE_FRAMEWORKS_DIR)"
 	@cp "$(PACKAGE_INFO_PLIST_SRC)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
 	@/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(PACKAGE_BUNDLE_ID)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
@@ -31,7 +31,7 @@ package-desktop: $(PACKAGE_SOURCE_BIN) physics_sim_session_worker
 	@/usr/libexec/PlistBuddy -c "Add :PhysicsSimLogNamespace string $(PACKAGE_LOG_NAMESPACE)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
 	@/usr/libexec/PlistBuddy -c "Add :PhysicsSimBuildLabel string $(PACKAGE_BUILD_LABEL)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
 	@cp "$(PACKAGE_SOURCE_BIN)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
-	@cp physics_sim_session_worker "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"
+	@cp "$(SESSION_WORKER_BIN)" "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"
 	@mkdir -p "$(PACKAGE_RESOURCES_DIR)/scripts/agent_session"
 	@cp scripts/physics_sim_session.py "$(PACKAGE_RESOURCES_DIR)/scripts/"
 	@cp scripts/agent_session/*.py "$(PACKAGE_RESOURCES_DIR)/scripts/agent_session/"
@@ -106,18 +106,22 @@ package-desktop-smoke: package-desktop
 	@echo "package-desktop-smoke passed."
 
 package-desktop-self-test: package-desktop-smoke
-	@python3 tools/packaging/validate_macos_session.py --app "$(PACKAGE_APP_DIR)"
-	@support="$$(mktemp -d "$(CURDIR)/$(BUILD_DIR)/package-self-test.XXXXXX")"; \
+	+@python3 -B scripts/package_proof.py --root "$(DIST_DIR)" --name macos-self-test --input "$(PACKAGE_APP_DIR)" --identity "profile=$(PACKAGE_PROFILE)" -- $(MAKE) -f makefile _package-desktop-proof
+
+.PHONY: _package-desktop-proof
+_package-desktop-proof:
+	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public package proof/refresh target"; exit 2)
+	@python3 tools/packaging/validate_macos_session.py --app "$(PACKAGE_APP_DIR)" --output-root "$(PACKAGE_PROOF_DIR)/session-proof"
+	@support="$(PACKAGE_PROOF_DIR)/support"; mkdir -p "$$support"; \
 	PHYSICS_SIM_APP_SUPPORT_DIR="$$support" PHYSICS_SIM_LOG_DIR="$$support/logs" \
 		"$(PACKAGE_MACOS_DIR)/physics-sim-launcher" --self-test; result=$$?; \
-	if [ "$$result" = 0 ]; then rm -rf "$$support"; else echo "package-desktop self-test failed; evidence: $$support"; fi; \
+	echo "package-desktop self-test evidence retained: $$support"; \
 	exit "$$result"
 	@echo "package-desktop-self-test passed."
 
 package-desktop-copy-desktop: package-desktop-refresh-authority package-desktop
 	@mkdir -p "$(dir $(DESKTOP_APP_DIR))"
-	@rm -rf "$(DESKTOP_APP_DIR)"
-	@/usr/bin/ditto "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
+	@python3 -B scripts/desktop_replace.py --source "$(PACKAGE_APP_DIR)" --destination "$(DESKTOP_APP_DIR)" --bundle-id "$(PACKAGE_BUNDLE_ID)"
 	@echo "Copied $(PACKAGE_APP_NAME) to $(DESKTOP_APP_DIR)"
 
 package-desktop-sync: package-desktop-copy-desktop
@@ -127,13 +131,12 @@ package-desktop-open: package-desktop
 	@open "$(PACKAGE_APP_DIR)"
 
 package-desktop-remove:
-	@rm -rf "$(PACKAGE_APP_DIR)"
-	@echo "Removed desktop package: $(PACKAGE_APP_DIR)"
+	@python3 -B scripts/package_outputs.py --root "$(DIST_DIR)" --directory "$(PACKAGE_APP_DIR)"
+	@echo "No desktop package present: $(PACKAGE_APP_DIR)"
 
 package-desktop-refresh: package-desktop-refresh-authority package-desktop
 	@mkdir -p "$(dir $(DESKTOP_APP_DIR))"
-	@rm -rf "$(DESKTOP_APP_DIR)"
-	@/usr/bin/ditto "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
+	@python3 -B scripts/desktop_replace.py --source "$(PACKAGE_APP_DIR)" --destination "$(DESKTOP_APP_DIR)" --bundle-id "$(PACKAGE_BUNDLE_ID)"
 	@echo "Refreshed $(PACKAGE_APP_NAME) at $(DESKTOP_APP_DIR)"
 
 package-desktop-main-edit:
@@ -152,13 +155,17 @@ package-desktop-main-edit:
 		PACKAGE_EMBED_BUILD_IDENTITY=1 || exit 1; \
 	after="$$(python3 "$(MEW1_TOOL)" fingerprint --repo "$(CURDIR)")"; \
 	if [ "$$before" != "$$after" ]; then \
-		rm -rf "$(MAIN_EDIT_APP_DIR)"; \
-		echo "Source changed during Main Edit packaging; discarded generated package."; \
+		echo "Source changed during Main Edit packaging; retained failed package at $(MAIN_EDIT_APP_DIR)."; \
 		exit 1; \
 	fi
 	@echo "Main Edit desktop package ready: $(MAIN_EDIT_APP_DIR)"
 
 package-desktop-main-edit-self-test: package-desktop-main-edit
+	+@python3 -B scripts/package_proof.py --root "$(MAIN_EDIT_DIST_DIR)" --name main-edit-self-test --input "$(MAIN_EDIT_APP_DIR)" --identity "profile=$(MAIN_EDIT_PROFILE)" --input "$(MEW1_TOOL)" --input "$(PACKAGE_APP_ICON_SRC)" --input "$(PACKAGE_APP_ICONSET_SRC)" --map "MAIN_EDIT_SELF_TEST_DIR=." -- $(MAKE) -f makefile _package-main-edit-proof
+
+.PHONY: _package-main-edit-proof
+_package-main-edit-proof:
+	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public package proof/refresh target"; exit 2)
 	@test -s "$(MAIN_EDIT_APP_DIR)/Contents/Resources/$(PACKAGE_APP_ICON_FILE)" || (echo "Missing bundled Main Edit icon"; exit 1)
 	@test "$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$(MAIN_EDIT_APP_DIR)/Contents/Info.plist")" = "$(PACKAGE_APP_ICON_NAME)" || (echo "Main Edit icon metadata mismatch"; exit 1)
 	@if [ -f "$(PACKAGE_APP_ICON_SRC)" ]; then cmp "$(PACKAGE_APP_ICON_SRC)" "$(MAIN_EDIT_APP_DIR)/Contents/Resources/$(PACKAGE_APP_ICON_FILE)" || exit 1; fi
@@ -177,8 +184,7 @@ package-desktop-main-edit-self-test: package-desktop-main-edit
 		--product kinetiC \
 		--version "$(RELEASE_VERSION)"
 	@set -e; \
-	fake_home="$(CURDIR)/$(MAIN_EDIT_SELF_TEST_DIR)/home"; \
-	rm -rf "$$fake_home"; \
+	fake_home="$(MAIN_EDIT_SELF_TEST_DIR)/home"; \
 	mkdir -p "$$fake_home"; \
 	HOME="$$fake_home" "$(MAIN_EDIT_APP_DIR)/Contents/MacOS/physics-sim-launcher" --self-test; \
 	config="$$(HOME="$$fake_home" "$(MAIN_EDIT_APP_DIR)/Contents/MacOS/physics-sim-launcher" --print-config)"; \
@@ -193,16 +199,17 @@ package-desktop-main-edit-self-test: package-desktop-main-edit
 	@echo "package-desktop-main-edit-self-test passed."
 
 package-desktop-main-edit-refresh: package-desktop-main-edit-self-test
+	+@python3 -B scripts/package_proof.py --root "$(MAIN_EDIT_DIST_DIR)" --name main-edit-refresh --input "$(MAIN_EDIT_APP_DIR)" --identity "destination=$(MAIN_EDIT_DESKTOP_APP_DIR)" --input "$(MEW1_TOOL)" --map "MAIN_EDIT_PROCESS_RECEIPT=process-audit.json" -- $(MAKE) -f makefile _package-main-edit-refresh
+
+.PHONY: _package-main-edit-refresh
+_package-main-edit-refresh:
+	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public package proof/refresh target"; exit 2)
 	@test "$(MAIN_EDIT_DESKTOP_APP_DIR)" != "$(DESKTOP_APP_DIR)" || (echo "Refusing canonical Desktop destination"; exit 1)
 	@mkdir -p "$(dir $(MAIN_EDIT_PROCESS_RECEIPT))"
 	@python3 "$(MEW1_TOOL)" process-audit --match "$(MAIN_EDIT_DISPLAY_NAME)" --path "$(MAIN_EDIT_DESKTOP_APP_DIR)" > "$(MAIN_EDIT_PROCESS_RECEIPT)"
-	@if grep -Fq '"running": true' "$(MAIN_EDIT_PROCESS_RECEIPT)"; then \
-		echo "Refusing to replace a running $(MAIN_EDIT_APP_NAME); process receipt: $(MAIN_EDIT_PROCESS_RECEIPT)"; \
-		exit 1; \
-	fi
+	@python3 -B scripts/check_desktop_process_audit.py --receipt "$(MAIN_EDIT_PROCESS_RECEIPT)" --match "$(MAIN_EDIT_DISPLAY_NAME)" --path "$(MAIN_EDIT_DESKTOP_APP_DIR)"
 	@mkdir -p "$$(dirname "$(MAIN_EDIT_DESKTOP_APP_DIR)")"
-	@rm -rf "$(MAIN_EDIT_DESKTOP_APP_DIR)"
-	@/usr/bin/ditto "$(MAIN_EDIT_APP_DIR)" "$(MAIN_EDIT_DESKTOP_APP_DIR)"
+	@python3 -B scripts/desktop_replace.py --source "$(MAIN_EDIT_APP_DIR)" --destination "$(MAIN_EDIT_DESKTOP_APP_DIR)" --bundle-id "$(MAIN_EDIT_BUNDLE_ID)"
 	@echo "Refreshed $(MAIN_EDIT_APP_NAME) at $(MAIN_EDIT_DESKTOP_APP_DIR)"
 
 main-edit-package-contract-checks:

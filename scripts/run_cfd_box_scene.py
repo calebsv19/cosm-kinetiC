@@ -7,6 +7,7 @@ Forces remain provisional. No package/install or general transient/wake claim.
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import shutil
@@ -15,10 +16,11 @@ import sys
 import time
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[1]
+from cfd_evidence import experiment_root, seal_bundle, portable_paths, resolve_artifact, verify_bundle
 sys.path.insert(0, str(ROOT/'scripts/agent_session'))
 from service import Service, TERMINAL
 from protocol import call
-from run_cfd_native_accuracy_regression import execute, require, save, sha
+from cfd_run_support import compile_probe, execute, require, save, sha
 from run_cfd_native_box import FILES as NATIVE_FILES
 
 FRONTEND = ('scripts/run_cfd_box_scene.py', 'scripts/physics_sim_session.py',
@@ -87,12 +89,13 @@ def readback_file(fields, status, path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--experiment-root', type=Path, default=experiment_root(ROOT))
     parser.add_argument('--name', required=True)
-    parser.add_argument('--worker', type=Path, default=ROOT/'build/c3d-box/workflow-build/physics_sim_session_worker')
+    parser.add_argument('--worker', type=Path, default=Path(os.environ.get('PHYSICS_SIM_BUILD_ROOT',ROOT/'build'))/'c3d-box/workflow-build/physics_sim_session_worker')
     args = parser.parse_args()
     require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}', args.name), 'Unique run identity')
     require(args.worker.is_file(), 'Build the source session worker first; see docs/cfd_3d_box_checkpoint.md')
-    directory = ROOT/'build/c3d-box/scenes'/args.name
+    directory = experiment_root(ROOT,args.experiment_root)/'c3d-box/scenes'/args.name
     directory.mkdir(parents=True, exist_ok=False)
     source = directory/'source'
     sources = {q:sha(ROOT/q) for q in dict.fromkeys((*NATIVE_FILES,*FRONTEND))}
@@ -115,7 +118,7 @@ def main():
             '-I'+str(source/'include'),str(source/'tests/cfd_obstacle3d_box_field_probe.c')]
         cc += [str(source/q) for q in NATIVE_FILES if q.startswith('src/') and not q.endswith('cfd_obstacle3d_mixed.c')]
         cc += ['-lm','-o',str(directory/'readback')]
-        result['compile']=execute(cc,directory,'compile-readback',60,1024**3)
+        result['compile']=compile_probe(cc,directory,'compile-readback',60,1024**3)
         scene=call(service,'scene_create',dict(scene_id='long-box',template='cfd_box_3d',dimensions=[4,2,2],
                     channel={'body_min_m':list(LOWER),'body_max_m':list(UPPER),'volume_flow_m3_s':.008}))
         result['scene']=scene;save(directory/'scene-response.json',scene)
@@ -184,7 +187,8 @@ def main():
                     try:child.wait(timeout=10)
                     except subprocess.TimeoutExpired:child.kill();child.wait(timeout=10)
         result['artifact_sha256']={str(p.relative_to(directory)):sha(p) for p in directory.rglob('*') if p.is_file() and p.name!='service.lock'}
-        save(directory/'receipt.json',result)
+        save(directory/'receipt.json',portable_paths(result,directory))
+        seal_bundle(directory)
     print(json.dumps(dict(status=result['status'],receipt=str(directory/'receipt.json'),failure=result.get('failure'))),flush=True)
     return 0 if result['status'].startswith('completed') else 1
 

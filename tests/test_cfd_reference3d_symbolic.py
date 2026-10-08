@@ -1,4 +1,5 @@
 """Exact scalar permutation, complete block graph and owned symbolic cost proofs."""
+import os
 import sys
 import unittest
 import gc
@@ -11,13 +12,14 @@ import numpy as np
 from scipy.sparse import csr_matrix
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
+from cfd_reference_test_support import library_path
 from test_cfd_reference3d_bounded_condensed import fixture
 from cfd_reference3d_triangle_condensed import TriangleCondensedSystem
 from cfd_reference3d_shared_factor import BlockTriangle,SharedTriangleFactor
 from cfd_reference3d_triangle import SymmetricTriangle
 from cfd_reference3d_symbolic import velocity_graph,SymbolicFactor
-LIB=ROOT/'build/c3d-symbolic/support/symbolic.dylib'
-NUMERIC=ROOT/'build/c3d-cholesky/support/factor.dylib'
+LIB=library_path('build/c3d-symbolic/support/symbolic.dylib')
+NUMERIC=library_path('build/c3d-cholesky/support/factor.dylib')
 
 
 def velocity_fixture(refined):

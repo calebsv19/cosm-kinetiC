@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Bounded native checkpoint/restart for periodic evolving flow and passive scalars."""
+from atmosphere_attempt import retained_atmosphere, retained_directory
+from passive_atmosphere import atmosphere_worker_path,run_atmosphere_worker
+from build_owner import owned_worker
 import argparse
+import subprocess
 import hashlib
 import json
 import math
 from pathlib import Path
-import subprocess
 import tempfile
 from passive_atmosphere import validate as passive_validate,ROOT
 from surface_sources.growth_fire_v1 import keys,number,integer,require,strict_load,digest,sealed
@@ -47,17 +50,18 @@ def validate(r):
         require(math.isclose(data['time_s'],data['steps']*r['momentum_dt_s'],abs_tol=1e-12,rel_tol=1e-12),'state clock')
     return r
 
+@owned_worker(ROOT)
+@retained_atmosphere(ROOT,"evolving")
 def run(request,worker):
     validate(request);worker=Path(worker).resolve();worker_sha=hashlib.sha256(worker.read_bytes()).hexdigest()
     old=request['state'];start=0. if old is None else old['data']['time_s'];n=math.prod(request['grid'])
     if old is not None:require(old['worker_sha256']==worker_sha,'checkpoint worker bytes changed')
     native=dict(request,state=None if old is None else old['data'])
-    with tempfile.TemporaryDirectory(prefix='evolving-atmosphere-') as temp:
+    with retained_directory() as temp:
         path=Path(temp)/'request.json';path.write_text(json.dumps(native,allow_nan=False,separators=(',',':')))
         require(path.stat().st_size<=64*1024*1024,'request byte bound')
-        result=subprocess.run([str(worker),str(path)],capture_output=True,text=True,timeout=120)
-        require(result.returncode==0,result.stderr.strip() or 'worker failed')
-        path.write_text(result.stdout);fields=strict_load(path)
+        output=run_atmosphere_worker(worker,path)
+        result_path=Path(temp)/'fields.json';result_path.write_bytes(output);fields=strict_load(result_path)
     require(worker_sha==hashlib.sha256(worker.read_bytes()).hexdigest(),'worker changed during step')
     require(fields['schema']=='physics_sim_evolving_atmosphere_fields/v1','native field model')
     data=fields.pop('state')
@@ -99,7 +103,7 @@ def run(request,worker):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--request',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
-    p.add_argument('--worker',type=Path,default=ROOT/'build/evolving-atmosphere/physics_sim_atmosphere_worker');a=p.parse_args()
+    p.add_argument('--worker',type=Path,default=atmosphere_worker_path('evolving'));a=p.parse_args()
     require(not a.output.exists(),'fresh output path');result=run(strict_load(a.request),a.worker)
     a.output.parent.mkdir(parents=True,exist_ok=True)
     with a.output.open('x') as f:json.dump(result,f,allow_nan=False)

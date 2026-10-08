@@ -8,5 +8,6 @@
   "save_volume_frames": true,
   "save_render_frames": false,
   "skip_present": true,
-  "overwrite": false
+  "overwrite": false,
+  "grid": "8x8x8"
 }

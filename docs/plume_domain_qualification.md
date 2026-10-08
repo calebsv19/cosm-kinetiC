@@ -40,3 +40,25 @@ proves full 64×64×128 admission, original VF3D output and exact reproduction o
 the accepted movie's 0.2-second control packet. Full-duration domain sensitivity,
 open side boundaries, long-domain/full-larger-fire capacity and Linux capability
 qualification remain next; no worker package or version changes accompany this.
+
+## Local tall-domain movie envelope
+
+The separate `--sparse-domain-movie` selection and Python `domain_movie=True`
+admit a fresh-start local run up to 40 s, 8000 steps and 200 samples on the
+same 64×64×128 maximum grid. Exactly one sparse experiment mode may be selected.
+The request must explicitly budget numerical allocation (still capped at
+512 MiB) and scalar work (capped at eight billion cell updates). Only this mode
+admits a forcing file up to 256 MiB and a six-hour wall allowance. Configuration
+and sample packet bounds remain unchanged. Previous modes retain their limits.
+
+Receipts use `physics_sim_sparse_domain_movie_receipt/v1`; compact fields use
+`physics_sim_domain_movie_sample_fields/v1`. Every decoded sample passes the
+existing independent physical acceptance gates. This is an execution envelope,
+not a calibrated hot-combustion model or checkpoint-resume API.
+
+The dedicated local tests prove byte-identical short tall-domain states across
+the old and new modes, a 40-second small-grid conservative run, rejection by the
+old profiles, and rejection beyond the new duration/step limits. Existing domain,
+qualification, atmosphere and native transport checks also pass. The larger
+center-source 40-second run is recorded separately by GrowthSim; this envelope's
+unit and regression checks alone do not claim that workload has completed.

@@ -29,23 +29,24 @@ static bool plume_write_sample(const CfdOpenAtmosphere3d *s, const char *root) {
 }
 
 static bool plume_sparse_qualification(CfdOpenAtmosphere3d *s, double *input,
-                                       const char *schedule, const char *root, double peaks[4], bool movie) {
+                                       const char *schedule, const char *root, double peaks[4], bool movie, bool domain_movie) {
     uint32_t endian = 1;
     struct stat statbuf;
     if (*(unsigned char *)&endian != 1 || sizeof(double) != 8 || s->steps != 0 ||
-        stat(schedule, &statbuf) || statbuf.st_size <= 0 || statbuf.st_size > 64*1024*1024)
+        stat(schedule, &statbuf) || statbuf.st_size <= 0 ||
+        statbuf.st_size > (domain_movie ? 256 : 64)*1024*1024)
         return false;
     FILE *file = fopen(schedule, "rb");
     if (!file) return false;
-    char magic[8]; uint32_t header[5], samples[160]; double dt;
+    char magic[8]; uint32_t header[5], samples[200]; double dt;
     bool ok = fread(magic, 1, 8, file) == 8 && !memcmp(magic, "PSQUAL01", 8) &&
         fread(header, sizeof(uint32_t), 5, file) == 5 &&
         fread(&dt, sizeof(dt), 1, file) == 1;
     if (!ok || header[0] != (uint32_t)s->grid.n[0] ||
         header[1] != (uint32_t)s->grid.n[1] || header[2] != (uint32_t)s->grid.n[2] ||
-        header[3] == 0 || header[3] > (movie ? 6400u : 3200u) ||
-        header[4] == 0 || header[4] > (movie ? 160u : 3u) ||
-        dt != s->dt || dt*header[3] > (movie ? 32.0 : 8.0) ||
+        header[3] == 0 || header[3] > (domain_movie ? 8000u : movie ? 6400u : 3200u) ||
+        header[4] == 0 || header[4] > (domain_movie ? 200u : movie ? 160u : 3u) ||
+        dt != s->dt || dt*header[3] > (domain_movie ? 40.0 : movie ? 32.0 : 8.0) ||
         fread(samples, sizeof(uint32_t), header[4], file) != header[4]) {
         fclose(file); return false;
     }

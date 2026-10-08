@@ -3,7 +3,9 @@ set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 RUNTIME_SCENE="$PHYSICS_DIR/tests/fixtures/runtime_scene_wind_tunnel_3d_long_box.json"
-OUT_DIR="$PHYSICS_DIR/tmp/headless_wind_long_tunnel_visual"
+source "$PHYSICS_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$PHYSICS_DIR" "$0" "$@"
+OUT_DIR="$(physics_fixture_root "$PHYSICS_DIR" headless_wind_long_tunnel_visual)"
 PROJECTION_OUT="$OUT_DIR/projection"
 RENDER_OUT="$OUT_DIR/render"
 REPORT="$OUT_DIR/long_tunnel_visual_summary.txt"
@@ -17,10 +19,9 @@ RENDER_FRAME="$RENDER_OUT/render_frames/frame_000005.bmp"
 RENDER_LOG="$OUT_DIR/render_attempt.log"
 RENDER_BLOCKER="$OUT_DIR/renderer_blocker.txt"
 
-rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 6 \
   --sim-steps-per-frame 8 \
@@ -125,7 +126,7 @@ report.write_text(
 PY
 
 set +e
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 6 \
   --sim-steps-per-frame 8 \

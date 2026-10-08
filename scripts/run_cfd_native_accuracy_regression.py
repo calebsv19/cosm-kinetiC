@@ -20,6 +20,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
     'scripts/run_cfd_native_accuracy_regression.py',
+    'scripts/cfd_run_support.py', 'scripts/cfd_evidence.py','scripts/check_clean_root.py',
     'scripts/verify_cfd_native_manufactured_stokes.py',
     'tests/cfd_obstacle3d_manufactured_stokes_probe.c',
     'tests/cfd_obstacle3d_manufactured_stokes_fine_probe.c',
@@ -31,55 +32,18 @@ FILES = (
 )
 
 
-def sha(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def save(path, value):
-    with path.open('x') as stream:
-        json.dump(value, stream, indent=2, allow_nan=False)
-        stream.write('\n')
-
-
-def require(condition, message):
-    if not condition:
-        raise ValueError(message)
-
-
-def execute(command, directory, tag, wall_cap, rss_cap):
-    """Bound the child, retain stdout/stderr, and reap it even on failure."""
-    started = time.monotonic()
-    peak = 0
-    with (directory / (tag + '.stdout')).open('xb') as output, \
-            (directory / (tag + '.stderr')).open('xb') as errors:
-        process = subprocess.Popen(command, stdout=output, stderr=errors,
-                                   start_new_session=True, cwd=directory)
-        try:
-            while process.poll() is None:
-                require(time.monotonic() - started < wall_cap, tag + ': wall cap')
-                sample = subprocess.run(['ps', '-o', 'rss=', '-p', str(process.pid)],
-                                        capture_output=True, text=True, timeout=5)
-                if sample.returncode == 0 and sample.stdout.strip():
-                    peak = max(peak, int(sample.stdout.strip()) * 1024)
-                    require(peak <= rss_cap, tag + ': RSS cap')
-                time.sleep(.1)
-            require(process.returncode == 0, tag + ': child exited ' + str(process.returncode))
-        finally:
-            if process.poll() is None:
-                os.killpg(process.pid, signal.SIGKILL)
-            process.wait()
-    return dict(command=command, wall_s=time.monotonic() - started,
-                peak_sampled_child_rss_bytes=peak, exit_code=process.returncode)
-
+from cfd_run_support import compile_probe, execute, require, save, sha
+from cfd_evidence import experiment_root, seal_bundle, portable_paths
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--experiment-root', type=Path, default=experiment_root(ROOT))
     parser.add_argument('--name', required=True, help='New unique local run name; never overwritten')
     args = parser.parse_args()
     require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}', args.name), 'Invalid run name')
     sources = {name: sha(ROOT / name) for name in FILES}
     bundle = hashlib.sha256(json.dumps(sources, sort_keys=True).encode()).hexdigest()
-    directory = ROOT / 'build/c3d-native-accuracy-regression/runs' / bundle / args.name
+    directory = experiment_root(ROOT, args.experiment_root) / 'c3d-native-accuracy-regression/runs' / bundle / args.name
     directory.mkdir(parents=True, exist_ok=False)
     frozen = directory / 'source'
     for name, digest in sources.items():
@@ -115,7 +79,7 @@ def main():
             command += [str(frozen / 'src/app' / source) for source in
                         ('cfd_cartesian3d.c', 'cfd_sparse_mg.c', 'cfd_memory.c')]
             command += ['-lm', '-o', str(directory / label)]
-            result['processes']['compile_' + label] = execute(
+            result['processes']['compile_' + label] = compile_probe(
                 command, directory, 'compile_' + label, 60, 1536 * 1024**2)
         for n in contract['resolutions']:
             fine = n == 64
@@ -178,7 +142,8 @@ def main():
         result['failure'] = str(error)
     result['artifact_sha256'] = {str(path.relative_to(directory)): sha(path)
                                  for path in sorted(directory.rglob('*')) if path.is_file()}
-    save(directory / 'receipt.json', result)
+    save(directory / 'receipt.json', portable_paths(result, directory))
+    seal_bundle(directory)
     print(json.dumps(dict(status=result['status'], receipt=str(directory / 'receipt.json'),
                           sha256=sha(directory / 'receipt.json'))), flush=True)
     return 0 if result['status'] == 'passed_smooth_native_accuracy_regression' else 1

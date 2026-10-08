@@ -4,9 +4,10 @@ from pathlib import Path
 import sys
 import unittest
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from passive_atmosphere import atmosphere_worker_path
 from evolving_atmosphere import run,SCHEMA
 from surface_sources.growth_fire_v1 import sealed
-WORKER=ROOT/'build/evolving-atmosphere/physics_sim_atmosphere_worker'
+WORKER=atmosphere_worker_path('evolving')
 def request():
     n=512;v=[.2+.05*math.cos(2*math.pi*((q//8)%8+.5)/8) for q in range(n)]+[.05]*n+[.1]*n
     j=[0.]*n;j[0]=100;kg=[0.]*n;kg[0]=.01

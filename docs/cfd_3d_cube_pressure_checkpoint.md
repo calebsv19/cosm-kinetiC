@@ -144,12 +144,14 @@ From this Main Edit checkout, give every field run a new unique name:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
-build/cfd-reference-venv/bin/python scripts/run_cfd_native_cube_pressure.py \
+python3 -B scripts/run_cfd_native_cube_pressure.py \
   --name my-cube-n64 --n 64 --length 4
 
 # Supply the receipt path printed by the field command.
-build/cfd-reference-venv/bin/python scripts/check_cfd_native_cube_readback.py <receipt-path>
-build/cfd-reference-venv/bin/python scripts/check_cfd_native_pressure_trace_api.py <receipt-path>
+data/tools/cfd-reference-venv/bin/python scripts/check_cfd_native_cube_readback.py <receipt-path> \
+  --output data/experiments/c3d-native-cube-pressure/readbacks/my-cube-n64
+data/tools/cfd-reference-venv/bin/python scripts/check_cfd_native_pressure_trace_api.py <receipt-path> \
+  --output data/experiments/c3d-native-cube-pressure/pressure-traces/my-cube-n64
 make test-cfd-obstacle3d-pressure-trace-api
 make test-cfd-obstacle3d-pressure-trace-api-sanitize
 make test-cfd-obstacle3d-pressure-trace-anisotropic
@@ -184,3 +186,12 @@ MemDB project context were inspected. Unrelated dirty work is preserved. Existin
 solver source, protected worker/audit and historical checkpoints remain unchanged;
 only two bounded build additions and rolling docs change among preexisting files.
 This checkpoint does not complete the persistent goal.
+
+## Output lifecycle correction (2026-10-06)
+
+Historical build paths above identify the original checkpoint, whose missing
+receipts are not restored by fresh runs. New native fields use data/experiments;
+complete readback and pressure-trace inspection each create a separate sealed
+output and do not append to a sealed input. Check specialized API test output
+placement before running; not every target has migrated BUILD_DIR yet. See
+[cfd_evidence_lifecycle.md](cfd_evidence_lifecycle.md) and the repair status.

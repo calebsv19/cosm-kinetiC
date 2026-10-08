@@ -85,8 +85,15 @@ bool shape_asset_load_file(const char *path, ShapeAsset *out_asset) {
     if (n != (size_t)sz) { free(buf); return false; }
     buf[sz] = '\0';
 
-    cJSON *root = cJSON_Parse(buf);
+    bool ok = shape_asset_from_json_text(buf, out_asset);
     free(buf);
+    return ok;
+}
+
+bool shape_asset_from_json_text(const char *text, ShapeAsset *out_asset) {
+    if (!text || !out_asset) return false;
+    memset(out_asset, 0, sizeof(*out_asset));
+    cJSON *root = cJSON_Parse(text);
     if (!root) return false;
 
     ShapeAsset asset = {0};
@@ -200,49 +207,63 @@ bool shape_asset_bounds(const ShapeAsset *asset, ShapeAssetBounds *out_bounds) {
 static cJSON *point_to_json(ShapeAssetPoint p) {
     cJSON *obj = cJSON_CreateObject();
     if (!obj) return NULL;
-    cJSON_AddNumberToObject(obj, "x", p.x);
-    cJSON_AddNumberToObject(obj, "y", p.y);
+    if (!isfinite(p.x) || !isfinite(p.y) ||
+        !cJSON_AddNumberToObject(obj, "x", p.x) || !cJSON_AddNumberToObject(obj, "y", p.y)) {
+        cJSON_Delete(obj); return NULL;
+    }
     return obj;
 }
 
-bool shape_asset_save_file(const ShapeAsset *asset, const char *path) {
-    if (!asset || !path) return false;
+char *shape_asset_to_json_text(const ShapeAsset *asset) {
+    if (!asset || (asset->path_count && !asset->paths)) return NULL;
     cJSON *root = cJSON_CreateObject();
-    if (!root) return false;
-    cJSON_AddNumberToObject(root, "schema", asset->schema > 0 ? asset->schema : 1);
+    if (!root) return NULL;
+    if (!cJSON_AddNumberToObject(root, "schema", asset->schema > 0 ? asset->schema : 1)) { cJSON_Delete(root); return NULL; }
     if (asset->name) {
-        cJSON_AddStringToObject(root, "name", asset->name);
+        if (!cJSON_AddStringToObject(root, "name", asset->name)) { cJSON_Delete(root); return NULL; }
     }
 
     cJSON *pathsArr = cJSON_AddArrayToObject(root, "paths");
-    if (!pathsArr) { cJSON_Delete(root); return false; }
+    if (!pathsArr) { cJSON_Delete(root); return NULL; }
     for (size_t pi = 0; pi < asset->path_count; ++pi) {
         const ShapeAssetPath *p = &asset->paths[pi];
+        if (p->point_count && !p->points) { cJSON_Delete(root); return NULL; }
         cJSON *pObj = cJSON_CreateObject();
-        if (!pObj) { cJSON_Delete(root); return false; }
-        cJSON_AddItemToArray(pathsArr, pObj);
-        cJSON_AddBoolToObject(pObj, "closed", p->closed);
+        if (!pObj) { cJSON_Delete(root); return NULL; }
+        if (!cJSON_AddItemToArray(pathsArr, pObj)) { cJSON_Delete(pObj); cJSON_Delete(root); return NULL; }
+        if (!cJSON_AddBoolToObject(pObj, "closed", p->closed)) { cJSON_Delete(root); return NULL; }
 
         cJSON *ptsArr = cJSON_AddArrayToObject(pObj, "points");
-        if (!ptsArr) { cJSON_Delete(root); return false; }
+        if (!ptsArr) { cJSON_Delete(root); return NULL; }
         for (size_t vi = 0; vi < p->point_count; ++vi) {
             cJSON *ptObj = point_to_json(p->points[vi]);
-            if (!ptObj) { cJSON_Delete(root); return false; }
-            cJSON_AddItemToArray(ptsArr, ptObj);
+            if (!ptObj) { cJSON_Delete(root); return NULL; }
+            if (!cJSON_AddItemToArray(ptsArr, ptObj)) { cJSON_Delete(ptObj); cJSON_Delete(root); return NULL; }
         }
     }
 
     char *text = cJSON_Print(root);
-    if (!text) { cJSON_Delete(root); return false; }
+    if (!text) { cJSON_Delete(root); return NULL; }
 
+    cJSON_Delete(root);
+    return text;
+}
+
+void shape_asset_json_text_free(char *text) {
+    cJSON_free(text);
+}
+
+bool shape_asset_save_file(const ShapeAsset *asset, const char *path) {
+    if (!path) return false;
+    char *text = shape_asset_to_json_text(asset);
+    if (!text) return false;
     FILE *f = fopen(path, "wb");
-    if (!f) { cJSON_Delete(root); free(text); return false; }
+    if (!f) { shape_asset_json_text_free(text); return false; }
     size_t len = strlen(text);
     size_t n = fwrite(text, 1, len, f);
-    fclose(f);
-    cJSON_Delete(root);
-    free(text);
-    return n == len;
+    bool closed = fclose(f) == 0;
+    shape_asset_json_text_free(text);
+    return n == len && closed;
 }
 
 bool shape_asset_from_shapelib_shape(const Shape *shape,

@@ -22,3 +22,6 @@ tools/packaging/macos/local_app_icon/*
 
 /physics_sim_session_worker
 __pycache__/
+
+/data/experiments/
+/data/tools/

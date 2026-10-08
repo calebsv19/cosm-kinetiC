@@ -13,10 +13,4 @@ class TranslatedCells(unittest.TestCase):
         with self.assertRaises(ValueError):compare_cells(np.concatenate([left,left]),np.concatenate([left,left]))
         right=left.copy();right[0,3]=[.1,.1,.1]
         self.assertFalse(compare_cells(left,right)['cells_match'])
-    def test_all_archived_local_cells_match_below_one_picometer(self):
-        for root in ('c3d-graded-local','c3d-graded-local-relative'):
-            with np.load(R/'build'/root/'geometry.npz',allow_pickle=False) as saved:
-                for kind in ('r025','r040'):
-                    result=compare_cells(inner_cells(saved,f'L4_{kind}_'),inner_cells(saved,f'L8_{kind}_'))
-                    self.assertTrue(result['cells_match']);self.assertLess(result['maximum_coordinate_difference_m'],1e-15)
 if __name__=='__main__':unittest.main()

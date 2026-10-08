@@ -5,6 +5,7 @@ from unittest.mock import patch
 import numpy as np
 from scipy.sparse import csr_matrix
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_encoded_operator import EncodedTriangle
 from cfd_reference3d_encoded_workspace import EncodedWorkspaceCholesky
@@ -14,7 +15,7 @@ from cfd_reference3d_flexible import flexible_gmres
 from cfd_reference3d_condensed import full_action
 from cfd_reference3d_quartic_pair import assemble_quartic
 from test_cfd_reference3d_coarse_velocity import system_fixture
-LIB=R/'build/c3d-encoded-operator/support/factor.dylib'
+LIB=library_path('build/c3d-encoded-operator/support/factor.dylib')
 
 def old_triangle(A):return VectorTriangle(csr_matrix(np.triu(A)),LIB,batch_rows=3)
 def bits(a,b):np.testing.assert_array_equal(a.view(np.uint64),b.view(np.uint64))

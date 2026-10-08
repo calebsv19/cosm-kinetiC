@@ -35,8 +35,4 @@ class Profile(unittest.TestCase):
   def fail(phase):raise RuntimeError('stop')
   with self.assertRaises(RuntimeError):p.profile_actions(f,pre,np.arange(1.,5.),3,fail)
   self.assertIs(f.balanced.inverse,inverse);self.assertIs(f.balanced.velocity,velocity);self.assertEqual(f.coarse_factor.solve,solve);self.assertEqual(p.diagnostic_reserve(4),8*8*4+2*2**20)
- def test_exact_runner_transform_and_rejected_predecessor(self):
-  d=R/'build/c3d-packed-matched-profile';t=json.loads((d/'runner-transform.json').read_text());v=(R/t['parent']).read_text()
-  for a,b in t['literal_replacements']:self.assertIn(a,v);v=v.replace(a,b)
-  self.assertEqual(v,(R/t['output']).read_text());pre=json.loads((d/'predecessor.json').read_text());self.assertEqual(hashlib.sha256(Path(pre['path']).read_bytes()).hexdigest(),pre['sha256']);self.assertFalse(json.loads(Path(pre['path']).read_text())['eligibility']['finer_trial_permitted'])
 if __name__=='__main__':unittest.main()

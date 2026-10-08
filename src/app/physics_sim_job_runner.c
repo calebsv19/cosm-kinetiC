@@ -1,14 +1,21 @@
+#include "app/physics_sim_job_startup.h"
+#include "app/physics_sim_job_logs.h"
+#include "app/physics_sim_job_guard.h"
+#include "app/physics_sim_job_file.h"
+#include "app/physics_sim_job_json.h"
 #include "app/physics_sim_job_runner.h"
 #include "app/physics_sim_headless_job_bundle.h"
 #include "app/physics_sim_job_runner_internal.h"
 
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #if defined(__APPLE__) || defined(__unix__)
 extern time_t timegm(struct tm *tm);
@@ -17,10 +24,10 @@ extern time_t timegm(struct tm *tm);
 static bool spawn_detached_headless(const char *headless_cli_path,
                                     const PhysicsSimDetachedJobPaths *paths,
                                     const PhysicsSimDetachedRequest *request,
-                                    pid_t *out_pid) {
+                                    pid_t *out_pid, char *diagnostics, size_t diagnostics_size) {
     pid_t pid = 0;
-    FILE *stdout_file = NULL;
-    FILE *stderr_file = NULL;
+    PhysicsSimJobLogs logs;
+    PhysicsSimJobStartup startup;
     char frames_arg[32];
     char sim_steps_arg[32];
     char progress_interval_arg[32];
@@ -30,7 +37,7 @@ static bool spawn_detached_headless(const char *headless_cli_path,
 
     if (out_pid) *out_pid = 0;
     if (!headless_cli_path || !paths || !request) return false;
-    if (!ensure_directory_exists(paths->job_root)) return false;
+    if (!physics_sim_job_guard_current()) return false;
 
     snprintf(frames_arg, sizeof(frames_arg), "%d", request->frames);
     snprintf(sim_steps_arg, sizeof(sim_steps_arg), "%d", request->sim_steps_per_frame);
@@ -39,23 +46,21 @@ static bool spawn_detached_headless(const char *headless_cli_path,
     snprintf(volume_export_stride_arg, sizeof(volume_export_stride_arg), "%d", request->volume_export_stride);
     snprintf(volume_export_max_arg, sizeof(volume_export_max_arg), "%d", request->volume_export_max_frames);
 
+    if (!physics_sim_job_logs_prepare(paths->job_root, &logs)) {
+        diag_set(diagnostics, diagnostics_size, "log destination admission held"); return false;
+    }
+    if (!physics_sim_job_startup_open(&startup)) {
+        physics_sim_job_logs_close(&logs); diag_set(diagnostics, diagnostics_size, "startup channel allocation failed"); return false;
+    }
     pid = fork();
-    if (pid < 0) return false;
+    if (pid < 0) { physics_sim_job_startup_close(&startup); physics_sim_job_logs_close(&logs);
+        diag_set(diagnostics, diagnostics_size, "fork failed"); return false; }
     if (pid == 0) {
         char *argv[38];
         int argc = 0;
-        int null_fd = -1;
-        if (setsid() < 0) _exit(126);
-        stdout_file = fopen(paths->stdout_log_path, "ab");
-        stderr_file = fopen(paths->stderr_log_path, "ab");
-        if (!stdout_file || !stderr_file) _exit(126);
-        if (dup2(fileno(stdout_file), STDOUT_FILENO) < 0) _exit(126);
-        if (dup2(fileno(stderr_file), STDERR_FILENO) < 0) _exit(126);
-        null_fd = open("/dev/null", O_RDONLY);
-        if (null_fd >= 0) {
-            (void)dup2(null_fd, STDIN_FILENO);
-            close(null_fd);
-        }
+        physics_sim_job_startup_child(&startup);
+        if (setsid() < 0) { physics_sim_job_startup_error(&startup, 1, errno); _exit(126); }
+        if (!physics_sim_job_logs_redirect(&logs)) { physics_sim_job_startup_error(&startup, 2, errno ? errno : EIO); _exit(126); }
 
         argv[argc++] = (char *)headless_cli_path;
         argv[argc++] = (char *)"--runtime-scene";
@@ -104,10 +109,12 @@ static bool spawn_detached_headless(const char *headless_cli_path,
         argv[argc] = NULL;
 
         execv(headless_cli_path, argv);
+        physics_sim_job_startup_error(&startup, 3, errno);
         _exit(127);
     }
+    physics_sim_job_logs_close(&logs);
     if (out_pid) *out_pid = pid;
-    return true;
+    return physics_sim_job_startup_wait(&startup, pid, 10000, diagnostics, diagnostics_size);
 }
 
 static bool validate_grid_request(const char *text) {
@@ -157,11 +164,31 @@ static bool load_request_file(const char *request_path,
                 "three_quarter");
     out_request->skip_present = true;
 
-    root = json_object_from_file(request_path);
+    root = physics_sim_job_json_read(request_path);
     if (!root || !json_object_is_type(root, json_type_object)) {
         if (root) json_object_put(root);
         diag_set(out_diagnostics, out_diagnostics_size, "failed to parse request json");
         return false;
+    }
+    const PhysicsSimJobJsonField fields[] = {
+        {"frames", PHYSICS_JOB_INT, 0, INT_MAX},
+        {"sim_steps_per_frame", PHYSICS_JOB_INT, 0, INT_MAX},
+        {"progress_interval", PHYSICS_JOB_INT, 0, INT_MAX},
+        {"volume_export_start_frame", PHYSICS_JOB_INT, 0, INT_MAX},
+        {"volume_export_stride", PHYSICS_JOB_INT, 0, INT_MAX},
+        {"volume_export_max_frames", PHYSICS_JOB_INT, 0, INT_MAX},
+        {"save_volume_frames", PHYSICS_JOB_BOOL, 0, 0},
+        {"save_render_frames", PHYSICS_JOB_BOOL, 0, 0},
+        {"save_wind_projection_frames", PHYSICS_JOB_BOOL, 0, 0},
+        {"skip_present", PHYSICS_JOB_BOOL, 0, 0},
+        {"overwrite", PHYSICS_JOB_BOOL, 0, 0},
+        {"schema_version", PHYSICS_JOB_STRING, 0, sizeof(out_request->schema_version)-1},
+        {"grid", PHYSICS_JOB_STRING, 0, sizeof(out_request->grid)-1},
+        {"wind_shot_camera", PHYSICS_JOB_STRING, 0, sizeof(out_request->wind_shot_camera_profile)-1},
+        {"wind_shot_camera_profile", PHYSICS_JOB_STRING, 0, sizeof(out_request->wind_shot_camera_profile)-1}
+    };
+    if (!physics_sim_job_json_fields(root, fields, sizeof(fields)/sizeof(fields[0]))) {
+        json_object_put(root); diag_set(out_diagnostics, out_diagnostics_size, "request field type/range held"); return false;
     }
     if (json_get_string(root, "schema_version", &text_value)) {
         copy_string(out_request->schema_version, sizeof(out_request->schema_version), text_value);
@@ -357,11 +384,13 @@ static bool build_default_shared_job_envelope(const PhysicsSimDetachedRequest *r
 static bool write_canonical_request_file(const char *path,
                                          const PhysicsSimDetachedRequest *request) {
     FILE *file = NULL;
+    PhysicsSimJobFile publication;
     if (!path || !request) return false;
-    if (!ensure_parent_directory_exists(path)) return false;
-    file = fopen(path, "wb");
+    if (!physics_sim_job_guard_current() || !ensure_parent_directory_exists(path)) return false;
+    file = physics_sim_job_file_begin(path, true, &publication);
     if (!file) return false;
     fprintf(file, "{\n");
+    fprintf(file, "  \"artifact_class\": \"operational_job\",\n");
     fprintf(file, "  \"schema_version\": ");
     json_write_string(file, request->schema_version);
     fprintf(file, ",\n");
@@ -396,7 +425,7 @@ static bool write_canonical_request_file(const char *path,
     fprintf(file, "  \"skip_present\": %s,\n", request->skip_present ? "true" : "false");
     fprintf(file, "  \"overwrite\": %s\n", request->overwrite ? "true" : "false");
     fprintf(file, "}\n");
-    fclose(file);
+    if (!physics_sim_job_file_finish(&publication, file)) return false;
     return true;
 }
 
@@ -452,7 +481,10 @@ bool physics_sim_job_runner_submit(const char *argv0,
             return false;
         }
     }
-    build_job_paths(jobs_root, out_job_id, &paths);
+    if (!build_job_paths(jobs_root, out_job_id, &paths)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "job path admission held: invalid ID, linked/special metadata or oversized path");
+        return false;
+    }
     if (file_exists(paths.job_root)) {
         diag_set(out_diagnostics, out_diagnostics_size, "job id collision");
         return false;
@@ -474,13 +506,19 @@ bool physics_sim_job_runner_submit(const char *argv0,
                  "output root already exists and is not empty; use --overwrite");
         return false;
     }
-    if (!ensure_directory_exists(paths.job_root)) {
-        diag_set(out_diagnostics, out_diagnostics_size, "failed to create job directory");
+    if (!ensure_directory_exists(paths.jobs_root) || mkdir(paths.job_root, 0700) != 0) {
+        diag_set(out_diagnostics, out_diagnostics_size, "exclusive job slot creation held");
         return false;
     }
+    PhysicsSimJobGuard guard;
+    if (!physics_sim_job_guard_begin(paths.job_root, &guard)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "job operation ownership held");
+        return false;
+    }
+    bool success = false;
     if (!write_canonical_request_file(paths.job_request_path, &request)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to stage job request");
-        return false;
+        goto finish;
     }
 
     detached_job_record_defaults(&record);
@@ -510,7 +548,7 @@ bool physics_sim_job_runner_submit(const char *argv0,
                                            record.submitted_at_utc,
                                            &shared_envelope)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to build shared job envelope");
-        return false;
+        goto finish;
     }
     if (is_shared_bundle) {
         if (!copy_string(shared_envelope.scene_payload.schema_family,
@@ -538,7 +576,7 @@ bool physics_sim_job_runner_submit(const char *argv0,
                          sizeof(shared_envelope.metadata.created_at),
                          source_bundle.envelope.metadata.created_at)) {
             diag_set(out_diagnostics, out_diagnostics_size, "failed to preserve source bundle metadata");
-            return false;
+            goto finish;
         }
     }
     if (!physics_sim_headless_job_bundle_write(paths.shared_job_path,
@@ -546,22 +584,32 @@ bool physics_sim_job_runner_submit(const char *argv0,
                                                diagnostics,
                                                sizeof(diagnostics))) {
         diag_set(out_diagnostics, out_diagnostics_size, diagnostics);
-        return false;
+        goto finish;
     }
     if (!persist_job_state(&paths, &record)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to write queued job status");
-        return false;
+        goto finish;
     }
 
-    if (!spawn_detached_headless(headless_cli_path, &paths, &request, &pid)) {
+    if (!physics_sim_job_guard_check(&guard)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "job operation namespace changed"); goto finish;
+    }
+    if (!spawn_detached_headless(headless_cli_path, &paths, &request, &pid, diagnostics, sizeof(diagnostics))) {
         snprintf(record.state, sizeof(record.state), "failed");
         utc_now_string(record.finished_at_utc, sizeof(record.finished_at_utc));
         utc_now_string(record.updated_at_utc, sizeof(record.updated_at_utc));
+        record.pid = pid;
         record.exit_code = 127;
-        snprintf(record.diagnostics, sizeof(record.diagnostics), "failed to spawn detached simulation");
+        snprintf(record.stage, sizeof(record.stage), "startup_failed");
+        copy_string(record.diagnostics, sizeof(record.diagnostics), diagnostics);
+        if (pid > 0 && !strstr(diagnostics, "direct_child_reaped=true")) {
+            snprintf(record.state, sizeof(record.state), "stalled");
+            snprintf(record.stage, sizeof(record.stage), "startup_held");
+            record.finished_at_utc[0] = '\0'; record.exit_code = -1;
+        }
         (void)persist_job_state(&paths, &record);
-        diag_set(out_diagnostics, out_diagnostics_size, "failed to spawn detached simulation");
-        return false;
+        diag_set(out_diagnostics, out_diagnostics_size, diagnostics);
+        goto finish;
     }
 
     record.pid = pid;
@@ -571,11 +619,14 @@ bool physics_sim_job_runner_submit(const char *argv0,
     snprintf(record.diagnostics, sizeof(record.diagnostics), "detached simulation launched");
     if (!write_pid_file(paths.pid_path, pid) || !persist_job_state(&paths, &record)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to persist detached job state");
-        return false;
+        goto finish;
     }
 
     diag_set(out_diagnostics, out_diagnostics_size, "ok");
-    return true;
+    success = physics_sim_job_guard_check(&guard);
+finish:
+    physics_sim_job_guard_end(&guard);
+    return success;
 }
 
 bool physics_sim_job_runner_print_status(FILE *out,
@@ -592,23 +643,40 @@ bool physics_sim_job_runner_print_status(FILE *out,
         diag_set(out_diagnostics, out_diagnostics_size, "failed to resolve jobs root");
         return false;
     }
-    build_job_paths(jobs_root, job_id, &paths);
+    if (!build_job_paths(jobs_root, job_id, &paths)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "job path admission held: invalid ID, linked/special metadata or oversized path");
+        return false;
+    }
     if (!file_exists(paths.job_status_path)) {
         diag_set(out_diagnostics, out_diagnostics_size, "job status file not found");
         return false;
     }
-    {
-        PhysicsSimDetachedJobRecord record;
-        if (load_job_status_record(&paths, &record)) {
-            (void)refresh_job_status_record(&paths, &record);
-        }
-    }
-    if (!print_file_to_stream(out, paths.job_status_path)) {
-        diag_set(out_diagnostics, out_diagnostics_size, "failed to read job status file");
+    PhysicsSimJobGuard guard;
+    if (!physics_sim_job_guard_begin(paths.job_root, &guard)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "job operation ownership held");
         return false;
     }
+    bool success = false;
+    {
+        PhysicsSimDetachedJobRecord record;
+        if (!load_job_status_record(&paths, &record)) {
+            diag_set(out_diagnostics, out_diagnostics_size, "job status identity/path binding held");
+            goto finish;
+        }
+        if (!physics_sim_job_guard_check(&guard) || !refresh_job_status_record(&paths, &record)) {
+            diag_set(out_diagnostics, out_diagnostics_size, "job refresh held; metadata not fully published");
+            goto finish;
+        }
+    }
+    if (!physics_sim_job_guard_check(&guard) || !print_file_to_stream(out, paths.job_status_path)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "failed to read job status file");
+        goto finish;
+    }
     diag_set(out_diagnostics, out_diagnostics_size, "ok");
-    return true;
+    success = physics_sim_job_guard_check(&guard); goto finish;
+finish:
+    physics_sim_job_guard_end(&guard);
+    return success;
 }
 
 bool physics_sim_job_runner_cancel(const char *argv0,
@@ -625,21 +693,37 @@ bool physics_sim_job_runner_cancel(const char *argv0,
         diag_set(out_diagnostics, out_diagnostics_size, "failed to resolve jobs root");
         return false;
     }
-    build_job_paths(jobs_root, job_id, &paths);
-    if (!load_job_status_record(&paths, &record)) {
+    if (!build_job_paths(jobs_root, job_id, &paths)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "job path admission held: invalid ID, linked/special metadata or oversized path");
+        return false;
+    }
+    if (!file_exists(paths.job_status_path)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to load job status");
         return false;
     }
-    (void)refresh_job_status_record(&paths, &record);
+    PhysicsSimJobGuard guard;
+    if (!physics_sim_job_guard_begin(paths.job_root, &guard)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "job operation ownership held");
+        return false;
+    }
+    bool success = false;
+    if (!load_job_status_record(&paths, &record)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "failed to load job status");
+        goto finish;
+    }
+    if (!physics_sim_job_guard_check(&guard) || !refresh_job_status_record(&paths, &record)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "job refresh held; metadata not fully published");
+        goto finish;
+    }
     if (strcmp(record.state, "completed") == 0 ||
         strcmp(record.state, "cancelled") == 0 ||
         strcmp(record.state, "failed") == 0) {
         diag_set(out_diagnostics, out_diagnostics_size, "job already terminal");
-        return true;
+        success = physics_sim_job_guard_check(&guard); goto finish;
     }
     if (!write_cancel_flag_file(paths.cancel_request_path)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to write cancel flag");
-        return false;
+        goto finish;
     }
     utc_now_string(record.updated_at_utc, sizeof(record.updated_at_utc));
     snprintf(record.stage, sizeof(record.stage), "cancel_requested");
@@ -648,8 +732,11 @@ bool physics_sim_job_runner_cancel(const char *argv0,
              "cancel flag written; awaiting cooperative shutdown");
     if (!persist_job_state(&paths, &record)) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to update cancel-requested status");
-        return false;
+        goto finish;
     }
     diag_set(out_diagnostics, out_diagnostics_size, "ok");
-    return true;
+    success = physics_sim_job_guard_check(&guard); goto finish;
+finish:
+    physics_sim_job_guard_end(&guard);
+    return success;
 }

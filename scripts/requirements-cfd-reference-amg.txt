@@ -1,0 +1,2 @@
+# Explicit additional dependency for current AMG/preconditioner checks.
+pyamg==5.3.0

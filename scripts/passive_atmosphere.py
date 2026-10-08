@@ -1,17 +1,46 @@
 #!/usr/bin/env python3
 """Admit and run a bounded offline periodic passive-atmosphere experiment."""
+from atmosphere_attempt import retained_atmosphere, retained_directory
 import argparse
+import subprocess
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
-import subprocess
+from tool_probe import capture
+from build_owner import inherited, inherited_descriptors, execution_descriptors, owned_worker
 import tempfile
 from surface_sources.growth_fire_v1 import strict_load,keys,number,integer,require,sealed
 ROOT=Path(__file__).resolve().parents[1]
 SCHEMA='physics_sim_passive_transport_request/v1'
 MODEL='periodic_constant_property_passive3d_v1'
+
+def atmosphere_worker_path(role):
+    """Select the exact Make-exported worker; never search alternate builds."""
+    routes={
+        'passive':('PHYSICS_SIM_PASSIVE_WORKER','passive-atmosphere/physics_sim_passive_worker'),
+        'evolving':('PHYSICS_SIM_ATMOSPHERE_WORKER','evolving-atmosphere/physics_sim_atmosphere_worker'),
+        'open':('PHYSICS_SIM_OPEN_ATMOSPHERE_WORKER','open-atmosphere/physics_sim_open_atmosphere_worker')}
+    variable,relative=routes[role]
+    value=os.environ.get(variable)
+    if value is None:return ROOT/'build'/relative
+    require(bool(value) and Path(value).is_absolute(),'selected worker must be a non-empty absolute path: '+variable)
+    return Path(value)
+
+def worker_subprocess_descriptors():
+    owner=os.environ.get('PHYSICS_SIM_BUILD_OWNER_ROOT')
+    return execution_descriptors() or (inherited_descriptors(ROOT,Path(owner)) if owner and inherited(ROOT,Path(owner)) else ())
+
+
+def run_atmosphere_worker(worker, request_path, output_limit=67108864):
+    """Capture native JSON with live byte/wall limits and owned-group teardown."""
+    descriptors=worker_subprocess_descriptors()
+    row=capture([str(worker),str(request_path)],stdout_limit=output_limit,pass_fds=descriptors)
+    from atmosphere_attempt import retain_capture
+    retain_capture(row,[str(worker),str(request_path)])
+    require(row['status']=='passed',row.get('reason') or row['stderr'].decode('utf-8',errors='replace').strip() or 'worker failed')
+    return row['stdout']
 
 def validate(r):
     keys(r,('schema','grid','length_m','properties','initial_energy_j','initial_smoke_kg','steps'))
@@ -36,15 +65,16 @@ def validate(r):
         for key in ('energy_j','smoke_kg'):array(step[key],n,0,1e12)
     return r
 
+@owned_worker(ROOT)
+@retained_atmosphere(ROOT,"passive")
 def run(request,worker):
     validate(request)
     worker=Path(worker).resolve();worker_hash=hashlib.sha256(worker.read_bytes()).hexdigest()
-    with tempfile.TemporaryDirectory(prefix='passive-atmosphere-') as temp:
+    with retained_directory() as temp:
         p=Path(temp)/'request.json';p.write_text(json.dumps(request,allow_nan=False,separators=(',',':')))
         require(p.stat().st_size<=64*1024*1024,'request byte resource bound')
-        executed=subprocess.run([str(worker),str(p)],capture_output=True,text=True,timeout=120)
-        require(executed.returncode==0,executed.stderr.strip() or 'worker failed')
-        result_path=Path(temp)/'fields.json';result_path.write_text(executed.stdout)
+        output=run_atmosphere_worker(worker,p)
+        result_path=Path(temp)/'fields.json';result_path.write_bytes(output)
         fields=strict_load(result_path)
     require(worker_hash==hashlib.sha256(worker.read_bytes()).hexdigest(),'worker changed during execution')
     require(fields['schema']=='physics_sim_passive_fields/v1' and fields['model']==MODEL,'worker model mismatch')
@@ -72,7 +102,7 @@ def run(request,worker):
         'checkpoint_restart':False,'buoyancy_qualified':False,'ash_model':False})
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--worker',type=Path,default=ROOT/'build/passive-atmosphere/physics_sim_passive_worker')
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--worker',type=Path,default=atmosphere_worker_path('passive'))
     p.add_argument('--request',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
     require(not a.output.exists(),'choose a new result path')
     result=run(strict_load(a.request),a.worker)

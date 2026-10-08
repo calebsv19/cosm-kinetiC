@@ -101,10 +101,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
+    if args.report:
+        from cfd_evidence import admitted_path,experiment_root
+        from test_open_atmosphere import ROOT
+        args.report=admitted_path(args.report)
+        experiment_root(ROOT,args.report.parent)
+        if args.report.exists():parser.error('Report output exists; select a fresh retained path')
     result = unittest.TextTestRunner(verbosity=2).run(
         unittest.defaultTestLoader.loadTestsFromTestCase(ConvergenceTests))
     if result.wasSuccessful() and args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(json.dumps({'schema': 'physics_sim_open_convergence/v1',
+        with args.report.open('x') as stream:stream.write(json.dumps({'schema': 'physics_sim_open_convergence/v1',
             'tests_passed': result.testsRun, 'metrics': METRICS}, indent=2)+'\n')
     raise SystemExit(0 if result.wasSuccessful() else 1)

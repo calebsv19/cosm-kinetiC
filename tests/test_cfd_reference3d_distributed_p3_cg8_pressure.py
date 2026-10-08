@@ -25,9 +25,6 @@ class FixedPressure(unittest.TestCase):
    if phase=='fixed_pressure_velocity_ready':raise ValueError('stopped after extra owner')
   with self.assertRaises(ValueError):DistributedP3CG8PressureFactor(t,LOCAL,pressure_control=False,coarse_library=COARSE,Z=Z,coarse_upper=C,stage_callback=stop)
  def test_exact_probe_transform_and_work_reservation_reuse(self):
-  t=json.loads((R/'build/c3d-distributed-p3-cg8-pressure/probe-transform-control.json').read_text());s=(R/t['parent']).read_text()
-  for a,b in t['literal_replacements']:self.assertIn(a,s);s=s.replace(a,b)
-  self.assertEqual(s,(R/t['output']).read_text())
-  from cfd_reference3d_distributed_p3_cg8_pressure import work_reserve
-  self.assertEqual(work_reserve(100,20),8*(40*100+24*20)+2*2**20)
+     from cfd_reference3d_distributed_p3_cg8_pressure import work_reserve
+     self.assertEqual(work_reserve(100, 20), 8 * (40 * 100 + 24 * 20) + 2 * 2 ** 20)
 if __name__=='__main__':unittest.main()

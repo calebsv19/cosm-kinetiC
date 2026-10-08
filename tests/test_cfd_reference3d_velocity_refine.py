@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import numpy as np
 from scipy.sparse import csr_matrix
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_velocity_refine import RefinedVelocity,reserve
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_mixed_workspace import MixedWorkspaceCholesky
@@ -13,7 +14,7 @@ from cfd_reference3d_flexible import flexible_gmres
 from cfd_reference3d_condensed import full_action
 from cfd_reference3d_quartic_pair import assemble_quartic
 from test_cfd_reference3d_coarse_velocity import system_fixture
-LIB=R/'build/c3d-encoded-operator/support/factor.dylib'
+LIB=library_path('build/c3d-encoded-operator/support/factor.dylib')
 class Refine(unittest.TestCase):
  def test_actual_float_inverse_residual_improves_and_observation_bound(self):
   rng=np.random.default_rng(741);B=rng.normal(size=(24,24));A=B.T@B+3*np.eye(24);t=VectorTriangle(csr_matrix(np.triu(A)),LIB);f=MixedWorkspaceCholesky(t,LIB,pressure_control=False);pc=RefinedVelocity(t,f);h=t.input_sha256

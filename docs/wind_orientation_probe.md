@@ -9,7 +9,7 @@ The helper:
 
 - loads a `scene_runtime_v1` Wind scene
 - optionally lists probe-eligible objects
-- clones the scene once per orientation into an output directory
+- creates a fresh retained attempt under the requested output parent and clones the scene once per orientation
 - applies absolute rotations or relative rotation deltas to one selected object
 - runs `physics_sim_headless`
 - writes text and JSON summaries with object drag-pressure proxy, projected
@@ -67,6 +67,22 @@ Supported probe object types are `mesh_asset_instance`, `box`, and `sphere`.
 - `--rotation-mode absolute`: replace the object's rotation.
 - `--rotation-mode relative`: add each orientation to the authored rotation.
 - `--require-wind-tunnel`: fail unless the runtime scene has active Wind setup.
+
+## Output ownership and reruns
+
+`--output-root` is a parent in this checkout's `tmp/`, `data/experiments/` or
+`visual_artifacts/` namespace. Each run prints a new `orientation-<UUID>` attempt;
+text/JSON summaries and per-orientation output live beneath its `work/` directory.
+Previous attempts and failed logs are retained. `--keep-existing` is deprecated;
+all runs preserve existing output. The native worker is never passed `--overwrite`.
+
+Build the source headless tool first. The default worker is
+`build/bin/physics_sim_headless`; use `--headless-bin` for another checkout build
+profile. External and legacy root-level workers are outside this lifecycle route.
+`--list-objects` remains read-only and needs no worker or output allocation.
+`--wall-cap` bounds supervised work (default 900 seconds), and `--log-cap` bounds
+sampled per-case logs (default 64 MiB). See [wind_probe_lifecycle.md](wind_probe_lifecycle.md)
+for admission, evidence, tested behavior and remaining resource/recovery limits.
 
 ## Interpretation
 

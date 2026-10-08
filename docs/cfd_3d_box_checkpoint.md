@@ -48,7 +48,9 @@ Stationary temporal comparisons are rejected.
 The following developer commands reproduce authoring, run, retained inspection,
 separate forces, complete export/native equation readback and a matched two-grid
 comparison. Run them from the authoritative Main Edit checkout. They require
-the existing clang/build dependencies and the NumPy-capable developer environment.
+the existing clang/build dependencies. The active box runner and inspector
+use Python standard-library tooling. Build the pinned reference environment
+separately for independent-reference tests.
 Each named output is immutable; choose a fresh name/output directory when repeating.
 
 ```bash
@@ -57,15 +59,15 @@ make BUILD_DIR=build/c3d-box/workflow-build CFD_BUILD_OPT=1 \
   "$PWD/build/c3d-box/workflow-build/physics_sim_session_worker"
 
 PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
-  build/cfd-reference-venv/bin/python scripts/run_cfd_box_scene.py --name my-box-01
+  python3 -B scripts/run_cfd_box_scene.py --name my-box-01
 
 PYTHONDONTWRITEBYTECODE=1 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 \
-  build/cfd-reference-venv/bin/python scripts/inspect_cfd_box_scene.py \
-  --receipt build/c3d-box/scenes/my-box-01/receipt.json \
-  --output build/c3d-box/inspection/my-box-01
+  python3 -B scripts/inspect_cfd_box_scene.py \
+  --receipt data/experiments/c3d-box/scenes/my-box-01/receipt.json \
+  --output data/experiments/c3d-box/inspection/my-box-01
 ```
 
-Open the resulting `build/c3d-box/inspection/my-box-01/index.html` for labelled
+Open the resulting `data/experiments/c3d-box/inspection/my-box-01/index.html` for labelled
 velocity/pressure previews, SI probes, force components and resolution sensitivity.
 The individual case JSON files link full XYZ loads, physical/numerical assessment
 and field/worker hashes. Retained `channel_fields.json` contains every cell/face
@@ -219,3 +221,18 @@ The mismatch is not a proven ±1.2% absolute-error bound. It does not block addi
 a separately labelled stationary box workflow or the next pressure-driven
 transient-Stokes implementation. All original gates and saved successes/failures
 remain intact; the investigation stops here for this batch.
+
+## Build and evidence lifecycle repair (2026-10-06)
+
+Historical numerical values above describe the earlier checkpoint; lost historical
+fields cannot be inferred present from these descriptions. Fresh receipts and
+remaining qualification gaps are tracked in [repair status](cfd_lifecycle_repair_status.md).
+See [portable retained bundles and cleanup](cfd_evidence_lifecycle.md) before new runs.
+
+## Current contract evidence location
+
+The six native box contract/material/session targets now retain each attempt in
+`EXPERIMENT_DIR/contract-proofs/<target>-<uuid>/`. Printed capsule paths contain
+`compile.stdout`, `compile.stderr`, `run.stdout`, `run.stderr` and sealed readback
+metadata. Earlier build-tree paths in this checkpoint describe historical
+evidence; new runs preserve them. See [native contract proof lifecycle](native_contract_proof_lifecycle.md).

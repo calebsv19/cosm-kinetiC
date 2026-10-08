@@ -53,7 +53,12 @@ typedef struct {
 //     { "closed": true, "points": [ { "x": 0, "y": 0 }, ... ] }
 //   ]
 // }
+/* Borrowed NUL-terminated text; empty output required; legacy decoding semantics. */
+bool shape_asset_from_json_text(const char *text, ShapeAsset *out_asset);
 bool shape_asset_load_file(const char *path, ShapeAsset *out_asset);
+/* Serialize without file I/O; release returned text with shape_asset_json_text_free. */
+char *shape_asset_to_json_text(const ShapeAsset *asset);
+void shape_asset_json_text_free(char *text);
 bool shape_asset_save_file(const ShapeAsset *asset, const char *path);
 
 // Compute bounds of the asset (in asset-local coordinates).

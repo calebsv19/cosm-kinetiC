@@ -2,7 +2,6 @@
 #  Release rules
 # =========================
 release-contract:
-	@mkdir -p "$(RELEASE_DIR)"
 	@echo "release-contract:"
 	@echo "  product: $(RELEASE_PRODUCT_NAME)"
 	@echo "  program: $(RELEASE_PROGRAM_KEY)"
@@ -11,182 +10,109 @@ release-contract:
 	@echo "  bundle_id: $(RELEASE_BUNDLE_ID)"
 	@echo "  app_name: $(PACKAGE_APP_NAME)"
 	@echo "  artifact_base: $(RELEASE_ARTIFACT_BASENAME)"
-	@echo "  release_zip: $(RELEASE_APP_ZIP)"
+	@echo "  unsigned_local_zip: $(RELEASE_APP_ZIP)"
+	@echo "  authenticated_root: $(RELEASE_PIPELINE_ROOT)"
+	@echo "  authenticated_zip: $(RELEASE_PIPELINE_ROOT)/final/$(RELEASE_ARTIFACT_BASENAME).zip"
 	@echo "  signing_identity: $(RELEASE_CODESIGN_IDENTITY)"
-	@echo "  notary_profile_set: $$( [ -n \"$(APPLE_NOTARY_PROFILE)\" ] && echo yes || echo no )"
-	@echo "  team_id_set: $$( [ -n \"$(APPLE_TEAM_ID)\" ] && echo yes || echo no )"
+	@echo "  notary_profile_set: $(if $(strip $(APPLE_NOTARY_PROFILE)),yes,no)"
+	@echo "  team_id_set: $(if $(strip $(APPLE_TEAM_ID)),yes,no)"
 
 release-clean:
-	@rm -rf "$(RELEASE_DIR)"
-	@echo "Removed release dir: $(RELEASE_DIR)"
+	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(RELEASE_DIR)"
+	@echo "Release outputs absent; no retained artifact removal performed"
 
 release-build: all
 	@echo "Release build complete: $(TARGET)"
 
+RELEASE_PLIST_BUDDY ?= /usr/libexec/PlistBuddy
+RELEASE_OTOOL ?= otool
+.PHONY: release-bundle-audit _release-bundle-audit
 release-bundle-audit: package-desktop-self-test
-	@mkdir -p "$(RELEASE_DIR)"
-	@/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$(PACKAGE_CONTENTS_DIR)/Info.plist" > "$(RELEASE_DIR)/bundle_id.txt"
-	@test "$$(cat "$(RELEASE_DIR)/bundle_id.txt")" = "$(RELEASE_BUNDLE_ID)" || (echo "bundle id mismatch: expected $(RELEASE_BUNDLE_ID), got $$(cat "$(RELEASE_DIR)/bundle_id.txt")"; exit 1)
-	@env -i HOME="$(HOME)" PATH="$(PATH)" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher" --print-config > "$(RELEASE_DIR)/print_config.txt"
-	@runtime_dir="$$(/usr/bin/grep '^PHYSICS_SIM_RUNTIME_DIR=' "$(RELEASE_DIR)/print_config.txt" | /usr/bin/cut -d= -f2-)"; \
+	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name release-bundle-audit --input "$(PACKAGE_APP_DIR)" --input "$(RELEASE_PLIST_BUDDY)" --input "$$(command -v "$(RELEASE_OTOOL)")" --identity "bundle-id=$(RELEASE_BUNDLE_ID)" --map "RELEASE_AUDIT_DIR=." -- $(MAKE) -f makefile _release-bundle-audit
+
+_release-bundle-audit:
+	@python3 -B scripts/package_outputs.py --root "$(RELEASE_AUDIT_DIR)" --directory "$(RELEASE_AUDIT_DIR)/framework-reports" --file "$(RELEASE_AUDIT_DIR)/bundle_id.txt" --file "$(RELEASE_AUDIT_DIR)/print_config.txt" --file "$(RELEASE_AUDIT_DIR)/otool_physics_sim_bin.txt" --declare
+	@"$(RELEASE_PLIST_BUDDY)" -c 'Print :CFBundleIdentifier' "$(PACKAGE_CONTENTS_DIR)/Info.plist" > "$(RELEASE_AUDIT_DIR)/bundle_id.txt"
+	@test "$$(cat "$(RELEASE_AUDIT_DIR)/bundle_id.txt")" = "$(RELEASE_BUNDLE_ID)" || (echo "bundle id mismatch: expected $(RELEASE_BUNDLE_ID), got $$(cat "$(RELEASE_AUDIT_DIR)/bundle_id.txt")"; exit 1)
+	@env -i HOME="$(HOME)" PATH="$(PATH)" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher" --print-config > "$(RELEASE_AUDIT_DIR)/print_config.txt"
+	@runtime_dir="$$(/usr/bin/grep '^PHYSICS_SIM_RUNTIME_DIR=' "$(RELEASE_AUDIT_DIR)/print_config.txt" | /usr/bin/cut -d= -f2-)"; \
 	if [ -z "$$runtime_dir" ]; then echo "runtime dir missing from print-config"; exit 1; fi; \
 	case "$$runtime_dir" in *"/Contents/Resources"*) echo "runtime dir incorrectly points into app bundle: $$runtime_dir"; exit 1;; esac; \
 	case "$$runtime_dir" in /tmp/*|/var/*|"$(HOME)"/*) ;; *) echo "runtime dir is not user-writable rooted: $$runtime_dir"; exit 1;; esac
-	@/usr/bin/grep -q '^VK_ICD_FILENAMES=' "$(RELEASE_DIR)/print_config.txt" || (echo "missing VK_ICD_FILENAMES in print-config"; exit 1)
-	@/usr/bin/grep -q '^VK_DRIVER_FILES=' "$(RELEASE_DIR)/print_config.txt" || (echo "missing VK_DRIVER_FILES in print-config"; exit 1)
-	@otool -L "$(PACKAGE_MACOS_DIR)/physics-sim-bin" > "$(RELEASE_DIR)/otool_physics_sim_bin.txt"
-	@if /usr/bin/grep -Eq '/opt/homebrew|/usr/local/Cellar|/Users/.*/CodeWork' "$(RELEASE_DIR)/otool_physics_sim_bin.txt"; then \
-		echo "non-portable dylib dependency detected in $(PACKAGE_MACOS_DIR)/physics-sim-bin"; \
-		cat "$(RELEASE_DIR)/otool_physics_sim_bin.txt"; \
-		exit 1; \
-	fi
-	@for file in $$(/usr/bin/find "$(PACKAGE_FRAMEWORKS_DIR)" -type f -name '*.dylib' 2>/dev/null); do \
-		base="$$(/usr/bin/basename "$$file")"; \
-		otool -L "$$file" > "$(RELEASE_DIR)/otool_$$base.txt" || exit 1; \
-		if /usr/bin/grep -Eq '/opt/homebrew|/usr/local/Cellar|/Users/.*/CodeWork' "$(RELEASE_DIR)/otool_$$base.txt"; then \
-			echo "non-portable dylib dependency detected in $$file"; \
-			cat "$(RELEASE_DIR)/otool_$$base.txt"; \
-			exit 1; \
-		fi; \
-	done
+	@/usr/bin/grep -q '^VK_ICD_FILENAMES=' "$(RELEASE_AUDIT_DIR)/print_config.txt" || (echo "missing VK_ICD_FILENAMES in print-config"; exit 1)
+	@/usr/bin/grep -q '^VK_DRIVER_FILES=' "$(RELEASE_AUDIT_DIR)/print_config.txt" || (echo "missing VK_DRIVER_FILES in print-config"; exit 1)
+	@"$(RELEASE_OTOOL)" -L "$(PACKAGE_MACOS_DIR)/physics-sim-bin" > "$(RELEASE_AUDIT_DIR)/otool_physics_sim_bin.txt"
+	@python3 -B scripts/release_framework_audit.py --verify-report "$(RELEASE_AUDIT_DIR)/otool_physics_sim_bin.txt" --input-binary "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
+	@python3 -B scripts/release_framework_audit.py --frameworks "$(PACKAGE_FRAMEWORKS_DIR)" --reports "$(RELEASE_AUDIT_DIR)/framework-reports" --otool "$(RELEASE_OTOOL)"
 	@echo "release-bundle-audit passed."
 
 # Unsigned, local package evidence for Decision 1. Authentication and
 # publication remain separate later stages.
+RELEASE_DITTO ?= /usr/bin/ditto
+RELEASE_SHASUM ?= shasum
+RELEASE_APP_SHA256 ?= $(RELEASE_APP_ZIP).sha256
+.PHONY: release-local-artifact _release-local-artifact
 release-local-artifact: release-bundle-audit
-	@mkdir -p "$(RELEASE_DIR)"
-	@rm -f "$(RELEASE_APP_ZIP)" "$(RELEASE_APP_ZIP).sha256" "$(RELEASE_MANIFEST)"
-	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(PACKAGE_APP_DIR)" "$(RELEASE_APP_ZIP)"
-	@shasum -a 256 "$(RELEASE_APP_ZIP)" > "$(RELEASE_APP_ZIP).sha256"
+	+@python3 -B scripts/package_transaction.py --root "$(RELEASE_DIR)" \
+		--file "RELEASE_APP_ZIP=$(RELEASE_APP_ZIP)" --file "RELEASE_APP_SHA256=$(RELEASE_APP_SHA256)" --file "RELEASE_MANIFEST=$(RELEASE_MANIFEST)" \
+		--input "$(PACKAGE_APP_DIR)" --input makefile --input make --input scripts \
+		--identity "product=$(RELEASE_PRODUCT_NAME)" --identity "program=$(RELEASE_PROGRAM_KEY)" --identity "version=$(RELEASE_VERSION)" --identity "platform=$(RELEASE_PLATFORM)" --identity "arch=$(RELEASE_ARCH)" --identity "channel=$(RELEASE_CHANNEL)" --identity unsigned-local-artifact \
+		--tool "$(RELEASE_DITTO)" --tool "$(RELEASE_SHASUM)" --tool "$(SHELL)" -- $(MAKE) -f makefile _release-local-artifact
+
+_release-local-artifact:
+	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --file "$(RELEASE_APP_ZIP)" --file "$(RELEASE_APP_SHA256)" --file "$(RELEASE_MANIFEST)" --declare
+	@mkdir -p "$$(dirname "$(RELEASE_APP_ZIP)")" "$$(dirname "$(RELEASE_APP_SHA256)")" "$$(dirname "$(RELEASE_MANIFEST)")"
+	@"$(RELEASE_DITTO)" -c -k --sequesterRsrc --keepParent "$(PACKAGE_APP_DIR)" "$(RELEASE_APP_ZIP)"
+	@archive_dir="$$(dirname "$(RELEASE_APP_ZIP)")"; archive_name="$$(basename "$(RELEASE_APP_ZIP)")"; (cd "$$archive_dir" && "$(RELEASE_SHASUM)" -a 256 "$$archive_name") > "$(RELEASE_APP_SHA256)"
 	@printf 'product=%s\nprogram=%s\nversion=%s\nplatform=%s\narch=%s\nformat=zip\nchannel=%s\nartifact=%s\nsha256=%s\nsigned=false\nnotarized=false\n' \
 		"$(RELEASE_PRODUCT_NAME)" "$(RELEASE_PROGRAM_KEY)" "$(RELEASE_VERSION)" \
 		"$(RELEASE_PLATFORM)" "$(RELEASE_ARCH)" "$(RELEASE_CHANNEL)" \
-		"$(notdir $(RELEASE_APP_ZIP))" \
-		"$$(cut -d' ' -f1 "$(RELEASE_APP_ZIP).sha256")" > "$(RELEASE_MANIFEST)"
+		"$$(basename "$(RELEASE_APP_ZIP)")" \
+		"$$(cut -d' ' -f1 "$(RELEASE_APP_SHA256)")" > "$(RELEASE_MANIFEST)"
+	@python3 -B scripts/verify_release_local_artifact.py --archive "$(RELEASE_APP_ZIP)" --checksum "$(RELEASE_APP_SHA256)" --manifest "$(RELEASE_MANIFEST)"
 	@echo "release-local-artifact complete: $(RELEASE_APP_ZIP)"
 
+# Separate immutable phase roots. No source app is signed or stapled in place.
+# Output paths are returned in exact transaction receipts, not guessed by callers.
+RELEASE_PIPELINE_ROOT ?= $(RELEASE_DIR)/authenticated
+RELEASE_CODESIGN ?= codesign
+RELEASE_XCRUN ?= xcrun
+RELEASE_SPCTL ?= spctl
+RELEASE_LIPO ?= lipo
+RELEASE_PIPELINE_ARGS = --source "$(PACKAGE_APP_DIR)" --root "$(RELEASE_PIPELINE_ROOT)" \
+ --signing-identity="$(RELEASE_CODESIGN_IDENTITY)" --profile "$(APPLE_NOTARY_PROFILE)" \
+ --archive-name "$(RELEASE_ARTIFACT_BASENAME).zip" \
+ --identity "product=$(RELEASE_PRODUCT_NAME)" --identity "program=$(RELEASE_PROGRAM_KEY)" \
+ --identity "bundle_id=$(RELEASE_BUNDLE_ID)" --identity "version=$(RELEASE_VERSION)" \
+ --identity "channel=$(RELEASE_CHANNEL)" --identity "platform=$(RELEASE_PLATFORM)" --identity "arch=$(RELEASE_ARCH)" \
+ --tool "codesign=$(RELEASE_CODESIGN)" --tool "xcrun=$(RELEASE_XCRUN)" \
+ --tool "spctl=$(RELEASE_SPCTL)" --tool "lipo=$(RELEASE_LIPO)" --tool "ditto=$(RELEASE_DITTO)"
+
 release-sign: release-bundle-audit
-	@echo "Signing with identity: $(RELEASE_CODESIGN_IDENTITY)"
-	@if [ "$(RELEASE_CODESIGN_IDENTITY)" = "-" ]; then \
-		for dylib in $$(/usr/bin/find "$(PACKAGE_FRAMEWORKS_DIR)" -type f -name '*.dylib' 2>/dev/null); do \
-			codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp=none "$$dylib"; \
-		done; \
-		codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp=none "$(PACKAGE_MACOS_DIR)/physics-sim-bin"; \
-		codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp=none "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"; \
-		codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp=none "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"; \
-		codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp=none "$(PACKAGE_APP_DIR)"; \
-	else \
-		for dylib in $$(/usr/bin/find "$(PACKAGE_FRAMEWORKS_DIR)" -type f -name '*.dylib' 2>/dev/null); do \
-			codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp "$$dylib"; \
-		done; \
-		codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp --options runtime "$(PACKAGE_MACOS_DIR)/physics-sim-bin"; \
-		codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp --options runtime "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"; \
-		codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp --options runtime "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"; \
-		codesign --force --sign "$(RELEASE_CODESIGN_IDENTITY)" --timestamp --options runtime "$(PACKAGE_APP_DIR)"; \
-	fi
-	@echo "release-sign complete."
+	@python3 -B scripts/release_pipeline.py sign $(RELEASE_PIPELINE_ARGS)
 
-release-verify: release-sign
-	@codesign --verify --deep --strict "$(PACKAGE_APP_DIR)"
-	@if [ "$(RELEASE_CODESIGN_IDENTITY)" = "-" ]; then \
-		echo "release-verify note: ad-hoc identity in use; skipping spctl Gatekeeper assessment"; \
-	else \
-		spctl_output="$$(spctl --assess --type execute --verbose=2 "$(PACKAGE_APP_DIR)" 2>&1)"; \
-		spctl_status=$$?; \
-		if [ $$spctl_status -ne 0 ]; then \
-			if printf '%s\n' "$$spctl_output" | /usr/bin/grep -qi "internal error in Code Signing subsystem"; then \
-				echo "release-verify note: spctl internal subsystem error on this host; codesign verification remains authoritative"; \
-			elif printf '%s\n' "$$spctl_output" | /usr/bin/grep -qi "Unnotarized Developer ID"; then \
-				echo "release-verify note: app is Developer ID signed but not notarized yet"; \
-			else \
-				printf '%s\n' "$$spctl_output"; \
-				exit $$spctl_status; \
-			fi; \
-		else \
-			printf '%s\n' "$$spctl_output"; \
-		fi; \
-	fi
-	@echo "release-verify passed."
+# The sign transaction performs strict codesign verification. Gatekeeper is a
+# mandatory final-artifact gate after same-ID acceptance and stapling.
+release-verify release-verify-signed: release-sign
+	@echo "Signed app verified by retained signing transaction"
 
-release-verify-signed: release-sign release-verify
-	@echo "release-verify-signed passed."
+release-notarize: release-bundle-audit
+	@python3 -B scripts/release_pipeline.py notarize $(RELEASE_PIPELINE_ARGS)
 
-release-notarize: release-verify-signed
-	@if [ -z "$(APPLE_NOTARY_PROFILE)" ]; then \
-		echo "APPLE_NOTARY_PROFILE is required for release-notarize"; \
-		exit 1; \
-	fi
-	@if [ "$(RELEASE_CODESIGN_IDENTITY)" = "-" ]; then \
-		echo "release-notarize requires a real Developer ID signing identity (APPLE_SIGN_IDENTITY)"; \
-		exit 1; \
-	fi
-	@mkdir -p "$(RELEASE_DIR)"
-	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(PACKAGE_APP_DIR)" "$(RELEASE_APP_ZIP)"
-	@submission_json="$$(xcrun notarytool submit "$(RELEASE_APP_ZIP)" --keychain-profile "$(APPLE_NOTARY_PROFILE)" --wait --output-format json)"; \
-	echo "$$submission_json" > "$(RELEASE_DIR)/notary_submit.json"; \
-	status="$$(printf '%s\n' "$$submission_json" | /usr/bin/sed -n 's/.*\"status\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p' | /usr/bin/tail -n 1)"; \
-	if [ "$$status" != "Accepted" ]; then \
-		submission_id="$$(printf '%s\n' "$$submission_json" | /usr/bin/sed -n 's/.*\"id\"[[:space:]]*:[[:space:]]*\"\([^\"]*\)\".*/\1/p' | /usr/bin/head -n 1)"; \
-		echo "release-notarize failed: status=$$status id=$$submission_id"; \
-		if [ -n "$$submission_id" ]; then \
-			xcrun notarytool log "$$submission_id" --keychain-profile "$(APPLE_NOTARY_PROFILE)" > "$(RELEASE_DIR)/notary_log_$$submission_id.json" || true; \
-			echo "notary log: $(RELEASE_DIR)/notary_log_$$submission_id.json"; \
-		fi; \
-		exit 1; \
-	fi
-	@echo "release-notarize passed."
-
-release-staple: release-notarize
-	@attempt=1; \
-	while [ $$attempt -le "$(STAPLE_MAX_ATTEMPTS)" ]; do \
-		if xcrun stapler staple "$(PACKAGE_APP_DIR)"; then \
-			break; \
-		fi; \
-		if [ $$attempt -eq "$(STAPLE_MAX_ATTEMPTS)" ]; then \
-			echo "release-staple failed after $$attempt attempts"; \
-			exit 1; \
-		fi; \
-		echo "release-staple retry $$attempt/$(STAPLE_MAX_ATTEMPTS) in $(STAPLE_RETRY_DELAY_SEC)s"; \
-		sleep "$(STAPLE_RETRY_DELAY_SEC)"; \
-		attempt=$$((attempt + 1)); \
-	done
-	@xcrun stapler validate "$(PACKAGE_APP_DIR)"
-	@echo "release-staple passed."
+release-staple: release-bundle-audit
+	@python3 -B scripts/release_pipeline.py staple $(RELEASE_PIPELINE_ARGS)
 
 release-verify-notarized: release-staple
-	@xcrun stapler validate "$(PACKAGE_APP_DIR)"
-	@echo "release-verify-notarized passed."
+	@echo "Stapled app verified by retained stapling transaction"
 
-release-artifact: release-verify-notarized
-	@mkdir -p "$(RELEASE_DIR)"
-	@/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$(PACKAGE_APP_DIR)" "$(RELEASE_APP_ZIP)"
-	@shasum -a 256 "$(RELEASE_APP_ZIP)" > "$(RELEASE_APP_ZIP).sha256"
-	@{ \
-		echo "product=$(RELEASE_PRODUCT_NAME)"; \
-		echo "program=$(RELEASE_PROGRAM_KEY)"; \
-		echo "bundle_id=$(RELEASE_BUNDLE_ID)"; \
-		echo "version=$(RELEASE_VERSION)"; \
-		echo "channel=$(RELEASE_CHANNEL)"; \
-		echo "platform=$(RELEASE_PLATFORM)"; \
-		echo "arch=$(RELEASE_ARCH)"; \
-		echo "signed=1"; \
-		echo "notarized=1"; \
-		echo "artifact=$(RELEASE_APP_ZIP)"; \
-		echo "sha256_file=$(RELEASE_APP_ZIP).sha256"; \
-		echo "notary_json=$(RELEASE_DIR)/notary_submit.json"; \
-	} > "$(RELEASE_MANIFEST)"
-	@echo "release-artifact complete: $(RELEASE_APP_ZIP)"
+release-artifact: release-bundle-audit
+	@python3 -B scripts/release_pipeline.py artifact $(RELEASE_PIPELINE_ARGS)
 
-release-distribute: release-notarize release-staple release-verify-notarized release-artifact
-	@echo "release-distribute passed."
+release-distribute: release-artifact
+	@echo "Local authenticated artifact complete; publication remains Release Control owned"
 
-release-desktop-refresh:
-	@if [ ! -d "$(PACKAGE_APP_DIR)" ]; then \
-		echo "release-desktop-refresh requires an existing built app at $(PACKAGE_APP_DIR)"; \
-		echo "run release-distribute first"; \
-		exit 1; \
-	fi
-	@mkdir -p "$$(dirname "$(DESKTOP_APP_DIR)")"
-	@rm -rf "$(DESKTOP_APP_DIR)"
-	@/usr/bin/ditto "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
-	@echo "Release app refreshed at $(DESKTOP_APP_DIR)"
+# Refresh requires the exact completed final receipt; never select a raw app or
+# discover the newest transaction. Existing authority target stays mandatory.
+release-desktop-refresh: package-desktop-refresh-authority
+	@test -n "$(RELEASE_FINAL_RECEIPT)" || (echo "RELEASE_FINAL_RECEIPT is required"; exit 1)
+	@python3 -B scripts/release_final_artifact.py refresh --final-receipt "$(RELEASE_FINAL_RECEIPT)" --destination "$(DESKTOP_APP_DIR)"

@@ -3,13 +3,14 @@ from pathlib import Path
 import numpy as np
 from scipy.sparse import csr_matrix
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
+from cfd_reference_test_support import library_path
 from cfd_reference3d_vector_storage import VectorTriangle
 from cfd_reference3d_block_ic0 import BlockIC0,BalancedVelocity,basis,velocity_reserve,fresh_admission
 from cfd_reference3d_shared_factor import BlockTriangle
 from test_cfd_reference3d_coarse_velocity import system_fixture
 from cfd_reference3d_condensed import full_action
 from cfd_reference3d_quartic_pair import assemble_quartic
-LIB=R/'build/c3d-block-ic0/support/factor.dylib'
+LIB=library_path('build/c3d-block-ic0/support/factor.dylib')
 def triangle(A):return VectorTriangle(csr_matrix(np.triu(A)),LIB)
 def dense_lower(f):
     n=f.owner.nodes;L=np.zeros((3*n,3*n));v=f.lower_copy().reshape(-1,3,3)

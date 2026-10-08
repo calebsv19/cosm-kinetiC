@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
-
+# Legacy entrypoint: inspect retention; never infer frame disposability by name.
 set -euo pipefail
 
-RENDER_DIR="export/render_frames"
-VIDEO_DIR="export/render_vid"
-
-if [ -d "$RENDER_DIR" ]; then
-    rm -f "$RENDER_DIR"/frame_*.bmp
-    echo "Cleared BMP frames in $RENDER_DIR"
-else
-    echo "Render frame directory $RENDER_DIR does not exist."
-fi
+case "${1:-}" in
+    ""|--plan)
+        if [ "$#" -gt 1 ]; then
+            echo "usage: rm_frames [--plan|--help]" >&2
+            exit 2
+        fi
+        ;;
+    --help|-h)
+        echo "usage: rm_frames [--plan|--help]"
+        echo "Read-only retention inventory of this checkout's export/render_frames."
+        echo "Frames remain held until ownership, retirement eligibility and recovery coverage are verified."
+        exit 0
+        ;;
+    *)
+        echo "Frame deletion is held; use rm_frames --plan to inspect retention." >&2
+        exit 2
+        ;;
+esac
+REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)"
+cd -- "$REPO_ROOT"
+exec python3 -B scripts/retention_audit.py --path export/render_frames

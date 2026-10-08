@@ -1,8 +1,12 @@
+#include <errno.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "app/physics_sim_persistence.h"
+#include "import/shape_asset_output.h"
 #include "geo/shape_asset.h"
 #include "import/shape_import.h"
 
@@ -31,8 +35,9 @@ static void usage(const char *exe) {
 static int parse_float(const char *s, float *out) {
     if (!s || !out) return 0;
     char *end = NULL;
+    errno = 0;
     float v = strtof(s, &end);
-    if (end == s || *end != '\0') return 0;
+    if (errno || end == s || *end != '\0' || !isfinite(v)) return 0;
     *out = v;
     return 1;
 }
@@ -45,7 +50,7 @@ static const char *default_out_path(const char *input) {
     size_t base_len = dot ? (size_t)(dot - base) : strlen(base);
     const char *prefix = getenv("SHAPE_ASSET_DIR");
     if (!prefix || prefix[0] == '\0') {
-        prefix = "config/objects";
+        prefix = "data/runtime";
     }
     size_t prefix_len = strlen(prefix);
     size_t total = prefix_len + 1 + base_len + strlen(".asset.json") + 1;
@@ -90,9 +95,14 @@ static bool parse_args(int argc, char **argv, Args *out) {
         }
     }
     if (!a.input_path) return false;
+    if (a.max_error <= 0.0f) {
+        fprintf(stderr, "Invalid --max-error: positive finite tolerance required\n");
+        return false;
+    }
     *out = a;
     return true;
 }
+
 
 int main(int argc, char **argv) {
     Args args;
@@ -132,7 +142,10 @@ int main(int argc, char **argv) {
         out_path = owned_out;
     }
 
-    bool ok = out_path && shape_asset_save_file(&asset, out_path);
+    const char *asset_dir = getenv("SHAPE_ASSET_DIR");
+    bool generated_default = !args.output_path && (!asset_dir || !asset_dir[0]);
+    bool ok = out_path && (!generated_default || physics_sim_persistence_runtime_directory()) &&
+        physics_sim_shape_asset_publish(&asset, args.input_path, out_path);
     if (ok) {
         printf("Exported ShapeAsset to %s (paths=%zu)\n", out_path, asset.path_count);
     } else {

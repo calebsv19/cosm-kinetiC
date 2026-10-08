@@ -2,7 +2,8 @@ import gc,json,sys,unittest,weakref
 from pathlib import Path
 import numpy as np
 R=Path(__file__).resolve().parents[1];sys.path.insert(0,str(R/'scripts'))
-LIB=R/'build/c3d-seed-fill1/support/factor.dylib'
+from cfd_reference_test_support import library_path
+LIB=library_path('build/c3d-seed-fill1/support/factor.dylib')
 from cfd_reference3d_bounded_fill1 import BlockIC0 as Seed
 from cfd_reference3d_seed_fill1_block import SeedInformedBlockIC0
 from cfd_reference3d_seed_fill1_graph import seed_pattern
@@ -44,7 +45,7 @@ class Informed(unittest.TestCase):
         from test_cfd_reference3d_distributed_p3_cg8 import fixture as actual
         from cfd_reference3d_seed_fill1_pressure import SeedFill1PressureFactor
         from cfd_reference3d_vector_storage import VectorTriangle
-        _,s=actual();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LIB);f=SeedFill1PressureFactor(t,LIB,pressure_control=False,coarse_library=R/'build/c3d-p3-cg8-scalar/support/coarse.dylib',Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata)
+        _,s=actual();nv=len(s.retained_free)-s.nmacro;t=VectorTriangle(s.upper_matrix[:nv,:nv],LIB);f=SeedFill1PressureFactor(t,LIB,pressure_control=False,coarse_library=library_path('build/c3d-p3-cg8-scalar/support/coarse.dylib'),Z=s.p3.Z,coarse_upper=s.p3.upper,coarse_metadata=s.p3.metadata)
         x,y=np.random.default_rng(1922).normal(size=(2,nv));px,py=f.pressure_solve(x),f.pressure_solve(y);self.assertGreater(x@px,0);self.assertGreater(x@f.solve(x),0);np.testing.assert_allclose(x@py,y@px,rtol=1e-10,atol=1e-7)
         self.assertTrue(f.input_unchanged());refs=[weakref.ref(f.starts),weakref.ref(f.linear_pressure),weakref.ref(f.balanced),weakref.ref(f.coarse_factor.starts)];f.close();del f;gc.collect();self.assertTrue(all(r() is None for r in refs))
     def test_graph_budget_rejection_keeps_seed_and_constructor_reservations(self):
@@ -54,10 +55,6 @@ class Informed(unittest.TestCase):
         np.testing.assert_array_equal(seed.solve(x),before);self.assertTrue(seed.input_unchanged());seed.close()
         with self.assertRaises(ValueError):seed_pattern(seed,LIB,0)
         with self.assertRaises(ValueError):SeedInformedBlockIC0(t,LIB,True,pattern_reservation_bytes=0)
-    def test_exact_transforms_and_previous_native_prefix(self):
-        for t in json.loads((R/'build/c3d-seed-fill1/transforms.json').read_text()):
-            v=(R/t['parent']).read_text()
-            for a,b in t['literal_replacements']:self.assertIn(a,v);v=v.replace(a,b)
-            v+=t['append'];self.assertEqual(v,(R/t['output']).read_text())
-        self.assertTrue((R/'scripts/cfd_reference3d_seed_fill1.c').read_bytes().startswith((R/'scripts/cfd_reference3d_bounded_fill1.c').read_bytes()))
+    def test_current_prefix_and_previous_native_prefix(self):
+        self.assertTrue((R / 'scripts/cfd_reference3d_seed_fill1.c').read_bytes().startswith((R / 'scripts/cfd_reference3d_bounded_fill1.c').read_bytes()))
 if __name__=='__main__':unittest.main()

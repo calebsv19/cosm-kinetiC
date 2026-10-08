@@ -97,7 +97,7 @@ bool build_jobs_root(const char *argv0,
                      const char *jobs_root_override,
                      char *out_jobs_root,
                      size_t out_jobs_root_size);
-void build_job_paths(const char *jobs_root,
+bool build_job_paths(const char *jobs_root,
                      const char *job_id,
                      PhysicsSimDetachedJobPaths *out_paths);
 bool generate_job_id(char *out_job_id, size_t out_job_id_size);
@@ -129,9 +129,7 @@ bool detached_job_state_for_headless_progress_status(const char *progress_status
                                                      size_t out_state_size);
 bool merge_progress_into_record(const char *progress_path,
                                 PhysicsSimDetachedJobRecord *record);
-bool parse_summary_status(const char *summary_path,
-                          char *out_status,
-                          size_t out_status_size);
+
 bool pid_is_alive(pid_t pid);
 bool parse_utc_timestamp(const char *text, time_t *out_time);
 bool refresh_job_status_record(const PhysicsSimDetachedJobPaths *paths,

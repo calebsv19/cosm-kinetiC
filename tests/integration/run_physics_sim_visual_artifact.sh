@@ -3,7 +3,9 @@ set -euo pipefail
 
 PHYSICS_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 RUNTIME_SCENE="$PHYSICS_DIR/tests/fixtures/runtime_scene_wind_tunnel_3d_minimal.json"
-ARTIFACT_ROOT="${PHYSICS_SIM_VISUAL_ARTIFACT_DIR:-$PHYSICS_DIR/visual_artifacts/source_first_frame}"
+source "$PHYSICS_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$PHYSICS_DIR" "$0" "$@"
+ARTIFACT_ROOT="$(physics_fixture_root "$PHYSICS_DIR" visual_artifact "${PHYSICS_SIM_VISUAL_ARTIFACT_DIR:-$PHYSICS_DIR/visual_artifacts}" retained)"
 RUN_DIR="$ARTIFACT_ROOT/run"
 SUMMARY="$RUN_DIR/run_summary.json"
 MANIFEST="$RUN_DIR/wind_shot_manifest.json"
@@ -12,10 +14,9 @@ SOURCE_FRAME="$RUN_DIR/wind_projection_frames/frame_000000.bmp"
 ARTIFACT="$ARTIFACT_ROOT/physics_sim_wind_projection_first_frame.bmp"
 REPORT="$ARTIFACT_ROOT/visual_artifact_report.json"
 
-rm -rf "$ARTIFACT_ROOT"
 mkdir -p "$RUN_DIR"
 
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 1 \
   --sim-steps-per-frame 4 \

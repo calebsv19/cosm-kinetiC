@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 import fcntl
 import hashlib
+from functools import wraps
 import json
 import math
 import os
@@ -9,6 +10,11 @@ from pathlib import Path
 import re
 import subprocess
 import shutil
+from attempts import attempt as retained_attempt
+from owned_command import execute as execute_session
+import stat
+from session_paths import checked as session_path, root_path as admit_session_root, directory as session_directory, asset_path
+from sample_retention import retire as retire_sample, verify as verify_sample_history, location as sample_history_location, admit_new as admit_sample_request, history_entries as retained_sample_ids
 from qualification import FLUIDS, write_shape
 from acceptance import assess
 from cartesian3d import TEMPLATES as CARTESIAN_TEMPLATES, MODEL as CARTESIAN_MODEL, scene_parameters as cartesian_parameters, assess_3d, comparison_metrics as cartesian_metrics
@@ -33,21 +39,74 @@ def digest(value):
 
 
 def atomic(path, value):
-    path = Path(path)
+    path = session_path(path)
+    if path.exists() and not path.is_file():raise SessionError('Session output is not a regular file')
     fd, tmp = tempfile.mkstemp(prefix='.' + path.name, dir=path.parent)
     try:
         with os.fdopen(fd, 'w') as f:
             f.write(encode(value) + '\n')
             f.flush()
             os.fsync(f.fileno())
+        session_path(path)
         os.replace(tmp, path)
     finally:
         if os.path.exists(tmp):
             os.unlink(tmp)
 
 
+def unique_json(pairs):
+    value={}
+    for key,item in pairs:
+        if key in value:raise SessionError('Duplicate session JSON field: '+key)
+        value[key]=item
+    return value
+
+
+def invalid_constant(value):
+    raise SessionError('Non-finite session JSON value: '+value)
+
+
+def json_depth(content,limit=128):
+    depth=0;quoted=False;escaped=False
+    for byte in content:
+        if quoted:
+            if escaped:escaped=False
+            elif byte==92:escaped=True
+            elif byte==34:quoted=False
+        elif byte==34:quoted=True
+        elif byte in (91,123):
+            depth+=1
+            if depth>limit:raise SessionError('Session JSON nesting held')
+        elif byte in (93,125):depth-=1
+
+
 def read(path):
-    return json.loads(Path(path).read_text())
+    path=session_path(path)
+    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+    try:
+        info=os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_size>16777216:
+            raise SessionError('Session JSON file type/size held')
+        with os.fdopen(fd,'rb',closefd=False) as stream:content=stream.read(16777217)
+        if len(content)>16777216:raise SessionError('Session JSON size held')
+        after=os.fstat(fd);current=path.lstat()
+        fields=('st_dev','st_ino','st_size','st_mtime_ns','st_ctime_ns')
+        if any(getattr(info,key)!=getattr(after,key) or getattr(after,key)!=getattr(current,key) for key in fields):
+            raise SessionError('Session JSON changed during read')
+        json_depth(content)
+        try:return json.loads(content,object_pairs_hook=unique_json,parse_constant=invalid_constant)
+        except RecursionError as error:raise SessionError('Session JSON nesting held') from error
+    finally:os.close(fd)
+
+
+@contextmanager
+def regular_lock(path):
+    path=session_path(path)
+    fd=os.open(path,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):raise SessionError('Session lock is not a regular file')
+        with os.fdopen(fd,'a',closefd=False) as stream:yield stream
+    finally:os.close(fd)
 
 
 def identifier(value):
@@ -64,32 +123,86 @@ def number(value, low, high, integral=False):
     return value
 
 
+def storage_checked(operation):
+    @wraps(operation)
+    def checked_operation(self,*args,**kwargs):
+        self._assert_storage()
+        try:return operation(self,*args,**kwargs)
+        finally:self._assert_storage()
+    return checked_operation
+
+
 class Service:
     def __init__(self, root=None, worker=None):
-        self.root = Path(root or os.environ.get('PHYSICS_SIM_SESSION_ROOT', REPO / 'data/runtime/agent_sessions')).resolve()
+        self.root = admit_session_root(root or os.environ.get('PHYSICS_SIM_SESSION_ROOT', REPO / 'data/runtime/agent_sessions'),REPO)
         self.worker = Path(worker or os.environ.get('PHYSICS_SIM_SESSION_WORKER', REPO / 'physics_sim_session_worker')).resolve()
+        # Admit all fixed storage selections before allocating any of them.
+        for name in ('scenes','runs'):session_directory(self.root/name)
+        selected_lock=session_path(self.root/'service.lock')
+        if selected_lock.exists() and not stat.S_ISREG(selected_lock.lstat().st_mode):
+            raise SessionError('Session lock is not a regular file')
         self.root.mkdir(parents=True, exist_ok=True)
         for name in ('scenes', 'runs'):
             (self.root / name).mkdir(exist_ok=True)
         self.children = {}
+        self._storage_descriptors={};self._closed=False
+        try:
+            for path in (self.root,self.root/'scenes',self.root/'runs'):
+                descriptor=os.open(session_directory(path),os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+                self._storage_descriptors[path]=descriptor
+            lock_path=session_path(self.root/'service.lock')
+            descriptor=os.open(lock_path,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
+            self._storage_descriptors[lock_path]=descriptor
+            self._assert_storage()
+        except BaseException:
+            self.close()
+            raise
+
+    def close(self):
+        for descriptor in getattr(self,'_storage_descriptors',{}).values():
+            try:os.close(descriptor)
+            except OSError:pass
+        self._storage_descriptors={};self._closed=True
+
+    def __del__(self):
+        self.close()
+
+    def _assert_storage(self):
+        if getattr(self,'_closed',True):raise SessionError('Session client is closed')
+        for path,descriptor in self._storage_descriptors.items():
+            selected=session_path(path);observed=selected.lstat();witness=os.fstat(descriptor)
+            kind=stat.S_ISREG if path==self.root/'service.lock' else stat.S_ISDIR
+            if (not kind(observed.st_mode) or not kind(witness.st_mode)
+                    or (observed.st_dev,observed.st_ino)!=(witness.st_dev,witness.st_ino)):
+                raise SessionError('Session storage identity changed; original evidence retained: '+str(path))
 
     @contextmanager
     def lock(self):
-        with (self.root / 'service.lock').open('a') as f:
+        self._assert_storage()
+        with regular_lock(self.root / 'service.lock') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
-            yield
+            self._assert_storage()
+            observed=os.fstat(f.fileno());witness=os.fstat(self._storage_descriptors[self.root/'service.lock'])
+            if (observed.st_dev,observed.st_ino)!=(witness.st_dev,witness.st_ino):
+                raise SessionError('Session service lock identity changed')
+            try:yield
+            finally:self._assert_storage()
 
+    @storage_checked
     def run_dir(self, run_id):
-        path = self.root / 'runs' / identifier(run_id)
+        self._assert_storage()
+        path = session_directory(self.root / 'runs' / identifier(run_id))
         if not (path / 'request.json').exists():
             raise SessionError('unknown run_id')
         return path
 
+    @storage_checked
     def capabilities(self):
+        self._assert_storage()
         return {'schema': 'physics_sim_session_capabilities_v1', 'models': ['wind_approximate_v1', 'wind_numerical_qualification_v1', 'incompressible_channel_fv_v1','incompressible_mac2d_v1','incompressible_open2d_v1', REFINED_MODEL, CARTESIAN_MODEL],
                 'templates': ['wind_box', 'wind_sphere', 'wind_stl_cube', 'wind_stl_sphere', 'wind_stl_cone', 'wind_empty', 'cfd_channel','cfd_channel_2d','cfd_obstacle_2d','cfd_open_channel_2d','cfd_open_obstacle_2d',*REFINED_TEMPLATES,*CARTESIAN_TEMPLATES], 'fluid_presets': FLUIDS, 'qualification': {'si_viscosity': True, 'drag_force_validated': False, 'wind_heuristics_can_disable': True}, 'active_runs_per_root': 1,
                 'controls': ['pause', 'step', 'continue', 'cancel'], 'checkpoint_restart': False,
-                'inspection': {'planes':['XY','XZ','YZ'],'fields':['speed','dye','solid','vx','vy','vz','pressure_proxy','divergence','vorticity','pressure_pa','shear_stress_pa'], 'max_samples':4096,'max_probes':16,'history_points':128,'pending_requests':8,'retained_requests':32},
+                'inspection': {'planes':['XY','XZ','YZ'],'fields':['speed','dye','solid','vx','vy','vz','pressure_proxy','divergence','vorticity','pressure_pa','shear_stress_pa'], 'max_samples':4096,'max_probes':16,'history_points':128,'pending_requests':8,'retained_requests':32,'sample_history_retained':True,'max_sample_requests':4096},
                 'states': ['starting','running','paused','completed','cancelled','failed'],
                 'tick_semantics': 'one fixed dt, including configured core_sim substeps; acknowledgement at safe boundaries',
                 'preview': 'XY midpoint, at most 64x64 sparse samples; [speed,dye_density,solid]',
@@ -105,6 +218,7 @@ class Service:
                 'model_limitations': 'Model-specific: Wind remains unvalidated predictive CFD; channel is a reduced laminar verification model',
                 'root': str(self.root), 'worker_available': self.worker.is_file()}
 
+    @storage_checked
     def scene_create(self, scene_id, template='wind_box', dimensions=None, inflow_speed=2.0, object_size_m=None, object_center_m=None, channel=None):
         scene_id = identifier(scene_id)
         if template not in ('wind_box', 'wind_sphere', 'wind_stl_cube', 'wind_stl_sphere', 'wind_stl_cone', 'wind_empty', 'cfd_channel','cfd_channel_2d','cfd_obstacle_2d','cfd_open_channel_2d','cfd_open_obstacle_2d',*REFINED_TEMPLATES,*CARTESIAN_TEMPLATES):
@@ -206,30 +320,48 @@ class Service:
         with self.lock():
             if path.exists():
                 manifest = read(path / 'scene.json')
+                self._verify_author_attempt(path,manifest)
                 if manifest.get('template_fingerprint',manifest['revision']) != template_fingerprint:
                     raise SessionError('scene_id already exists with different parameters; use a new ID')
                 revision = manifest['revision']
             else:
-                with tempfile.TemporaryDirectory(prefix='author-',dir=self.root / 'scenes') as tmp:
-                    stage = Path(tmp)
+                with retained_attempt(self.root,'author',self.worker,{'scene_id':scene_id,'scene_authoring':doc},storage_guard=self._assert_storage) as (capsule,stage,outcome):
                     assets = write_shape(stage, template[9:]) if template.startswith('wind_stl_') else {}
                     atomic(stage / 'scene_authoring.json', dict(doc, schema_variant='scene_authoring_v1'))
-                    compiled = subprocess.run([str(self.worker),'--compile',str(stage / 'scene_authoring.json'),
-                                               str(stage / 'scene_runtime.json')], capture_output=True,text=True,timeout=30)
-                    if compiled.returncode:
-                        raise SessionError('scene_compile_failed: '+compiled.stderr[-1000:])
+                    outcome['command']=execute_session([str(self.worker),'--compile',str(stage / 'scene_authoring.json'),
+                                               str(stage / 'scene_runtime.json')],self.root,capsule,'compile',(),30,1048576)
                     revision = digest(read(stage / 'scene_runtime.json'))
                     atomic(stage / 'scene.json', {'scene_id':scene_id,'revision':revision,'template':template,
-                                                 'template_fingerprint':template_fingerprint, 'assets':assets})
-                    os.replace(stage,path)
+                                                 'template_fingerprint':template_fingerprint, 'assets':assets,
+                                                 'author_attempt':str(capsule),'worker_sha256':outcome['worker_sha256']})
+                    session_directory(path)
+                    if path.exists():raise SessionError('scene publication predecessor appeared; attempt retained')
+                    os.rename(stage,path)
+                    outcome['published_scene']=str(path)
+                    outcome['scene_revision']=revision
         return {'scene_id': scene_id, 'scene_revision': revision, 'project_path': str(path)}
 
+    def _verify_author_attempt(self,path,manifest):
+        selected=manifest.get('author_attempt')
+        if selected is None:return  # Legacy scenes retain their existing admission.
+        capsule=session_directory(selected)
+        if capsule.parent!=self.root/'attempts':raise SessionError('scene author attempt escapes its root')
+        receipt=read(capsule/'receipt.json')
+        if (receipt.get('status')!='completed' or receipt.get('terminal_processes_verified') is not True
+                or receipt.get('phase')!='author' or receipt.get('published_scene')!=str(path)
+                or receipt.get('scene_revision')!=manifest['revision']
+                or receipt.get('worker_sha256')!=manifest['worker_sha256']):
+            raise SessionError('scene author attempt not verified; retained evidence requires reconciliation')
+
+    @storage_checked
     def request(self, scene_id, scene_revision, grid=None, steps=100, dt=.0166666667,
                 start_paused=True, solver_cell_budget=0, fluid=None, solver_iterations=20,
                 qualification_mode=False, numerical_memory_limit_mib=512):
+        self._assert_storage()
         scene = self.root / 'scenes' / identifier(scene_id)
         if not (scene / 'scene_runtime.json').exists():
             raise SessionError('unknown scene_id')
+        self._verify_author_attempt(scene,read(scene/'scene.json'))
         doc = read(scene / 'scene_runtime.json')
         if digest(doc) != scene_revision or read(scene / 'scene.json')['revision'] != scene_revision:
             raise SessionError('stale_scene_revision')
@@ -332,7 +464,7 @@ class Service:
     def _verify_assets(scene):
         assets=read(scene/'scene.json').get('assets',{})
         for name, expected in assets.items():
-            p=scene/name
+            p=asset_path(scene,name)
             if not p.is_file() or hashlib.sha256(p.read_bytes()).hexdigest()!=expected:
                 raise SessionError('scene_asset_digest_mismatch')
         return assets
@@ -340,29 +472,29 @@ class Service:
     def _copy_assets(self, scene_id, destination):
         scene=self.root/'scenes'/scene_id
         for name in self._verify_assets(scene):
-            p=destination/name;p.parent.mkdir(parents=True,exist_ok=True)
-            shutil.copyfile(scene/name,p)
+            p=asset_path(destination,name);p.parent.mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(asset_path(scene,name),p)
 
+    @storage_checked
     def scene_validate(self, scene_id, scene_revision, grid=None, **options):
         options.setdefault("steps",1)
         req, doc = self.request(scene_id, scene_revision, grid, **options)
-        with tempfile.TemporaryDirectory(prefix='validate-', dir=self.root) as tmp:
-            root = Path(tmp)
+        with self.lock(), retained_attempt(self.root,'validate',self.worker,req,storage_guard=self._assert_storage) as (capsule,root,outcome):
             atomic(root / 'request.json', dict(req, run_id='validation'))
             atomic(root / 'scene_runtime.json', doc)
             self._copy_assets(scene_id, root)
-            result = subprocess.run([str(self.worker), str(root), '--validate'], capture_output=True,
-                                    text=True, timeout=30)
-            if result.returncode:
-                raise SessionError('scene_validation_failed: ' + result.stderr[-1000:])
-            status = json.loads(result.stdout)
+            outcome['command']=execute_session([str(self.worker),str(root),'--validate'],self.root,capsule,'validate',(),30,1048576)
+            status=read(capsule/'validate.stdout')
+            required={'effective_grid','voxel_size_m','estimated_dense_bytes','model_limitations','physics','geometry'}
+            if not isinstance(status,dict) or not required<=set(status):
+                raise SessionError('scene_validation_output_invalid; attempt retained: '+str(capsule))
             return {k: status[k] for k in ('effective_grid', 'voxel_size_m', 'estimated_dense_bytes', 'model_limitations', 'physics', 'geometry')} | {
                 'valid': True, 'scene_revision': scene_revision, 'requested_grid': req['grid'],
                 'resolution_changed': req['grid'] != status['effective_grid']}
 
     @staticmethod
     def owner_alive(path):
-        with (path / 'owner.lock').open('a') as f:
+        with regular_lock(path / 'owner.lock') as f:
             try:
                 fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
@@ -382,7 +514,7 @@ class Service:
             # The owner may publish terminal state and exit after the first read.
             # Acquire its released lock, then re-read before reconciling death;
             # never replace completion with a stale running snapshot.
-            with (path / 'owner.lock').open('a') as owner:
+            with regular_lock(path / 'owner.lock') as owner:
                 try:
                     fcntl.flock(owner, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError:
@@ -399,6 +531,7 @@ class Service:
                                          'state':'failed','error':snap['error']})+'\n')
         return snap
 
+    @storage_checked
     def run_start(self, request_id, scene_id, scene_revision, **options):
         run_id = identifier(request_id)
         req, doc = self.request(scene_id, scene_revision, **options)
@@ -455,6 +588,7 @@ class Service:
     def _compact(snap):
         return {k: v for k, v in snap.items() if k not in ('preview','history')}
 
+    @storage_checked
     def run_inspect(self, run_id, preview=False, log_tail_lines=0, history=False):
         number(log_tail_lines,0,100,True)
         with self.lock():
@@ -473,6 +607,7 @@ class Service:
         elif preview: result.pop('history',None)
         return result
 
+    @storage_checked
     def run_control(self, run_id, command_id, action, scene_revision, wait_ms=0):
         identifier(command_id)
         if action not in ('pause', 'step', 'continue', 'cancel'):
@@ -517,6 +652,7 @@ class Service:
                         'run_state': snap['state']}
             time.sleep(.01)
 
+    @storage_checked
     def run_events(self, run_id, after_cursor=0, wait_ms=0):
         number(after_cursor, 0, 2**53, True); number(wait_ms, 0, 5000, True)
         path = self.run_dir(run_id) / 'events.jsonl'
@@ -540,6 +676,7 @@ class Service:
                         'status': status}
             time.sleep(.05)
 
+    @storage_checked
     def run_result(self, run_id):
         status = self.run_inspect(run_id)
         if status['state'] not in TERMINAL:
@@ -555,6 +692,11 @@ class Service:
         files.extend(sorted((path / 'output').rglob('*')))
         files.extend(sorted((path / 'assets').rglob('*')))
         files.extend(sorted((path / 'sample_results').glob('*.json')))
+        try:
+            for request_id in retained_sample_ids(path):
+                verified=verify_sample_history(path,request_id)
+                files.extend(sorted(verified.iterdir()))
+        except (OSError,ValueError) as error:raise SessionError('sample_history_held: '+str(error)) from error
         for file in files:
             if file.is_file():
                 artifacts.append({'path': str(file), 'bytes': file.stat().st_size,
@@ -563,6 +705,7 @@ class Service:
         atomic(path / 'result.json', result)
         return result
 
+    @storage_checked
     def run_assess(self, run_id, spatial_coarse_run=None, temporal_coarse_run=None):
         status=self.run_inspect(run_id)
         if status.get('model')==CARTESIAN_MODEL:
@@ -582,6 +725,7 @@ class Service:
             if coarse is not None:comparisons[kind]=self.run_compare([coarse,run_id],kind)
         return assess(status,comparisons)
 
+    @storage_checked
     def run_compare(self, run_ids, kind='spatial'):
         if kind not in ('spatial','temporal'):raise SessionError('comparison kind must be spatial or temporal')
         if not isinstance(run_ids,list) or not 2<=len(run_ids)<=3:raise SessionError('compare requires two or three distinct completed run IDs')
@@ -625,6 +769,7 @@ class Service:
             comparisons.append({'coarse_run':coarse['run_id'],'fine_run':fine['run_id'],'changes':changes})
         return {'schema':'physics_sim_cfd_refinement_comparison_v1','kind':kind,'scene_revision':base['scene_revision'],'worker_sha256':base['worker_sha256'],'simulation_time':base_status['simulation_time'],'comparisons':comparisons,'qualification':'sensitivity_only; no reference error or steady-state acceptance inferred','run_statuses':[status.get('boundary_force_budget',{}).get('drag_status') for _,status in records]}
 
+    @storage_checked
     def run_sample(self, run_id, request_id, plane='XY', position=.5, resolution=48,
                    field='speed', points=None, wait_ms=0, color_range=None, vectors=False):
         identifier(request_id)
@@ -653,21 +798,30 @@ class Service:
             identity=path/'sample_ids'/f'{request_id}.json'
             response=path/'sample_results'/f'{request_id}.json'
             pending=path/'sample_requests'/f'{request_id}.json'
-            if identity.exists():
+            history=sample_history_location(path,request_id)
+            if history.exists() or history.is_symlink():
+                try:verified=verify_sample_history(path,request_id)
+                except (OSError,ValueError) as error:raise SessionError('sample_history_held: '+str(error)) from error
+                if read(verified/'request.json')!=payload:raise SessionError('sample_request_id_conflict')
+                response=verified/'result.json'
+            elif identity.exists():
                 if read(identity)!=payload:raise SessionError('sample_request_id_conflict')
             else:
                 if self._status(path)['state'] in TERMINAL:raise SessionError('live_sampling_unavailable_after_terminal; use retained samples and result artifacts')
                 if self._status(path).get('sample_protocol') != 1:raise SessionError('worker_has_no_live_sampling; start a new S2 run')
-                # Expire abandoned pending requests and cap retained diagnostic requests.
-                for old in (path/'sample_requests').glob('*.json'):
-                    if time.time()-old.stat().st_mtime>30:old.unlink()
+                try:admit_sample_request(path)
+                except (OSError,ValueError) as error:raise SessionError('sample_history_held: '+str(error)) from error
+                # Pending work stays held regardless of age. Retire completed
+                # diagnostic samples only after exact preservation/readback.
                 if len(list((path/'sample_requests').glob('*.json')))>=8:raise SessionError('sample_queue_full; retry later')
                 entries=sorted((path/'sample_ids').glob('*.json'),key=lambda p:p.stat().st_mtime)
                 retained=len(entries)
                 for old in entries:
                     if retained<32:break
                     if (path/'sample_requests'/old.name).exists():continue
-                    (path/'sample_results'/old.name).unlink(missing_ok=True);old.unlink();retained-=1
+                    try:retire_sample(path,old.stem)
+                    except (OSError,ValueError) as error:raise SessionError('sample_history_held: '+str(error)) from error
+                    retained-=1
                 if retained>=32:raise SessionError('sample_retention_busy; retry later')
                 atomic(identity,payload);atomic(pending,payload)
         deadline=time.monotonic()+wait_ms/1000

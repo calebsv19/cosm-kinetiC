@@ -3,6 +3,9 @@
 # =========================
 SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/tools/cli/*' \
+	! -path '$(SRC_DIR)/tools/physics_sim_passive_worker.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_atmosphere_worker.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_open_atmosphere_worker.c' \
 	! -path '$(SRC_DIR)/render/renderer_sdl_headless_stub.c' \
 	! -path '$(SRC_DIR)/render/kit_render_backend_vk_headless_stub.c' \
 	! -path '$(SRC_DIR)/render/retained_runtime_scene_overlay_headless_stub.c' \

@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from passive_atmosphere import atmosphere_worker_path
 from coupled_atmosphere import CoupledAtmosphere
 from evolving_atmosphere import run,SCHEMA
 from surface_sources.growth_fire_v1 import strict_load,sealed
@@ -19,7 +20,7 @@ class JournalTests(unittest.TestCase):
         self.props={'density_kg_m3':1,'dynamic_viscosity_pa_s':.02,'heat_capacity_j_kg_k':1000,'reference_temperature_k':300,'conductivity_w_m_k':.1,'tracer_diffusivity_m2_s':.001}
         nx,ny,nz=self.policy['receiver']['dimensions'];n=nx*ny*nz
         self.velocity=[.2+.05*math.cos(2*math.pi*((q//nx)%ny+.5)/ny) for q in range(n)]+[.05]*n+[.1]*n
-        self.worker=ROOT/'build/evolving-atmosphere/physics_sim_atmosphere_worker';self.receiver=self.reopen();self.receiver.initialize();self.receiver.admit(self.frame)
+        self.worker=atmosphere_worker_path('evolving');self.receiver=self.reopen();self.receiver.initialize();self.receiver.admit(self.frame)
     def tearDown(self):self.temp.cleanup()
     def reopen(self):return CoupledAtmosphere(self.temp.name,self.policy,self.props,self.velocity,.01,self.worker)
     def test_restart_retry_consumption_and_native_increment(self):

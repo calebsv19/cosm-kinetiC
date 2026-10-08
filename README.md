@@ -311,3 +311,16 @@ Adding new systems (particles, rigid bodies, tools, exporters, etc.) should foll
 ## License
 
 This repository is licensed under Apache License 2.0. See `LICENSE`.
+
+PhysicsSim Main Edit converter publication: `shape_asset_tool` now defaults to
+`data/runtime/<stem>.asset.json`; explicit `--out` or `SHAPE_ASSET_DIR` selects
+an admitted existing destination parent. The runtime library still loads
+`config/objects` or `SHAPE_ASSET_DIR`. Generated conversions require explicit
+review/promotion before becoming source assets. See
+[shape asset publication](docs/shape_asset_publication.md).
+
+Editor conversion also writes generated assets to `data/runtime` (or an admitted
+existing `SHAPE_ASSET_DIR`) and regenerates from input rather than accepting an
+existing filename. Configured input roots remain discovery roots. See
+[editor import publication](docs/editor_import_publication.md) for path limits,
+validation and remaining picker/cache boundaries.

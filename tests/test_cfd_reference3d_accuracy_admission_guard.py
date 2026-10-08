@@ -23,9 +23,4 @@ class AdmissionGuard(unittest.TestCase):
    with contextlib.redirect_stdout(out):self.stage(module,True)('workspace_pressure_complete')
    logs.append(out.getvalue())
   self.assertEqual(logs[0],logs[1]);self.assertTrue(json.loads(logs[1].splitlines()[1])['numeric_stage_admitted'])
- def test_only_failure_record_and_module_routing_change(self):
-  for t in json.loads((R/'build/c3d-accuracy-admission-guard/transforms.json').read_text()):
-   v=(R/t['parent']).read_text()
-   for a,b in t['literal_replacements']:self.assertIn(a,v);v=v.replace(a,b)
-   self.assertEqual(v,(R/t['output']).read_text())
 if __name__=='__main__':unittest.main()

@@ -162,6 +162,7 @@ void backend_2d_free_emitter_masks(SimRuntimeBackend2D *state) {
 void backend_2d_build_emitter_masks(SimRuntimeBackend *backend,
                                     SceneState *scene) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     if (!scene || !scene->config || !scene->preset || !state) return;
 
     backend_2d_free_emitter_masks(state);
@@ -206,6 +207,7 @@ void backend_2d_build_emitter_masks(SimRuntimeBackend *backend,
 void backend_2d_rasterize_dynamic_obstacles(SimRuntimeBackend *backend,
                                             SceneState *scene) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     if (!scene || !scene->config || !state || !state->obstacle_mask) return;
 
     int w = scene->config->grid_w;
@@ -722,6 +724,7 @@ void backend_2d_apply_emitters(SimRuntimeBackend *backend,
                                SceneState *scene,
                                double dt FISICS_DIM(time) FISICS_UNIT(second)) {
     SimRuntimeBackend2D *state = backend_2d_state(backend);
+    if (!backend_2d_scene_grid_matches(state, scene)) return;
     float dt_seconds FISICS_DIM(time) FISICS_UNIT(second) = (float)dt;
     float zero_seconds FISICS_DIM(time) FISICS_UNIT(second) = 0.0f;
     if (!scene || !scene->preset || !state || !state->fluid) return;

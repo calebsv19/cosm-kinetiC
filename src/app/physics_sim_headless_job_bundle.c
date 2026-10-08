@@ -1,3 +1,6 @@
+#include "app/physics_sim_job_guard.h"
+#include "app/physics_sim_job_file.h"
+#include "app/physics_sim_job_json.h"
 #include "app/physics_sim_headless_job_bundle.h"
 
 #include "app/physics_sim_diagnostic_helpers.h"
@@ -26,8 +29,11 @@ static bool ensure_directory_exists(const char *path) {
 
 static bool ensure_parent_directory_exists(const char *path) {
     char dir[PATH_MAX];
+    if (!physics_sim_job_guard_current()) return false;
     if (!parent_dir_of(path, dir, sizeof(dir))) return false;
-    return ensure_directory_exists(dir);
+    char admitted[PATH_MAX];
+    if (!physics_sim_headless_storage_directory(dir, admitted, sizeof(admitted))) return false;
+    return ensure_directory_exists(admitted);
 }
 
 static void json_write_string(FILE *file, const char *value) {
@@ -118,7 +124,7 @@ bool physics_sim_headless_job_bundle_load(const char *job_json_path,
         return false;
     }
 
-    root = json_object_from_file(job_json_path);
+    root = physics_sim_job_json_read(job_json_path);
     if (!root || !json_object_is_type(root, json_type_object)) {
         if (root) json_object_put(root);
         diag_set(out_diagnostics, out_diagnostics_size, "failed to parse outer job json");
@@ -252,6 +258,7 @@ bool physics_sim_headless_job_bundle_write(const char *job_json_path,
                                            char *out_diagnostics,
                                            size_t out_diagnostics_size) {
     FILE *file = NULL;
+    PhysicsSimJobFile publication;
 
     diag_set(out_diagnostics, out_diagnostics_size, "invalid input");
     if (!job_json_path || !job_json_path[0] || !envelope) return false;
@@ -264,7 +271,7 @@ bool physics_sim_headless_job_bundle_write(const char *job_json_path,
         return false;
     }
 
-    file = fopen(job_json_path, "wb");
+    file = physics_sim_job_file_begin(job_json_path, true, &publication);
     if (!file) {
         diag_set(out_diagnostics, out_diagnostics_size, "failed to open job.json");
         return false;
@@ -343,36 +350,19 @@ bool physics_sim_headless_job_bundle_write(const char *job_json_path,
     json_write_string(file, envelope->metadata.created_at);
     fprintf(file, "\n  }\n");
     fprintf(file, "}\n");
-    fclose(file);
+    if (!physics_sim_job_file_finish(&publication, file)) return false;
     diag_set(out_diagnostics, out_diagnostics_size, "ok");
     return true;
 }
 
-bool physics_sim_headless_job_report_write(const char *report_path,
-                                           const CoreHeadlessJobReport *report,
-                                           const CoreHeadlessJobArtifact *artifacts,
-                                           size_t artifact_count,
-                                           char *out_diagnostics,
-                                           size_t out_diagnostics_size) {
-    FILE *file = NULL;
-
-    diag_set(out_diagnostics, out_diagnostics_size, "invalid input");
-    if (!report_path || !report_path[0] || !report) return false;
-    if (!core_headless_job_report_validate(report)) {
-        diag_set(out_diagnostics, out_diagnostics_size, "shared report failed validation");
-        return false;
-    }
-    if (!ensure_parent_directory_exists(report_path)) {
-        diag_set(out_diagnostics, out_diagnostics_size, "failed to create report parent directory");
-        return false;
-    }
-
-    file = fopen(report_path, "wb");
-    if (!file) {
-        diag_set(out_diagnostics, out_diagnostics_size, "failed to open report");
-        return false;
-    }
-
+bool physics_sim_headless_job_report_serialize(FILE *file,
+    const CoreHeadlessJobReport *report, const CoreHeadlessJobArtifact *artifacts,
+    size_t artifact_count) {
+    if (!file || !report || !core_headless_job_report_validate(report)) return false;
+    CoreHeadlessJobReport serialized = *report;
+    serialized.artifacts = artifacts;
+    serialized.artifact_count = artifact_count;
+    if (!core_headless_job_report_validate(&serialized)) return false;
     fprintf(file, "{\n");
     fprintf(file, "  \"schema_family\": ");
     json_write_string(file, report->schema_family);
@@ -424,7 +414,40 @@ bool physics_sim_headless_job_report_write(const char *report_path,
     }
     fprintf(file, "  ]\n");
     fprintf(file, "}\n");
-    fclose(file);
+    return !ferror(file);
+}
+
+bool physics_sim_headless_job_report_write(const char *report_path,
+                                           const CoreHeadlessJobReport *report,
+                                           const CoreHeadlessJobArtifact *artifacts,
+                                           size_t artifact_count,
+                                           char *out_diagnostics,
+                                           size_t out_diagnostics_size) {
+    FILE *file = NULL;
+    PhysicsSimJobFile publication;
+
+    diag_set(out_diagnostics, out_diagnostics_size, "invalid input");
+    if (!report_path || !report_path[0] || !report) return false;
+    if (!core_headless_job_report_validate(report)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "shared report failed validation");
+        return false;
+    }
+    if (!ensure_parent_directory_exists(report_path)) {
+        diag_set(out_diagnostics, out_diagnostics_size, "failed to create report parent directory");
+        return false;
+    }
+
+    file = physics_sim_job_file_begin(report_path, true, &publication);
+    if (!file) {
+        diag_set(out_diagnostics, out_diagnostics_size, "failed to open report");
+        return false;
+    }
+
+    if (!physics_sim_headless_job_report_serialize(file, report, artifacts, artifact_count)) {
+        physics_sim_job_file_discard(&publication, file);
+        return false;
+    }
+    if (!physics_sim_job_file_finish(&publication, file)) return false;
     diag_set(out_diagnostics, out_diagnostics_size, "ok");
     return true;
 }

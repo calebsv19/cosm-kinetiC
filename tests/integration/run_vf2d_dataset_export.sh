@@ -2,8 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+source "$ROOT_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$ROOT_DIR" "$0" "$@"
+TMP_DIR="$(physics_fixture_root "$ROOT_DIR" vf2d_dataset_export)"
 
 VF2D_PATH="$TMP_DIR/frame_000001.vf2d"
 DATASET_PATH="$TMP_DIR/frame_000001.dataset.json"
@@ -61,7 +62,7 @@ EOF
 cc -std=c11 -Wall -Wextra -Wpedantic -o "$TMP_DIR/gen_vf2d" "$TMP_DIR/gen_vf2d.c"
 "$TMP_DIR/gen_vf2d" "$VF2D_PATH"
 
-"$ROOT_DIR/vf2d_dataset_tool" "$VF2D_PATH" "$DATASET_PATH"
+"${PHYSICS_SIM_VF2D_DATASET_TOOL_BIN:-$ROOT_DIR/build/bin/vf2d_dataset_tool}" "$VF2D_PATH" "$DATASET_PATH"
 
 if [[ ! -f "$DATASET_PATH" ]]; then
     echo "dataset export test failed: missing output json at $DATASET_PATH"

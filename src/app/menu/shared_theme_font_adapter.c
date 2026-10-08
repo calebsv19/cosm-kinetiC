@@ -1,5 +1,6 @@
 #include "app/menu/shared_theme_font_adapter.h"
 
+#include "app/physics_sim_persistence.h"
 #include "core_font.h"
 #include "core_theme.h"
 
@@ -69,11 +70,6 @@ static void trim_trailing_whitespace(char* text) {
         text[len - 1] = '\0';
         --len;
     }
-}
-
-static void ensure_runtime_persist_dir(void) {
-    (void)mkdir("data", 0777);
-    (void)mkdir("data/runtime", 0777);
 }
 
 static SDL_Color theme_color_or_default(const CoreThemePreset* preset,
@@ -324,19 +320,16 @@ bool physics_sim_shared_theme_load_persisted(void) {
 }
 
 bool physics_sim_shared_theme_save_persisted(void) {
-    FILE* file;
+    PhysicsSimPersistence save;
     char preset_name[128];
     if (!physics_sim_shared_theme_current_preset(preset_name, sizeof(preset_name))) {
         return false;
     }
-    ensure_runtime_persist_dir();
-    file = fopen(k_theme_persist_path, "w");
-    if (!file) {
-        return false;
-    }
+    if (!physics_sim_persistence_runtime_directory()) return false;
+    FILE *file = physics_sim_persistence_begin(k_theme_persist_path, &save);
+    if (!file) return false;
     fprintf(file, "%s\n", preset_name);
-    fclose(file);
-    return true;
+    return physics_sim_persistence_finish(&save, file);
 }
 
 bool physics_sim_shared_font_set_preset(const char* preset_name) {
@@ -397,19 +390,16 @@ bool physics_sim_shared_font_load_persisted(void) {
 }
 
 bool physics_sim_shared_font_save_persisted(void) {
-    FILE* file;
+    PhysicsSimPersistence save;
     char preset_name[128];
     if (!physics_sim_shared_font_current_preset(preset_name, sizeof(preset_name))) {
         return false;
     }
-    ensure_runtime_persist_dir();
-    file = fopen(k_font_persist_path, "w");
-    if (!file) {
-        return false;
-    }
+    if (!physics_sim_persistence_runtime_directory()) return false;
+    FILE *file = physics_sim_persistence_begin(k_font_persist_path, &save);
+    if (!file) return false;
     fprintf(file, "%s\n", preset_name);
-    fclose(file);
-    return true;
+    return physics_sim_persistence_finish(&save, file);
 }
 
 bool physics_sim_shared_font_resolve_menu_title(char* out_path, size_t out_path_size, int* out_point_size) {

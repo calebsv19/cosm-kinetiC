@@ -2,23 +2,19 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
-BUILD_ROOT="$ROOT_DIR/build/$(uname -m)"
-RUNNER="$BUILD_ROOT/tools/cli/physics_sim_job_runner"
-if [[ ! -x "$RUNNER" ]]; then
-  RUNNER="$ROOT_DIR/build/tools/cli/physics_sim_job_runner"
-fi
-if [[ ! -x "$RUNNER" ]]; then
-  RUNNER="$ROOT_DIR/physics_sim_job_runner"
-fi
+RUNNER="${PHYSICS_SIM_JOB_RUNNER_BIN:-$ROOT_DIR/build/bin/physics_sim_job_runner}"
 
 DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
 RUNTIME_SCENE="${PHYSICS_SIM_HEADLESS_RUNTIME_SCENE:-$DEFAULT_RUNTIME_SCENE}"
-JOBS_ROOT="$ROOT_DIR/build/agent_runs/jobs"
-RUN_ROOT="/private/tmp/physics_sim_job_runner_bundle_smoke"
+source "$ROOT_DIR/tests/integration/fixture_support.sh"
+physics_fixture_supervise "$ROOT_DIR" "$0" "$@"
+RUN_ROOT="$(physics_fixture_root "$ROOT_DIR" job_runner_bundle_smoke)"
+JOBS_ROOT="$RUN_ROOT/jobs"
 FIXTURE="$ROOT_DIR/tests/fixtures/physics_sim_job_runner_bundle_request.json"
 RUN_CONFIG="$RUN_ROOT/input/run.physics_sim.json"
 JOB_JSON="$RUN_ROOT/job.json"
-JOB_ID="ps-bundle-smoke-001"
+EXPECTED_JOB_ID="ps-bundle-smoke-$(basename "$(dirname "$RUN_ROOT")")"
+JOB_ID="$EXPECTED_JOB_ID"
 
 if [[ ! -f "$RUNTIME_SCENE" ]]; then
   echo "missing runtime scene fixture: $RUNTIME_SCENE" >&2
@@ -26,7 +22,6 @@ if [[ ! -f "$RUNTIME_SCENE" ]]; then
   exit 1
 fi
 
-rm -rf "$RUN_ROOT" "$JOBS_ROOT/$JOB_ID"
 mkdir -p "$JOBS_ROOT" "$RUN_ROOT/input"
 
 sed \
@@ -74,8 +69,8 @@ EOF
 SUBMIT_OUTPUT="$("$RUNNER" submit --request "$JOB_JSON" --jobs-root "$JOBS_ROOT")"
 JOB_ID="$(printf '%s' "$SUBMIT_OUTPUT" | sed -n 's/.*"job_id":"\([^"]*\)".*/\1/p')"
 
-if [[ "$JOB_ID" != "ps-bundle-smoke-001" ]]; then
-  echo "expected bundle job id ps-bundle-smoke-001, got: $SUBMIT_OUTPUT" >&2
+if [[ "$JOB_ID" != "$EXPECTED_JOB_ID" ]]; then
+  echo "expected bundle job id $EXPECTED_JOB_ID, got: $SUBMIT_OUTPUT" >&2
   exit 1
 fi
 
@@ -109,7 +104,7 @@ fi
 grep -q '"schema_version": "physics_sim_detached_job_status_v1"' "$STATUS_FILE"
 grep -q '"schema_family": "codework_job"' "$SHARED_JOB_FILE"
 grep -q '"schema_variant": "headless_bundle_v1"' "$SHARED_JOB_FILE"
-grep -q '"job_id": "ps-bundle-smoke-001"' "$SHARED_JOB_FILE"
+grep -q '"job_id": "'"$EXPECTED_JOB_ID"'"' "$SHARED_JOB_FILE"
 grep -q '"schema_family": "codework_job_report"' "$SHARED_REPORT_FILE"
 grep -q '"schema_variant": "headless_report_v1"' "$SHARED_REPORT_FILE"
 grep -q '"state": "succeeded"' "$SHARED_REPORT_FILE"

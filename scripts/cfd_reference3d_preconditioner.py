@@ -4,7 +4,6 @@ import numpy as np
 from scipy.sparse import hstack, diags, coo_matrix
 from scipy.sparse.linalg import splu
 from scipy.linalg import eigh
-from pyamg import smoothed_aggregation_solver
 
 
 def array_sha(*arrays):
@@ -42,6 +41,7 @@ class PressureMass:
 
 def velocity_preconditioner(A,kind):
     if kind=='amg':
+        from pyamg import smoothed_aggregation_solver
         pc=smoothed_aggregation_solver(A,max_coarse=100,symmetry='symmetric',
             presmoother=('gauss_seidel',{'sweep':'symmetric'}),
             postsmoother=('gauss_seidel',{'sweep':'symmetric'})).aspreconditioner()

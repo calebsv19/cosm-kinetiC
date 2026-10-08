@@ -4,9 +4,10 @@ from pathlib import Path
 import sys
 import unittest
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
+from passive_atmosphere import atmosphere_worker_path
 from open_atmosphere import run,SCHEMA
 from surface_sources.growth_fire_v1 import sealed
-WORKER=ROOT/'build/open-atmosphere/physics_sim_open_atmosphere_worker'
+WORKER=atmosphere_worker_path('open')
 def request(nz=8,dt=.01):
     grid=[8,8,nz];n=math.prod(grid);plane=64;zero=[0.]*n
     return {'schema':SCHEMA,'grid':grid,'length_m':[2]*3,'momentum_dt_s':dt,
