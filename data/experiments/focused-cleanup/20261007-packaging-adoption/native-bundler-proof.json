@@ -1,0 +1,43 @@
+{
+  "commands": [
+    {
+      "command": [
+        "clang",
+        "-dynamiclib",
+        "-Wl,-no_adhoc_codesign",
+        "-Wl,-headerpad_max_install_names",
+        "-install_name",
+        "@rpath/libphysics_fixture.dylib",
+        "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dependencies/fixture.c",
+        "-o",
+        "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dependencies/lib/libphysics_fixture.dylib"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "clang",
+        "-Wl,-no_adhoc_codesign",
+        "-Wl,-headerpad_max_install_names",
+        "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dependencies/main.c",
+        "-L/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dependencies/lib",
+        "-lphysics_fixture",
+        "-Wl,-rpath,/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dependencies/lib",
+        "-o",
+        "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dist/native-attempt/fixture.app/Contents/MacOS/physics-sim-bin"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "before": "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dist/native-attempt/fixture.app/Contents/MacOS/physics-sim-bin:\n\t@rpath/libphysics_fixture.dylib (compatibility version 0.0.0, current version 0.0.0)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+  "after": "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dist/native-attempt/fixture.app/Contents/MacOS/physics-sim-bin:\n\t@executable_path/../Frameworks/libphysics_fixture.dylib (compatibility version 0.0.0, current version 0.0.0)\n\t/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)\n",
+  "dylib_identity": "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dist/native-attempt/fixture.app/Contents/Frameworks/libphysics_fixture.dylib:\n@loader_path/libphysics_fixture.dylib\n",
+  "attempt": "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/data/experiments/package-bundler-attempts/bundle-52044c0ef20e47faa3267186fd970f95",
+  "copied_library": "/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dist/native-attempt/fixture.app/Contents/Frameworks/libphysics_fixture.dylib",
+  "result": "passed",
+  "scope": "Native Mach-O compile, dependency copy and install-name readback only; no signing or execution"
+}

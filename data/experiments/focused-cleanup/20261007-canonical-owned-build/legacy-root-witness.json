@@ -1,0 +1,7 @@
+{
+  "scope": "sampled during canonical profile build; compare at completion",
+  "sha256": {
+    "physics_sim": "08a4da36187cbd5d14215bd1d696f7a7cb617d771606ac67f024ec9b36886aac",
+    "physics_sim_headless": "b7a51dd3494f3fe7822cde105df5f3545a8b9cfed0c0a6797d97a7f483154ec4"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "status": "canonical source adopted and fixture-verified",
+  "source_base": "3fa1ad5f6fb2384a7626e83c5e22fa7821cb7ed5",
+  "files": [
+    {
+      "path": "tools/packaging/linux/physics-sim-launcher",
+      "bytes": 6417,
+      "sha256": "a7889b6e63b39827cbadce4c136b67a6042d040bdcbe891b6939911eafbfa3ac",
+      "before_saved": true
+    },
+    {
+      "path": "tools/packaging/macos/physics-sim-launcher",
+      "bytes": 9967,
+      "sha256": "d956f996ccee4da8add76e0ce05e79094731269b0abb5425b20b42557f0d7def",
+      "before_saved": true
+    },
+    {
+      "path": "tools/packaging/runtime-config.sh",
+      "bytes": 5874,
+      "sha256": "e738193c5bdb4fc6d685caa70c21d7ce28a3107d879491ad81a897f9fc8e2f7f",
+      "before_saved": false
+    },
+    {
+      "path": "tests/test_package_launcher_lifecycle.py",
+      "bytes": 33810,
+      "sha256": "739e96f16087e3088af8081f3ee4a4c4c05ea0f66ee330f76bac8e07dc864b75",
+      "before_saved": false
+    },
+    {
+      "path": "make/package-linux-desktop.mk",
+      "bytes": 13142,
+      "sha256": "70d65ad549158d54dcfc6ac5cd4463edff362160dcfecc72d2e9bdd6e5e6c421",
+      "before_saved": true
+    },
+    {
+      "path": "make/package-macos.mk",
+      "bytes": 13908,
+      "sha256": "953ef1e78487bce942c11f87d7c4a3960aa98af46e2dc6ced7a63417b71b778d",
+      "before_saved": true
+    },
+    {
+      "path": "makefile",
+      "bytes": 2373,
+      "sha256": "fb0b85e72833c630828215db0e1bf3c5cddd479ee5a8dd09411d7c186c523638",
+      "before_saved": false
+    },
+    {
+      "path": "make/rules-runtime.mk",
+      "bytes": 2004,
+      "sha256": "fc82db5aa7630003e58d4cb43a49014fa4490d2bc9b6a354ef00707c3d74d7c8",
+      "before_saved": false
+    },
+    {
+      "path": "docs/launcher_configuration_recovery.md",
+      "bytes": 4532,
+      "sha256": "71f9ed92e2e98582c8e987ea54e12b312f952e2c63259921dd95dc716be141a7",
+      "before_saved": false
+    },
+    {
+      "path": "docs/cleanup_operations.md",
+      "bytes": 3491,
+      "sha256": "8094a874b0282f454f9845c2335c0d907b372d3cf90e4f1cd75f5a520e1e6e09",
+      "before_saved": false
+    },
+    {
+      "path": "docs/README.md",
+      "bytes": 17207,
+      "sha256": "823c15d6173c92bfd184ed9e1dff7b91e084f4dfa2b3b2b670a4e8bc4d9c4837",
+      "before_saved": false
+    },
+    {
+      "path": "docs/focused_cleanup_progress.md",
+      "bytes": 4782,
+      "sha256": "74afd66f162376a0d9c711060760b7ee30c14b330e6329b56daaa9a26cebd819",
+      "before_saved": false
+    }
+  ],
+  "tests": {
+    "methods": 37,
+    "command": "make test-package-launcher-lifecycle CLANG=false PKG_CONFIG=false",
+    "result": "passed",
+    "platforms": "Linux shell fixtures on macOS; native macOS plist tools; stub apps only",
+    "readonly_package_configuration": "passed: copied configuration becomes owner-writable; package mode and bytes unchanged"
+  },
+  "checks": [
+    {
+      "command": [
+        "sh",
+        "-n",
+        "tools/packaging/runtime-config.sh"
+      ],
+      "exit": 0,
+      "diagnostic": ""
+    },
+    {
+      "command": [
+        "sh",
+        "-n",
+        "tools/packaging/linux/physics-sim-launcher"
+      ],
+      "exit": 0,
+      "diagnostic": ""
+    },
+    {
+      "command": [
+        "sh",
+        "-n",
+        "tools/packaging/macos/physics-sim-launcher"
+      ],
+      "exit": 0,
+      "diagnostic": ""
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0,
+      "diagnostic": ""
+    }
+  ],
+  "installed_changed": false,
+  "package_built": false,
+  "independent_backup": false,
+  "main_edit_synchronized": false,
+  "remaining": [
+    "independent preservation",
+    "bundler and desktop installer adoption",
+    "final operating contract reconciliation"
+  ]
+}

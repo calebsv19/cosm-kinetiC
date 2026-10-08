@@ -108,7 +108,13 @@ admit_file() {
 setup_runtime_root() {
     mkdir -p "$RUNTIME_DIR/data/runtime" "$RUNTIME_DIR/data/snapshots"
 
-    for lane in config shared shaders vk_renderer; do
+    . "$RES_DIR/runtime-config.sh"
+    physics_config_initialize "$RES_DIR/config" "$RUNTIME_DIR" "${1:-}"
+    if [ "${1:-}" = --adopt-existing-config ]; then
+        printf '%s\n' 'configuration adoption complete'
+        exit 0
+    fi
+    for lane in shared shaders vk_renderer; do
         target="$RUNTIME_DIR/$lane"
         source="$RES_DIR/$lane"
         if [ -L "$target" ] || [ -e "$target" ]; then
@@ -133,7 +139,7 @@ if [ -f "$MOLTENVK_DYLIB" ] && { [ -z "${VK_ICD_FILENAMES:-}" ] || [ -z "${VK_DR
 fi
 mkdir -p "$LOG_DIR"
 touch "$LOG_FILE"
-setup_runtime_root
+setup_runtime_root "${1:-}"
 
 # A new checked JSON generation preserves every previous ICD. Respect both
 # explicit driver overrides without creating an unused configuration file.

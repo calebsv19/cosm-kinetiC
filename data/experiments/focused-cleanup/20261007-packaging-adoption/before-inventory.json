@@ -1,0 +1,118 @@
+[
+  {
+    "path": "tools/packaging/linux/install-desktop-entry.sh",
+    "before_sha256": "c91a68eef7b84a2cdc1bfc2c474e2c28645cc74f2a7469fe274891994236c923"
+  },
+  {
+    "path": "tools/packaging/linux/install-desktop-entry.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tests/test_linux_desktop_installer.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tools/packaging/macos/bundle-dylibs.sh",
+    "before_sha256": "3cff2d9c1beaa710149645d64229123aa03812bd39d65b7b9d0f168f8f0cb115"
+  },
+  {
+    "path": "scripts/macos_bundle.py",
+    "before_sha256": null
+  },
+  {
+    "path": "scripts/macos_bundle_engine.sh",
+    "before_sha256": null
+  },
+  {
+    "path": "scripts/agent_session/owned_command.py",
+    "before_sha256": null
+  },
+  {
+    "path": "scripts/agent_session/sample_retention.py",
+    "before_sha256": null
+  },
+  {
+    "path": "scripts/cfd_evidence.py",
+    "before_sha256": null
+  },
+  {
+    "path": "scripts/desktop_replace.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tests/test_macos_bundle_lifecycle.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tests/test_owned_command.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tests/test_package_outputs.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tests/test_clean_reservations.py",
+    "before_sha256": "86bb1891b27a91f06bbdc405ba06c1c849090ac7c0ef307480895d68b1d3419b"
+  },
+  {
+    "path": "make/package-linux-desktop.mk",
+    "before_sha256": "70d65ad549158d54dcfc6ac5cd4463edff362160dcfecc72d2e9bdd6e5e6c421"
+  },
+  {
+    "path": "make/package-macos.mk",
+    "before_sha256": "953ef1e78487bce942c11f87d7c4a3960aa98af46e2dc6ced7a63417b71b778d"
+  },
+  {
+    "path": "makefile",
+    "before_sha256": "fb0b85e72833c630828215db0e1bf3c5cddd479ee5a8dd09411d7c186c523638"
+  },
+  {
+    "path": "make/rules-runtime.mk",
+    "before_sha256": "fc82db5aa7630003e58d4cb43a49014fa4490d2bc9b6a354ef00707c3d74d7c8"
+  },
+  {
+    "path": "scripts/contract_proof.py",
+    "before_sha256": null
+  },
+  {
+    "path": "scripts/package_transaction.py",
+    "before_sha256": null
+  },
+  {
+    "path": "scripts/package_proof.py",
+    "before_sha256": null
+  },
+  {
+    "path": "scripts/check_desktop_process_audit.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tools/packaging/validate_macos_session.py",
+    "before_sha256": "df0faac7fdfa0c32f2f4e5643038e93cd0b9105e6cac7c76fed764f712f500bb"
+  },
+  {
+    "path": "tests/test_package_transaction.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tests/test_package_proof.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tests/test_desktop_replace.py",
+    "before_sha256": null
+  },
+  {
+    "path": "tests/test_desktop_process_audit.py",
+    "before_sha256": null
+  },
+  {
+    "path": "make/release.mk",
+    "before_sha256": "43caaf8ac44a94cbac2b68fc1ed4086c4646ab39fffdc84195a1f0de7ef1acfb"
+  },
+  {
+    "path": "make/package-linux-worker.mk",
+    "before_sha256": "3c62b02a1f0a0f3db0991c96ba1206901d54a57d79748f6198e67db43a27e657"
+  }
+]

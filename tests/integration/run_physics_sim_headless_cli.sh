@@ -11,7 +11,7 @@ SUMMARY="$OUT_DIR/run_summary.json"
 PROGRESS="$OUT_DIR/run_progress.json"
 STEP_LOG="$OUT_DIR/../step_progress.out"
 EXISTING_LOG="$OUT_DIR/../existing_output.out"
-VERSION_JSON="$("${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" --version)"
+VERSION_JSON="$("${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" --version)"
 
 printf '%s' "$VERSION_JSON" | python3 -c '
 import json
@@ -42,7 +42,7 @@ if [ ! -f "$RUNTIME_SCENE" ]; then
   exit 1
 fi
 
-"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --grid 8x8x8 \
   --frames 2 \
@@ -66,7 +66,7 @@ rg -q '"sim_steps_completed_in_frame"[[:space:]]*:[[:space:]]*0' "$PROGRESS"
 rg -q '"sim_steps_total_in_frame"[[:space:]]*:[[:space:]]*0' "$PROGRESS"
 test -d "$OUT_DIR/volume_frames"
 
-"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --grid 8x8x8 \
   --frames 1 \
@@ -81,7 +81,7 @@ rg -q 'stage=prepare_output' "$EXISTING_LOG"
 rg -q "output_root=$OUT_DIR" "$EXISTING_LOG"
 rg -q 'action=choose a new output root or pass --overwrite' "$EXISTING_LOG"
 
-"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --grid 8x8x8 \
   --frames 1 \

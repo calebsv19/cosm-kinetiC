@@ -1,0 +1,18 @@
+{
+  "status": "prepared-local-restore-and-staged-payload-verified",
+  "item_id": "20261008T050409Z--physics-focused-preservation-20261007d",
+  "origin_files_rechecked": 16469,
+  "origin_drift": [],
+  "payload_sha256": "d2546e02ba988902b7e0f665dfb41c465cff2da8e2dc2f9a9503cbf638998253",
+  "payload_bytes": 43174272,
+  "payload_files": 16475,
+  "cold_archive_destination": "/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d/20261008T050409Z--physics-focused-preservation-20261007d",
+  "upload_started": false,
+  "independent_copy_verified": false,
+  "authorization": "Exact final payload/destination question pending; earlier upload auto-review rejected",
+  "supersedes_local_preparations": [
+    "20261007b",
+    "20261007c"
+  ],
+  "administrative_receipt_not_inside_its_own_frozen_payload": true
+}

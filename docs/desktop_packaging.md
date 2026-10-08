@@ -2,6 +2,12 @@
 
 Last updated: 2026-09-03
 
+2026-10-07 source update: use `packaging_lifecycle_operations.md` for guarded
+package preservation, retained attempts/proofs, optional desktop installer
+recovery and current validation limits. Use `launcher_configuration_recovery.md`
+for private runtime configuration. The source changes are uncommitted; installed
+packages and public release state have not changed.
+
 ## Bundle Targets
 - `make -C physics_sim package-desktop`
 - `make -C physics_sim package-desktop-smoke`

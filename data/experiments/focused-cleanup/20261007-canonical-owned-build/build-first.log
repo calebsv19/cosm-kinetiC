@@ -1,0 +1,6 @@
+fatal: not a git repository (or any of the parent directories): .git
+python3 -B scripts/build_owner.py --root 'build' -- /Applications/Xcode.app/Contents/Developer/usr/bin/make -f 'makefile' 'physics_sim_headless'
+fatal: not a git repository (or any of the parent directories): .git
+Build configuration held: Undeclared compilation output TARGET: /private/tmp/physics-focused-build-20261007/repo/physics_sim
+make/build-identity.mk:40: *** Cannot establish build configuration identity.  Stop.
+make: *** [owned-build] Error 2

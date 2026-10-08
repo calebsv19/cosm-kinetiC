@@ -1,0 +1,6 @@
+....Compiler terminal ownership unverified; staging retained: [Errno 3] No such process; [Errno 1] Operation not permitted; Compiler result pipe closed prematurely; [Errno 1] Operation not permitted
+........
+----------------------------------------------------------------------
+Ran 12 tests in 20.154s
+
+OK

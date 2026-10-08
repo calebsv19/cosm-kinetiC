@@ -1,0 +1,15 @@
+{
+  "action": "export-item-import-apply",
+  "approve_token": "COLD_ARCHIVE:export-item-import-apply:UUID:2958c9ed-b77f-4c88-9214-f0aa162de000:MOUNT:/mnt/cold_archive_500g",
+  "batch_id": "physics-focused-preservation-20261007d",
+  "category": "physics-focused-preservation-20261007d",
+  "checksums": true,
+  "export_item_id": "20261008T050409Z--physics-focused-preservation-20261007d",
+  "lane": "generated-runs",
+  "mountpoint": "/mnt/cold_archive_500g",
+  "reason": "User-approved independent preservation of PhysicsSim focused cleanup source and evidence",
+  "schema": "codework-linuxpc-cold-archive-control-request/v1",
+  "source_id": "",
+  "thread_id": "physics-focused-preservation-20261007d-apply",
+  "uuid": "2958c9ed-b77f-4c88-9214-f0aa162de000"
+}

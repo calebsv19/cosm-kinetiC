@@ -1,0 +1,4184 @@
+python3 scripts/clean_outputs.py --build-root "build/profiles/local-owned" --experiment-root "data/experiments" --tools-root "data/tools" --test-root "tmp/tests" --executable "build/profiles/local-owned/bin/physics_sim" --executable "build/profiles/local-owned/bin/vf2d_pack_tool" --executable "build/profiles/local-owned/bin/vf2d_dataset_tool" --executable "build/profiles/local-owned/bin/physics_trace_tool" --executable "build/profiles/local-owned/bin/physics_sim_headless" --executable "build/profiles/local-owned/bin/physics_sim_job_runner" --executable "build/profiles/local-owned/bin/runtime_scene_emitter_diag_tool" --executable "build/profiles/local-owned/bin/physics_sim_session_worker" --executable "build/profiles/local-owned/bin/shape_sanity_tool" --executable "build/profiles/local-owned/bin/shape_mask_tool" --executable "build/profiles/local-owned/bin/shape_asset_tool"
+{
+  "schema": "physics_sim_clean_plan_v2",
+  "owned_files": [
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/.configuration/154f86e04ea8b8ea1f564b66538cf4ea232fa162ae7e85b41b9247d7e1b37395-1.json",
+      "identity": [
+        16777231,
+        252229926,
+        33152,
+        12600,
+        1791434657082667405,
+        1791434657082888029
+      ],
+      "sha256": "154f86e04ea8b8ea1f564b66538cf4ea232fa162ae7e85b41b9247d7e1b37395"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/.configuration/active.json",
+      "identity": [
+        16777231,
+        252229930,
+        33152,
+        96,
+        1791434657084890688,
+        1791434657085033104
+      ],
+      "sha256": "144b01b4d5e2e61616f2c4704c867219b38f69ad8735c15f161039b696006ca6"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/app_config.d",
+      "identity": [
+        16777231,
+        252230456,
+        33188,
+        295,
+        1791434664871303430,
+        1791434664927797835
+      ],
+      "sha256": "c55122151feb261f2d8873a16313f062fdc486267dc56e20e26f6ea7986a64da"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/app_config.o",
+      "identity": [
+        16777231,
+        252230455,
+        33188,
+        8392,
+        1791434664871111264,
+        1791434664927973834
+      ],
+      "sha256": "0639b54553a016e6719dcb7cf898ab26b2c256b96d218c4ceb12ba1a21c4dc04"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/atmospheric/atmospheric_field.d",
+      "identity": [
+        16777231,
+        252230458,
+        33188,
+        581,
+        1791434664887912657,
+        1791434664919176660
+      ],
+      "sha256": "32e5e638f41d087a1c9136db3bde8b5550b09945cc6a0dde4214e0a9cd60bfc1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/atmospheric/atmospheric_field.o",
+      "identity": [
+        16777231,
+        252230454,
+        33188,
+        27352,
+        1791434664887662533,
+        1791434664919302660
+      ],
+      "sha256": "3d8d9311e872912b4121086969a4e6d1b9fc3df247b88e7f1853491371b24cc7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/atmospheric/atmospheric_warm_start.d",
+      "identity": [
+        16777231,
+        252230502,
+        33188,
+        7642,
+        1791434665675012636,
+        1791434665713098029
+      ],
+      "sha256": "a7515e69f5a41ed360c0b9ec4f63b25ef83e605c39634b27e5b14831f079fa28"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/atmospheric/atmospheric_warm_start.o",
+      "identity": [
+        16777231,
+        252230488,
+        33188,
+        59960,
+        1791434665674720137,
+        1791434665713211571
+      ],
+      "sha256": "1e0fc26ba0eb60cbd008f17e9800af9a8b93d0a1785774320c8f96ea886b87e4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/data_paths.d",
+      "identity": [
+        16777231,
+        252230129,
+        33188,
+        240,
+        1791434660097991213,
+        1791434660133988114
+      ],
+      "sha256": "443de28df28d01fe9ddee31d406e64593e2a1d812367a25e3f6c3b9fed50bee8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/data_paths.o",
+      "identity": [
+        16777231,
+        252230127,
+        33188,
+        17584,
+        1791434660097781338,
+        1791434660134121155
+      ],
+      "sha256": "5221e5fe23b10c62ea1d66891d863ad1845a5551860d163a8bdf4db46f366031"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/editor/scene_editor_viewport.d",
+      "identity": [
+        16777231,
+        252230843,
+        33188,
+        657,
+        1791434670540545619,
+        1791434670569968005
+      ],
+      "sha256": "fed6247ef93ff18ee1d7e9b2b5d5b5577e9e7ec6f94d238a4f176f4858cc35a3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/editor/scene_editor_viewport.o",
+      "identity": [
+        16777231,
+        252230836,
+        33188,
+        32896,
+        1791434670540311079,
+        1791434670570090546
+      ],
+      "sha256": "0a7c330f6ba276320c6d2301b131e15f829f30740b152159509c2f2f2ede338d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/editor/scene_editor_wind_setup.d",
+      "identity": [
+        16777231,
+        252230828,
+        33188,
+        1679,
+        1791434670328528986,
+        1791434670382172361
+      ],
+      "sha256": "a1072f913b3425b4f8f5525e1a8d02e4ab4164a01f1a3e89c2dbfa278210ea5d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/editor/scene_editor_wind_setup.o",
+      "identity": [
+        16777231,
+        252230827,
+        33188,
+        25496,
+        1791434670328324820,
+        1791434670382353777
+      ],
+      "sha256": "6eedc738a0755c25b12f1220042cb1c9079a56edec5f1399c881280d00df9c43"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/menu/menu_settings_provider_water.d",
+      "identity": [
+        16777231,
+        252230623,
+        33188,
+        580,
+        1791434666856803829,
+        1791434666917097802
+      ],
+      "sha256": "22fb6aebef638818a6e061c28c0db6e3c67079c88b800f39b4887e43ac45230c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/menu/menu_settings_provider_water.o",
+      "identity": [
+        16777231,
+        252230622,
+        33188,
+        4456,
+        1791434666856605663,
+        1791434666917252510
+      ],
+      "sha256": "b9c7de2a1dbc298b991b905e6553b0b5c07af50ee24770a14f8d7165888ad18c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_app_main.d",
+      "identity": [
+        16777231,
+        252230411,
+        33188,
+        300,
+        1791434664104854037,
+        1791434664141150271
+      ],
+      "sha256": "70b05949d078a648b95e1e28e7ea559ab66c34ea80d8496738f4fc9b2f19d341"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_app_main.o",
+      "identity": [
+        16777231,
+        252230406,
+        33188,
+        19480,
+        1791434664104652038,
+        1791434664141272187
+      ],
+      "sha256": "61b54da7b43c120e6efc8b3db8caf46ea01fa3bcc2e4f49f1e4587b604a37036"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_cli_helpers.d",
+      "identity": [
+        16777231,
+        252230616,
+        33188,
+        296,
+        1791434666771020496,
+        1791434666813221623
+      ],
+      "sha256": "f5eef7022e98d13fedfa50ea09dd4deb97ba59e2063b95d2897152b4b07a9322"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_cli_helpers.o",
+      "identity": [
+        16777231,
+        252230615,
+        33188,
+        4440,
+        1791434666770823955,
+        1791434666813386748
+      ],
+      "sha256": "31c60801cb7d3b68f377f491a9f00446da8a47787a7df4756c02ab922daad37e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_diagnostic_helpers.d",
+      "identity": [
+        16777231,
+        252230240,
+        33188,
+        205,
+        1791434661645421316,
+        1791434661707261034
+      ],
+      "sha256": "bb1a6f29cecca4e2ac5e97427aa1a12db1749291f93a4d8edc10636d1cb4d5f4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_diagnostic_helpers.o",
+      "identity": [
+        16777231,
+        252230233,
+        33188,
+        2632,
+        1791434661645240442,
+        1791434661707386908
+      ],
+      "sha256": "43fd29fe13f75507a362071fb178d9acbfd953b5364970b5bdd1506a9fa88021"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_file_helpers.d",
+      "identity": [
+        16777231,
+        252230798,
+        33188,
+        300,
+        1791434669794823604,
+        1791434669833767328
+      ],
+      "sha256": "ee2533b767306e6388471d5b22ef6dbc2cc9aa66322b1448d8f3ab5c181955c0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_file_helpers.o",
+      "identity": [
+        16777231,
+        252230797,
+        33188,
+        12040,
+        1791434669794623855,
+        1791434669833929202
+      ],
+      "sha256": "0b840ac8a62d1bb9ab02349b83811dd99dee42409470655eb9c74d6470ef9333"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_headless_job_bundle.d",
+      "identity": [
+        16777231,
+        252230367,
+        33188,
+        2099,
+        1791434663498573938,
+        1791434663550492861
+      ],
+      "sha256": "beaa7ed962a1667b1ab8a447a4bc450d6510edf7a3ff5ac8f2215f2f36db5123"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_headless_job_bundle.o",
+      "identity": [
+        16777231,
+        252230365,
+        33188,
+        29664,
+        1791434663498277314,
+        1791434663550642194
+      ],
+      "sha256": "2fc2f2ac66652cea2130e4e5f92d111e67c52952a2acbaf4de908f252bcb7dcb"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_job_runner.d",
+      "identity": [
+        16777231,
+        252230403,
+        33188,
+        1984,
+        1791434664017687502,
+        1791434664084271451
+      ],
+      "sha256": "c81cd38a11b462dca785c6642281a2e1a11c1317a280698a64f5238877a404eb"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_job_runner.o",
+      "identity": [
+        16777231,
+        252230397,
+        33188,
+        41384,
+        1791434664017439961,
+        1791434664084415409
+      ],
+      "sha256": "c361ccbc4cbed5edc268b4566698e3fb617d9234b7be54ec9969524622c8e8b2"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_job_runner_paths.d",
+      "identity": [
+        16777231,
+        252230231,
+        33188,
+        2261,
+        1791434661599878077,
+        1791434661637624346
+      ],
+      "sha256": "d0195d015025d8df4bb5eff2e1b0e2c3f5d8135d66c1210a98eb2a411eb4d000"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_job_runner_paths.o",
+      "identity": [
+        16777231,
+        252230220,
+        33188,
+        19768,
+        1791434661599204121,
+        1791434661637756554
+      ],
+      "sha256": "37a0610babcc23c036b255aed1b9b12d5384baeaed8c3f2f219fcf14aa45c2df"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_job_runner_status.d",
+      "identity": [
+        16777231,
+        252230283,
+        33188,
+        2002,
+        1791434662369987372,
+        1791434662387167097
+      ],
+      "sha256": "fda01ea4225260a2a86922537f07f9d2f9e37d32f6b0d1a392771840d9b0dd06"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_job_runner_status.o",
+      "identity": [
+        16777231,
+        252230274,
+        33188,
+        36080,
+        1791434662369667873,
+        1791434662387293638
+      ],
+      "sha256": "13f01efbdd772114aa677103c7bf2ee0dadfb829a0206609236b370a1a4b40df"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_json_helpers.d",
+      "identity": [
+        16777231,
+        252230199,
+        33188,
+        181,
+        1791434661146125217,
+        1791434661194737487
+      ],
+      "sha256": "4c99700ae6c413463d1a3c69aa2d520a98cfc60e99984b26e8863e7206e74856"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/physics_sim_json_helpers.o",
+      "identity": [
+        16777231,
+        252230198,
+        33188,
+        4856,
+        1791434661145954843,
+        1791434661194853403
+      ],
+      "sha256": "e0fcb0f06527e3d98c57a25c82dc05f315b6f36258c410f46118faa0af7f95c4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/platform/physics_sim_file_picker.d",
+      "identity": [
+        16777231,
+        252230268,
+        33188,
+        324,
+        1791434662142827214,
+        1791434662199783992
+      ],
+      "sha256": "51d28ef4374b4b444433d40580de1ad563a40cb052321036fca5f3e384220315"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/platform/physics_sim_file_picker.o",
+      "identity": [
+        16777231,
+        252230264,
+        33188,
+        9816,
+        1791434662142514715,
+        1791434662200199824
+      ],
+      "sha256": "d44c356f6fccf909c1d89004c6a413de311d73463f6569b37cff6af58662b613"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/platform/physics_sim_path_opener.d",
+      "identity": [
+        16777231,
+        252230263,
+        33188,
+        324,
+        1791434662055864386,
+        1791434662121999003
+      ],
+      "sha256": "10468a4fd3f620ba3c9bbeaf29df8d57accac6ff403bba97706c989c580b3279"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/platform/physics_sim_path_opener.o",
+      "identity": [
+        16777231,
+        252230260,
+        33188,
+        6792,
+        1791434662055592345,
+        1791434662122174169
+      ],
+      "sha256": "b3c54a53fdf58c5c9c075ca38b534495cb40f501bb8b7394654616d8ad34bf40"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/preset_io.d",
+      "identity": [
+        16777231,
+        252230428,
+        33188,
+        653,
+        1791434664398651644,
+        1791434664426925326
+      ],
+      "sha256": "2166007a8af6554cff2cc830a22be528833a13df5aca52d8f84a8e98dd9b42c4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/preset_io.o",
+      "identity": [
+        16777231,
+        252230425,
+        33188,
+        56376,
+        1791434664398373937,
+        1791434664427062367
+      ],
+      "sha256": "3bd42a30e968bd9ed0c9cd4bd5efa6eba00b60b91e152a92d1beff4a030b92a8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/preset_io_library.d",
+      "identity": [
+        16777231,
+        252230573,
+        33188,
+        437,
+        1791434666234042669,
+        1791434666276740044
+      ],
+      "sha256": "b99099e4f5f061392806ab426bf113856a6bb435b7e1a8e0f4ad90bdce0b8cf5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/preset_io_library.o",
+      "identity": [
+        16777231,
+        252230569,
+        33188,
+        13064,
+        1791434666233744336,
+        1791434666276871794
+      ],
+      "sha256": "ab24f24792cca9c11c0f16d908583b973a2c0e614c84b640541ea1a213ee34a4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/preset_io_save.d",
+      "identity": [
+        16777231,
+        252230306,
+        33188,
+        427,
+        1791434662698319011,
+        1791434662742150299
+      ],
+      "sha256": "a040eeedf01aa8a6ae167afa63300707434474e5af2fcae6765e8acdb458ff6d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/preset_io_save.o",
+      "identity": [
+        16777231,
+        252230304,
+        33188,
+        17928,
+        1791434662697323640,
+        1791434662742285131
+      ],
+      "sha256": "11486f6c6e08681fd771c827a04af3b93a15a8d86ea6cfd84b376321aaafa1cb"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/quality_profiles.d",
+      "identity": [
+        16777231,
+        252230740,
+        33188,
+        319,
+        1791434668653293255,
+        1791434668713058064
+      ],
+      "sha256": "d2e9641595b3e0883e78dcf54941484d6520f2c92b30d4880a57f6055ed6c5c0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/quality_profiles.o",
+      "identity": [
+        16777231,
+        252230739,
+        33188,
+        11272,
+        1791434668653098755,
+        1791434668713225855
+      ],
+      "sha256": "354f1755eed01c28e7c7e052c4920bab143a7e33fcf81a3cab549d647a249e43"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_apply.d",
+      "identity": [
+        16777231,
+        252230426,
+        33188,
+        7518,
+        1791434664333837521,
+        1791434664413361545
+      ],
+      "sha256": "074a98ed96eb6311f826c0ffa1c108595a1e7c23d4e4bed6869ff398b5effab9"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_apply.o",
+      "identity": [
+        16777231,
+        252230400,
+        33188,
+        36920,
+        1791434664333611647,
+        1791434664413494836
+      ],
+      "sha256": "64dc183cf58c6f322fb42da14500ce53e0101f3948184c0a3dea94c8fce17e10"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_controller.d",
+      "identity": [
+        16777231,
+        252230380,
+        33188,
+        9218,
+        1791434663715590427,
+        1791434663780089759
+      ],
+      "sha256": "503514a3f49fabf7e16468f17be35025c6d71488a080bb8944f108f7d5a1050d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_controller.o",
+      "identity": [
+        16777231,
+        252230357,
+        33188,
+        114384,
+        1791434663715331387,
+        1791434663780235842
+      ],
+      "sha256": "ec3b0bfd0570fa39605372f7667fd2de833d4666e656cd6937aa3171b5cce0b2"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_controller_stroke_sampler.d",
+      "identity": [
+        16777231,
+        252230069,
+        33188,
+        7582,
+        1791434659180590866,
+        1791434659230588630
+      ],
+      "sha256": "b3d6a36cd640e17994494cb65c9e474632e94588febc5e147b3ea62c18514656"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_controller_stroke_sampler.o",
+      "identity": [
+        16777231,
+        252230059,
+        33188,
+        40240,
+        1791434659180359033,
+        1791434659230711879
+      ],
+      "sha256": "07ec75954f88879b67814e1881e3f8286249cb983f65c412ac95235be0a3741e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_controller_util.d",
+      "identity": [
+        16777231,
+        252230631,
+        33188,
+        7558,
+        1791434666951876167,
+        1791434667012451348
+      ],
+      "sha256": "d43ce05a89ab9e030bafa8cad984fc7f3d1128f372c7fde8873bc94b4a253a56"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_controller_util.o",
+      "identity": [
+        16777231,
+        252230617,
+        33188,
+        38584,
+        1791434666951559585,
+        1791434667012612681
+      ],
+      "sha256": "0d97f5c3ac5ec310acf1006b017897943b1adc8c3a50408f633776db0bc93155"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_core_sim_runtime_step.d",
+      "identity": [
+        16777231,
+        252230692,
+        33188,
+        8094,
+        1791434667874741993,
+        1791434667970467037
+      ],
+      "sha256": "ce179dcaea3d2f1d6f84516f068716bc957fc1e0f6c66c4c41443eb01146f093"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_core_sim_runtime_step.o",
+      "identity": [
+        16777231,
+        252230679,
+        33188,
+        50896,
+        1791434667874494702,
+        1791434667970593286
+      ],
+      "sha256": "722e9797ad6da346efc319812dec52cab278d0e51741c02d967333b93326df31"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_imports.d",
+      "identity": [
+        16777231,
+        252230770,
+        33188,
+        7721,
+        1791434669288371117,
+        1791434669380476467
+      ],
+      "sha256": "25661b1c2c8dec040324952c56cef73ecbb07943c465b84ca6ac6b502bfd05dc"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_imports.o",
+      "identity": [
+        16777231,
+        252230764,
+        33188,
+        41352,
+        1791434669288114868,
+        1791434669380626674
+      ],
+      "sha256": "26c4cb6957de7123600b4961d326f798fb144f2d5e18873351c872a79f25c7b8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_loop_diag.d",
+      "identity": [
+        16777231,
+        252230666,
+        33188,
+        260,
+        1791434667407554144,
+        1791434667422915584
+      ],
+      "sha256": "f0747a8ece87b6128ae48ac8d7850b67c78a6048eef063d023a6257b26beab44"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_loop_diag.o",
+      "identity": [
+        16777231,
+        252230661,
+        33188,
+        7672,
+        1791434667407351811,
+        1791434667423084667
+      ],
+      "sha256": "981d76a5542127f976da4d7f86024d82b04d3857ca8a3ac1bb0851dc09a61e5a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_loop_policy.d",
+      "identity": [
+        16777231,
+        252230062,
+        33188,
+        268,
+        1791434659093778620,
+        1791434659145117504
+      ],
+      "sha256": "b18145ff00db8cff0f9db3ba54c29eb9def41403e66c09ebda4770a51ff11303"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_loop_policy.o",
+      "identity": [
+        16777231,
+        252230061,
+        33188,
+        4120,
+        1791434659093556829,
+        1791434659145262753
+      ],
+      "sha256": "c2e8d46340e3ddc3b6865c2ebebddb646ada47806e9012715eaef061a5eccf91"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_masks.d",
+      "identity": [
+        16777231,
+        252230854,
+        33188,
+        7518,
+        1791434670791959683,
+        1791434670847422050
+      ],
+      "sha256": "74915314a441ed901f10a089c9c1dc9be42a17165be17497ebd92ecba6effb8e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_masks.o",
+      "identity": [
+        16777231,
+        252230849,
+        33188,
+        37528,
+        1791434670791723767,
+        1791434670847539966
+      ],
+      "sha256": "f4d1282e65319cbdb5015da878bc8347d6d5f724afeedb040f51058fbaa508ec"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_objects.d",
+      "identity": [
+        16777231,
+        252230812,
+        33188,
+        7526,
+        1791434670055354841,
+        1791434670148406103
+      ],
+      "sha256": "da3701be6879cc7eaa205d2c54bd501b6530fb5c15b68e66ddff9cfbdb231fc9"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_objects.o",
+      "identity": [
+        16777231,
+        252230804,
+        33188,
+        41592,
+        1791434670055074800,
+        1791434670148532770
+      ],
+      "sha256": "52261c8bef7df569d1a8a5538fc6b9a321e92ba8d8963ea6502511309216cdf8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_presets.d",
+      "identity": [
+        16777231,
+        252230593,
+        33188,
+        317,
+        1791434666369056435,
+        1791434666416259460
+      ],
+      "sha256": "853de72945c3a9760a0645b9208d709cc78a46e4c0bfeb20ba556f043d366a35"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_presets.o",
+      "identity": [
+        16777231,
+        252230586,
+        33188,
+        952816,
+        1791434666368860394,
+        1791434666416403417
+      ],
+      "sha256": "7824a9ae852202cf4b7440505bab48b728e64d638fd74cdf4b9f190edba8b8a7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_project_cache_output.d",
+      "identity": [
+        16777231,
+        252230662,
+        33188,
+        391,
+        1791434667386377310,
+        1791434667399966049
+      ],
+      "sha256": "f9105a0c404d120109c4aaac8885cc709e40b49a6ddbd0bf7c5f04a4a6f8c818"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_project_cache_output.o",
+      "identity": [
+        16777231,
+        252230659,
+        33188,
+        50952,
+        1791434667386194227,
+        1791434667400120839
+      ],
+      "sha256": "75377e404ebc6c2e2735829245ddd83a9485f3b08ef4fad000c016b2e648d4c3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_runtime_launch_projection.d",
+      "identity": [
+        16777231,
+        252230188,
+        33188,
+        7813,
+        1791434661008017588,
+        1791434661109697526
+      ],
+      "sha256": "ac6acecdb8f86742426e922077046a99edda67d8e273dbf9e5a9c29b3cb73574"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_runtime_launch_projection.o",
+      "identity": [
+        16777231,
+        252230174,
+        33188,
+        12824,
+        1791434661007754756,
+        1791434661109810734
+      ],
+      "sha256": "28fad4f31db3ccc89ce2d4611087e4e38c9957f7c1074a23c32b9bdb216faac7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_state.d",
+      "identity": [
+        16777231,
+        252230352,
+        33188,
+        7636,
+        1791434663309814631,
+        1791434663405973799
+      ],
+      "sha256": "ce97627dd9af254158d0aa7d4f0d660c43bab42fde9b15f8fa7521a59781a320"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/scene_state.o",
+      "identity": [
+        16777231,
+        252230326,
+        33188,
+        44512,
+        1791434663309422299,
+        1791434663406236964
+      ],
+      "sha256": "93aa81a6dc138e8efd213599f1d80af4eb128426e15a886a682454fec8a54866"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/session_observation.d",
+      "identity": [
+        16777231,
+        252230118,
+        33188,
+        9243,
+        1791434659957466843,
+        1791434660026194200
+      ],
+      "sha256": "c3a1446945ead6ae7504a37348da330762a2189cc8dcb510b1acec81a52ea148"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/session_observation.o",
+      "identity": [
+        16777231,
+        252230097,
+        33188,
+        64000,
+        1791434659957199635,
+        1791434660026307075
+      ],
+      "sha256": "32b10984dca1af87bb49bd9fc203c4b2a10a0d14a083161cc7395b5ede9b25c4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/shape_lookup.d",
+      "identity": [
+        16777231,
+        252230768,
+        33188,
+        898,
+        1791434669245217701,
+        1791434669301566815
+      ],
+      "sha256": "5749fa4093e1863761b49ab3400db09a48fe02d8b5913164cb59c97cdfb01341"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/shape_lookup.o",
+      "identity": [
+        16777231,
+        252230766,
+        33188,
+        5280,
+        1791434669245002452,
+        1791434669301742481
+      ],
+      "sha256": "95405e47fba3ffc799a3c8b7f85bfdc429c9207cec6f08f449642ce2d5c85845"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_atmospheric.d",
+      "identity": [
+        16777231,
+        252230741,
+        33188,
+        7592,
+        1791434668709656785,
+        1791434668769437761
+      ],
+      "sha256": "0cefc5d01ec6383f79775cb501bfc0a35435bf287985c49095a3efe5c623b3b0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_atmospheric.o",
+      "identity": [
+        16777231,
+        252230734,
+        33188,
+        37208,
+        1791434668707950584,
+        1791434668769561219
+      ],
+      "sha256": "213c102014e8c280c911e83f2c310170bf7f2b310f1d5adac2e637f637fa0387"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_box.d",
+      "identity": [
+        16777231,
+        252230710,
+        33188,
+        7487,
+        1791434668142160285,
+        1791434668231118398
+      ],
+      "sha256": "53468fd0f25c68b239e9aa9b7a0c9a2a0472f49854020a72f8dc22fad987c06d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_box.o",
+      "identity": [
+        16777231,
+        252230698,
+        33188,
+        36656,
+        1791434668141915995,
+        1791434668231241772
+      ],
+      "sha256": "566138ac320520ae4aaeb833db8584f17796f32d705b1f63ae7a1f74348ea09d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_dispatch.d",
+      "identity": [
+        16777231,
+        252230694,
+        33188,
+        649,
+        1791434667928132452,
+        1791434667981768451
+      ],
+      "sha256": "0ca10075f0ddc5911f996810ca13b72f3a1ba3ae7e7c488eadba5fd468a0a6ee"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_dispatch.o",
+      "identity": [
+        16777231,
+        252230693,
+        33188,
+        14136,
+        1791434667927921702,
+        1791434667981916617
+      ],
+      "sha256": "e9376dca1002887ce1ff7c7277b09ae21a18feb2a1f80e0014a7b91c6108dbdc"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_water.d",
+      "identity": [
+        16777231,
+        252230742,
+        33188,
+        7684,
+        1791434668712828523,
+        1791434668793368418
+      ],
+      "sha256": "cf8daf28c0751b9736e376604f77e2105b88d5efbdbba9c5829d6f4fe8e3f1da"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_water.o",
+      "identity": [
+        16777231,
+        252230732,
+        33188,
+        40672,
+        1791434668712587191,
+        1791434668793495959
+      ],
+      "sha256": "6f8c2a08acbd7879cb7083f6e7bf671c4441d753395a37ff47c7a3aec21201ff"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_wind.d",
+      "identity": [
+        16777231,
+        252230733,
+        33188,
+        7489,
+        1791434668535559630,
+        1791434668601328832
+      ],
+      "sha256": "eeef5b2e5fab164597b4f0789a279397bbfaf06caf51481a7f3897ce6a16875e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_modes/sim_mode_wind.o",
+      "identity": [
+        16777231,
+        252230723,
+        33188,
+        41296,
+        1791434668535284714,
+        1791434668601474165
+      ],
+      "sha256": "f654a80bba3a395d3399361eee49cd348b533a5aa4ad50dede938bd5292b222f"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_anchor.d",
+      "identity": [
+        16777231,
+        252230167,
+        33188,
+        7702,
+        1791434660646423120,
+        1791434660706873093
+      ],
+      "sha256": "771d894be0462a6ebf635e265640c899f5a2b847ce186aaf46f1dfb39c901114"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_anchor.o",
+      "identity": [
+        16777231,
+        252230154,
+        33188,
+        41808,
+        1791434660646139830,
+        1791434660706987968
+      ],
+      "sha256": "6767ff710ffd931d9503a2a94164a97082b50fbf656658bbb6b1570adbc6e781"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_brick_store.d",
+      "identity": [
+        16777231,
+        252230490,
+        33188,
+        558,
+        1791434665465846033,
+        1791434665485099500
+      ],
+      "sha256": "275389160549fafe3d34d529556856888b73875081d6cb353713f13f46888f77"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_brick_store.o",
+      "identity": [
+        16777231,
+        252230487,
+        33188,
+        39496,
+        1791434665465654742,
+        1791434665485233874
+      ],
+      "sha256": "21ea79eff92de12eddcdc24d6f3a3eb7daab6b4fb6f1a76c8c0cc51761f679ff"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_domain.d",
+      "identity": [
+        16777231,
+        252230327,
+        33188,
+        1554,
+        1791434662920653145,
+        1791434662942537019
+      ],
+      "sha256": "67441fa2f10e5fcaab823bd6ba748aed0689d1c18547caab19eaf90d0130b405"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_domain.o",
+      "identity": [
+        16777231,
+        252230318,
+        33188,
+        38632,
+        1791434662920389855,
+        1791434662942733310
+      ],
+      "sha256": "094d3e3cdd167f624d4fd40d7740f09169e5e9c89ae8bfe14166b95ecd0d246f"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_footprint.d",
+      "identity": [
+        16777231,
+        252230162,
+        33188,
+        550,
+        1791434660553387399,
+        1791434660601073130
+      ],
+      "sha256": "1adee49a4d3edf6282abcdc9a0f62670578d93479e3f7ce3623783d70a32030b"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_footprint.o",
+      "identity": [
+        16777231,
+        252230161,
+        33188,
+        10664,
+        1791434660553160650,
+        1791434660601230129
+      ],
+      "sha256": "ab50aedfbe34ab0e299db4e0775c2b3a44aa0a47e9ce0b05dbe063e1ca1155ab"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_solver.d",
+      "identity": [
+        16777231,
+        252230275,
+        33188,
+        673,
+        1791434662338194245,
+        1791434662351993942
+      ],
+      "sha256": "f03def7fbbb458c33a8044990bea49ad3967c17a673e5ae461ded5029502a102"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_solver.o",
+      "identity": [
+        16777231,
+        252230273,
+        33188,
+        11616,
+        1791434662338005246,
+        1791434662352265232
+      ],
+      "sha256": "6bdc417756c0c608794d54ca0275fb95b8906b88bea55200e07e72c33fb3a838"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_solver_core_sim.d",
+      "identity": [
+        16777231,
+        252230808,
+        33188,
+        917,
+        1791434669998475020,
+        1791434670049610488
+      ],
+      "sha256": "9bd781cc9397e15f6b05c6350008b7fdeed5cfc4cf69f15ecf59e68dbad14d27"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_solver_core_sim.o",
+      "identity": [
+        16777231,
+        252230807,
+        33188,
+        13600,
+        1791434669998269604,
+        1791434670049768612
+      ],
+      "sha256": "e8067762b09b377bc6f1f83de19179dc17f7154334ab55ac4090e71ac495139d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_solver_step.d",
+      "identity": [
+        16777231,
+        252230245,
+        33188,
+        687,
+        1791434661709140652,
+        1791434661769332167
+      ],
+      "sha256": "8107da37695661a6cc074840bf5b92be2bd411e75b6ec28cbd6c001b563fde8f"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_solver_step.o",
+      "identity": [
+        16777231,
+        252230235,
+        33188,
+        38704,
+        1791434661708957486,
+        1791434661769465292
+      ],
+      "sha256": "bd86f19ec33eb31982a3d1018b98f36ce2abdc6e31fadb3cc38b2b06483d09e5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_space.d",
+      "identity": [
+        16777231,
+        252230576,
+        33188,
+        534,
+        1791434666262741265,
+        1791434666309725333
+      ],
+      "sha256": "d6f53e619bf09f302bb0c2edeb206127367bb34048debcd11093eaf891d1a33a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_3d_space.o",
+      "identity": [
+        16777231,
+        252230575,
+        33188,
+        6776,
+        1791434666262530808,
+        1791434666309854999
+      ],
+      "sha256": "f53d8a3151167abc854730255ace97d6010e59aa384c77cfbb4d8f496df192a7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend.d",
+      "identity": [
+        16777231,
+        252230085,
+        33188,
+        6301,
+        1791434659514274651,
+        1791434659595590584
+      ],
+      "sha256": "208c4f2a28a51ebe9cb7e94a3f75fe1891c321d5e230fe6b4df2be660130eac6"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend.o",
+      "identity": [
+        16777231,
+        252230078,
+        33188,
+        45768,
+        1791434659514051610,
+        1791434659595706501
+      ],
+      "sha256": "e3b2557802eda34be0bfdff4d75472aab21d9b3b420ec8266befacb8739f1981"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_2d.d",
+      "identity": [
+        16777231,
+        252230577,
+        33188,
+        8214,
+        1791434666277198626,
+        1791434666360164428
+      ],
+      "sha256": "b16e93a74ffc3ce557e51d91545f6df9ee58d6930f4972bcecc12680277eae0f"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_2d.o",
+      "identity": [
+        16777231,
+        252230566,
+        33188,
+        79904,
+        1791434666276822502,
+        1791434666360301052
+      ],
+      "sha256": "dbf66e2d5ba9183e06580a8ce969ff9902f5a3eecece4446761207a7395ad17e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_2d_runtime_fields.d",
+      "identity": [
+        16777231,
+        252230077,
+        33188,
+        7864,
+        1791434659320731112,
+        1791434659403098875
+      ],
+      "sha256": "b4a6b4dc447aa5d31fde61a8f6e93e4aba502be6b74b81b5b7f13d02ca66f73a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_2d_runtime_fields.o",
+      "identity": [
+        16777231,
+        252230060,
+        33188,
+        71160,
+        1791434659320399572,
+        1791434659403226125
+      ],
+      "sha256": "c0c3adb8ee252acd790d2bb4efd4407b4b6ed1748c5d21d48ec498be505ed059"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_emitter_shapes.d",
+      "identity": [
+        16777231,
+        252230813,
+        33188,
+        8019,
+        1791434670108040719,
+        1791434670154400455
+      ],
+      "sha256": "e261a5b2a771c7ff16b1b8b43e4538a98a64920ba6198c89926ff5af54b2aa1b"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_emitter_shapes.o",
+      "identity": [
+        16777231,
+        252230805,
+        33188,
+        53016,
+        1791434670107802262,
+        1791434670154520080
+      ],
+      "sha256": "ff9a6bcc57582bfc6c342745bb84005be2ed23d95b23f546a9f05c12a183de73"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_emitters.d",
+      "identity": [
+        16777231,
+        252230470,
+        33188,
+        8211,
+        1791434664949796499,
+        1791434665002411461
+      ],
+      "sha256": "22fa0193484f168db07922827c378d4d09b59b064a7bb58475f4962b4da0f660"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_emitters.o",
+      "identity": [
+        16777231,
+        252230447,
+        33188,
+        83976,
+        1791434664949523875,
+        1791434665002562961
+      ],
+      "sha256": "2318960dbd3dca6145319c33915bdaa5b144481a00391a435f1e095bc12b1c99"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_mesh_obstacle_proxy.d",
+      "identity": [
+        16777231,
+        252230527,
+        33188,
+        7974,
+        1791434665763780582,
+        1791434665869598504
+      ],
+      "sha256": "6c0f43c6c93a01559a6daaa9b8066d68118d5adc76da4ace2d8ef0c9ff947dfa"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_mesh_obstacle_proxy.o",
+      "identity": [
+        16777231,
+        252230497,
+        33188,
+        44248,
+        1791434665762426296,
+        1791434665869734253
+      ],
+      "sha256": "6fe371444a842f03f9637b6504931b7440224327f56b23bfaee1bee9d06e6512"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_obstacle_sources.d",
+      "identity": [
+        16777231,
+        252230683,
+        33188,
+        8031,
+        1791434667760495729,
+        1791434667815662347
+      ],
+      "sha256": "bec06ed397d3c01c57611102012bfa91dbe7980b221f2076a9802082f4acab3c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_obstacle_sources.o",
+      "identity": [
+        16777231,
+        252230673,
+        33188,
+        52648,
+        1791434667760215147,
+        1791434667815826014
+      ],
+      "sha256": "0d638cbde9a4b29023eaad2b2ebd2da4c889df39b96cf3c809949d4dfe7b8175"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_obstacles.d",
+      "identity": [
+        16777231,
+        252230104,
+        33188,
+        7849,
+        1791434659870983929,
+        1791434659922518729
+      ],
+      "sha256": "9173b209f895466ede5ba8fd6c4fbc7b1280057ce7083ebdffafd1c5670ad05e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_obstacles.o",
+      "identity": [
+        16777231,
+        252230094,
+        33188,
+        72120,
+        1791434659870658806,
+        1791434659922640478
+      ],
+      "sha256": "707daea515e70696ba040578ad9d5df9d4345446cdbc6460f829e7eeb25c076a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_oriented_box.d",
+      "identity": [
+        16777231,
+        252230031,
+        33188,
+        669,
+        1791434658487359313,
+        1791434658535102503
+      ],
+      "sha256": "3b22619418fc4bf281821c9c0bed4b5aa347235d4c3f36caf920932ec6ae7138"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_oriented_box.o",
+      "identity": [
+        16777231,
+        252230029,
+        33188,
+        10936,
+        1791434658487064939,
+        1791434658535267085
+      ],
+      "sha256": "af79628f433ab6341560f22c0c7ba6f666d5c95482045736114760a5eecdf30d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_runtime.d",
+      "identity": [
+        16777231,
+        252230856,
+        33188,
+        8027,
+        1791434670818721578,
+        1791434670916644822
+      ],
+      "sha256": "5f7cc8221c129c9453a7d86f4ef2c1fa36a2c19941d5ff155e566fc796ff974b"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_runtime.o",
+      "identity": [
+        16777231,
+        252230850,
+        33188,
+        71552,
+        1791434670818348497,
+        1791434670916770197
+      ],
+      "sha256": "305a35e44b71f5a73b9ef28d4deb6ff55aaaa82d81d121242f79bf7776fe4ece"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_scaffold.d",
+      "identity": [
+        16777231,
+        252230784,
+        33188,
+        8128,
+        1791434669486520054,
+        1791434669566648784
+      ],
+      "sha256": "75adb42f000103d5caaa46633f97e79b842ccfab4cb918233b3ba7db1c87eec1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_scaffold.o",
+      "identity": [
+        16777231,
+        252230771,
+        33188,
+        76424,
+        1791434669486262847,
+        1791434669566793033
+      ],
+      "sha256": "a64fcd1aa75357ea5a9016cccfb82ec6b1a0086d587f5ef2860e745a6ae46c2c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_scaffold_views.d",
+      "identity": [
+        16777231,
+        252230217,
+        33188,
+        6883,
+        1791434661522150171,
+        1791434661594000933
+      ],
+      "sha256": "330ff8805a7386479fbb17be368f66c9ae7a19b5252d74039eded48e6ec25577"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_scaffold_views.o",
+      "identity": [
+        16777231,
+        252230200,
+        33188,
+        33088,
+        1791434661521924880,
+        1791434661594143557
+      ],
+      "sha256": "f5b426094b9b0637d9894abe6faf581f8b89210ec97c47fb11b80c5b6c7c9ffd"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_wind.d",
+      "identity": [
+        16777231,
+        252230895,
+        33188,
+        7839,
+        1791434671538012196,
+        1791434671627720847
+      ],
+      "sha256": "cfc6149a670be06b8a502d101161aa78af29fb273b0532f4344d44a4d0d659c8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_backend_3d_wind.o",
+      "identity": [
+        16777231,
+        252230880,
+        33188,
+        64568,
+        1791434671537786989,
+        1791434671627857513
+      ],
+      "sha256": "0cc2435ec9fc2ab474ccb7a74c3cf60629c54d2f1f192af1b11d80a4a1a4579d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_emitter.d",
+      "identity": [
+        16777231,
+        252230348,
+        33188,
+        744,
+        1791434663281623282,
+        1791434663322313749
+      ],
+      "sha256": "4fead4ba8e55525397f569f39f6c7b170beab6a4db30f5140b88edcd2c6f584d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_emitter.o",
+      "identity": [
+        16777231,
+        252230345,
+        33188,
+        23472,
+        1791434663281428533,
+        1791434663322458582
+      ],
+      "sha256": "a72f9a8282fa374142debde08ba432697c9a9476d6ee36bb6fc03b2a1223ae56"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_mesh_accel.d",
+      "identity": [
+        16777231,
+        252230189,
+        33188,
+        848,
+        1791434661012965527,
+        1791434661044086906
+      ],
+      "sha256": "59df196909f78727f0961be8e9a2b34b3e98225eb6e16d9e1ac138ae8aa4d9b7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_mesh_accel.o",
+      "identity": [
+        16777231,
+        252230184,
+        33188,
+        24472,
+        1791434661012766028,
+        1791434661044218114
+      ],
+      "sha256": "99b4127eb2256398ec63d46b28b0d37ebaf26c185cc80f51a0b995412bc46dad"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_mesh_diagnostics.d",
+      "identity": [
+        16777231,
+        252230629,
+        33188,
+        1481,
+        1791434666930156127,
+        1791434666960676716
+      ],
+      "sha256": "35da8faf61cbd037009cc3434576aac9549fd4f114d74321d3cf5d4fe41dbd9a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_mesh_diagnostics.o",
+      "identity": [
+        16777231,
+        252230624,
+        33188,
+        24168,
+        1791434666929932127,
+        1791434666960803924
+      ],
+      "sha256": "37d451cd87a75dd853729aaf222c8ca496796094241fcf19effc4fa52985327d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_mesh_obstacle_proxy.d",
+      "identity": [
+        16777231,
+        252230048,
+        33188,
+        1550,
+        1791434658756291767,
+        1791434658820032227
+      ],
+      "sha256": "335522f9eb6b7c7e664fa95661fab325afd8e8a71de88ef83aa0fda04925c109"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_mesh_obstacle_proxy.o",
+      "identity": [
+        16777231,
+        252230046,
+        33188,
+        62344,
+        1791434658756037976,
+        1791434658820174602
+      ],
+      "sha256": "e63a3c2a80dffed18014e041a309ee190a9b9b48d5852e1f5f2a00f4fc268faa"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_obstacle.d",
+      "identity": [
+        16777231,
+        252230151,
+        33188,
+        530,
+        1791434660401279907,
+        1791434660455755071
+      ],
+      "sha256": "0e8cb1dea566628d24e000fa187887c12d8f29eb31be54a5f127f1f9cbdfd743"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/sim_runtime_obstacle.o",
+      "identity": [
+        16777231,
+        252230149,
+        33188,
+        11760,
+        1791434660401069700,
+        1791434660455923695
+      ],
+      "sha256": "98750bf7b094b9d9a79c673d49190b89c117f422c90264063ba3018403fe98c6"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/space_mode_adapter.d",
+      "identity": [
+        16777231,
+        252230105,
+        33188,
+        639,
+        1791434659874467208,
+        1791434659921628941
+      ],
+      "sha256": "f6d218018beed26aaa6878baad034081e45e49c54466d43302cbc2a378bf20d0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/space_mode_adapter.o",
+      "identity": [
+        16777231,
+        252230102,
+        33188,
+        17408,
+        1791434659874255833,
+        1791434659921761023
+      ],
+      "sha256": "1ae7163a44fe5d95f544a8e14cddb538587a62cd5ff002b35133c9cb22556611"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/water_mode.d",
+      "identity": [
+        16777231,
+        252230855,
+        33188,
+        417,
+        1791434670806356210,
+        1791434670853452443
+      ],
+      "sha256": "05a2da3272b2b40ca7a3ccd66c23f2ef069d492faecfc8a9dc0dceaf91aa4d42"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/water_mode.o",
+      "identity": [
+        16777231,
+        252230853,
+        33188,
+        19208,
+        1791434670806123877,
+        1791434670853586193
+      ],
+      "sha256": "fd38006af4e0ff976974667cf9a01e08f4b17bc8aac02121a091bc2d68b4ee51"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/water_object_coupling.d",
+      "identity": [
+        16777231,
+        252230503,
+        33188,
+        7623,
+        1791434665675587217,
+        1791434665734115697
+      ],
+      "sha256": "6bcfdfcd41382afdcd735eb743c10753297bfdb6d68fc23b0bd17f57f18ea60c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/water_object_coupling.o",
+      "identity": [
+        16777231,
+        252230489,
+        33188,
+        47040,
+        1791434665675264010,
+        1791434665734248364
+      ],
+      "sha256": "d4520eb83a19c831b45e3ef2516b4a25062633918aec87f25b377d26c3536c7a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/wind_tunnel_3d.d",
+      "identity": [
+        16777231,
+        252230305,
+        33188,
+        311,
+        1791434662690088334,
+        1791434662738739937
+      ],
+      "sha256": "bc10f056975392b4213fb4a8e5c02f4c4eef239781de16720212ae2dca9b09f5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/wind_tunnel_3d.o",
+      "identity": [
+        16777231,
+        252230302,
+        33188,
+        17888,
+        1791434662689881210,
+        1791434662738902478
+      ],
+      "sha256": "e1ebfd7ec4c43282615d01a4d4e69ef00a08164c53fcb13e2c14f4d0cbc2940e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/wind_tunnel_3d_analysis.d",
+      "identity": [
+        16777231,
+        252230457,
+        33188,
+        6390,
+        1791434664886146164,
+        1791434664938537585
+      ],
+      "sha256": "8dd2698d32dd6cdffcd29b8023f7af738a7618b958789df4b2478c4537777381"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/wind_tunnel_3d_analysis.o",
+      "identity": [
+        16777231,
+        252230450,
+        33188,
+        23464,
+        1791434664885904248,
+        1791434664938663834
+      ],
+      "sha256": "08180e5c0de42b1a03cdd18b7f44e2d5acb0f316d449242f3347807d7980763b"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/wind_tunnel_3d_inspector.d",
+      "identity": [
+        16777231,
+        252230779,
+        33188,
+        6394,
+        1791434669389792472,
+        1791434669431100561
+      ],
+      "sha256": "7888d5f302a3e4c9b679ea02c0babfcf85a8f38a68cb0d9ee194f2258e1c5824"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/app/wind_tunnel_3d_inspector.o",
+      "identity": [
+        16777231,
+        252230765,
+        33188,
+        30544,
+        1791434669389563181,
+        1791434669431224394
+      ],
+      "sha256": "cc72214c82dc756d5cf99dd2d4f9da243636cbd549cc72d51809e4d994ffa4de"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/bin/physics_sim_headless",
+      "identity": [
+        16777231,
+        252232073,
+        33261,
+        2432648,
+        1791434687876996325,
+        1791434687901296105
+      ],
+      "sha256": "3d440f8779a9ca128f6767fdf2f108e0ca40d4ef6b6fac74ae1b176a71d13b99"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/command/command_bus.d",
+      "identity": [
+        16777231,
+        252230969,
+        33188,
+        260,
+        1791434672744811792,
+        1791434672790426906
+      ],
+      "sha256": "e40fff0fd596f1ec660cc8f83bdb69228b769081141f698d0f45aebde9668ea1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/command/command_bus.o",
+      "identity": [
+        16777231,
+        252230967,
+        33188,
+        8624,
+        1791434672744623793,
+        1791434672790537697
+      ],
+      "sha256": "8a474f154a74a4ad3d9a592926fb5819d34027bf52ae2919f18c0ed30b6d026d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/config/config_loader.d",
+      "identity": [
+        16777231,
+        252230890,
+        33188,
+        319,
+        1791434671489410719,
+        1791434671517997732
+      ],
+      "sha256": "3024f79db504f5f4e0f807992702fd84de08d4ba580682801c0cf71b2ad66f02"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/config/config_loader.o",
+      "identity": [
+        16777231,
+        252230889,
+        33188,
+        41768,
+        1791434671489186220,
+        1791434671518134773
+      ],
+      "sha256": "e2bf7d4e378333e8b95a5720a96311aa2219587236e5a17bd58bc471f5779a7f"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_base/core_base.d",
+      "identity": [
+        16777231,
+        252231456,
+        33188,
+        363,
+        1791434680293832916,
+        1791434680345998005
+      ],
+      "sha256": "87da97848d57509433a865baeda9696e2a76473a1a10cef41f9c314a8232b3b1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_base/core_base.o",
+      "identity": [
+        16777231,
+        252231452,
+        33188,
+        7336,
+        1791434680293664625,
+        1791434680346105713
+      ],
+      "sha256": "31de90ac6faf420fae42e634dde1c761595e4b1ad1d870886a19be37174be03e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_data/core_data.d",
+      "identity": [
+        16777231,
+        252231467,
+        33188,
+        494,
+        1791434680480963730,
+        1791434680531653199
+      ],
+      "sha256": "8092f8a314f0140c270b254125647685e11a7f1c84ecd6a6a1f0b9eaf84a4ced"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_data/core_data.o",
+      "identity": [
+        16777231,
+        252231465,
+        33188,
+        32272,
+        1791434680480773272,
+        1791434680531781907
+      ],
+      "sha256": "b48052c5f2d9822739b2d06829af66ddc93eee94b4136a410dc5d9ad2d708d10"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_font/core_font.d",
+      "identity": [
+        16777231,
+        252231651,
+        33188,
+        494,
+        1791434683221531607,
+        1791434683259301044
+      ],
+      "sha256": "b4391ea5b4c499040e376f211d7888cf377e8fd1b92526b9e958b84d35539647"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_font/core_font.o",
+      "identity": [
+        16777231,
+        252231650,
+        33188,
+        30704,
+        1791434683221338691,
+        1791434683259447835
+      ],
+      "sha256": "e0f8afa935014150793ee1bdd4ed9d114dd717ead6d90c83f4295246b1e93138"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_headless_job/core_headless_job.d",
+      "identity": [
+        16777231,
+        252231649,
+        33188,
+        427,
+        1791434683184250294,
+        1791434683229360785
+      ],
+      "sha256": "e822bbadf9c5ff47333af43626105f33e051c36ade98f5f93094b5403c18ea4a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_headless_job/core_headless_job.o",
+      "identity": [
+        16777231,
+        252231647,
+        33188,
+        9616,
+        1791434683184057211,
+        1791434683229466993
+      ],
+      "sha256": "76b7220ac30507df9a33583bedb625d9feefc4511deb034e220ce3edf2bf78cc"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_io/core_io.d",
+      "identity": [
+        16777231,
+        252231461,
+        33188,
+        478,
+        1791434680375129808,
+        1791434680420985297
+      ],
+      "sha256": "8f1da3227d6e9259cc903ac159e914a85b818302fd7ccc87fd93b01d83bde910"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_io/core_io.o",
+      "identity": [
+        16777231,
+        252231457,
+        33188,
+        17720,
+        1791434680374947017,
+        1791434680421151796
+      ],
+      "sha256": "bc944fc0cb877eefb77a6c22ce8be43b4e4cc2a19d1e213175b05c337a5b04d3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_mesh_asset/core_mesh_asset.d",
+      "identity": [
+        16777231,
+        252231530,
+        33188,
+        816,
+        1791434681519913604,
+        1791434681535661709
+      ],
+      "sha256": "a1980a254b62be89aea128e830fd5da12f3f65061d7a2e29f968249d62c627dc"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_mesh_asset/core_mesh_asset.o",
+      "identity": [
+        16777231,
+        252231525,
+        33188,
+        33040,
+        1791434681519718813,
+        1791434681535777084
+      ],
+      "sha256": "e29e563676e8e338a23535e5c50773ebba0f45a4342c04b623137888b5f29b96"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_mesh_asset/core_mesh_asset_authoring_document.d",
+      "identity": [
+        16777231,
+        252231542,
+        33188,
+        1164,
+        1791434681809467602,
+        1791434681866395339
+      ],
+      "sha256": "b740367200596337bc2dfd55f07261f47a989f54840563610316bfee9ae91bc4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_mesh_asset/core_mesh_asset_authoring_document.o",
+      "identity": [
+        16777231,
+        252231537,
+        33188,
+        56280,
+        1791434681809228770,
+        1791434681866559546
+      ],
+      "sha256": "b62b6cefcf2675cd633c6c493cc153346a681da1df0d4e664a51257e27e54630"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_mesh_asset/core_mesh_asset_runtime_document.d",
+      "identity": [
+        16777231,
+        252231543,
+        33188,
+        1160,
+        1791434681846832165,
+        1791434681858896076
+      ],
+      "sha256": "82ca4a2461c345ddd88f12cb3ed8a2da098e6154d555d98dda8b01b97a154ec1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_mesh_asset/core_mesh_asset_runtime_document.o",
+      "identity": [
+        16777231,
+        252231541,
+        33188,
+        53488,
+        1791434681846625041,
+        1791434681859019826
+      ],
+      "sha256": "3bbb182f629f1c034286189499734d50b718ce26b162ce080d4127c98fd56a43"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_mesh_preview/core_mesh_preview.d",
+      "identity": [
+        16777231,
+        252231574,
+        33188,
+        1187,
+        1791434682152216060,
+        1791434682167398251
+      ],
+      "sha256": "aa583121bb77d21e87fca540e1118022449e5acc1b30b8805350f64516e1cc00"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_mesh_preview/core_mesh_preview.o",
+      "identity": [
+        16777231,
+        252231562,
+        33188,
+        99840,
+        1791434682152017644,
+        1791434682167560500
+      ],
+      "sha256": "ad2d30885a0aa21dcc22d0cd4ea59562415db522b37eb92a65a2f9f185967e24"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_object/core_object.d",
+      "identity": [
+        16777231,
+        252231563,
+        33188,
+        510,
+        1791434682072293912,
+        1791434682093462913
+      ],
+      "sha256": "ef21c8d97ba841f8b9248d4ef17e621b55085320d8ba5e643d46318f6a4d9c4e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_object/core_object.o",
+      "identity": [
+        16777231,
+        252231561,
+        33188,
+        11832,
+        1791434682072001122,
+        1791434682093631288
+      ],
+      "sha256": "ffaf720ed713a792a985623ce4e414fcb2c09cb98460fbfc1e67cc038abce8c2"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_pack/core_pack.d",
+      "identity": [
+        16777231,
+        252231466,
+        33188,
+        494,
+        1791434680474550463,
+        1791434680540712331
+      ],
+      "sha256": "f894e520e99b6407b04de2e6d7530ef03d17edb72b49c28501fa41a3d5b91945"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_pack/core_pack.o",
+      "identity": [
+        16777231,
+        252231462,
+        33188,
+        48648,
+        1791434680474219589,
+        1791434680540923955
+      ],
+      "sha256": "e8fd20bbd8fddf4bd9477d9cd75c808ebd88f4addb023d79b14388f2518bf33c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_pack/core_pack_vf2d.d",
+      "identity": [
+        16777231,
+        252231487,
+        33188,
+        627,
+        1791434680889090308,
+        1791434680950634902
+      ],
+      "sha256": "e0accf1ef8b3536f5969b662eb8a01de9cc4f7e0f879104ca16dd7de6ba6e55a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_pack/core_pack_vf2d.o",
+      "identity": [
+        16777231,
+        252231486,
+        33188,
+        13224,
+        1791434680888868518,
+        1791434680950774902
+      ],
+      "sha256": "a1492b3f8e9cde259d903e6736e1ee514727d201993c570a4b5deb6608f44af3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_pack/core_pack_vf3d.d",
+      "identity": [
+        16777231,
+        252231495,
+        33188,
+        627,
+        1791434680989830375,
+        1791434681046800945
+      ],
+      "sha256": "43129f19f54c29ef61250bdc2fa27a6231213fb22f42f96718bff944475bb58e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_pack/core_pack_vf3d.o",
+      "identity": [
+        16777231,
+        252231493,
+        33188,
+        14216,
+        1791434680989623667,
+        1791434681046931153
+      ],
+      "sha256": "08f694d11d1a3df314fba8d3ff0be28880c7be36ef4d4eb4252b3d59a1b60777"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_pane/core_pane.d",
+      "identity": [
+        16777231,
+        252231611,
+        33188,
+        363,
+        1791434682640495285,
+        1791434682701875754
+      ],
+      "sha256": "b27d308e3eb5ebf9ceab8b57bb9840ee0ea179c0261806670d4787d27524daeb"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_pane/core_pane.o",
+      "identity": [
+        16777231,
+        252231609,
+        33188,
+        26872,
+        1791434682640266828,
+        1791434682701977129
+      ],
+      "sha256": "e6bbdb31ed38b2122badd190822e459129fa17e2ad8e198fee840f9a08cc86b1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_scene/core_scene.d",
+      "identity": [
+        16777231,
+        252231502,
+        33188,
+        776,
+        1791434681145445936,
+        1791434681197954232
+      ],
+      "sha256": "89a4011d9dfba79273ae9e9616f35b62190e020c5231d68d499b92386eef5d90"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_scene/core_scene.o",
+      "identity": [
+        16777231,
+        252231500,
+        33188,
+        48896,
+        1791434681145152687,
+        1791434681198073481
+      ],
+      "sha256": "18021bd4457d7a8eedf96c83c88c69a508b43642af9437e92076c57a70fcea9d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_scene_compile/core_scene_compile.d",
+      "identity": [
+        16777231,
+        252231503,
+        33188,
+        1098,
+        1791434681161464749,
+        1791434681201564801
+      ],
+      "sha256": "e0dd56f444385001906aa4dd8682fa633bf6ce038d7155eadefa645d84d080e5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_scene_compile/core_scene_compile.o",
+      "identity": [
+        16777231,
+        252231501,
+        33188,
+        81432,
+        1791434681161265583,
+        1791434681201678550
+      ],
+      "sha256": "724602dfd887eb4e25680361f67ec0cb805c4305b19f7ae1663424112d9714fe"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_scene_view/core_scene_view.d",
+      "identity": [
+        16777231,
+        252231522,
+        33188,
+        619,
+        1791434681420848823,
+        1791434681481207421
+      ],
+      "sha256": "24b24ed134ab248daa5fe18b2b5641803546dea883aa943f92870d98546f49a5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_scene_view/core_scene_view.o",
+      "identity": [
+        16777231,
+        252231519,
+        33188,
+        20616,
+        1791434681420489824,
+        1791434681481308171
+      ],
+      "sha256": "9366a303e1da5d2d1eb85fb58b43bde488da37bd69c6a3d8a70ce950aa3e773e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_screen_pick/core_screen_pick.d",
+      "identity": [
+        16777231,
+        252231610,
+        33188,
+        550,
+        1791434682602207476,
+        1791434682645493015
+      ],
+      "sha256": "4b88defc7472a8c4c4630d3c7cd008777f18c6c5e2c595806714620b832098d3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_screen_pick/core_screen_pick.o",
+      "identity": [
+        16777231,
+        252231607,
+        33188,
+        19808,
+        1791434682601330854,
+        1791434682645599473
+      ],
+      "sha256": "2a27f5057802b483e10b9a19422cae5c1951a953d288da20ce9708a42bd6bc85"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_sim/core_sim.d",
+      "identity": [
+        16777231,
+        252231637,
+        33188,
+        355,
+        1791434682949044792,
+        1791434682976930809
+      ],
+      "sha256": "3078477bb714bf6dcfdf8ed4d63b7c081200d1b40ddd3c8dd976f0e01a0a460c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_sim/core_sim.o",
+      "identity": [
+        16777231,
+        252231633,
+        33188,
+        25816,
+        1791434682948735294,
+        1791434682977063308
+      ],
+      "sha256": "7334d6375e54c2d46d46b178c87586e8e63466b501bafeb00c36d72323d43c2a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_theme/core_theme.d",
+      "identity": [
+        16777231,
+        252231636,
+        33188,
+        502,
+        1791434682946591635,
+        1791434683000954424
+      ],
+      "sha256": "300b3a2d393cf9da10897488d025370d994be1d8b1484c568d59188a8c5d415c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_theme/core_theme.o",
+      "identity": [
+        16777231,
+        252231634,
+        33188,
+        12888,
+        1791434682946318720,
+        1791434683001078632
+      ],
+      "sha256": "993b1e21e050933c1497186838badd4e888b860bb6eef9c79d36571bc699d044"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_units/core_units.d",
+      "identity": [
+        16777231,
+        252231594,
+        33188,
+        502,
+        1791434682407186818,
+        1791434682460105945
+      ],
+      "sha256": "88c4f6c3b30af8914a80afa1f12574fa850dfbe9f31bdc59f46085a98f550c05"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_units/core_units.o",
+      "identity": [
+        16777231,
+        252231593,
+        33188,
+        13120,
+        1791434682406990152,
+        1791434682460225445
+      ],
+      "sha256": "6f58075f631082c6c19dab3c1ddcd19833739e5176d0cab88bd1a7ee008e8b10"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_viewport2d/core_viewport2d.d",
+      "identity": [
+        16777231,
+        252231591,
+        33188,
+        542,
+        1791434682373396199,
+        1791434682405773990
+      ],
+      "sha256": "a6f912f809f881c7e7ba4a49e0c411bb263039e46ad6295683cc328b28c39cde"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/core_viewport2d/core_viewport2d.o",
+      "identity": [
+        16777231,
+        252231589,
+        33188,
+        23112,
+        1791434682373201158,
+        1791434682405958364
+      ],
+      "sha256": "18738d18e190c94da1373e8775df5f9893d8f00b23c87d51ae6980569d78a8b9"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/export_paths.d",
+      "identity": [
+        16777231,
+        252231191,
+        33188,
+        260,
+        1791434676160609333,
+        1791434676203013002
+      ],
+      "sha256": "5c08d1e079f9305838fdea9c43ec8bd3e64429c81da2a403e67d0b3bed673814"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/export_paths.o",
+      "identity": [
+        16777231,
+        252231190,
+        33188,
+        7976,
+        1791434676160387626,
+        1791434676203212251
+      ],
+      "sha256": "bca664f2ad33042ed2750cc9f9d723fdd070f4c63283f8dfc7d06ce8c5b9b275"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/render_frames.d",
+      "identity": [
+        16777231,
+        252231141,
+        33188,
+        329,
+        1791434675428895681,
+        1791434675472653636
+      ],
+      "sha256": "6d4c070c800711880da3ff8683decb4d0bcca2a04cf11a81f5eebd40967e5b15"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/render_frames.o",
+      "identity": [
+        16777231,
+        252231140,
+        33188,
+        8376,
+        1791434675428703931,
+        1791434675472813510
+      ],
+      "sha256": "cd97496e85d335ee4254c4c52899d450a1178b47b76cecca5f7eab9df4780973"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/volume_frames.d",
+      "identity": [
+        16777231,
+        252231213,
+        33188,
+        8320,
+        1791434676618400760,
+        1791434676691812100
+      ],
+      "sha256": "a17b2b76f98ec06a27173640ad8ef557ba61853aff488b84c1d7a5a58ce6bce3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/volume_frames.o",
+      "identity": [
+        16777231,
+        252231205,
+        33188,
+        92288,
+        1791434676618103845,
+        1791434676691939849
+      ],
+      "sha256": "728cd87376c8a4b1594aac7935281d6ee544995774b11f64c7cc93db00601c3e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/volume_frames_vf3d.d",
+      "identity": [
+        16777231,
+        252231171,
+        33188,
+        7665,
+        1791434675779887940,
+        1791434675864786651
+      ],
+      "sha256": "149681cf5a3858e09ce632471cac051cb74d6a7dcd578aed581cc52f1f210da9"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/volume_frames_vf3d.o",
+      "identity": [
+        16777231,
+        252231147,
+        33188,
+        62624,
+        1791434675779584024,
+        1791434675864908901
+      ],
+      "sha256": "1c8150e39d6fc8e93a551a83e3661442eaf7fe055fba8be87b7d2b969d364328"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/water_surface_artifacts.d",
+      "identity": [
+        16777231,
+        252231178,
+        33188,
+        7831,
+        1791434675971711402,
+        1791434676054306664
+      ],
+      "sha256": "f15d7a0670e37c14d44b61365b19abf52b423bc2f4c91ad885e7efd3bf2d5473"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/water_surface_artifacts.o",
+      "identity": [
+        16777231,
+        252231152,
+        33188,
+        84528,
+        1791434675971490194,
+        1791434676054440496
+      ],
+      "sha256": "b3deaaae6c2cba0df84399ff4bede8b5e75a2122a180d1ddb329e39afd66977c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/wind_projection_frames.d",
+      "identity": [
+        16777231,
+        252231204,
+        33188,
+        7641,
+        1791434676359947308,
+        1791434676415202468
+      ],
+      "sha256": "0da13a59ecab4a8ef7d72705c31031bc08464acaf84717d5a32866d1b33479b2"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/export/wind_projection_frames.o",
+      "identity": [
+        16777231,
+        252231183,
+        33188,
+        103632,
+        1791434676359660059,
+        1791434676415358175
+      ],
+      "sha256": "032a3704614a99ca41396fb3e294a6d14ddd9444269d99a9a8bf2c6670109b22"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/geo/shape_asset.d",
+      "identity": [
+        16777231,
+        252230931,
+        33188,
+        1183,
+        1791434672183455268,
+        1791434672205172892
+      ],
+      "sha256": "57fc121d7c4e496482d14dd71e35ea18bb6f0603657ad0b95c13acfcde82fd2a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/geo/shape_asset.o",
+      "identity": [
+        16777231,
+        252230927,
+        33188,
+        28696,
+        1791434672183144269,
+        1791434672205424766
+      ],
+      "sha256": "7b2325264a6a81f347bdf7796e0b377a5ccff132a40feefbd3519a6f708d48b8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/geo/shape_library.d",
+      "identity": [
+        16777231,
+        252230939,
+        33188,
+        986,
+        1791434672275234911,
+        1791434672317327080
+      ],
+      "sha256": "78c9e6757115a99f5b8c77ffc21e0e179d88472a59a2673a9c2762e935eb78a6"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/geo/shape_library.o",
+      "identity": [
+        16777231,
+        252230937,
+        33188,
+        9568,
+        1791434672275042537,
+        1791434672317470580
+      ],
+      "sha256": "befe17b8821de05b4ee0dcceb130c21b876d1746a12fab7debbe185898909e80"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_mesh_preview_bridge.d",
+      "identity": [
+        16777231,
+        252231223,
+        33188,
+        2752,
+        1791434676768808550,
+        1791434676787578643
+      ],
+      "sha256": "7f5ad5acacd6d2fbd79b9e7e53adee99530005f06d513329da36cb4f18d4bae4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_mesh_preview_bridge.o",
+      "identity": [
+        16777231,
+        252231221,
+        33188,
+        49576,
+        1791434676768590843,
+        1791434676787704310
+      ],
+      "sha256": "6a3046ce961b160319eea42c9998dc9b4c8a97698fcb330887640ae882be9d4e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_mesh_preview_path_resolver.d",
+      "identity": [
+        16777231,
+        252231212,
+        33188,
+        344,
+        1791434676583805561,
+        1791434676640038134
+      ],
+      "sha256": "820f83a8f56fba865767b73f0f9a8dfd9e6ba6b9d7e61182de524d6502e4dcd9"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_mesh_preview_path_resolver.o",
+      "identity": [
+        16777231,
+        252231211,
+        33188,
+        7488,
+        1791434676583541979,
+        1791434676640188467
+      ],
+      "sha256": "eecd9a43fe0f63bcf12b405a081f49e4f2e6ced6eccfe4253f435a414339affb"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_bridge.d",
+      "identity": [
+        16777231,
+        252231233,
+        33188,
+        3588,
+        1791434677020659778,
+        1791434677085694650
+      ],
+      "sha256": "cef2a810649440114d8024d6fdc1e55216442552222d931ee70f522c364c8cc0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_bridge.o",
+      "identity": [
+        16777231,
+        252231228,
+        33188,
+        98648,
+        1791434677020431279,
+        1791434677085813233
+      ],
+      "sha256": "a2724a83d553746b88b0c582b25da447902eadb28659c49348f120a906ade337"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_solver_projection.d",
+      "identity": [
+        16777231,
+        252231279,
+        33188,
+        3290,
+        1791434677701393713,
+        1791434677746716245
+      ],
+      "sha256": "e97f08d566c4135c763ea46cac3625e6cd52d0234d0660f0f76787d4a74a8175"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_solver_projection.o",
+      "identity": [
+        16777231,
+        252231278,
+        33188,
+        16224,
+        1791434677700920714,
+        1791434677746842911
+      ],
+      "sha256": "d654a38b2233af09600c4126c7aeb1e324829247809c08b41b6e0c2f1b988bae"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_solver_projection_domain.d",
+      "identity": [
+        16777231,
+        252231289,
+        33188,
+        3452,
+        1791434677832461203,
+        1791434677862357336
+      ],
+      "sha256": "8539b09ac903553d14632c765ff7b715b6c21ea85639454b11a1ea5662b51ba4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_solver_projection_domain.o",
+      "identity": [
+        16777231,
+        252231287,
+        33188,
+        49824,
+        1791434677832146245,
+        1791434677862480878
+      ],
+      "sha256": "761f84ebb3519c404955f4aa2013d8038defa6cdedafcaf1f5bc1733584f2158"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_solver_projection_emitters.d",
+      "identity": [
+        16777231,
+        252231251,
+        33188,
+        3606,
+        1791434677287688031,
+        1791434677334742014
+      ],
+      "sha256": "e381f764df077ba654e19b9f149f28c259592e8ca472dac742b2fbc096caf125"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_solver_projection_emitters.o",
+      "identity": [
+        16777231,
+        252231248,
+        33188,
+        24720,
+        1791434677287406824,
+        1791434677334873431
+      ],
+      "sha256": "cef1894eea2c7976e344384b330c580a65d009498c9b27886d6b3bf88b0ba832"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_solver_projection_objects.d",
+      "identity": [
+        16777231,
+        252231269,
+        33188,
+        3454,
+        1791434677589224483,
+        1791434677635476594
+      ],
+      "sha256": "33f38ba84d53efd6ae2efb4c20c101c9a5ddd1af672c60a8cee8792b56c205f1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_solver_projection_objects.o",
+      "identity": [
+        16777231,
+        252231268,
+        33188,
+        26048,
+        1791434677588995859,
+        1791434677635612219
+      ],
+      "sha256": "3f762811cd360129325a8295b910783027ca7ad33d1b38b608479183fbefc9c3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_view_packet_readout.d",
+      "identity": [
+        16777231,
+        252231253,
+        33188,
+        634,
+        1791434677335299471,
+        1791434677368156218
+      ],
+      "sha256": "d7cd69ece0b946c296345c33187231838822033e8de9314277f92e4c54be45ce"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/runtime_scene_view_packet_readout.o",
+      "identity": [
+        16777231,
+        252231252,
+        33188,
+        9296,
+        1791434677335108763,
+        1791434677368324217
+      ],
+      "sha256": "acae051fd2b55d1628eea2ca73fd42923fc46f060bf414d3f59fbdee92ccb636"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/shape_import.d",
+      "identity": [
+        16777231,
+        252231243,
+        33188,
+        998,
+        1791434677199675873,
+        1791434677235459859
+      ],
+      "sha256": "c0e1ecd1eff612e66462226ab51409119219c4583608078225fa8fe7efc5a8a0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/import/shape_import.o",
+      "identity": [
+        16777231,
+        252231242,
+        33188,
+        16520,
+        1791434677199434624,
+        1791434677235593650
+      ],
+      "sha256": "0a601b3a5cfd83ea20ca541f7d9fd4f1993db6d0786b7801653ecf9f18e45f41"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/input/input.d",
+      "identity": [
+        16777231,
+        252230909,
+        33188,
+        4606,
+        1791434671739541370,
+        1791434671788107306
+      ],
+      "sha256": "c2fdfe25deb7827eb2ed0f055f4f17200d831cad84057b27c4fa389e301beaee"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/input/input.o",
+      "identity": [
+        16777231,
+        252230894,
+        33188,
+        36752,
+        1791434671739053122,
+        1791434671788224473
+      ],
+      "sha256": "644c3aa5b8a87b5c5909381c003ee2abf87169a5941d0e29c243dc2485c60bb9"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/input/input_context.d",
+      "identity": [
+        16777231,
+        252230944,
+        33188,
+        4512,
+        1791434672306849204,
+        1791434672338958746
+      ],
+      "sha256": "9f62683cf58ba3fb3fcf309b9a93b39b1212ef34df2e587cf8f16ebf49104d35"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/input/input_context.o",
+      "identity": [
+        16777231,
+        252230924,
+        33188,
+        19776,
+        1791434672306591664,
+        1791434672339060121
+      ],
+      "sha256": "ec07ead22f21ce6c46f20878eca917882617e11a1a43b4fa87476dd6cfb58ca2"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/input/stroke_buffer.d",
+      "identity": [
+        16777231,
+        252230904,
+        33188,
+        4687,
+        1791434671704018800,
+        1791434671739157038
+      ],
+      "sha256": "2a21852020e1e6864f9e959e9bd1e8c23317ec922881641499f98187bf069147"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/input/stroke_buffer.o",
+      "identity": [
+        16777231,
+        252230896,
+        33188,
+        5968,
+        1791434671703741843,
+        1791434671739273038
+      ],
+      "sha256": "db014bf8286de0a02ae11173e127cec3deea8302d48fbe46e61e6f92d598828d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_pane/kit_pane.d",
+      "identity": [
+        16777231,
+        252231699,
+        33188,
+        1013,
+        1791434683768519479,
+        1791434683822303478
+      ],
+      "sha256": "67541e55a17d711d4f5db98bb977c4c8988f4ec2658cb0dda94b269ce0ff27c7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_pane/kit_pane.o",
+      "identity": [
+        16777231,
+        252231691,
+        33188,
+        29232,
+        1791434683768324438,
+        1791434683822436852
+      ],
+      "sha256": "427d03ac9a9588553fbd8660ffdb72d27a1fbf207edf34d5443ad53f649fa552"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_render/kit_render.d",
+      "identity": [
+        16777231,
+        252231675,
+        33188,
+        906,
+        1791434683537445920,
+        1791434683580693543
+      ],
+      "sha256": "a0ebcbdecfd7253687c8bb6318fb56d668211c3737cc638f352a5cd478a03928"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_render/kit_render.o",
+      "identity": [
+        16777231,
+        252231672,
+        33188,
+        29200,
+        1791434683537166837,
+        1791434683580842167
+      ],
+      "sha256": "a92e05f286531a0a584ed67fc5be627bf0fd373d553fcbeff980b8f52a84ff18"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_render/kit_render_backend_null.d",
+      "identity": [
+        16777231,
+        252231685,
+        33188,
+        932,
+        1791434683667171540,
+        1791434683721890577
+      ],
+      "sha256": "53f518a718e6196b4b0f74589bf2d888ca69b8f749f647c1391d139bc49d6a49"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_render/kit_render_backend_null.o",
+      "identity": [
+        16777231,
+        252231683,
+        33188,
+        14736,
+        1791434683666966374,
+        1791434683722019826
+      ],
+      "sha256": "298611644bfe84f8b71956206c76c235405383e1a92680b912cf0049b6f194a4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_ui/kit_ui.d",
+      "identity": [
+        16777231,
+        252231722,
+        33188,
+        866,
+        1791434683982969936,
+        1791434684002157111
+      ],
+      "sha256": "184a50244cded64db9a90e109f7a4c558bc7cffd3fb2614e1a64bf481a9ca8f5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_ui/kit_ui.o",
+      "identity": [
+        16777231,
+        252231714,
+        33188,
+        43384,
+        1791434683982683520,
+        1791434684002339486
+      ],
+      "sha256": "9a914d09edc662d3dc8b50991c703dad93d412c89c151506ad9f7640f3bd333d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_ui/kit_ui_button.d",
+      "identity": [
+        16777231,
+        252231727,
+        33188,
+        880,
+        1791434684028495050,
+        1791434684065544156
+      ],
+      "sha256": "1045375756a1a56e6a4273606ab41a0ca0ed640051979c085c7d20d768f559c5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_ui/kit_ui_button.o",
+      "identity": [
+        16777231,
+        252231723,
+        33188,
+        27360,
+        1791434684028278426,
+        1791434684065677989
+      ],
+      "sha256": "30118a9cf461e12f6aeec6da025a730e58bf49278e078207e6f6aafd4d157303"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_viz/kit_viz.d",
+      "identity": [
+        16777231,
+        252231671,
+        33188,
+        475,
+        1791434683493736131,
+        1791434683517711080
+      ],
+      "sha256": "c4118ab198c734dd931af00d54aad73ccbfd87fb6dfea578ed002c7a00da4c0b"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_viz/kit_viz.o",
+      "identity": [
+        16777231,
+        252231665,
+        33188,
+        19968,
+        1791434683493432049,
+        1791434683517852579
+      ],
+      "sha256": "328fded3dd86cca34594699a80d48bbe042c563b70cc9a451c69c65ae331b9f9"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_workspace_authoring/kit_workspace_authoring.d",
+      "identity": [
+        16777231,
+        252231288,
+        33188,
+        734,
+        1791434677787139087,
+        1791434677846961688
+      ],
+      "sha256": "8d70f3e27761bb1494f3fc35c49c8b1479bcf708aec254d96024329c853d6a12"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_workspace_authoring/kit_workspace_authoring.o",
+      "identity": [
+        16777231,
+        252231286,
+        33188,
+        12680,
+        1791434677786925922,
+        1791434677847105104
+      ],
+      "sha256": "4586d6bf29c164ea375da4b12edca5b1dfe5a2bd98935e106adf282718c3f18d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_workspace_authoring/ui/kit_workspace_authoring_ui_font_theme.d",
+      "identity": [
+        16777231,
+        252231315,
+        33188,
+        1173,
+        1791434678272050409,
+        1791434678300356590
+      ],
+      "sha256": "04dbe2ae791f3715dd448996c6ab1fe34df2bbebf9744405004e4fc5b19bb047"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_workspace_authoring/ui/kit_workspace_authoring_ui_font_theme.o",
+      "identity": [
+        16777231,
+        252231312,
+        33188,
+        29208,
+        1791434678271853951,
+        1791434678300501507
+      ],
+      "sha256": "a31b8a5125c673116344c154409f087c76dd520c8601e4cca92fb86532c204e8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_workspace_authoring/ui/kit_workspace_authoring_ui_overlay.d",
+      "identity": [
+        16777231,
+        252231308,
+        33188,
+        1167,
+        1791434678129000549,
+        1791434678187372405
+      ],
+      "sha256": "9a8bb2289b7c0d72df0dcc457ab3fd7307ff2480fea41d11497348a1b9655e13"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/kit_workspace_authoring/ui/kit_workspace_authoring_ui_overlay.o",
+      "identity": [
+        16777231,
+        252231306,
+        33188,
+        10136,
+        1791434678128827966,
+        1791434678187499155
+      ],
+      "sha256": "647946ae0f07a04ac66ecebbfabdf9523d352279513863d700637dbc21c30513"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/fluid2d/fluid2d.d",
+      "identity": [
+        16777231,
+        252231009,
+        33188,
+        1203,
+        1791434673340246808,
+        1791434673361981724
+      ],
+      "sha256": "21591f27a47fb4db36b3b391849eb9ac3da93c7c293f06e74e1a64df1b494e73"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/fluid2d/fluid2d.o",
+      "identity": [
+        16777231,
+        252231005,
+        33188,
+        41864,
+        1791434673339961393,
+        1791434673362112515
+      ],
+      "sha256": "3a8ea0d53caa5e0fcab528cde03579c147703be52525c2dbb1187f406d2fa2a0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/fluid2d/fluid2d_boundary.d",
+      "identity": [
+        16777231,
+        252231006,
+        33188,
+        857,
+        1791434673298314096,
+        1791434673337409986
+      ],
+      "sha256": "8e3460b90af3a943efb03c7eecd840e8104794aefe20d045685490484eb50fa0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/fluid2d/fluid2d_boundary.o",
+      "identity": [
+        16777231,
+        252231001,
+        33188,
+        29784,
+        1791434673298116430,
+        1791434673337536027
+      ],
+      "sha256": "f63cae9f71d4eaa1ff0d6afc4c45701ffb94ec1c54a51be92228c0c645a62263"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/math/math2d.d",
+      "identity": [
+        16777231,
+        252231095,
+        33188,
+        141,
+        1791434674536040738,
+        1791434674593856013
+      ],
+      "sha256": "c46afbc5ba12903a4e52b056fc81689df1c23d6d6567baed94a25e4eb2eb3a93"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/math/math2d.o",
+      "identity": [
+        16777231,
+        252231094,
+        33188,
+        336,
+        1791434674535834114,
+        1791434674593971888
+      ],
+      "sha256": "94e93c8879d51daa603a044772e83677e9a96ed585e1d8fce8f68ed0694e0eea"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/objects/object_manager.d",
+      "identity": [
+        16777231,
+        252231081,
+        33188,
+        632,
+        1791434674390273681,
+        1791434674434719133
+      ],
+      "sha256": "15e59f592bc19fb84ef4aecf56e04dc1fb07a7fb362b79f57f25a28730cc47c7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/objects/object_manager.o",
+      "identity": [
+        16777231,
+        252231076,
+        33188,
+        18696,
+        1791434674390080640,
+        1791434674434880465
+      ],
+      "sha256": "5f937180dba43402600c7577e7b78082d26dabd6ea1afbcf5c242a6f65a506fc"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/objects/physics_object_builder.d",
+      "identity": [
+        16777231,
+        252231080,
+        33188,
+        942,
+        1791434674382225045,
+        1791434674435935086
+      ],
+      "sha256": "80e86940c3127d284ee68499edba35507eec015e15a4734b455ce7c98a7b26bc"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/objects/physics_object_builder.o",
+      "identity": [
+        16777231,
+        252231077,
+        33188,
+        6272,
+        1791434674381958754,
+        1791434674436062419
+      ],
+      "sha256": "e986560510cc36741d3388a7ff50b3ddc66cb6a4d01cd06fa0bf3e4ce118087a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/particles/particles2d.d",
+      "identity": [
+        16777231,
+        252231082,
+        33188,
+        845,
+        1791434674402091676,
+        1791434674444427511
+      ],
+      "sha256": "a8aabadcdeeef829a7edecb3515034765cc43e28eca6df9445e16543c214a833"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/particles/particles2d.o",
+      "identity": [
+        16777231,
+        252231079,
+        33188,
+        13528,
+        1791434674401878135,
+        1791434674444561303
+      ],
+      "sha256": "69bb18e972fc515aa0afb306dbb3b518a604356a951ae09cceb7858433d57e04"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/collider_builder.d",
+      "identity": [
+        16777231,
+        252231040,
+        33188,
+        1678,
+        1791434673861210906,
+        1791434673911602293
+      ],
+      "sha256": "b4f941b395af2e379398e09c34b571a432f667b1048d73832668cb137d152565"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/collider_builder.o",
+      "identity": [
+        16777231,
+        252231034,
+        33188,
+        30184,
+        1791434673861009782,
+        1791434673911721918
+      ],
+      "sha256": "74804f54ef15b5ba5b4cb97e5a69e73e18b8ea19a2fbb5f361a4022c7112993b"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/collider_geom.d",
+      "identity": [
+        16777231,
+        252231020,
+        33188,
+        523,
+        1791434673441430456,
+        1791434673494555041
+      ],
+      "sha256": "aeb960d59374c8328566fc966671e6c134cbff43370fcbfee58daf9e0fa339f8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/collider_geom.o",
+      "identity": [
+        16777231,
+        252231019,
+        33188,
+        10256,
+        1791434673441216915,
+        1791434673494666082
+      ],
+      "sha256": "154a5d5677322f61c267d479b07588379cb3a55c7e1c0bc33b7ac42cb39418d8"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/collider_legacy.d",
+      "identity": [
+        16777231,
+        252231061,
+        33188,
+        1475,
+        1791434674066829064,
+        1791434674099041230
+      ],
+      "sha256": "057b167745c5e0a249a3b992e3c0801e6ddf432b67c9a80d3abcb0e8f31f22bc"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/collider_legacy.o",
+      "identity": [
+        16777231,
+        252231055,
+        33188,
+        32224,
+        1791434674066609565,
+        1791434674099196438
+      ],
+      "sha256": "4ea5d5d463fbb42f8efde966103c14bac43daa7a7af3e1f7a64884f048f171eb"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/collider_tagging.d",
+      "identity": [
+        16777231,
+        252231041,
+        33188,
+        1311,
+        1791434673868301003,
+        1791434673904453404
+      ],
+      "sha256": "e9eae000ccb526a610a4c6acec76b4cd5f87501e7a9a5b461f9ab56cda445431"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/collider_tagging.o",
+      "identity": [
+        16777231,
+        252231038,
+        33188,
+        22728,
+        1791434673868098587,
+        1791434673904602737
+      ],
+      "sha256": "6855ac75ba235a99e20aadf36f73a57af8564bf019998af37d5df254808165bd"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/rigid2d.d",
+      "identity": [
+        16777231,
+        252231039,
+        33188,
+        616,
+        1791434673859077414,
+        1791434673896405477
+      ],
+      "sha256": "54011d2a00b737976372e13f17b92a513be07aefed38832d12650de1f09d85d7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/rigid2d.o",
+      "identity": [
+        16777231,
+        252231035,
+        33188,
+        25088,
+        1791434673858843207,
+        1791434673896535769
+      ],
+      "sha256": "053cee218abc9d5fe4863a9fc270db383557d98aca24c4546b0fba021686b2a1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/rigid2d_collision.d",
+      "identity": [
+        16777231,
+        252231007,
+        33188,
+        636,
+        1791434673319025141,
+        1791434673348310277
+      ],
+      "sha256": "90722d9013f9387db46b786782db0a1df3037462650eae3707b24d73fe8749b5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/rigid/rigid2d_collision.o",
+      "identity": [
+        16777231,
+        252231004,
+        33188,
+        35640,
+        1791434673318811892,
+        1791434673348466234
+      ],
+      "sha256": "25d9bc4e8ae0413404a077bd40ace66b253bb1bbdc1a73576fbe78a594e373dd"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/smoke/smoke_field.d",
+      "identity": [
+        16777231,
+        252230974,
+        33188,
+        165,
+        1791434672771086523,
+        1791434672820511539
+      ],
+      "sha256": "fe0e0258fefdbaa75bbdf9b392e5f8ea101796cc5757e1ce861127ca55ac3a71"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/smoke/smoke_field.o",
+      "identity": [
+        16777231,
+        252230970,
+        33188,
+        3512,
+        1791434672770891732,
+        1791434672820696705
+      ],
+      "sha256": "945c1de2e8b3317be734f7c9048764c9ab8b7cb881ff6402dcd63ef8ef37b5da"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/soft/soft_body.d",
+      "identity": [
+        16777231,
+        252231114,
+        33188,
+        531,
+        1791434674908395789,
+        1791434674941699076
+      ],
+      "sha256": "47c8db10b3f45a3fc8c272ce1d5967e56d54d8f145e230ded484799896fc79e5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/soft/soft_body.o",
+      "identity": [
+        16777231,
+        252231110,
+        33188,
+        26304,
+        1791434674908191332,
+        1791434674941858284
+      ],
+      "sha256": "fb7e72ad975533e27071e13a4447ec08ceed5b89e7445eb54b5d39816c638613"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/structural/structural_scene.d",
+      "identity": [
+        16777231,
+        252231113,
+        33188,
+        328,
+        1791434674901245692,
+        1791434674926962926
+      ],
+      "sha256": "78da000e0f8e9eee44d208dbe8dac1c3222c256469f555cc8dfe2afb075eb765"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/structural/structural_scene.o",
+      "identity": [
+        16777231,
+        252231109,
+        33188,
+        31904,
+        1791434674901027360,
+        1791434674927073300
+      ],
+      "sha256": "02ae65845e4dcb7bd8d071a5904f4c07f08f4dffc698976f91c56212c3b79bcf"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/structural/structural_solver.d",
+      "identity": [
+        16777231,
+        252231115,
+        33188,
+        677,
+        1791434674921216573,
+        1791434674933095318
+      ],
+      "sha256": "a1babca3ada113ec54be7b52a83cdb92ace7b9b6a748d3e8e50557cabb038833"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/structural/structural_solver.o",
+      "identity": [
+        16777231,
+        252231108,
+        33188,
+        47488,
+        1791434674921001657,
+        1791434674933204734
+      ],
+      "sha256": "4e5c848973feb605e72d41e461ddaf7da9070c21ab5f771d45b079527469706a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/structural/structural_sparse_matrix.d",
+      "identity": [
+        16777231,
+        252231124,
+        33188,
+        453,
+        1791434675053218184,
+        1791434675109279716
+      ],
+      "sha256": "1d686bc6237ede203862b58341799429469552b7d7611827287851a3cf75b5d2"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/physics/structural/structural_sparse_matrix.o",
+      "identity": [
+        16777231,
+        252231123,
+        33188,
+        10128,
+        1791434675052918269,
+        1791434675109406715
+      ],
+      "sha256": "3ec551f6e8973b9e0961f211b00f72fe83758e483f6583afa61a287c39656355"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/field_overlay.d",
+      "identity": [
+        16777231,
+        252230989,
+        33188,
+        7805,
+        1791434672949134247,
+        1791434672993736990
+      ],
+      "sha256": "365d76fecd481160bf9ece2ebac90085a4031443b3d679f112cb0888f6713c92"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/field_overlay.o",
+      "identity": [
+        16777231,
+        252230968,
+        33188,
+        72432,
+        1791434672948886081,
+        1791434672993869073
+      ],
+      "sha256": "d678ac081047b838f3e7af0f1fd9f7c0defee1959bd70efbd9afa91dd89140f6"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/import_project.d",
+      "identity": [
+        16777231,
+        252230936,
+        33188,
+        834,
+        1791434672250623923,
+        1791434672302547180
+      ],
+      "sha256": "f780b9e872ff4acb3fada388713c5ef04d031622b0e3c5d1533e5e0341ef6f7a"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/import_project.o",
+      "identity": [
+        16777231,
+        252230935,
+        33188,
+        6360,
+        1791434672250438216,
+        1791434672302681721
+      ],
+      "sha256": "be724581994a1f94bb9d489733c52f77b7cb090a7e1fbab5e207042ed16b7b7f"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/kit_render_backend_vk_headless_stub.d",
+      "identity": [
+        16777231,
+        252231753,
+        33188,
+        950,
+        1791434684405373875,
+        1791434684427274374
+      ],
+      "sha256": "749678d6c837ce321f360b42ec411c8fb537b690d1acea8c9c9c877e93473c70"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/kit_render_backend_vk_headless_stub.o",
+      "identity": [
+        16777231,
+        252231752,
+        33188,
+        9160,
+        1791434684405170293,
+        1791434684427416998
+      ],
+      "sha256": "dd4c0ab52993a60b6f3f6416f0774a8245440eec3c56ba98b12a3b5b3f14a980"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/kit_viz_field_adapter.d",
+      "identity": [
+        16777231,
+        252230975,
+        33188,
+        552,
+        1791434672773136640,
+        1791434672782182813
+      ],
+      "sha256": "b7dfc0b049b6ece63f6b691054d243014868b19e99da0a181dab919cdeb40ab9"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/kit_viz_field_adapter.o",
+      "identity": [
+        16777231,
+        252230971,
+        33188,
+        9904,
+        1791434672772945099,
+        1791434672782333521
+      ],
+      "sha256": "28354791ddb1df121e8cd0f3d642e2ea8914c291a56d6e9d585b8dd13f44bd6f"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/renderer_sdl_headless_stub.d",
+      "identity": [
+        16777231,
+        252231756,
+        33188,
+        7645,
+        1791434684485379398,
+        1791434684587035669
+      ],
+      "sha256": "843dd1561a91b012f86b504169142ebb2434bc5c5e4f2dc192660192222b70e0"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/renderer_sdl_headless_stub.o",
+      "identity": [
+        16777231,
+        252231742,
+        33188,
+        53728,
+        1791434684484829775,
+        1791434684587169335
+      ],
+      "sha256": "a3dbbb5f380963d5dc6c52bc1815f251f77774b061c2d5d5f90d83afce0ce9fa"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/retained_runtime_scene_overlay_headless_stub.d",
+      "identity": [
+        16777231,
+        252231757,
+        33188,
+        7638,
+        1791434684507696061,
+        1791434684599907577
+      ],
+      "sha256": "4abf0e886a1ada0c85cd0b7e7739064644527c1afdd4297109374dcb030cce9c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/render/retained_runtime_scene_overlay_headless_stub.o",
+      "identity": [
+        16777231,
+        252231749,
+        33188,
+        37008,
+        1791434684507459937,
+        1791434684600040326
+      ],
+      "sha256": "10d4f11653691478185fdaa691fca853a98eb79f400d56f85a266935ff6dde03"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/api/time_scope.d",
+      "identity": [
+        16777231,
+        252231382,
+        33188,
+        2983,
+        1791434679328159716,
+        1791434679355754150
+      ],
+      "sha256": "96c06e14ea72683f51f93b40f9f0695a887779ae4ca5fdc4c1e573bf48bf9bab"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/api/time_scope.o",
+      "identity": [
+        16777231,
+        252231376,
+        33188,
+        34432,
+        1791434679327929508,
+        1791434679355884233
+      ],
+      "sha256": "369d7f7d6dcc97afa8b1b809872ea87f4531c3df9949da142c378261bfacf24c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/config/settings_loader.d",
+      "identity": [
+        16777231,
+        252231359,
+        33188,
+        2467,
+        1791434678963214636,
+        1791434679002993773
+      ],
+      "sha256": "15537cb91948ebec1164ef4825a3f6f6f0a3d7979a8d047192f328df9da8ae77"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/config/settings_loader.o",
+      "identity": [
+        16777231,
+        252231356,
+        33188,
+        33952,
+        1791434678962984887,
+        1791434679003116314
+      ],
+      "sha256": "06b161c67c8f6e46b205e45fa26a37877a8fbd9939c36b40352d21e5bb742caf"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/frame_tracker.d",
+      "identity": [
+        16777231,
+        252231357,
+        33188,
+        2502,
+        1791434678923472124,
+        1791434678984642303
+      ],
+      "sha256": "8b794df5e31e006025fbbc435605b84be2738e563330a28fd90547b4cc43f998"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/frame_tracker.o",
+      "identity": [
+        16777231,
+        252231355,
+        33188,
+        7880,
+        1791434678923253875,
+        1791434678984790260
+      ],
+      "sha256": "d5c44e56dcd3f98831a356ebe8a21ef5fff3575e9945318b163a82d52237978c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/session.d",
+      "identity": [
+        16777231,
+        252231325,
+        33188,
+        1830,
+        1791434678369905611,
+        1791434678428246759
+      ],
+      "sha256": "92df5ef9129242cb5c36f00338d31af29a85c81d8959ca2448efea4ed6cb0d13"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/session.o",
+      "identity": [
+        16777231,
+        252231323,
+        33188,
+        8880,
+        1791434678369703029,
+        1791434678428368176
+      ],
+      "sha256": "041374bbe7f2ea59d4084e9dbfb249f0002bb3e9d6b8523c726fd3c211fc8f50"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/time_utils.d",
+      "identity": [
+        16777231,
+        252231324,
+        33188,
+        364,
+        1791434678355205169,
+        1791434678406492136
+      ],
+      "sha256": "c0c4e75a37230c54166b7adb8e26c7c2e72869730a1dbafa215af3ffffbb141d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/time_utils.o",
+      "identity": [
+        16777231,
+        252231322,
+        33188,
+        3576,
+        1791434678354938170,
+        1791434678406644510
+      ],
+      "sha256": "ab5bfd01bbdd35b369b84c6f3f1144f0d76a266029d25768aa33658f48560ec2"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/timer.d",
+      "identity": [
+        16777231,
+        252231342,
+        33188,
+        469,
+        1791434678670729483,
+        1791434678724181399
+      ],
+      "sha256": "5aa3f4d0e084ccbd4e39b1ee6bdcba1c8b2845abd43ef82642696f8bbdb6822c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/timer.o",
+      "identity": [
+        16777231,
+        252231341,
+        33188,
+        8032,
+        1791434678670476483,
+        1791434678724313607
+      ],
+      "sha256": "0cbfd1cc7adbaf7017254434df466d9a76bd2c1d828f6465c4421aa1226523ae"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/timer_manager.d",
+      "identity": [
+        16777231,
+        252231349,
+        33188,
+        1814,
+        1791434678746981852,
+        1791434678799650606
+      ],
+      "sha256": "3ae81ecd02e754dfbe3b67add6c21155ef32970db5b700fa8c0a2a6da9b6c7de"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/core/timer_manager.o",
+      "identity": [
+        16777231,
+        252231345,
+        33188,
+        9352,
+        1791434678745771565,
+        1791434678799937355
+      ],
+      "sha256": "cd0541c8cbe98808c1e264c73d912fff84bc00b33316e27d2122a02dc0b96fd3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/events/event_tracker.d",
+      "identity": [
+        16777231,
+        252231390,
+        33188,
+        1978,
+        1791434679453980476,
+        1791434679466979509
+      ],
+      "sha256": "8379d22e7e1ac4e6c4be37226c71e128740a9aa0775b5b6c4735b97fb688fec5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/events/event_tracker.o",
+      "identity": [
+        16777231,
+        252231387,
+        33188,
+        9120,
+        1791434679453795352,
+        1791434679467097925
+      ],
+      "sha256": "469e9bed09b0923ae3563c0add7a8ee454c847650487a374ab16ee6a27d304b4"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/history/history_compression.d",
+      "identity": [
+        16777231,
+        252231371,
+        33188,
+        549,
+        1791434679201055919,
+        1791434679250859225
+      ],
+      "sha256": "4e1cd85c4bb1f79c99657355908d9f12dc6508d58ed16695c79b57586d113f2d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/history/history_compression.o",
+      "identity": [
+        16777231,
+        252231370,
+        33188,
+        4016,
+        1791434679200864128,
+        1791434679251001141
+      ],
+      "sha256": "f9896c082c2013f93cf501ecef9ac494626d34f0f931abf51989a8942d8938a5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/hud/hud_format.d",
+      "identity": [
+        16777231,
+        252231409,
+        33188,
+        241,
+        1791434679736314503,
+        1791434679794174361
+      ],
+      "sha256": "868dee466cccd0653b8ddb49659f53d66fc76b8850677baf27c642243c4c24a3"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/hud/hud_format.o",
+      "identity": [
+        16777231,
+        252231407,
+        33188,
+        5008,
+        1791434679736137587,
+        1791434679794280777
+      ],
+      "sha256": "5c136cdf74c4bc50205b3a7834848eadd95c06b3ca1b0532ff6ebca982668df7"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/hud/hud_renderer.d",
+      "identity": [
+        16777231,
+        252231417,
+        33188,
+        2190,
+        1791434679856081662,
+        1791434679900518864
+      ],
+      "sha256": "849276cdfec5fc478915276e035543c622637aba35af5b6b5f9f761e41091262"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/hud/hud_renderer.o",
+      "identity": [
+        16777231,
+        252231416,
+        33188,
+        23568,
+        1791434679855881954,
+        1791434679900658613
+      ],
+      "sha256": "0a35dfa1a4b10d70252634ece9fe237d350ec20c39bdb4412e8e6214557922fa"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/hud/hud_snapshot.d",
+      "identity": [
+        16777231,
+        252231425,
+        33188,
+        2186,
+        1791434679962502914,
+        1791434680002553175
+      ],
+      "sha256": "69c79a905773528d49ae911763fcaa0e97f1a1fcd00273dac7e56fc2a1624797"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/hud/hud_snapshot.o",
+      "identity": [
+        16777231,
+        252231423,
+        33188,
+        20376,
+        1791434679962229249,
+        1791434680002673550
+      ],
+      "sha256": "4685b9c7dcd6a2f1d2f25cda83d8e05cb60e495581cadf60ad555c9a1fc8a495"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/logging/logger.d",
+      "identity": [
+        16777231,
+        252231389,
+        33188,
+        2121,
+        1791434679453465895,
+        1791434679471021577
+      ],
+      "sha256": "ca996e9b01a458f39bb4f851fe935de6c4503530cc474f78df62f153f7024334"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud/logging/logger.o",
+      "identity": [
+        16777231,
+        252231388,
+        33188,
+        11568,
+        1791434679453254562,
+        1791434679471117118
+      ],
+      "sha256": "3d263fc9896647954737a18eb17182fb0c4745127ed537718be89349140d7d35"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud_external/cJSON.d",
+      "identity": [
+        16777231,
+        252231426,
+        33188,
+        229,
+        1791434679963948200,
+        1791434679994215791
+      ],
+      "sha256": "2422e81579ebe9f8da7944a9404b8bb30f192b7399e81b3c2aa3c14f259dd2f1"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timer_hud_external/cJSON.o",
+      "identity": [
+        16777231,
+        252231418,
+        33188,
+        73976,
+        1791434679963788409,
+        1791434679994350998
+      ],
+      "sha256": "567f82ab32e9281bf8b1d173b2142d48037e8b761dde6e97a4979e30bed3250e"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timing.d",
+      "identity": [
+        16777231,
+        252231151,
+        33188,
+        4507,
+        1791434675600398430,
+        1791434675641484812
+      ],
+      "sha256": "ffbe3ad07f3245b268af5b678d859e22ff0ebe38c7ad0fbbcd1705ee33c3798f"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/timing.o",
+      "identity": [
+        16777231,
+        252231142,
+        33188,
+        6640,
+        1791434675600097931,
+        1791434675641651228
+      ],
+      "sha256": "4e20e13d784aab80d20ac1f742e395aa925ec13ac7fd54c099a434c3c67b2589"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/ShapeLib/shape_core.d",
+      "identity": [
+        16777231,
+        252230019,
+        33188,
+        626,
+        1791434658338045394,
+        1791434658388031366
+      ],
+      "sha256": "c63d3743b5e4ceeb543f0b9add208f83978abb54d9ccf81ef9457040dae6a48c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/ShapeLib/shape_core.o",
+      "identity": [
+        16777231,
+        252230018,
+        33188,
+        3984,
+        1791434658337852228,
+        1791434658388151991
+      ],
+      "sha256": "0a71242832f9ffc1b111ec47b5d359d82228bd30906f514d2a497cc81701ac1c"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/ShapeLib/shape_draw_sdl.d",
+      "identity": [
+        16777231,
+        252230039,
+        33188,
+        5402,
+        1791434658592091156,
+        1791434658632547665
+      ],
+      "sha256": "d58cbb227c036c3d5e4a906b9cee0c7b16df1fc9528639f0c0b54eb601cc048b"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/ShapeLib/shape_draw_sdl.o",
+      "identity": [
+        16777231,
+        252230027,
+        33188,
+        7664,
+        1791434658591873407,
+        1791434658632667415
+      ],
+      "sha256": "8d386a44a122015ec07c57a1072645d7ccd068242bdfc7a3868a6ffc85dcb374"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/ShapeLib/shape_flatten.d",
+      "identity": [
+        16777231,
+        252229984,
+        33188,
+        892,
+        1791434657877043897,
+        1791434657896836236
+      ],
+      "sha256": "b422badc84395660e5e93afbbaaf1d41dbe08f886e1b2776169c5849cea8daed"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/ShapeLib/shape_flatten.o",
+      "identity": [
+        16777231,
+        252229970,
+        33188,
+        10896,
+        1791434657876835606,
+        1791434657896947111
+      ],
+      "sha256": "6218346da1eca0a3e3467b8db402c7019caa4a5d47293120897c85891be593f5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/ShapeLib/shape_json.d",
+      "identity": [
+        16777231,
+        252229983,
+        33188,
+        1067,
+        1791434657876731065,
+        1791434657901069345
+      ],
+      "sha256": "abc111f3943d4e9e00683a8107dfca3f37f3deb16284eadf5450b95dbaf0be84"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/ShapeLib/shape_json.o",
+      "identity": [
+        16777231,
+        252229971,
+        33188,
+        17024,
+        1791434657876272525,
+        1791434657901166386
+      ],
+      "sha256": "bf014e7c723c246ee845b5f4097c4b63b67288b78c43e0fa7697264db775f16d"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/cli/physics_sim_headless.d",
+      "identity": [
+        16777231,
+        252230007,
+        33188,
+        8028,
+        1791434658153397113,
+        1791434658216403951
+      ],
+      "sha256": "c1b498b9eabbfd1dd717c18d7a589ce035271d71725da735f25fa853886bc6ac"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/tools/cli/physics_sim_headless.o",
+      "identity": [
+        16777231,
+        252229977,
+        33188,
+        93864,
+        1791434658153073281,
+        1791434658216537992
+      ],
+      "sha256": "043478fbff9672cb60b5edcf0988b2fb6819a9d7061cddc1b944e8fd6ef14be5"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/ui/text_input.d",
+      "identity": [
+        16777231,
+        252229996,
+        33188,
+        4488,
+        1791434657956422129,
+        1791434657983031734
+      ],
+      "sha256": "e41f63d2f0a3b6fdea2792f9c9480e3127558fa97f9056260101c52ce7fefb32"
+    },
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned/ui/text_input.o",
+      "identity": [
+        16777231,
+        252229974,
+        33188,
+        11912,
+        1791434657956183839,
+        1791434657983140109
+      ],
+      "sha256": "d3c91c97af954d89c8a1afb45253bc2b160364f8f4cce552e2dafc195b26e621"
+    }
+  ],
+  "repo": "/Users/calebsv/Desktop/CodeWork/physics_sim",
+  "build_root": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned",
+  "targets": [
+    {
+      "path": "/Users/calebsv/Desktop/CodeWork/physics_sim/build/profiles/local-owned",
+      "identity": [
+        16777231,
+        252229924,
+        16877,
+        1344,
+        1791434684708523154
+      ]
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "archive": "/private/tmp/physics-focused-preservation-20261007d/queue/physics-focused-preservation-20261007d/physics-focused-preservation.tar.gz",
+  "bytes": 43174272,
+  "sha256": "d2546e02ba988902b7e0f665dfb41c465cff2da8e2dc2f9a9503cbf638998253",
+  "files": 16475,
+  "logical_bytes": 225434677,
+  "local_restore_verified": true,
+  "independent_copy_verified": false,
+  "source_states": {
+    "canonical": {
+      "head": "3fa1ad5f6fb2384a7626e83c5e22fa7821cb7ed5",
+      "missing": []
+    },
+    "main-edit": {
+      "head": "dd55d7c0f4bbf6f7f4e614e5ee71ded7982b1962",
+      "missing": [
+        "tests/test_cfd_reference3d_force_local.py"
+      ]
+    }
+  }
+}

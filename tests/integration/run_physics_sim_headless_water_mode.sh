@@ -11,7 +11,7 @@ RUN_DIR="$OUT_DIR/volume_frames/Water Basin"
 MANIFEST="$RUN_DIR/manifest.json"
 WATER_MANIFEST="$RUN_DIR/water_manifest_v1.json"
 
-"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --water-mode \
   --frames 2 \
   --sim-steps-per-frame 1 \

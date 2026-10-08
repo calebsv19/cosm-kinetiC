@@ -19,7 +19,7 @@ release-contract:
 
 release-clean:
 	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(RELEASE_DIR)"
-	@echo "Release outputs absent; no retained artifact removal performed"
+	@echo "Release outputs retained; no removal performed"
 
 release-build: all
 	@echo "Release build complete: $(TARGET)"

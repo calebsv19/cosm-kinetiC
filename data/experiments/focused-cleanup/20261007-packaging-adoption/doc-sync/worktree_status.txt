@@ -1,0 +1,80 @@
+ M docs/AGENT_DEMO_PACK.md
+ M docs/README.md
+ M docs/headless_cli.md
+ M make/config.mk
+ M make/objects.mk
+ M make/package-linux-desktop.mk
+ M make/package-linux-worker.mk
+ M make/package-macos.mk
+ M make/release.mk
+ M make/rules-build.mk
+ M make/rules-runtime.mk
+ M make/rules-tools.mk
+ M make/sources-tools.mk
+ M makefile
+ M scripts/agent_session/service.py
+ M tests/integration/run_physics_sim_headless_cli.sh
+ M tests/integration/run_physics_sim_headless_dragonwind_orientation_probe.sh
+ M tests/integration/run_physics_sim_headless_scene_project_cache_output.sh
+ M tests/integration/run_physics_sim_headless_water_mode.sh
+ M tests/integration/run_physics_sim_headless_water_object_coupling.sh
+ M tests/integration/run_physics_sim_headless_water_object_quality_compare.sh
+ M tests/integration/run_physics_sim_headless_wind_analysis.sh
+ M tests/integration/run_physics_sim_headless_wind_long_tunnel_video.sh
+ M tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh
+ M tests/integration/run_physics_sim_headless_wind_mesh_probe.sh
+ M tests/integration/run_physics_sim_headless_wind_object_comparison.sh
+ M tests/integration/run_physics_sim_headless_wind_orientation_probe.sh
+ M tests/integration/run_physics_sim_job_runner_bundle_smoke.sh
+ M tests/integration/run_physics_sim_job_runner_policy.sh
+ M tests/integration/run_physics_sim_job_runner_smoke.sh
+ M tests/integration/run_physics_sim_visual_artifact.sh
+ M tools/packaging/linux/install-desktop-entry.sh
+ M tools/packaging/linux/physics-sim-launcher
+ M tools/packaging/macos/bundle-dylibs.sh
+ M tools/packaging/macos/physics-sim-launcher
+ M tools/packaging/validate_macos_session.py
+?? data/
+?? docs/cleanup_operations.md
+?? docs/focused_cleanup_completion_plan.md
+?? docs/focused_cleanup_progress.md
+?? docs/launcher_configuration_recovery.md
+?? make/build-identity.mk
+?? scripts/agent_session/owned_command.py
+?? scripts/agent_session/sample_retention.py
+?? scripts/atomic_output.py
+?? scripts/build_identity.py
+?? scripts/build_outputs.py
+?? scripts/build_owner.py
+?? scripts/cfd_evidence.py
+?? scripts/check_clean_root.py
+?? scripts/check_desktop_process_audit.py
+?? scripts/clean_outputs.py
+?? scripts/contract_proof.py
+?? scripts/desktop_replace.py
+?? scripts/macos_bundle.py
+?? scripts/macos_bundle_engine.sh
+?? scripts/package_outputs.py
+?? scripts/package_proof.py
+?? scripts/package_transaction.py
+?? scripts/tool_probe.py
+?? tests/test_atomic_output.py
+?? tests/test_build_identity.py
+?? tests/test_build_output_isolation.py
+?? tests/test_build_owner.py
+?? tests/test_clean_inventory_budget.py
+?? tests/test_clean_json_bounds.py
+?? tests/test_clean_outputs.py
+?? tests/test_clean_reservation_schema.py
+?? tests/test_clean_reservations.py
+?? tests/test_desktop_process_audit.py
+?? tests/test_desktop_replace.py
+?? tests/test_linux_desktop_installer.py
+?? tests/test_macos_bundle_lifecycle.py
+?? tests/test_owned_command.py
+?? tests/test_package_launcher_lifecycle.py
+?? tests/test_package_outputs.py
+?? tests/test_package_proof.py
+?? tests/test_package_transaction.py
+?? tools/packaging/linux/install-desktop-entry.py
+?? tools/packaging/runtime-config.sh

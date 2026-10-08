@@ -1,0 +1,100 @@
+#!/usr/bin/env sh
+set -eu
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+PACKAGE_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+RES_DIR="$PACKAGE_ROOT/resources"
+
+DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+RUNTIME_DIR_DEFAULT="$DATA_HOME/PhysicsSim/runtime"
+RUNTIME_DIR="${PHYSICS_SIM_RUNTIME_DIR:-$RUNTIME_DIR_DEFAULT}"
+LOG_DIR_DEFAULT="$STATE_HOME/PhysicsSim/logs"
+LOG_DIR="${PHYSICS_SIM_LOG_DIR:-$LOG_DIR_DEFAULT}"
+LOG_FILE="$LOG_DIR/package_launcher.log"
+
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+if ! touch "$LOG_FILE" 2>/dev/null; then
+    LOG_DIR="${TMPDIR:-/tmp}/PhysicsSim/logs"
+    LOG_FILE="$LOG_DIR/package_launcher.log"
+    mkdir -p "$LOG_DIR" 2>/dev/null || true
+    touch "$LOG_FILE" 2>/dev/null || true
+fi
+
+copy_lane_once() {
+    lane="$1"
+    source="$RES_DIR/$lane"
+    target="$RUNTIME_DIR/$lane"
+    if [ -L "$target" ] || [ -e "$target" ]; then
+        return 0
+    fi
+    if [ -e "$source" ]; then
+        mkdir -p "$(dirname "$target")"
+        cp -R "$source" "$target"
+    fi
+}
+
+setup_runtime_root() {
+    mkdir -p "$RUNTIME_DIR" 2>/dev/null || true
+    if [ ! -d "$RUNTIME_DIR" ]; then
+        RUNTIME_DIR="${TMPDIR:-/tmp}/PhysicsSim/runtime"
+        mkdir -p "$RUNTIME_DIR" 2>/dev/null || true
+    fi
+    if [ ! -d "$RUNTIME_DIR" ]; then
+        echo "failed to create writable runtime directory" >&2
+        exit 1
+    fi
+
+    mkdir -p "$RUNTIME_DIR/data/runtime" "$RUNTIME_DIR/data/snapshots"
+    copy_lane_once config
+    copy_lane_once shared
+    copy_lane_once shaders
+    copy_lane_once vk_renderer
+}
+
+setup_runtime_root
+
+export VK_RENDERER_SHADER_ROOT="${VK_RENDERER_SHADER_ROOT:-$RUNTIME_DIR}"
+export SHAPE_ASSET_DIR="${SHAPE_ASSET_DIR:-$RUNTIME_DIR/config/objects}"
+export PHYSICS_SIM_TIMER_HUD="${PHYSICS_SIM_TIMER_HUD:-0}"
+export PHYSICS_SIM_TIMER_HUD_OVERLAY="${PHYSICS_SIM_TIMER_HUD_OVERLAY:-0}"
+export PHYSICS_SIM_TIMER_HUD_VISUAL_MODE="${PHYSICS_SIM_TIMER_HUD_VISUAL_MODE:-hybrid}"
+
+if [ "${1:-}" = "--print-config" ]; then
+    echo "PACKAGE_ROOT=$PACKAGE_ROOT"
+    echo "RES_DIR=$RES_DIR"
+    echo "LOG_FILE=$LOG_FILE"
+    echo "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
+    echo "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
+    echo "PHYSICS_SIM_TIMER_HUD_OVERLAY=$PHYSICS_SIM_TIMER_HUD_OVERLAY"
+    echo "PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=$PHYSICS_SIM_TIMER_HUD_VISUAL_MODE"
+    echo "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
+    echo "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
+    exit 0
+fi
+
+if [ "${1:-}" = "--self-test" ]; then
+    [ -x "$SCRIPT_DIR/physics-sim-bin" ] || { echo "missing: physics-sim-bin" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/app.json" ] || { echo "missing: config/app.json" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/custom_preset.txt" ] || { echo "missing: config/custom_preset.txt" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/structural_scene.txt" ] || { echo "missing: config/structural_scene.txt" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/objects/Hexagon.asset.json" ] || { echo "missing: bundled shape assets" >&2; exit 1; }
+    [ -d "$RUNTIME_DIR/data/runtime" ] || { echo "missing: runtime dir" >&2; exit 1; }
+    [ -d "$RUNTIME_DIR/data/snapshots" ] || { echo "missing: snapshots dir" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/vk_renderer/shaders/textured.vert.spv" ] || { echo "missing: bundled vk_renderer shader" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/shaders/textured.vert.spv" ] || { echo "missing: bundled runtime shader" >&2; exit 1; }
+    echo "self-test: ok"
+    echo "LOG_FILE=$LOG_FILE"
+    echo "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
+    echo "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
+    echo "PHYSICS_SIM_TIMER_HUD_OVERLAY=$PHYSICS_SIM_TIMER_HUD_OVERLAY"
+    echo "PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=$PHYSICS_SIM_TIMER_HUD_VISUAL_MODE"
+    echo "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
+    echo "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
+    exit 0
+fi
+
+cd "$RUNTIME_DIR"
+printf '%s launch begin pid=%s cwd=%s runtime_dir=%s shader_root=%s shape_asset_dir=%s args=%s\n' \
+    "$(date '+%Y-%m-%d %H:%M:%S')" "$$" "$RUNTIME_DIR" "$RUNTIME_DIR" "$VK_RENDERER_SHADER_ROOT" "$SHAPE_ASSET_DIR" "$*" >>"$LOG_FILE" 2>/dev/null || true
+exec "$SCRIPT_DIR/physics-sim-bin" "$@" >>"$LOG_FILE" 2>&1

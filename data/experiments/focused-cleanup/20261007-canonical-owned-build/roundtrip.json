@@ -1,0 +1,59 @@
+{
+  "results": [
+    {
+      "step": "clean-plan",
+      "command": [
+        "make",
+        "clean-plan"
+      ],
+      "exit_code": 0,
+      "sentinels_unchanged": true
+    },
+    {
+      "step": "clean",
+      "command": [
+        "make",
+        "clean"
+      ],
+      "exit_code": 0,
+      "sentinels_unchanged": true
+    },
+    {
+      "step": "rebuild",
+      "command": [
+        "make",
+        "-j4",
+        "physics_sim_headless",
+        "CODEWORK_WORKSPACE_ROOT=/Users/calebsv/Desktop/CodeWork"
+      ],
+      "exit_code": 0,
+      "sentinels_unchanged": true
+    },
+    {
+      "step": "water",
+      "command": [
+        "make",
+        "test-physics-sim-headless-water-mode",
+        "CODEWORK_WORKSPACE_ROOT=/Users/calebsv/Desktop/CodeWork"
+      ],
+      "exit_code": 0,
+      "sentinels_unchanged": true
+    },
+    {
+      "step": "scene-cache",
+      "command": [
+        "make",
+        "test-physics-sim-headless-scene-project-cache-output",
+        "CODEWORK_WORKSPACE_ROOT=/Users/calebsv/Desktop/CodeWork"
+      ],
+      "exit_code": 0,
+      "sentinels_unchanged": true
+    }
+  ],
+  "sentinels": {
+    "data/experiments/retained-sentinel.bin": "94414f93ced45205ba712efa85f507621014f5b15baa287e07beaf316f608f58",
+    "data/tools/retained-tool-sentinel.bin": "4eaed09eee28f5e67d91eb744bb9d3eb94e7d58074ff8a0be4c3c756b491b311",
+    "tmp/tests/retained-test-sentinel.bin": "075979ea944cd022895da39069878a325fb905c16add5ec4554837d069ab099b"
+  },
+  "complete": true
+}

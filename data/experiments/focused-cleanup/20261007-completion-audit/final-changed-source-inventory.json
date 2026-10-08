@@ -1,0 +1,421 @@
+{
+  "base": "3fa1ad5f6fb2384a7626e83c5e22fa7821cb7ed5",
+  "uncommitted": true,
+  "files": [
+    {
+      "path": "docs/AGENT_DEMO_PACK.md",
+      "sha256": "6502315ab322616ae8b518aeaae163faf1c09f2cde8434c62116238674d32283",
+      "bytes": 6141
+    },
+    {
+      "path": "docs/README.md",
+      "sha256": "456e622c56ec4ec8a8569a203ab6d33624c394f21497cee6a5b8ad3e9cab00a1",
+      "bytes": 17486
+    },
+    {
+      "path": "docs/cleanup_operations.md",
+      "sha256": "78a610f64c0195ca5b9d22982068e05a979787ab07f2a548be270e0f6edfa1e7",
+      "bytes": 3789
+    },
+    {
+      "path": "docs/current_truth.md",
+      "sha256": "c6b04c698233326884f17b8186b7fb8c4a3a5c23f11afad549355d0fc40c45a3",
+      "bytes": 62663
+    },
+    {
+      "path": "docs/desktop_packaging.md",
+      "sha256": "cd8fe25505168ac42656c8f64d5b4a7d6e142233f069262a99922c6dfc32cc79",
+      "bytes": 16169
+    },
+    {
+      "path": "docs/focused_cleanup_closeout.md",
+      "sha256": "aa2ea5ce398396bc6b57e2001281324b1315e9b50fbe5dc8fb975dd49ea0f51d",
+      "bytes": 5085
+    },
+    {
+      "path": "docs/focused_cleanup_completion_plan.md",
+      "sha256": "a0afb35efa9d887f406755f7d8a66db78aca9a631ec50b916778dcd0f03910e7",
+      "bytes": 6356
+    },
+    {
+      "path": "docs/focused_cleanup_progress.md",
+      "sha256": "fe96fa703e96363adfa40859996e1a84c02caeaea0f46e2643ffd6cad99c4f40",
+      "bytes": 7005
+    },
+    {
+      "path": "docs/headless_cli.md",
+      "sha256": "687210d080842abddc0dc60fbc898d49af78e234cc31888a69d53088cdddf47a",
+      "bytes": 35218
+    },
+    {
+      "path": "docs/launcher_configuration_recovery.md",
+      "sha256": "71f9ed92e2e98582c8e987ea54e12b312f952e2c63259921dd95dc716be141a7",
+      "bytes": 4532
+    },
+    {
+      "path": "docs/packaging_lifecycle_operations.md",
+      "sha256": "ee7aad5000306ef5890531ddf36bb7907fc07d793ceb2660b13fc40016db9d9c",
+      "bytes": 4974
+    },
+    {
+      "path": "make/build-identity.mk",
+      "sha256": "8ffb5290cd5ab643ed23f737332c13c3450564e3206857aa8aeeacb5cabae9dc",
+      "bytes": 5924
+    },
+    {
+      "path": "make/config.mk",
+      "sha256": "2c1a718c2f9b57b2709d14c07910e656ac7370aa109cf95bdf31a7818dfc9e22",
+      "bytes": 5638
+    },
+    {
+      "path": "make/objects.mk",
+      "sha256": "430c7ad2856b041f33d6b0c153c0da588d9dc3cd4deda97360f9da0f1cefd06e",
+      "bytes": 10852
+    },
+    {
+      "path": "make/package-linux-desktop.mk",
+      "sha256": "67b3630a76bce4aaff201dc42356020cdc9549fda5b302769c7ce927f1d882ad",
+      "bytes": 16496
+    },
+    {
+      "path": "make/package-linux-worker.mk",
+      "sha256": "252da896ecddc6056fadcd61338dca838d3385fe67da08a45816cf15d3c0159b",
+      "bytes": 13413
+    },
+    {
+      "path": "make/package-macos.mk",
+      "sha256": "d4db77690b31e1b5d219df91227657a320a220ac176277e5174676118475fb76",
+      "bytes": 16037
+    },
+    {
+      "path": "make/release.mk",
+      "sha256": "225a5aebcb1728eb3fe9706cfd41da4cddf05a5e19faab3d2be2e6403704ca6b",
+      "bytes": 10085
+    },
+    {
+      "path": "make/rules-build.mk",
+      "sha256": "cf009dad2f2109585b60125d066530013c986b4b7bb10c651bbb48009a1f1ca6",
+      "bytes": 19980
+    },
+    {
+      "path": "make/rules-runtime.mk",
+      "sha256": "52841ddf5282897213480bb470788948f257747699d85ef276d26e9b225b12cc",
+      "bytes": 3356
+    },
+    {
+      "path": "make/rules-tools.mk",
+      "sha256": "c09d9be6d097e4efc19762f63b425ac82e45371d77ac591342f9ef6ca60e07cb",
+      "bytes": 7695
+    },
+    {
+      "path": "make/sources-tools.mk",
+      "sha256": "d1cd8301dcdbe824c27b22aff1132db33f533147ea06e985190acf626abc5303",
+      "bytes": 6410
+    },
+    {
+      "path": "makefile",
+      "sha256": "432d2af7ab6cb46a112cd761351fc683679799bf01cccbb4384fa98d7ca8c63c",
+      "bytes": 2435
+    },
+    {
+      "path": "scripts/agent_session/owned_command.py",
+      "sha256": "a37178c9bb893a18da689fab5e2cb52cefa7bf63be67b74efc61ff36932ad08f",
+      "bytes": 8427
+    },
+    {
+      "path": "scripts/agent_session/sample_retention.py",
+      "sha256": "238cb115a74ce4a21597889a595e16f844f16ee37b33730e2691d1881f0d83f3",
+      "bytes": 7210
+    },
+    {
+      "path": "scripts/agent_session/service.py",
+      "sha256": "5d9f3fda7773f862122e260d7fcd788a4ca5c27390a236d77949c1cbc200e565",
+      "bytes": 22642
+    },
+    {
+      "path": "scripts/atomic_output.py",
+      "sha256": "99d5bf063794c62a044d7bcfd3966af7aaa58479a745c5c91f4a34f5b0886281",
+      "bytes": 18388
+    },
+    {
+      "path": "scripts/build_identity.py",
+      "sha256": "8980a9b27f93ebf6ba56b1e795ad83f3425a930f2b49099e6c7662e8f680b038",
+      "bytes": 18528
+    },
+    {
+      "path": "scripts/build_outputs.py",
+      "sha256": "9fa8f5639f19f6de002ad0a8a0a875734a04394f99fa40dff0d4962f7de9e41c",
+      "bytes": 19094
+    },
+    {
+      "path": "scripts/build_owner.py",
+      "sha256": "5a722934630ac55e0bf843a9fbc7afe43b7fd1a9ce5dfc8d1d03a5dae38743be",
+      "bytes": 13932
+    },
+    {
+      "path": "scripts/cfd_evidence.py",
+      "sha256": "e7dfa855f14e0f0fb3db1078e755c5e4df538cffb05130f2204c3274a148d1d6",
+      "bytes": 8448
+    },
+    {
+      "path": "scripts/check_clean_root.py",
+      "sha256": "523e2ab1863222a5d2136fc0dedb2de9296bcf6ad8bdd23a7ddebdde39e3f290",
+      "bytes": 16249
+    },
+    {
+      "path": "scripts/check_desktop_process_audit.py",
+      "sha256": "954cd692fced52d5b753f42ba9b54f2f733898cde1a1805ccee7db299e7f5905",
+      "bytes": 2907
+    },
+    {
+      "path": "scripts/clean_outputs.py",
+      "sha256": "d37882382923eaa6cc3ea8889b1af3c2259bc7e27019a3d8c02f8f2e241442a2",
+      "bytes": 4766
+    },
+    {
+      "path": "scripts/contract_proof.py",
+      "sha256": "559d35e1419ea4dcba2437099401c2225f657264ecb327d0bc644bd5e39ea23e",
+      "bytes": 15600
+    },
+    {
+      "path": "scripts/desktop_replace.py",
+      "sha256": "35cd84d4cdd83f7aaa23ed92096569e2afc6b3f37880146a730a9bb980faf8ce",
+      "bytes": 22713
+    },
+    {
+      "path": "scripts/macos_bundle.py",
+      "sha256": "b9c4442b7fbcafccc1018026b0bda761d780be601e03418ffa616156db664d0c",
+      "bytes": 8060
+    },
+    {
+      "path": "scripts/macos_bundle_engine.sh",
+      "sha256": "6ee500b405b73fab104a6aa680186be8f02ffdac68174fe37d1266924f577906",
+      "bytes": 3857
+    },
+    {
+      "path": "scripts/package_outputs.py",
+      "sha256": "541bdabdcda275b7a38b1d6db18653cf2ba68f2ffb69af9d8a7a5d853cb04abe",
+      "bytes": 4727
+    },
+    {
+      "path": "scripts/package_proof.py",
+      "sha256": "bd1575c32afab408c39498179b2d905e1a290ce123724cdf015d0e75c39ac0e3",
+      "bytes": 7012
+    },
+    {
+      "path": "scripts/package_transaction.py",
+      "sha256": "94fadec6b0d671d1c178294b6e2260b63f73d4a9e408af237e81ec2b3cb5662d",
+      "bytes": 23353
+    },
+    {
+      "path": "scripts/tool_probe.py",
+      "sha256": "0ceada2c80491cf24723b614c6f8d6f0e8b5ee5fce44a360ddb24571c9ec80e9",
+      "bytes": 8559
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_cli.sh",
+      "sha256": "a267523faa6b54a92fdaaf67456ec316171bfed099cd13d053bbb8dfef44cf38",
+      "bytes": 4323
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_dragonwind_orientation_probe.sh",
+      "sha256": "f914e2c9b4d94103742f7a35f92361c9a6d40ea1509efc83ff76916a7859e753",
+      "bytes": 1299
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_scene_project_cache_output.sh",
+      "sha256": "3c77200553a214107e3c1062630a1a963c982594b8e0aa51656799c76f5cfcd3",
+      "bytes": 3194
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_mode.sh",
+      "sha256": "0e6f51139c75d5cd8ad38a408a0564baf9b312ac5692068bde79e5ebe2ec63bb",
+      "bytes": 3709
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_object_coupling.sh",
+      "sha256": "aa620012ae976b1e265bd43c2b5a834ba2b9f3ee5512d531f8a761d263dc82cf",
+      "bytes": 4975
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_object_quality_compare.sh",
+      "sha256": "6d685db2438cefa98041b2104e75481b565eff76b24bb90f2f05d63dd8e250e3",
+      "bytes": 12661
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_analysis.sh",
+      "sha256": "cfbab78a0f11c6a53cc47fa3a5d326e97adca2b18beaa863420e1067c4c18f8d",
+      "bytes": 2791
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_long_tunnel_video.sh",
+      "sha256": "5c78ecd7b5e9351782ffe53b456955ba51a046894aa665908c3b114a93b1febf",
+      "bytes": 5820
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh",
+      "sha256": "a4454c3d6a5a142908f112e7b4515bb2c5cd246f392a6cfb93d380e38cd79855",
+      "bytes": 7296
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_mesh_probe.sh",
+      "sha256": "9beef1679457ec80b94481a8a70131195574d6b0cecb7015f46eb2eb4b28a6ca",
+      "bytes": 6908
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_object_comparison.sh",
+      "sha256": "58b30ab766c33b4e441012e5ce20280e2b5a6636c50cbd0b5d2ca3a1405db491",
+      "bytes": 6190
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_orientation_probe.sh",
+      "sha256": "5928263b28ffc9008ad490e1ca293622b60ccbddcd2f419c3c6e2fc0608d5033",
+      "bytes": 1043
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_bundle_smoke.sh",
+      "sha256": "ad374b023aa33c843da3821b8e51b281f3648d3e60d0ea8fd7daee7421a05607",
+      "bytes": 4162
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_policy.sh",
+      "sha256": "c740817305f2f2e9d89d1d0e28037d4800c2a97b2e9c482a75e71858f0c915fa",
+      "bytes": 7290
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_smoke.sh",
+      "sha256": "d5eeb93b2420bd40787881a282900f7a4d19cce0397d87a39a89e84b85f9effe",
+      "bytes": 3216
+    },
+    {
+      "path": "tests/integration/run_physics_sim_visual_artifact.sh",
+      "sha256": "d7d95fba4885e72ae56caa51fc31eabc114ed5b4f4b4ec7e68d6640829839e23",
+      "bytes": 4075
+    },
+    {
+      "path": "tests/test_atomic_output.py",
+      "sha256": "10eed4b190c52fd11af15ea086ffb10b2746f839bea5e0bfbeb51602ad2b8fa5",
+      "bytes": 11530
+    },
+    {
+      "path": "tests/test_build_identity.py",
+      "sha256": "cb92125cf26ed74bd504adad6b414ed6a133fb4397d04f272fbf3ca312192001",
+      "bytes": 4621
+    },
+    {
+      "path": "tests/test_build_output_isolation.py",
+      "sha256": "87a3d5c495a97404b7d2cba6db876cdf6b3876aa2bd721e7980197b40b865453",
+      "bytes": 3456
+    },
+    {
+      "path": "tests/test_build_owner.py",
+      "sha256": "2f90edb6078607ea050877bbbbcd4f1cf0befb5310e25d018d2618e41bcfb6e4",
+      "bytes": 16151
+    },
+    {
+      "path": "tests/test_clean_inventory_budget.py",
+      "sha256": "8a3578160d47a6238b54f0c3056ed53d5fc89605092acff309338ae25c3ca989",
+      "bytes": 5864
+    },
+    {
+      "path": "tests/test_clean_json_bounds.py",
+      "sha256": "0b7b038d6ea36ebeec91e8317b88996ab3329434b2f5898c467ff7746ac7850e",
+      "bytes": 2264
+    },
+    {
+      "path": "tests/test_clean_outputs.py",
+      "sha256": "a09bbb1219054734c19af59c927573151dc326c97c4bf1c48c170d8f645b991d",
+      "bytes": 12191
+    },
+    {
+      "path": "tests/test_clean_reservation_schema.py",
+      "sha256": "692109ffedcb6fef68b1d2ba119004896e1939f137f624682f826f68ebd0d188",
+      "bytes": 3526
+    },
+    {
+      "path": "tests/test_clean_reservations.py",
+      "sha256": "86bb1891b27a91f06bbdc405ba06c1c849090ac7c0ef307480895d68b1d3419b",
+      "bytes": 5599
+    },
+    {
+      "path": "tests/test_desktop_process_audit.py",
+      "sha256": "ce8256184719c289ee946dc903f5c7dda2d305861327a339fce3c3ec5e613c78",
+      "bytes": 5324
+    },
+    {
+      "path": "tests/test_desktop_replace.py",
+      "sha256": "313dec1b4f0319baaf113045b981a80227099612bf12e89e885a9f3279d9ba83",
+      "bytes": 13761
+    },
+    {
+      "path": "tests/test_linux_desktop_installer.py",
+      "sha256": "ae2bf4775d96072e92d3a5ee4d907c8da5ae127d4579a3bdd1fb989edbe7069d",
+      "bytes": 20348
+    },
+    {
+      "path": "tests/test_macos_bundle_lifecycle.py",
+      "sha256": "f01ae13f448d9b27a67ed4fd43222d6ce770f17dc7aef13a54b48e30dd0e2229",
+      "bytes": 12792
+    },
+    {
+      "path": "tests/test_owned_command.py",
+      "sha256": "b2479751181bc86d8e2c4181a6dc3dd7bf90163c4de9ab8fb8a5dcede182ce6f",
+      "bytes": 5713
+    },
+    {
+      "path": "tests/test_package_launcher_lifecycle.py",
+      "sha256": "739e96f16087e3088af8081f3ee4a4c4c05ea0f66ee330f76bac8e07dc864b75",
+      "bytes": 33810
+    },
+    {
+      "path": "tests/test_package_outputs.py",
+      "sha256": "c70abc7e392d4489d9c69132b18e76bf34b03487307d64a0d978ba9dcc45e86a",
+      "bytes": 6899
+    },
+    {
+      "path": "tests/test_package_proof.py",
+      "sha256": "d7e2bc119a37167713304d51a4baea8f02c51c7aae39cd2616a896f2f75a2309",
+      "bytes": 13926
+    },
+    {
+      "path": "tests/test_package_transaction.py",
+      "sha256": "10d3fd98dd2c66916a96d08f67ebcf77e6fbbc937b44c98f6fcd96795dd626bf",
+      "bytes": 24588
+    },
+    {
+      "path": "tools/packaging/linux/install-desktop-entry.py",
+      "sha256": "3ebce1193bb3d180adb9e70cc5e5fb4cbd4febba4821e4a68ca3f449bc0c6c4c",
+      "bytes": 17882
+    },
+    {
+      "path": "tools/packaging/linux/install-desktop-entry.sh",
+      "sha256": "0fdf2d1aa8644f22a63bc3442dbaa6e1f02c769ef6e0f6467b709b7a31122492",
+      "bytes": 141
+    },
+    {
+      "path": "tools/packaging/linux/physics-sim-launcher",
+      "sha256": "a7889b6e63b39827cbadce4c136b67a6042d040bdcbe891b6939911eafbfa3ac",
+      "bytes": 6417
+    },
+    {
+      "path": "tools/packaging/macos/bundle-dylibs.sh",
+      "sha256": "b83b8ff26f8d753403467903e13d0d2fd00ab4c9a7b4c22956ab5d8cae666e27",
+      "bytes": 141
+    },
+    {
+      "path": "tools/packaging/macos/physics-sim-launcher",
+      "sha256": "d956f996ccee4da8add76e0ce05e79094731269b0abb5425b20b42557f0d7def",
+      "bytes": 9967
+    },
+    {
+      "path": "tools/packaging/runtime-config.sh",
+      "sha256": "e738193c5bdb4fc6d685caa70c21d7ce28a3107d879491ad81a897f9fc8e2f7f",
+      "bytes": 5874
+    },
+    {
+      "path": "tools/packaging/validate_macos_session.py",
+      "sha256": "8c1472c5c4525087cf28c89f256a66a966b3ce4be33987fa2f1b0c026600bf18",
+      "bytes": 3689
+    }
+  ]
+}

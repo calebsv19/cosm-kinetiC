@@ -1,0 +1,204 @@
+#!/bin/sh
+set -eu
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+APP_CONTENTS_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+APP_PACKAGE_DIR="${APP_CONTENTS_DIR%/*}"
+RES_DIR="$APP_CONTENTS_DIR/Resources"
+INFO_PLIST="$APP_CONTENTS_DIR/Info.plist"
+plist_value() {
+    /usr/libexec/PlistBuddy -c "Print :$1" "$INFO_PLIST" 2>/dev/null || true
+}
+PACKAGE_PROFILE="$(plist_value PhysicsSimPackageProfile)"
+RUNTIME_NAMESPACE="$(plist_value PhysicsSimRuntimeNamespace)"
+LOG_NAMESPACE="$(plist_value PhysicsSimLogNamespace)"
+BUILD_LABEL="$(plist_value PhysicsSimBuildLabel)"
+[ -n "$PACKAGE_PROFILE" ] || PACKAGE_PROFILE="standard"
+[ -n "$RUNTIME_NAMESPACE" ] || RUNTIME_NAMESPACE="PhysicsSim"
+[ -n "$LOG_NAMESPACE" ] || LOG_NAMESPACE="PhysicsSim"
+[ -n "$BUILD_LABEL" ] || BUILD_LABEL="kinetiC"
+for namespace in "$RUNTIME_NAMESPACE" "$LOG_NAMESPACE"; do
+    case "$namespace" in ''|.|..|*[!A-Za-z0-9_.-]*)
+        printf '%s\n' 'invalid package runtime/log namespace' >&2
+        exit 1;;
+    esac
+done
+APP_SUPPORT_DIR_DEFAULT="${HOME}/Library/Application Support/$RUNTIME_NAMESPACE"
+APP_SUPPORT_DIR="${PHYSICS_SIM_APP_SUPPORT_DIR:-$APP_SUPPORT_DIR_DEFAULT}"
+RUNTIME_DIR_DEFAULT="$APP_SUPPORT_DIR/runtime"
+RUNTIME_DIR="${PHYSICS_SIM_RUNTIME_DIR:-$RUNTIME_DIR_DEFAULT}"
+LOG_DIR="${PHYSICS_SIM_LOG_DIR:-${HOME}/Library/Logs/$LOG_NAMESPACE}"
+LOG_FILE="$LOG_DIR/launcher.log"
+MOLTENVK_DYLIB="$APP_CONTENTS_DIR/Frameworks/libMoltenVK.dylib"
+VK_RUNTIME_DIR=""
+VK_ICD_FILE=""
+
+export VK_RENDERER_SHADER_ROOT="${VK_RENDERER_SHADER_ROOT:-$RUNTIME_DIR}"
+export PHYSICS_SIM_SESSION_TOOL="${PHYSICS_SIM_SESSION_TOOL:-$RES_DIR/scripts/physics_sim_session.py}"
+export PHYSICS_SIM_SESSION_WORKER="${PHYSICS_SIM_SESSION_WORKER:-$SCRIPT_DIR/physics_sim_session_worker}"
+export PHYSICS_SIM_SESSION_ROOT="${PHYSICS_SIM_SESSION_ROOT:-$RUNTIME_DIR/data/runtime/agent_sessions}"
+export SHAPE_ASSET_DIR="${SHAPE_ASSET_DIR:-$RUNTIME_DIR/config/objects}"
+export PHYSICS_SIM_TIMER_HUD="${PHYSICS_SIM_TIMER_HUD:-0}"
+export PHYSICS_SIM_TIMER_HUD_OVERLAY="${PHYSICS_SIM_TIMER_HUD_OVERLAY:-0}"
+export PHYSICS_SIM_TIMER_HUD_VISUAL_MODE="${PHYSICS_SIM_TIMER_HUD_VISUAL_MODE:-hybrid}"
+
+if [ "${1:-}" = "--print-config" ]; then
+    printf '%s\n' "APP_CONTENTS_DIR=$APP_CONTENTS_DIR"
+    printf '%s\n' "RES_DIR=$RES_DIR"
+    printf '%s\n' "PACKAGE_PROFILE=$PACKAGE_PROFILE"
+    printf '%s\n' "RUNTIME_NAMESPACE=$RUNTIME_NAMESPACE"
+    printf '%s\n' "LOG_NAMESPACE=$LOG_NAMESPACE"
+    printf '%s\n' "BUILD_LABEL=$BUILD_LABEL"
+    printf '%s\n' "LOG_FILE=$LOG_FILE"
+    printf '%s\n' "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD_OVERLAY=$PHYSICS_SIM_TIMER_HUD_OVERLAY"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=$PHYSICS_SIM_TIMER_HUD_VISUAL_MODE"
+    printf '%s\n' "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
+    printf '%s\n' "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
+    printf '%s\n' "VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-}"
+    printf '%s\n' "VK_DRIVER_FILES=${VK_DRIVER_FILES:-}"
+    printf '%s\n' "MOLTENVK_DYLIB=$MOLTENVK_DYLIB"
+    printf '%s\n' "VK_ICD_GENERATION_ROOT=$RUNTIME_DIR/vk"
+    printf '%s\n' "CONFIG_INSPECTION_READ_ONLY=1"
+    printf '%s\n' "CONFIG_PATH_SCOPE=requested_without_writability_probe"
+    exit 0
+fi
+
+# Validate configured destinations before any initialization. These checks protect
+# cooperating local use; they are not a sandbox against concurrent path swaps.
+launcher_hold() {
+    printf '%s\n' "$1" >&2
+    exit 1
+}
+admit_directory() {
+    selected="$1"
+    case "$selected" in /*) ;; *) launcher_hold "launcher requires absolute destination: $selected";; esac
+    case "$selected/" in /|//|*'/../'*|*'/./'*|*'//'*) launcher_hold "launcher refuses ambiguous/root destination: $selected";; esac
+    case "$selected" in *'
+'*) launcher_hold 'launcher destination contains newline';; esac
+    [ "${#selected}" -le 4096 ] || launcher_hold 'launcher destination exceeds path bound'
+    if printf '%s' "$selected" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+        launcher_hold 'launcher destination contains control characters'
+    fi
+    current="$selected"
+    while [ "$current" != / ]; do
+        if [ -L "$current" ]; then
+            case "$current:$(readlink "$current")" in
+                /tmp:private/tmp|/tmp:/private/tmp|/var:private/var|/var:/private/var) ;;
+                *) launcher_hold "launcher refuses linked destination: $current";;
+            esac
+        fi
+        if [ -e "$current" ] && [ ! -d "$current" ]; then
+            launcher_hold "launcher destination is not a directory: $current"
+        fi
+        current="${current%/*}"
+        [ -n "$current" ] || current=/
+    done
+}
+admit_file() {
+    filename="$1"
+    admit_directory "${filename%/*}"
+    [ ! -L "$filename" ] || launcher_hold "launcher refuses linked file: $filename"
+    if [ -e "$filename" ] && [ ! -f "$filename" ]; then
+        launcher_hold "launcher file is not regular: $filename"
+    fi
+}
+
+setup_runtime_root() {
+    mkdir -p "$RUNTIME_DIR/data/runtime" "$RUNTIME_DIR/data/snapshots"
+
+    . "$RES_DIR/runtime-config.sh"
+    physics_config_initialize "$RES_DIR/config" "$RUNTIME_DIR" "${1:-}"
+    if [ "${1:-}" = --adopt-existing-config ]; then
+        printf '%s\n' 'configuration adoption complete'
+        exit 0
+    fi
+
+    for lane in shared shaders vk_renderer; do
+        target="$RUNTIME_DIR/$lane"
+        source="$RES_DIR/$lane"
+        if [ -L "$target" ] || [ -e "$target" ]; then
+            continue
+        fi
+        if [ -e "$source" ]; then
+            ln -s "$source" "$target"
+        fi
+    done
+}
+
+# All selected initialization roots are admitted before the first write.
+admit_directory "$RUNTIME_DIR"
+admit_directory "$RUNTIME_DIR/data/runtime"
+admit_directory "$RUNTIME_DIR/data/snapshots"
+admit_directory "$LOG_DIR"
+admit_file "$LOG_FILE"
+case "$RUNTIME_DIR/" in "$APP_PACKAGE_DIR/"*) launcher_hold 'runtime destination overlaps package';; esac
+case "$LOG_DIR/" in "$APP_PACKAGE_DIR/"*) launcher_hold 'log destination overlaps package';; esac
+if [ -f "$MOLTENVK_DYLIB" ] && { [ -z "${VK_ICD_FILENAMES:-}" ] || [ -z "${VK_DRIVER_FILES:-}" ]; }; then
+    admit_directory "$RUNTIME_DIR/vk"
+fi
+mkdir -p "$LOG_DIR"
+touch "$LOG_FILE"
+setup_runtime_root "${1:-}"
+
+# A new checked JSON generation preserves every previous ICD. Respect both
+# explicit driver overrides without creating an unused configuration file.
+if [ -f "$MOLTENVK_DYLIB" ] && { [ -z "${VK_ICD_FILENAMES:-}" ] || [ -z "${VK_DRIVER_FILES:-}" ]; }; then
+    VK_RUNTIME_DIR="$RUNTIME_DIR/vk"
+    mkdir -p "$VK_RUNTIME_DIR"
+    VK_ICD_FILE="$(mktemp "$VK_RUNTIME_DIR/MoltenVK_icd.XXXXXX")"
+    /usr/bin/plutil -create xml1 "$VK_ICD_FILE" >&2
+    /usr/bin/plutil -insert file_format_version -string '1.0.0' "$VK_ICD_FILE" >&2
+    /usr/bin/plutil -insert ICD -json '{"api_version":"1.3.0"}' "$VK_ICD_FILE" >&2
+    /usr/bin/plutil -insert ICD.library_path -string "$MOLTENVK_DYLIB" "$VK_ICD_FILE" >&2
+    /usr/bin/plutil -lint -s "$VK_ICD_FILE" >&2
+    /usr/bin/plutil -convert json "$VK_ICD_FILE" >&2
+    if [ -z "${VK_ICD_FILENAMES:-}" ]; then
+        export VK_ICD_FILENAMES="$VK_ICD_FILE"
+    fi
+    if [ -z "${VK_DRIVER_FILES:-}" ]; then
+        export VK_DRIVER_FILES="$VK_ICD_FILE"
+    fi
+fi
+
+if [ "${1:-}" = "--self-test" ]; then
+    [ -x "$SCRIPT_DIR/physics-sim-bin" ] || { printf '%s\n' "missing: physics-sim-bin" >&2; exit 1; }
+    [ -f "$APP_CONTENTS_DIR/Info.plist" ] || { printf '%s\n' "missing: Info.plist" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/app.json" ] || { printf '%s\n' "missing: config/app.json" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/custom_preset.txt" ] || { printf '%s\n' "missing: config/custom_preset.txt" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/structural_scene.txt" ] || { printf '%s\n' "missing: config/structural_scene.txt" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/config/objects/Hexagon.asset.json" ] || { printf '%s\n' "missing: bundled shape assets" >&2; exit 1; }
+    [ -d "$RUNTIME_DIR/data/runtime" ] || { printf '%s\n' "missing: runtime dir" >&2; exit 1; }
+    [ -d "$RUNTIME_DIR/data/snapshots" ] || { printf '%s\n' "missing: snapshots dir" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/vk_renderer/shaders/textured.vert.spv" ] || { printf '%s\n' "missing: bundled vk_renderer shader" >&2; exit 1; }
+    [ -f "$RUNTIME_DIR/shaders/textured.vert.spv" ] || { printf '%s\n' "missing: bundled runtime shader" >&2; exit 1; }
+    [ -f "$MOLTENVK_DYLIB" ] || { printf '%s\n' "missing: bundled MoltenVK dylib" >&2; exit 1; }
+    [ -d "$RUNTIME_DIR" ] || { printf '%s\n' "missing: runtime state dir ($RUNTIME_DIR)" >&2; exit 1; }
+    printf '%s\n' "self-test: ok"
+    printf '%s\n' "PACKAGE_PROFILE=$PACKAGE_PROFILE"
+    printf '%s\n' "RUNTIME_NAMESPACE=$RUNTIME_NAMESPACE"
+    printf '%s\n' "LOG_NAMESPACE=$LOG_NAMESPACE"
+    printf '%s\n' "BUILD_LABEL=$BUILD_LABEL"
+    printf '%s\n' "LOG_FILE=$LOG_FILE"
+    printf '%s\n' "PHYSICS_SIM_RUNTIME_DIR=$RUNTIME_DIR"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD=$PHYSICS_SIM_TIMER_HUD"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD_OVERLAY=$PHYSICS_SIM_TIMER_HUD_OVERLAY"
+    printf '%s\n' "PHYSICS_SIM_TIMER_HUD_VISUAL_MODE=$PHYSICS_SIM_TIMER_HUD_VISUAL_MODE"
+    printf '%s\n' "VK_RENDERER_SHADER_ROOT=$VK_RENDERER_SHADER_ROOT"
+    printf '%s\n' "SHAPE_ASSET_DIR=$SHAPE_ASSET_DIR"
+    printf '%s\n' "VK_ICD_FILENAMES=${VK_ICD_FILENAMES:-}"
+    printf '%s\n' "VK_DRIVER_FILES=${VK_DRIVER_FILES:-}"
+    printf '%s\n' "MOLTENVK_DYLIB=$MOLTENVK_DYLIB"
+    exit 0
+fi
+
+if [ "${1:-}" = "--agent-mcp" ]; then
+    shift
+    exec python3 "$PHYSICS_SIM_SESSION_TOOL" --mcp "$@"
+fi
+
+cd "$RUNTIME_DIR"
+printf '%s launch begin pid=%s cwd=%s runtime_dir=%s shader_root=%s shape_asset_dir=%s args=%s\n' \
+    "$(date '+%Y-%m-%d %H:%M:%S')" "$$" "$RUNTIME_DIR" "$RUNTIME_DIR" "$VK_RENDERER_SHADER_ROOT" "$SHAPE_ASSET_DIR" "$*" >>"$LOG_FILE" 2>/dev/null || true
+exec "$SCRIPT_DIR/physics-sim-bin" "$@" >>"$LOG_FILE" 2>&1

@@ -1,0 +1,12 @@
+PhysicsSim local source workflow (run each command separately):
+  make physics_sim_headless                            Build the selected owned profile
+  make test-physics-sim-headless-water-mode             Water smoke; resets its named tmp output
+  make test-physics-sim-headless-scene-project-cache-output  Scene-cache proof; resets its named tmp output
+  make clean-plan                                      Inspect selected compiler outputs without deletion
+  make clean                                           Remove only admitted owned compiler outputs
+Selected build profile: build/profiles/local-owned
+Retained evidence: data/experiments/; reference tools: data/tools/
+Unknown or changed outputs hold cleanup; preserve them and inspect the refusal.
+Use disposable checkouts for fixtures when their output directories contain retained work.
+Read docs/cleanup_operations.md and docs/launcher_configuration_recovery.md for recovery.
+Packaging, installation and release require their separate operating authority.

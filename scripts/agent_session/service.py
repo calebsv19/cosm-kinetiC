@@ -135,7 +135,7 @@ def storage_checked(operation):
 class Service:
     def __init__(self, root=None, worker=None):
         self.root = admit_session_root(root or os.environ.get('PHYSICS_SIM_SESSION_ROOT', REPO / 'data/runtime/agent_sessions'),REPO)
-        self.worker = Path(worker or os.environ.get('PHYSICS_SIM_SESSION_WORKER', REPO / 'physics_sim_session_worker')).resolve()
+        self.worker = Path(worker or os.environ.get('PHYSICS_SIM_SESSION_WORKER', REPO / 'build/profiles/local-owned/bin/physics_sim_session_worker')).resolve()
         # Admit all fixed storage selections before allocating any of them.
         for name in ('scenes','runs'):session_directory(self.root/name)
         selected_lock=session_path(self.root/'service.lock')

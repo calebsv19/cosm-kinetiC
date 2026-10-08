@@ -16,7 +16,7 @@ python3 "$PHYSICS_DIR/tools/wind_orientation_probe.py" \
   --runtime-scene "$SCENE" \
   --object-id "$OBJECT_ID" \
   --output-root "$OUT_DIR" \
-  --headless-bin "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/bin/physics_sim_headless}" \
+  --headless-bin "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --frames "$FRAMES" \
   --sim-steps-per-frame "$STEPS_PER_FRAME" \
   --grid "$GRID" \

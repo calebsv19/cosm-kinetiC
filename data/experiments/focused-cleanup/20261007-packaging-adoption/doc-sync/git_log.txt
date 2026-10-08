@@ -1,0 +1,30 @@
+3fa1ad5 (HEAD -> main, tag: v0.4.0) Release physics_sim 0.4.0
+e091fc5 (codex/physics-sim-release-040) Validate and sign packaged PhysicsSim sessions in contained tests
+a5ccdc4 Reconcile approved PhysicsSim session checkpoint with canonical release history
+4e322da Add rich live fluid inspection, HiDPI text and setup navigation
+e623d10 Add shared local simulation sessions, MCP control and desktop workspace
+098294d (tag: v0.3.3) Release physics_sim 0.3.2
+f471d55 Make PhysicsSim target contract archive-local
+dfdcda3 Add PhysicsSim worker executable identity
+4531559 (github/main, github/HEAD) Bind PhysicsSim x86_64 worker package target
+d9f0e73 Establish independent PhysicsSim worker identity
+a47bf9b physics_sim: adopt portable fisiCs units macros
+a757d8e Add PhysicsSim persistent Main Edit lane
+7e588e3 (tag: v0.3.2) Fix Linux worker artifact manifest sidecar
+3644f48 release: emit canonical desktop artifact manifest
+4c259e6 (codex/shared-subtree-ddc0c2b) physics_sim: advance CosmFabric rollout provenance
+95465c3 Merge commit '761cebc8021c2c86287ab885f861b1871f095cc9' into codex/shared-subtree-ddc0c2b
+761cebc Squashed 'third_party/codework_shared/' changes from 7fa8469..ddc0c2b
+d54e0fd Align agent docs with PhysicsSim 0.3.2
+1e861e1 Add local release artifact evidence
+641bb23 Reject incompatible Linux worker GLIBC requirements
+e5ec1f8 Reconcile managed Vulkan current truth
+e534f95 Adopt managed Vulkan runtime in kinetiC
+2f9bb55 Refresh managed shared Vulkan subtree
+2921230 Refresh shared subtree
+ff6e87a Unify editor object origin selection
+aed2eda Bump PhysicsSim worker package to 0.3.2
+a173985 Harden Linux worker package architecture contract
+1d9dd5c Keep cache actions visible on narrow layouts
+0d38238 Add scene project cache folder action
+bd05b9a Open output roots in Linux file managers

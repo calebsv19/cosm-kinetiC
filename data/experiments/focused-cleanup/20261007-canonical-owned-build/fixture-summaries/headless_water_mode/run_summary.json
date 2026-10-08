@@ -1,0 +1,61 @@
+{
+  "schema": "physics_sim_headless_run_summary_v1",
+  "runtime_scene": "",
+  "mode": "water",
+  "water_level": 0.420000,
+  "water_review_ripples": false,
+  "water_review_ripple_amplitude_m": 0,
+  "water_object_fixture": false,
+  "output_root": "/private/tmp/physics-focused-build-20261007/repo/tmp/headless_water_mode",
+  "grid_override": true,
+  "grid": {"width": 16, "height": 12, "depth": 8},
+  "frames_requested": 2,
+  "frames_completed": 2,
+  "sim_steps_per_frame": 1,
+  "save_volume_frames": true,
+  "volume_export_start_frame": 0,
+  "volume_export_stride": 1,
+  "volume_export_max_frames": 0,
+  "volume_frames_selected": 2,
+  "volume_frames_skipped": 0,
+  "save_render_frames": false,
+  "save_wind_projection_frames": false,
+  "skip_present": true,
+  "output_policy": "overwrite",
+  "result_code": 0,
+  "status": "passed",
+  "wind_visual_mode": "flow",
+  "atmosphere": {
+    "initial_state_source": "blank",
+    "parsed_settings_available": false,
+    "settings": null,
+    "seed": {
+      "seeded": false,
+      "seed": 0,
+      "seeded_cell_count": 0,
+      "max_density": 0,
+      "max_velocity_magnitude": 0
+    },
+    "warm_start": {
+      "loaded": false,
+      "source_kind": 0,
+      "grid_w": 0,
+      "grid_h": 0,
+      "grid_d": 0,
+      "cell_count": 0,
+      "active_density_cells": 0,
+      "solid_cells": 0,
+      "max_density": 0,
+      "max_velocity_magnitude": 0
+    },
+    "final_volume": {
+      "debug_view_available": true,
+      "active_density_cells": 36,
+      "solid_cells": 184,
+      "max_density": 0.999999285,
+      "max_velocity_magnitude": 0,
+      "export_cache_materialization_count": 0,
+      "runtime_dense_mirror_live": true
+    }
+  }
+}

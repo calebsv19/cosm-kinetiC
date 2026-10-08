@@ -1,0 +1,8 @@
+fatal: not a git repository (or any of the parent directories): .git
+python3 -B scripts/build_owner.py --root 'build' -- /Applications/Xcode.app/Contents/Developer/usr/bin/make -f 'makefile' 'test-physics-sim-headless-cli'
+fatal: not a git repository (or any of the parent directories): .git
+USING MAKEFILE AT: /private/tmp/physics-focused-build-20261007/repo/makefile
+tests/integration/run_physics_sim_headless_cli.sh
+tests/integration/run_physics_sim_headless_cli.sh: line 11: /private/tmp/physics-focused-build-20261007/repo/physics_sim_headless: No such file or directory
+make[1]: *** [test-physics-sim-headless-cli] Error 127
+make: *** [owned-build] Error 2

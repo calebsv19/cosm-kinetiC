@@ -1,0 +1,3 @@
+/private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt/fixture.app/Contents/MacOS/physics-sim-bin:
+	@rpath/libphysics_fixture.dylib (compatibility version 0.0.0, current version 0.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)

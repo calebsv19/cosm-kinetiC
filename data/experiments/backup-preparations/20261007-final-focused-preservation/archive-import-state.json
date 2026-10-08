@@ -1,0 +1,708 @@
+{
+  "action": "export-item-import-apply",
+  "after": {
+    "archive_listing": {
+      "command": [
+        "find",
+        "/mnt/cold_archive_500g/codework-archive",
+        "-maxdepth",
+        "2",
+        "-mindepth",
+        "1",
+        "-type",
+        "d"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "/mnt/cold_archive_500g/codework-archive/release-artifacts\n/mnt/cold_archive_500g/codework-archive/release-artifacts/intel-worker-package-cache-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/server-uploaded-package-staging-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/linuxpc-superseded-worker-packages-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/linuxpc-uploaded-staging-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/historical-uploaded-package-copies-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/worker-packages-20260705a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/ray-canonical-historical-release-builds-20260924a\n/mnt/cold_archive_500g/codework-archive/media-renders\n/mnt/cold_archive_500g/codework-archive/media-renders/external-stl-skull-render-proofs-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/visualizer-runs-prejuly18-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/simulation-major-frames-20260906a\n/mnt/cold_archive_500g/codework-archive/media-renders/desktop-capture-historical-artifacts-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/aurora-completed-20261004a\n/mnt/cold_archive_500g/codework-archive/media-renders/desktop-capture-historical-sessions-june-july-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/simulation-bmp-collector-historical-test-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/historical-worker-jobs-and-recovered-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/mac-proof-media-preservation-20260816a\n/mnt/cold_archive_500g/codework-archive/media-renders/ambient-air-vf3d-probes-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/intel-mac-historical-skull-render-proofs-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-cfd-lifecycle-20261007a\n/mnt/cold_archive_500g/codework-archive/generated-runs/report-inbox-fisics-build-readiness-20260707-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-historical-release-staging-20260615-20260729-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-skull-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-disney-v2-40f-staging-variants-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-historical-gui-diagnostic-bundles-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-trio-terminal-evidence-h3b4-h5ac03-20260715-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-caustic-unreferenced-proofs-20260727-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/asset-imports-new-stls-20260720-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-source-tarballs-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-power-outage-recovery-20260724-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-pool-caustic-quality-experiment-20260726a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-source-unreferenced-worker-bundles-20260527-20260626-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-submit-payloads-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-w2-visual-variants-20260730a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-queue-worker40-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-tracing-physics-trio-bmps-older30-20260826a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-main-edit-remaining-build-products-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linux-pc-gui-proof-duplicates-20260713-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-submit-linuxpc-full40-historical-20260619-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-skull-progress-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-main-edit-editor-ui-recovery-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-caustic-remote-matrix-20260704-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-pool-caustic-home-server-queue-20260726-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/historical-worker-source-bundles-20260801b\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-trio-home-activation-staging-20260715-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-uploaded-buildweek-cache-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-large-submit-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ppm-generated-evidence-ignored-build-20260825a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-tracing-physics-trio-volume-contracts-20260826a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-large-submit-v2-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-selection-historical-payloads-20260711-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-disney-v2-denoise-tile-tests-chunked-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-source-bundles-prejuly-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/stl-scene-worker-curated-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-physics-scene-cache-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-full-payload-aquarium-validation-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/historical-linux-and-pi-source-bundles-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/caustic-remote-matrix-local-queue-20260825a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-uploaded-staging-prejuly14-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-aquarium-hq-recovery-32f-unreferenced-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-caustic-l5-queue-staging-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/server-export-raytracing-historical-packages-20260607-20260724-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-caustic-0417-unreferenced-20260630-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-canonical-surface-material-adoption-evidence-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-curated-stl-room-20260614-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-aquarium-hq-48f-unreferenced-variants-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-stl-skull-20260605-15-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-physics-trio-content-ingest-20260721-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/private-agent-runs-ray-physics-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-hq-24f-progress-20260722-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-historical-staged-chain-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/workspace-generated-storage-20260721b\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-physics-package-source-evidence-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/simulation-frame-sources-older7-20260721a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-source-raytracing-bvh-diag-bundles-20260615-19-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-staged-vps040-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/private-scene-procedural-history-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/desktop-capture-june-historical-sessions-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-imported-mesh-historical-visuals-20260801a\n/mnt/cold_archive_500g/codework-archive/manifests\n/mnt/cold_archive_500g/codework-archive/manifests/batches\n/mnt/cold_archive_500g/codework-archive/system-snapshots\n/mnt/cold_archive_500g/codework-archive/system-snapshots/history-render-retention-20260907a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/private-report-inbox-historical-nonreceipt-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-completed-unreferenced-payloads-20260704-25-20260801a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-config-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-systemd-user-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/trader-lab-db-snapshots-20260721a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-terminal-transports-20261006a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-report-inbox-snapshot-20260721a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/private-report-inbox-historical-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-db-state-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-completed-unreferenced-payloads-20260722-26-20260801a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-bin-20260705a\n/mnt/cold_archive_500g/codework-archive/docs-snapshots\n/mnt/cold_archive_500g/codework-archive/docs-snapshots/private_program_docs\n/mnt/cold_archive_500g/codework-archive/logs\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/datalab\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/fisiCs\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/shared\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/daw\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/growth_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/map_forge\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/ray_tracing\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/workspace_sandbox\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/physics_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/video_editor\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/line_drawing\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/behavior_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/drawing_program\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/gravity_orbit_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/mem_console\n/mnt/cold_archive_500g/codework-archive/incoming\n/mnt/cold_archive_500g/codework-archive/recovery-images\n/mnt/cold_archive_500g/codework-archive/recovery-images/minecraft-intel-transfer-preservation-20260816a\n/mnt/cold_archive_500g/codework-archive/extracted-recovery-data\n/mnt/cold_archive_500g/codework-archive/worker-artifacts\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-build-week-submission-support-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/private-vps-worker-staged-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-old-unreferenced-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-aquarium-queue-payloads-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/qemu-schema87-raytracing-roots-only-20260825a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-raytracing-evidence-bulk-20260825a"
+    },
+    "archive_root_exists": true,
+    "device": "/dev/sda1",
+    "df": {
+      "command": [
+        "df",
+        "-h",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       458G   40G  395G  10% /mnt/cold_archive_500g"
+    },
+    "findmnt": {
+      "command": [
+        "findmnt",
+        "-T",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "TARGET                 SOURCE    FSTYPE OPTIONS\n/mnt/cold_archive_500g /dev/sda1 ext4   rw,noatime,seclabel"
+    },
+    "findmnt_parsed": {
+      "mounted": true,
+      "rows": [
+        {
+          "fstype": "ext4",
+          "options": "rw,noatime,seclabel",
+          "ro": false,
+          "rw": true,
+          "source": "/dev/sda1",
+          "target": "/mnt/cold_archive_500g"
+        }
+      ]
+    },
+    "label": "COLD_ARCHIVE_500",
+    "lsblk": {
+      "command": [
+        "lsblk",
+        "-b",
+        "-o",
+        "NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,UUID,PARTLABEL,MODEL,SERIAL,MOUNTPOINTS"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "NAME        PATH                    SIZE TYPE FSTYPE LABEL            UUID                                 PARTLABEL                    MODEL                        SERIAL               MOUNTPOINTS\nsda         /dev/sda        500107862016 disk                                                                                           APPLE HDD HTS545050A7E362    TNS519GY2HY9PH       \n\u2514\u2500sda1      /dev/sda1       500106788864 part ext4   COLD_ARCHIVE_500 2958c9ed-b77f-4c88-9214-f0aa162de000 COLD_ARCHIVE_500G                                                              /mnt/cold_archive_500g\nsdb         /dev/sdb       1000204886016 disk                                                                                           PNY CS900 1TB SSD            PNY442022958801031D8 \n\u251c\u2500sdb1      /dev/sdb1           16777216 part                                                              Microsoft reserved partition                                                   \n\u251c\u2500sdb2      /dev/sdb2       999512080384 part ntfs                    7ACEEB85CEEB37D1                     Basic data partition                                                           \n\u2514\u2500sdb3      /dev/sdb3          673185792 part ntfs                    E6BA1212BA11DFBB                                                                                                    \nsdc         /dev/sdc         31331450880 disk                                                                                           Cruzer Dial                  4C530001320505109030 \n\u2514\u2500sdc1      /dev/sdc1        31331434496 part vfat                    F226-C70C                                                                                                           \nnvme0n1     /dev/nvme0n1   2000398934016 disk                                                                                           Samsung SSD 990 EVO Plus 2TB S7U6NJ0XA01879Z      \n\u251c\u2500nvme0n1p1 /dev/nvme0n1p1     536870912 part vfat                    F061-78CF                                                                                                           /boot/efi\n\u251c\u2500nvme0n1p2 /dev/nvme0n1p2   21474836480 part swap                    8f556b2a-8927-4095-98a4-7220ab77fcae                                                                                [SWAP]\n\u251c\u2500nvme0n1p3 /dev/nvme0n1p3  161061273600 part btrfs                   a1bb8d06-1e74-4f27-8f33-a1c031a7a320                                                                                /var\n\u2502                                                                                                                                                                                         /usr/local\n\u2502                                                                                                                                                                                         /srv\n\u2502                                                                                                                                                                                         /root\n\u2502                                                                                                                                                                                         /opt\n\u2502                                                                                                                                                                                         /boot/grub2/i386-pc\n\u2502                                                                                                                                                                                         /boot/grub2/x86_64-efi\n\u2502                                                                                                                                                                                         /\n\u2514\u2500nvme0n1p4 /dev/nvme0n1p4 1817324887552 part xfs                     03bfe775-629e-4834-ad02-0dda174c2c3b                                                                                /home"
+    },
+    "mount_identity": {
+      "label": "COLD_ARCHIVE_500",
+      "label_read": {
+        "command": [
+          "blkid",
+          "-s",
+          "LABEL",
+          "-o",
+          "value",
+          "/dev/sda1"
+        ],
+        "exit_code": 125,
+        "stderr": "FileNotFoundError(2, 'No such file or directory')",
+        "stdout": ""
+      },
+      "lsblk_identity_read": {
+        "command": [
+          "lsblk",
+          "-J",
+          "-o",
+          "PATH,UUID,LABEL",
+          "/dev/sda1"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "{\n   \"blockdevices\": [\n      {\n         \"path\": \"/dev/sda1\",\n         \"uuid\": \"2958c9ed-b77f-4c88-9214-f0aa162de000\",\n         \"label\": \"COLD_ARCHIVE_500\"\n      }\n   ]\n}"
+      },
+      "source": "/dev/sda1",
+      "uuid": "2958c9ed-b77f-4c88-9214-f0aa162de000",
+      "uuid_read": {
+        "command": [
+          "blkid",
+          "-s",
+          "UUID",
+          "-o",
+          "value",
+          "/dev/sda1"
+        ],
+        "exit_code": 125,
+        "stderr": "FileNotFoundError(2, 'No such file or directory')",
+        "stdout": ""
+      },
+      "verified": true
+    },
+    "mountpoint": "/mnt/cold_archive_500g",
+    "source_targets": {
+      "codework-inbox-bin": {
+        "byte_count": 2484983,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Fixed Linux PC inbox helper scripts.",
+        "dir_count": 3,
+        "errors": [],
+        "exists": true,
+        "file_count": 154,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/bin",
+        "source_id": "codework-inbox-bin",
+        "symlink_count": 0
+      },
+      "codework-inbox-config": {
+        "byte_count": 12812,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Linux PC inbox configuration files.",
+        "dir_count": 2,
+        "errors": [],
+        "exists": true,
+        "file_count": 10,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/config",
+        "source_id": "codework-inbox-config",
+        "symlink_count": 0
+      },
+      "codework-inbox-systemd-user": {
+        "byte_count": 1276,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Linux PC inbox user-service unit files.",
+        "dir_count": 1,
+        "errors": [],
+        "exists": true,
+        "file_count": 3,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/systemd-user",
+        "source_id": "codework-inbox-systemd-user",
+        "symlink_count": 0
+      },
+      "worker-packages": {
+        "byte_count": 852656166,
+        "category": "release-artifacts",
+        "checksums": {},
+        "default_lane": "release-artifacts",
+        "description": "Installed Linux PC worker package versions and current symlinks.",
+        "dir_count": 497,
+        "errors": [],
+        "exists": true,
+        "file_count": 1716,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-worker/packages",
+        "source_id": "worker-packages",
+        "symlink_count": 7
+      },
+      "worker-runtime-runs": {
+        "byte_count": 0,
+        "category": "worker-artifacts",
+        "checksums": {},
+        "default_lane": "worker-artifacts",
+        "description": "Linux PC remote-worker run roots under /tmp.",
+        "dir_count": 0,
+        "errors": [],
+        "exists": false,
+        "file_count": 0,
+        "is_dir": false,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/tmp/codework-remote-worker-jobs",
+        "source_id": "worker-runtime-runs",
+        "symlink_count": 0
+      }
+    },
+    "stat": {
+      "command": [
+        "stat",
+        "-c",
+        "%U:%G %a %n",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "calebsv16:calebsv16 755 /mnt/cold_archive_500g"
+    },
+    "uuid": "2958c9ed-b77f-4c88-9214-f0aa162de000"
+  },
+  "after_remount": {
+    "archive_listing": {
+      "command": [
+        "find",
+        "/mnt/cold_archive_500g/codework-archive",
+        "-maxdepth",
+        "2",
+        "-mindepth",
+        "1",
+        "-type",
+        "d"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "/mnt/cold_archive_500g/codework-archive/release-artifacts\n/mnt/cold_archive_500g/codework-archive/release-artifacts/intel-worker-package-cache-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/server-uploaded-package-staging-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/linuxpc-superseded-worker-packages-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/linuxpc-uploaded-staging-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/historical-uploaded-package-copies-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/worker-packages-20260705a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/ray-canonical-historical-release-builds-20260924a\n/mnt/cold_archive_500g/codework-archive/media-renders\n/mnt/cold_archive_500g/codework-archive/media-renders/external-stl-skull-render-proofs-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/visualizer-runs-prejuly18-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/simulation-major-frames-20260906a\n/mnt/cold_archive_500g/codework-archive/media-renders/desktop-capture-historical-artifacts-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/aurora-completed-20261004a\n/mnt/cold_archive_500g/codework-archive/media-renders/desktop-capture-historical-sessions-june-july-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/simulation-bmp-collector-historical-test-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/historical-worker-jobs-and-recovered-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/mac-proof-media-preservation-20260816a\n/mnt/cold_archive_500g/codework-archive/media-renders/ambient-air-vf3d-probes-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/intel-mac-historical-skull-render-proofs-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-cfd-lifecycle-20261007a\n/mnt/cold_archive_500g/codework-archive/generated-runs/report-inbox-fisics-build-readiness-20260707-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-historical-release-staging-20260615-20260729-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-skull-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-disney-v2-40f-staging-variants-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-historical-gui-diagnostic-bundles-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-trio-terminal-evidence-h3b4-h5ac03-20260715-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-caustic-unreferenced-proofs-20260727-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/asset-imports-new-stls-20260720-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-source-tarballs-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-power-outage-recovery-20260724-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-pool-caustic-quality-experiment-20260726a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-source-unreferenced-worker-bundles-20260527-20260626-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-submit-payloads-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-w2-visual-variants-20260730a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-queue-worker40-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-tracing-physics-trio-bmps-older30-20260826a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-main-edit-remaining-build-products-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linux-pc-gui-proof-duplicates-20260713-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-submit-linuxpc-full40-historical-20260619-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-skull-progress-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-main-edit-editor-ui-recovery-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-caustic-remote-matrix-20260704-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-pool-caustic-home-server-queue-20260726-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/historical-worker-source-bundles-20260801b\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-trio-home-activation-staging-20260715-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-uploaded-buildweek-cache-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-large-submit-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ppm-generated-evidence-ignored-build-20260825a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-tracing-physics-trio-volume-contracts-20260826a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-large-submit-v2-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-selection-historical-payloads-20260711-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-disney-v2-denoise-tile-tests-chunked-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-source-bundles-prejuly-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/stl-scene-worker-curated-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-physics-scene-cache-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-full-payload-aquarium-validation-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/historical-linux-and-pi-source-bundles-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/caustic-remote-matrix-local-queue-20260825a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-uploaded-staging-prejuly14-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-aquarium-hq-recovery-32f-unreferenced-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-caustic-l5-queue-staging-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/server-export-raytracing-historical-packages-20260607-20260724-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-caustic-0417-unreferenced-20260630-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-canonical-surface-material-adoption-evidence-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-curated-stl-room-20260614-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-aquarium-hq-48f-unreferenced-variants-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-stl-skull-20260605-15-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-physics-trio-content-ingest-20260721-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/private-agent-runs-ray-physics-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-hq-24f-progress-20260722-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-historical-staged-chain-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/workspace-generated-storage-20260721b\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-physics-package-source-evidence-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/simulation-frame-sources-older7-20260721a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-source-raytracing-bvh-diag-bundles-20260615-19-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-staged-vps040-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/private-scene-procedural-history-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/desktop-capture-june-historical-sessions-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-imported-mesh-historical-visuals-20260801a\n/mnt/cold_archive_500g/codework-archive/manifests\n/mnt/cold_archive_500g/codework-archive/manifests/batches\n/mnt/cold_archive_500g/codework-archive/system-snapshots\n/mnt/cold_archive_500g/codework-archive/system-snapshots/history-render-retention-20260907a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/private-report-inbox-historical-nonreceipt-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-completed-unreferenced-payloads-20260704-25-20260801a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-config-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-systemd-user-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/trader-lab-db-snapshots-20260721a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-terminal-transports-20261006a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-report-inbox-snapshot-20260721a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/private-report-inbox-historical-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-db-state-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-completed-unreferenced-payloads-20260722-26-20260801a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-bin-20260705a\n/mnt/cold_archive_500g/codework-archive/docs-snapshots\n/mnt/cold_archive_500g/codework-archive/docs-snapshots/private_program_docs\n/mnt/cold_archive_500g/codework-archive/logs\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/datalab\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/fisiCs\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/shared\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/daw\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/growth_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/map_forge\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/ray_tracing\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/workspace_sandbox\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/physics_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/video_editor\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/line_drawing\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/behavior_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/drawing_program\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/gravity_orbit_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/mem_console\n/mnt/cold_archive_500g/codework-archive/incoming\n/mnt/cold_archive_500g/codework-archive/recovery-images\n/mnt/cold_archive_500g/codework-archive/recovery-images/minecraft-intel-transfer-preservation-20260816a\n/mnt/cold_archive_500g/codework-archive/extracted-recovery-data\n/mnt/cold_archive_500g/codework-archive/worker-artifacts\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-build-week-submission-support-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/private-vps-worker-staged-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-old-unreferenced-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-aquarium-queue-payloads-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/qemu-schema87-raytracing-roots-only-20260825a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-raytracing-evidence-bulk-20260825a"
+    },
+    "archive_root_exists": true,
+    "device": "/dev/sda1",
+    "df": {
+      "command": [
+        "df",
+        "-h",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       458G   40G  395G  10% /mnt/cold_archive_500g"
+    },
+    "findmnt": {
+      "command": [
+        "findmnt",
+        "-T",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "TARGET                 SOURCE    FSTYPE OPTIONS\n/mnt/cold_archive_500g /dev/sda1 ext4   rw,noatime,seclabel"
+    },
+    "findmnt_parsed": {
+      "mounted": true,
+      "rows": [
+        {
+          "fstype": "ext4",
+          "options": "rw,noatime,seclabel",
+          "ro": false,
+          "rw": true,
+          "source": "/dev/sda1",
+          "target": "/mnt/cold_archive_500g"
+        }
+      ]
+    },
+    "label": "COLD_ARCHIVE_500",
+    "lsblk": {
+      "command": [
+        "lsblk",
+        "-b",
+        "-o",
+        "NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,UUID,PARTLABEL,MODEL,SERIAL,MOUNTPOINTS"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "NAME        PATH                    SIZE TYPE FSTYPE LABEL            UUID                                 PARTLABEL                    MODEL                        SERIAL               MOUNTPOINTS\nsda         /dev/sda        500107862016 disk                                                                                           APPLE HDD HTS545050A7E362    TNS519GY2HY9PH       \n\u2514\u2500sda1      /dev/sda1       500106788864 part ext4   COLD_ARCHIVE_500 2958c9ed-b77f-4c88-9214-f0aa162de000 COLD_ARCHIVE_500G                                                              /mnt/cold_archive_500g\nsdb         /dev/sdb       1000204886016 disk                                                                                           PNY CS900 1TB SSD            PNY442022958801031D8 \n\u251c\u2500sdb1      /dev/sdb1           16777216 part                                                              Microsoft reserved partition                                                   \n\u251c\u2500sdb2      /dev/sdb2       999512080384 part ntfs                    7ACEEB85CEEB37D1                     Basic data partition                                                           \n\u2514\u2500sdb3      /dev/sdb3          673185792 part ntfs                    E6BA1212BA11DFBB                                                                                                    \nsdc         /dev/sdc         31331450880 disk                                                                                           Cruzer Dial                  4C530001320505109030 \n\u2514\u2500sdc1      /dev/sdc1        31331434496 part vfat                    F226-C70C                                                                                                           \nnvme0n1     /dev/nvme0n1   2000398934016 disk                                                                                           Samsung SSD 990 EVO Plus 2TB S7U6NJ0XA01879Z      \n\u251c\u2500nvme0n1p1 /dev/nvme0n1p1     536870912 part vfat                    F061-78CF                                                                                                           /boot/efi\n\u251c\u2500nvme0n1p2 /dev/nvme0n1p2   21474836480 part swap                    8f556b2a-8927-4095-98a4-7220ab77fcae                                                                                [SWAP]\n\u251c\u2500nvme0n1p3 /dev/nvme0n1p3  161061273600 part btrfs                   a1bb8d06-1e74-4f27-8f33-a1c031a7a320                                                                                /var\n\u2502                                                                                                                                                                                         /usr/local\n\u2502                                                                                                                                                                                         /srv\n\u2502                                                                                                                                                                                         /root\n\u2502                                                                                                                                                                                         /opt\n\u2502                                                                                                                                                                                         /boot/grub2/i386-pc\n\u2502                                                                                                                                                                                         /boot/grub2/x86_64-efi\n\u2502                                                                                                                                                                                         /\n\u2514\u2500nvme0n1p4 /dev/nvme0n1p4 1817324887552 part xfs                     03bfe775-629e-4834-ad02-0dda174c2c3b                                                                                /home"
+    },
+    "mount_identity": {
+      "label": "COLD_ARCHIVE_500",
+      "label_read": {
+        "command": [
+          "blkid",
+          "-s",
+          "LABEL",
+          "-o",
+          "value",
+          "/dev/sda1"
+        ],
+        "exit_code": 125,
+        "stderr": "FileNotFoundError(2, 'No such file or directory')",
+        "stdout": ""
+      },
+      "lsblk_identity_read": {
+        "command": [
+          "lsblk",
+          "-J",
+          "-o",
+          "PATH,UUID,LABEL",
+          "/dev/sda1"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "{\n   \"blockdevices\": [\n      {\n         \"path\": \"/dev/sda1\",\n         \"uuid\": \"2958c9ed-b77f-4c88-9214-f0aa162de000\",\n         \"label\": \"COLD_ARCHIVE_500\"\n      }\n   ]\n}"
+      },
+      "source": "/dev/sda1",
+      "uuid": "2958c9ed-b77f-4c88-9214-f0aa162de000",
+      "uuid_read": {
+        "command": [
+          "blkid",
+          "-s",
+          "UUID",
+          "-o",
+          "value",
+          "/dev/sda1"
+        ],
+        "exit_code": 125,
+        "stderr": "FileNotFoundError(2, 'No such file or directory')",
+        "stdout": ""
+      },
+      "verified": true
+    },
+    "mountpoint": "/mnt/cold_archive_500g",
+    "source_targets": {
+      "codework-inbox-bin": {
+        "byte_count": 2484983,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Fixed Linux PC inbox helper scripts.",
+        "dir_count": 3,
+        "errors": [],
+        "exists": true,
+        "file_count": 154,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/bin",
+        "source_id": "codework-inbox-bin",
+        "symlink_count": 0
+      },
+      "codework-inbox-config": {
+        "byte_count": 12812,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Linux PC inbox configuration files.",
+        "dir_count": 2,
+        "errors": [],
+        "exists": true,
+        "file_count": 10,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/config",
+        "source_id": "codework-inbox-config",
+        "symlink_count": 0
+      },
+      "codework-inbox-systemd-user": {
+        "byte_count": 1276,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Linux PC inbox user-service unit files.",
+        "dir_count": 1,
+        "errors": [],
+        "exists": true,
+        "file_count": 3,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/systemd-user",
+        "source_id": "codework-inbox-systemd-user",
+        "symlink_count": 0
+      },
+      "worker-packages": {
+        "byte_count": 852656166,
+        "category": "release-artifacts",
+        "checksums": {},
+        "default_lane": "release-artifacts",
+        "description": "Installed Linux PC worker package versions and current symlinks.",
+        "dir_count": 497,
+        "errors": [],
+        "exists": true,
+        "file_count": 1716,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-worker/packages",
+        "source_id": "worker-packages",
+        "symlink_count": 7
+      },
+      "worker-runtime-runs": {
+        "byte_count": 0,
+        "category": "worker-artifacts",
+        "checksums": {},
+        "default_lane": "worker-artifacts",
+        "description": "Linux PC remote-worker run roots under /tmp.",
+        "dir_count": 0,
+        "errors": [],
+        "exists": false,
+        "file_count": 0,
+        "is_dir": false,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/tmp/codework-remote-worker-jobs",
+        "source_id": "worker-runtime-runs",
+        "symlink_count": 0
+      }
+    },
+    "stat": {
+      "command": [
+        "stat",
+        "-c",
+        "%U:%G %a %n",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "calebsv16:calebsv16 755 /mnt/cold_archive_500g"
+    },
+    "uuid": "2958c9ed-b77f-4c88-9214-f0aa162de000"
+  },
+  "before": {
+    "archive_listing": {
+      "command": [
+        "find",
+        "/mnt/cold_archive_500g/codework-archive",
+        "-maxdepth",
+        "2",
+        "-mindepth",
+        "1",
+        "-type",
+        "d"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "/mnt/cold_archive_500g/codework-archive/release-artifacts\n/mnt/cold_archive_500g/codework-archive/release-artifacts/intel-worker-package-cache-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/server-uploaded-package-staging-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/linuxpc-superseded-worker-packages-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/linuxpc-uploaded-staging-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/historical-uploaded-package-copies-20260801a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/worker-packages-20260705a\n/mnt/cold_archive_500g/codework-archive/release-artifacts/ray-canonical-historical-release-builds-20260924a\n/mnt/cold_archive_500g/codework-archive/media-renders\n/mnt/cold_archive_500g/codework-archive/media-renders/external-stl-skull-render-proofs-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/visualizer-runs-prejuly18-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/simulation-major-frames-20260906a\n/mnt/cold_archive_500g/codework-archive/media-renders/desktop-capture-historical-artifacts-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/aurora-completed-20261004a\n/mnt/cold_archive_500g/codework-archive/media-renders/desktop-capture-historical-sessions-june-july-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/simulation-bmp-collector-historical-test-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/historical-worker-jobs-and-recovered-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/mac-proof-media-preservation-20260816a\n/mnt/cold_archive_500g/codework-archive/media-renders/ambient-air-vf3d-probes-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/media-renders/intel-mac-historical-skull-render-proofs-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-cfd-lifecycle-20261007a\n/mnt/cold_archive_500g/codework-archive/generated-runs/report-inbox-fisics-build-readiness-20260707-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-historical-release-staging-20260615-20260729-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-skull-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-disney-v2-40f-staging-variants-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-historical-gui-diagnostic-bundles-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-trio-terminal-evidence-h3b4-h5ac03-20260715-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-caustic-unreferenced-proofs-20260727-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/asset-imports-new-stls-20260720-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-source-tarballs-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-power-outage-recovery-20260724-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-pool-caustic-quality-experiment-20260726a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-source-unreferenced-worker-bundles-20260527-20260626-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-submit-payloads-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-w2-visual-variants-20260730a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-queue-worker40-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-tracing-physics-trio-bmps-older30-20260826a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-main-edit-remaining-build-products-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linux-pc-gui-proof-duplicates-20260713-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-submit-linuxpc-full40-historical-20260619-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-skull-progress-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-main-edit-editor-ui-recovery-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-caustic-remote-matrix-20260704-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-pool-caustic-home-server-queue-20260726-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/historical-worker-source-bundles-20260801b\n/mnt/cold_archive_500g/codework-archive/generated-runs/physics-trio-home-activation-staging-20260715-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-uploaded-buildweek-cache-prejuly25-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-large-submit-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ppm-generated-evidence-ignored-build-20260825a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-tracing-physics-trio-volume-contracts-20260826a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-large-submit-v2-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-selection-historical-payloads-20260711-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-disney-v2-denoise-tile-tests-chunked-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-source-bundles-prejuly-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/stl-scene-worker-curated-june-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/linuxpc-physics-scene-cache-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-full-payload-aquarium-validation-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/historical-linux-and-pi-source-bundles-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/caustic-remote-matrix-local-queue-20260825a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-uploaded-staging-prejuly14-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-aquarium-hq-recovery-32f-unreferenced-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-caustic-l5-queue-staging-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/server-export-raytracing-historical-packages-20260607-20260724-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-caustic-0417-unreferenced-20260630-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/ray-canonical-surface-material-adoption-evidence-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-curated-stl-room-20260614-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-worker-aquarium-hq-48f-unreferenced-variants-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/worker-jobs-historical-stl-skull-20260605-15-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-physics-trio-content-ingest-20260721-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/private-agent-runs-ray-physics-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-aquarium-hq-24f-progress-20260722-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-worker40-historical-staged-chain-20260615-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/workspace-generated-storage-20260721b\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-physics-package-source-evidence-20260731a\n/mnt/cold_archive_500g/codework-archive/generated-runs/simulation-frame-sources-older7-20260721a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-source-raytracing-bvh-diag-bundles-20260615-19-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/vps-export-staged-vps040-historical-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/private-scene-procedural-history-20260924a\n/mnt/cold_archive_500g/codework-archive/generated-runs/desktop-capture-june-historical-sessions-20260801a\n/mnt/cold_archive_500g/codework-archive/generated-runs/raytracing-imported-mesh-historical-visuals-20260801a\n/mnt/cold_archive_500g/codework-archive/manifests\n/mnt/cold_archive_500g/codework-archive/manifests/batches\n/mnt/cold_archive_500g/codework-archive/system-snapshots\n/mnt/cold_archive_500g/codework-archive/system-snapshots/history-render-retention-20260907a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/private-report-inbox-historical-nonreceipt-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-completed-unreferenced-payloads-20260704-25-20260801a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-config-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-systemd-user-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/trader-lab-db-snapshots-20260721a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-terminal-transports-20261006a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-report-inbox-snapshot-20260721a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/private-report-inbox-historical-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-db-state-20260705a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/report-inbox-completed-unreferenced-payloads-20260722-26-20260801a\n/mnt/cold_archive_500g/codework-archive/system-snapshots/codework-inbox-bin-20260705a\n/mnt/cold_archive_500g/codework-archive/docs-snapshots\n/mnt/cold_archive_500g/codework-archive/docs-snapshots/private_program_docs\n/mnt/cold_archive_500g/codework-archive/logs\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/datalab\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/fisiCs\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/shared\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/daw\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/growth_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/map_forge\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/ray_tracing\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/workspace_sandbox\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/physics_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/video_editor\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/line_drawing\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/behavior_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/drawing_program\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/gravity_orbit_sim\n/mnt/cold_archive_500g/codework-archive/stable-program-snapshots/mem_console\n/mnt/cold_archive_500g/codework-archive/incoming\n/mnt/cold_archive_500g/codework-archive/recovery-images\n/mnt/cold_archive_500g/codework-archive/recovery-images/minecraft-intel-transfer-preservation-20260816a\n/mnt/cold_archive_500g/codework-archive/extracted-recovery-data\n/mnt/cold_archive_500g/codework-archive/worker-artifacts\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-build-week-submission-support-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/private-vps-worker-staged-payloads-20260924a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-old-unreferenced-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-aquarium-queue-payloads-20260721a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/qemu-schema87-raytracing-roots-only-20260825a\n/mnt/cold_archive_500g/codework-archive/worker-artifacts/agent-runs-raytracing-evidence-bulk-20260825a"
+    },
+    "archive_root_exists": true,
+    "device": "/dev/sda1",
+    "df": {
+      "command": [
+        "df",
+        "-h",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1       458G   40G  395G  10% /mnt/cold_archive_500g"
+    },
+    "findmnt": {
+      "command": [
+        "findmnt",
+        "-T",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "TARGET                 SOURCE    FSTYPE OPTIONS\n/mnt/cold_archive_500g /dev/sda1 ext4   rw,noatime,seclabel"
+    },
+    "findmnt_parsed": {
+      "mounted": true,
+      "rows": [
+        {
+          "fstype": "ext4",
+          "options": "rw,noatime,seclabel",
+          "ro": false,
+          "rw": true,
+          "source": "/dev/sda1",
+          "target": "/mnt/cold_archive_500g"
+        }
+      ]
+    },
+    "label": "COLD_ARCHIVE_500",
+    "lsblk": {
+      "command": [
+        "lsblk",
+        "-b",
+        "-o",
+        "NAME,PATH,SIZE,TYPE,FSTYPE,LABEL,UUID,PARTLABEL,MODEL,SERIAL,MOUNTPOINTS"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "NAME        PATH                    SIZE TYPE FSTYPE LABEL            UUID                                 PARTLABEL                    MODEL                        SERIAL               MOUNTPOINTS\nsda         /dev/sda        500107862016 disk                                                                                           APPLE HDD HTS545050A7E362    TNS519GY2HY9PH       \n\u2514\u2500sda1      /dev/sda1       500106788864 part ext4   COLD_ARCHIVE_500 2958c9ed-b77f-4c88-9214-f0aa162de000 COLD_ARCHIVE_500G                                                              /mnt/cold_archive_500g\nsdb         /dev/sdb       1000204886016 disk                                                                                           PNY CS900 1TB SSD            PNY442022958801031D8 \n\u251c\u2500sdb1      /dev/sdb1           16777216 part                                                              Microsoft reserved partition                                                   \n\u251c\u2500sdb2      /dev/sdb2       999512080384 part ntfs                    7ACEEB85CEEB37D1                     Basic data partition                                                           \n\u2514\u2500sdb3      /dev/sdb3          673185792 part ntfs                    E6BA1212BA11DFBB                                                                                                    \nsdc         /dev/sdc         31331450880 disk                                                                                           Cruzer Dial                  4C530001320505109030 \n\u2514\u2500sdc1      /dev/sdc1        31331434496 part vfat                    F226-C70C                                                                                                           \nnvme0n1     /dev/nvme0n1   2000398934016 disk                                                                                           Samsung SSD 990 EVO Plus 2TB S7U6NJ0XA01879Z      \n\u251c\u2500nvme0n1p1 /dev/nvme0n1p1     536870912 part vfat                    F061-78CF                                                                                                           /boot/efi\n\u251c\u2500nvme0n1p2 /dev/nvme0n1p2   21474836480 part swap                    8f556b2a-8927-4095-98a4-7220ab77fcae                                                                                [SWAP]\n\u251c\u2500nvme0n1p3 /dev/nvme0n1p3  161061273600 part btrfs                   a1bb8d06-1e74-4f27-8f33-a1c031a7a320                                                                                /var\n\u2502                                                                                                                                                                                         /usr/local\n\u2502                                                                                                                                                                                         /srv\n\u2502                                                                                                                                                                                         /root\n\u2502                                                                                                                                                                                         /opt\n\u2502                                                                                                                                                                                         /boot/grub2/i386-pc\n\u2502                                                                                                                                                                                         /boot/grub2/x86_64-efi\n\u2502                                                                                                                                                                                         /\n\u2514\u2500nvme0n1p4 /dev/nvme0n1p4 1817324887552 part xfs                     03bfe775-629e-4834-ad02-0dda174c2c3b                                                                                /home"
+    },
+    "mount_identity": {
+      "label": "COLD_ARCHIVE_500",
+      "label_read": {
+        "command": [
+          "blkid",
+          "-s",
+          "LABEL",
+          "-o",
+          "value",
+          "/dev/sda1"
+        ],
+        "exit_code": 125,
+        "stderr": "FileNotFoundError(2, 'No such file or directory')",
+        "stdout": ""
+      },
+      "lsblk_identity_read": {
+        "command": [
+          "lsblk",
+          "-J",
+          "-o",
+          "PATH,UUID,LABEL",
+          "/dev/sda1"
+        ],
+        "exit_code": 0,
+        "stderr": "",
+        "stdout": "{\n   \"blockdevices\": [\n      {\n         \"path\": \"/dev/sda1\",\n         \"uuid\": \"2958c9ed-b77f-4c88-9214-f0aa162de000\",\n         \"label\": \"COLD_ARCHIVE_500\"\n      }\n   ]\n}"
+      },
+      "source": "/dev/sda1",
+      "uuid": "2958c9ed-b77f-4c88-9214-f0aa162de000",
+      "uuid_read": {
+        "command": [
+          "blkid",
+          "-s",
+          "UUID",
+          "-o",
+          "value",
+          "/dev/sda1"
+        ],
+        "exit_code": 125,
+        "stderr": "FileNotFoundError(2, 'No such file or directory')",
+        "stdout": ""
+      },
+      "verified": true
+    },
+    "mountpoint": "/mnt/cold_archive_500g",
+    "source_targets": {
+      "codework-inbox-bin": {
+        "byte_count": 2484983,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Fixed Linux PC inbox helper scripts.",
+        "dir_count": 3,
+        "errors": [],
+        "exists": true,
+        "file_count": 154,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/bin",
+        "source_id": "codework-inbox-bin",
+        "symlink_count": 0
+      },
+      "codework-inbox-config": {
+        "byte_count": 12812,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Linux PC inbox configuration files.",
+        "dir_count": 2,
+        "errors": [],
+        "exists": true,
+        "file_count": 10,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/config",
+        "source_id": "codework-inbox-config",
+        "symlink_count": 0
+      },
+      "codework-inbox-systemd-user": {
+        "byte_count": 1276,
+        "category": "system-snapshots",
+        "checksums": {},
+        "default_lane": "system-snapshots",
+        "description": "Linux PC inbox user-service unit files.",
+        "dir_count": 1,
+        "errors": [],
+        "exists": true,
+        "file_count": 3,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-inbox/systemd-user",
+        "source_id": "codework-inbox-systemd-user",
+        "symlink_count": 0
+      },
+      "worker-packages": {
+        "byte_count": 852656166,
+        "category": "release-artifacts",
+        "checksums": {},
+        "default_lane": "release-artifacts",
+        "description": "Installed Linux PC worker package versions and current symlinks.",
+        "dir_count": 497,
+        "errors": [],
+        "exists": true,
+        "file_count": 1716,
+        "is_dir": true,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/srv/codework-worker/packages",
+        "source_id": "worker-packages",
+        "symlink_count": 7
+      },
+      "worker-runtime-runs": {
+        "byte_count": 0,
+        "category": "worker-artifacts",
+        "checksums": {},
+        "default_lane": "worker-artifacts",
+        "description": "Linux PC remote-worker run roots under /tmp.",
+        "dir_count": 0,
+        "errors": [],
+        "exists": false,
+        "file_count": 0,
+        "is_dir": false,
+        "is_file": false,
+        "is_symlink": false,
+        "path": "/tmp/codework-remote-worker-jobs",
+        "source_id": "worker-runtime-runs",
+        "symlink_count": 0
+      }
+    },
+    "stat": {
+      "command": [
+        "stat",
+        "-c",
+        "%U:%G %a %n",
+        "/mnt/cold_archive_500g"
+      ],
+      "exit_code": 0,
+      "stderr": "",
+      "stdout": "calebsv16:calebsv16 755 /mnt/cold_archive_500g"
+    },
+    "uuid": "2958c9ed-b77f-4c88-9214-f0aa162de000"
+  },
+  "export_item_import": {
+    "batch_id": "physics-focused-preservation-20261007d",
+    "batch_manifest_path": "/mnt/cold_archive_500g/codework-archive/manifests/batches/physics-focused-preservation-20261007d.json",
+    "category": "physics-focused-preservation-20261007d",
+    "copy_performed": true,
+    "created_at": "2026-10-08T05:08:32Z",
+    "delete_performed": false,
+    "destination_inventory": {
+      "byte_count": 43175814,
+      "checksums": {
+        "/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d/20261008T050409Z--physics-focused-preservation-20261007d/manifest.json": "fdb3bc4fb8c0e5765f61ae3c9aef2046e86bed67d98e4d5d869f2b1038b70621",
+        "/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d/20261008T050409Z--physics-focused-preservation-20261007d/notes.md": "0c7bf8bdb4b66210e33e974fbf3c2a7c344a7d6ccb3300015fee3cebbb19d19e",
+        "/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d/20261008T050409Z--physics-focused-preservation-20261007d/payload/physics-focused-preservation.tar.gz": "d2546e02ba988902b7e0f665dfb41c465cff2da8e2dc2f9a9503cbf638998253",
+        "/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d/20261008T050409Z--physics-focused-preservation-20261007d/summary.json": "a66d9184f5798c10eb1a5b3b4632cb68686e993ed196d9fa55d1f46df425f0e8"
+      },
+      "dir_count": 3,
+      "errors": [],
+      "exists": true,
+      "file_count": 4,
+      "is_dir": true,
+      "is_file": false,
+      "is_symlink": false,
+      "path": "/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d/20261008T050409Z--physics-focused-preservation-20261007d",
+      "symlink_count": 0
+    },
+    "destination_path": "/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d/20261008T050409Z--physics-focused-preservation-20261007d",
+    "export_item_id": "20261008T050409Z--physics-focused-preservation-20261007d",
+    "export_manifest": {
+      "files": [
+        {
+          "media_type": "generic",
+          "normalization": "copied",
+          "normalization_error": null,
+          "normalized_relpath": null,
+          "payload_relpath": "physics-focused-preservation.tar.gz",
+          "source_kind": "file",
+          "source_relpath": "physics-focused-preservation.tar.gz"
+        }
+      ],
+      "item_id": "20261008T050409Z--physics-focused-preservation-20261007d",
+      "normalized_root": "normalized",
+      "payload_root": "payload",
+      "prepared_at": "2026-10-08T05:04:09Z",
+      "receiver_boundary_files": [],
+      "schema": "linux_pc_export_dropbox_item_v1",
+      "source_kind": "directory",
+      "source_name": "physics-focused-preservation-20261007d",
+      "source_path": "/private/tmp/physics-focused-preservation-20261007d/queue/physics-focused-preservation-20261007d"
+    },
+    "lane": "generated-runs",
+    "mode": "apply",
+    "reason": "User-approved independent preservation of PhysicsSim focused cleanup source and evidence",
+    "schema": "codework-linuxpc-cold-archive-export-item-import/v1",
+    "source_inventory": {
+      "byte_count": 43175814,
+      "checksums": {
+        "/srv/codework-inbox/export-dropbox/20261008T050409Z--physics-focused-preservation-20261007d/manifest.json": "fdb3bc4fb8c0e5765f61ae3c9aef2046e86bed67d98e4d5d869f2b1038b70621",
+        "/srv/codework-inbox/export-dropbox/20261008T050409Z--physics-focused-preservation-20261007d/notes.md": "0c7bf8bdb4b66210e33e974fbf3c2a7c344a7d6ccb3300015fee3cebbb19d19e",
+        "/srv/codework-inbox/export-dropbox/20261008T050409Z--physics-focused-preservation-20261007d/payload/physics-focused-preservation.tar.gz": "d2546e02ba988902b7e0f665dfb41c465cff2da8e2dc2f9a9503cbf638998253",
+        "/srv/codework-inbox/export-dropbox/20261008T050409Z--physics-focused-preservation-20261007d/summary.json": "a66d9184f5798c10eb1a5b3b4632cb68686e993ed196d9fa55d1f46df425f0e8"
+      },
+      "dir_count": 3,
+      "errors": [],
+      "exists": true,
+      "file_count": 4,
+      "is_dir": true,
+      "is_file": false,
+      "is_symlink": false,
+      "path": "/srv/codework-inbox/export-dropbox/20261008T050409Z--physics-focused-preservation-20261007d",
+      "symlink_count": 0
+    },
+    "source_path": "/srv/codework-inbox/export-dropbox/20261008T050409Z--physics-focused-preservation-20261007d",
+    "status": "completed",
+    "verified_checksums": []
+  },
+  "finished_at": "2026-10-08T05:08:33Z",
+  "init_manifest": null,
+  "remount_attempts": [],
+  "schema": "codework-linuxpc-cold-archive-control-state/v1",
+  "started_at": "2026-10-08T05:08:32Z",
+  "status": "completed"
+}

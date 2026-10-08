@@ -1,0 +1,589 @@
+{
+  "schema": "physics_sim_focused_completion_audit_v1",
+  "created_utc": "2026-10-08T05:11:50.538947+00:00",
+  "goal_complete": true,
+  "source_checks": [
+    {
+      "path": "makefile",
+      "sha256": "432d2af7ab6cb46a112cd761351fc683679799bf01cccbb4384fa98d7ca8c63c",
+      "matches_latest_adoption_receipt": false,
+      "superseded_by_help_only": true
+    },
+    {
+      "path": "make/config.mk",
+      "sha256": "2c1a718c2f9b57b2709d14c07910e656ac7370aa109cf95bdf31a7818dfc9e22",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/rules-runtime.mk",
+      "sha256": "52841ddf5282897213480bb470788948f257747699d85ef276d26e9b225b12cc",
+      "matches_latest_adoption_receipt": false,
+      "superseded_by_help_only": true
+    },
+    {
+      "path": "scripts/check_clean_root.py",
+      "sha256": "523e2ab1863222a5d2136fc0dedb2de9296bcf6ad8bdd23a7ddebdde39e3f290",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/build_outputs.py",
+      "sha256": "9fa8f5639f19f6de002ad0a8a0a875734a04394f99fa40dff0d4962f7de9e41c",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/clean_outputs.py",
+      "sha256": "d37882382923eaa6cc3ea8889b1af3c2259bc7e27019a3d8c02f8f2e241442a2",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/package_outputs.py",
+      "sha256": "541bdabdcda275b7a38b1d6db18653cf2ba68f2ffb69af9d8a7a5d853cb04abe",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_clean_outputs.py",
+      "sha256": "a09bbb1219054734c19af59c927573151dc326c97c4bf1c48c170d8f645b991d",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_clean_inventory_budget.py",
+      "sha256": "8a3578160d47a6238b54f0c3056ed53d5fc89605092acff309338ae25c3ca989",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_clean_json_bounds.py",
+      "sha256": "0b7b038d6ea36ebeec91e8317b88996ab3329434b2f5898c467ff7746ac7850e",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_clean_reservations.py",
+      "sha256": "86bb1891b27a91f06bbdc405ba06c1c849090ac7c0ef307480895d68b1d3419b",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_clean_reservation_schema.py",
+      "sha256": "692109ffedcb6fef68b1d2ba119004896e1939f137f624682f826f68ebd0d188",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/AGENT_CONTROL.md",
+      "sha256": "413cc2c33777deb7a9b794ffaab78be0583841f876874d35b6e3dec7d9e42261",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/AGENT_DEMO_PACK.md",
+      "sha256": "6502315ab322616ae8b518aeaae163faf1c09f2cde8434c62116238674d32283",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/cleanup_operations.md",
+      "sha256": "76959866bb0fe8a11c54a61aa83c47a1aa458f73dc1f6323e7581ca7bb9533ef",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/headless_cli.md",
+      "sha256": "687210d080842abddc0dc60fbc898d49af78e234cc31888a69d53088cdddf47a",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/build-identity.mk",
+      "sha256": "8ffb5290cd5ab643ed23f737332c13c3450564e3206857aa8aeeacb5cabae9dc",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/objects.mk",
+      "sha256": "430c7ad2856b041f33d6b0c153c0da588d9dc3cd4deda97360f9da0f1cefd06e",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/rules-build.mk",
+      "sha256": "cf009dad2f2109585b60125d066530013c986b4b7bb10c651bbb48009a1f1ca6",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/rules-tools.mk",
+      "sha256": "c09d9be6d097e4efc19762f63b425ac82e45371d77ac591342f9ef6ca60e07cb",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/sources-tools.mk",
+      "sha256": "d1cd8301dcdbe824c27b22aff1132db33f533147ea06e985190acf626abc5303",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/agent_session/service.py",
+      "sha256": "5d9f3fda7773f862122e260d7fcd788a4ca5c27390a236d77949c1cbc200e565",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/atomic_output.py",
+      "sha256": "99d5bf063794c62a044d7bcfd3966af7aaa58479a745c5c91f4a34f5b0886281",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/build_identity.py",
+      "sha256": "8980a9b27f93ebf6ba56b1e795ad83f3425a930f2b49099e6c7662e8f680b038",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/build_owner.py",
+      "sha256": "5a722934630ac55e0bf843a9fbc7afe43b7fd1a9ce5dfc8d1d03a5dae38743be",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/tool_probe.py",
+      "sha256": "0ceada2c80491cf24723b614c6f8d6f0e8b5ee5fce44a360ddb24571c9ec80e9",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_cli.sh",
+      "sha256": "a267523faa6b54a92fdaaf67456ec316171bfed099cd13d053bbb8dfef44cf38",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_dragonwind_orientation_probe.sh",
+      "sha256": "f914e2c9b4d94103742f7a35f92361c9a6d40ea1509efc83ff76916a7859e753",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_scene_project_cache_output.sh",
+      "sha256": "3c77200553a214107e3c1062630a1a963c982594b8e0aa51656799c76f5cfcd3",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_mode.sh",
+      "sha256": "0e6f51139c75d5cd8ad38a408a0564baf9b312ac5692068bde79e5ebe2ec63bb",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_object_coupling.sh",
+      "sha256": "aa620012ae976b1e265bd43c2b5a834ba2b9f3ee5512d531f8a761d263dc82cf",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_object_quality_compare.sh",
+      "sha256": "6d685db2438cefa98041b2104e75481b565eff76b24bb90f2f05d63dd8e250e3",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_analysis.sh",
+      "sha256": "cfbab78a0f11c6a53cc47fa3a5d326e97adca2b18beaa863420e1067c4c18f8d",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_long_tunnel_video.sh",
+      "sha256": "5c78ecd7b5e9351782ffe53b456955ba51a046894aa665908c3b114a93b1febf",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh",
+      "sha256": "a4454c3d6a5a142908f112e7b4515bb2c5cd246f392a6cfb93d380e38cd79855",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_mesh_probe.sh",
+      "sha256": "9beef1679457ec80b94481a8a70131195574d6b0cecb7015f46eb2eb4b28a6ca",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_object_comparison.sh",
+      "sha256": "58b30ab766c33b4e441012e5ce20280e2b5a6636c50cbd0b5d2ca3a1405db491",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_orientation_probe.sh",
+      "sha256": "5928263b28ffc9008ad490e1ca293622b60ccbddcd2f419c3c6e2fc0608d5033",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_bundle_smoke.sh",
+      "sha256": "ad374b023aa33c843da3821b8e51b281f3648d3e60d0ea8fd7daee7421a05607",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_policy.sh",
+      "sha256": "c740817305f2f2e9d89d1d0e28037d4800c2a97b2e9c482a75e71858f0c915fa",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_smoke.sh",
+      "sha256": "d5eeb93b2420bd40787881a282900f7a4d19cce0397d87a39a89e84b85f9effe",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/integration/run_physics_sim_visual_artifact.sh",
+      "sha256": "d7d95fba4885e72ae56caa51fc31eabc114ed5b4f4b4ec7e68d6640829839e23",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_atomic_output.py",
+      "sha256": "10eed4b190c52fd11af15ea086ffb10b2746f839bea5e0bfbeb51602ad2b8fa5",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_build_identity.py",
+      "sha256": "cb92125cf26ed74bd504adad6b414ed6a133fb4397d04f272fbf3ca312192001",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_build_output_isolation.py",
+      "sha256": "87a3d5c495a97404b7d2cba6db876cdf6b3876aa2bd721e7980197b40b865453",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_build_owner.py",
+      "sha256": "2f90edb6078607ea050877bbbbcd4f1cf0befb5310e25d018d2618e41bcfb6e4",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tools/packaging/linux/physics-sim-launcher",
+      "sha256": "a7889b6e63b39827cbadce4c136b67a6042d040bdcbe891b6939911eafbfa3ac",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tools/packaging/macos/physics-sim-launcher",
+      "sha256": "d956f996ccee4da8add76e0ce05e79094731269b0abb5425b20b42557f0d7def",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tools/packaging/runtime-config.sh",
+      "sha256": "e738193c5bdb4fc6d685caa70c21d7ce28a3107d879491ad81a897f9fc8e2f7f",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_package_launcher_lifecycle.py",
+      "sha256": "739e96f16087e3088af8081f3ee4a4c4c05ea0f66ee330f76bac8e07dc864b75",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/package-linux-desktop.mk",
+      "sha256": "67b3630a76bce4aaff201dc42356020cdc9549fda5b302769c7ce927f1d882ad",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/package-macos.mk",
+      "sha256": "d4db77690b31e1b5d219df91227657a320a220ac176277e5174676118475fb76",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/launcher_configuration_recovery.md",
+      "sha256": "71f9ed92e2e98582c8e987ea54e12b312f952e2c63259921dd95dc716be141a7",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/README.md",
+      "sha256": "918473b2a402b9e5f8db65a9268309256db0ce915e34cbd85589b8c94abc9c1d",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/focused_cleanup_progress.md",
+      "sha256": "ced85a13d13ea70d29c30dfdf68474a7410a18cc755b3d1913bc5779d996bd28",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/current_truth.md",
+      "sha256": "6a9dbb4efeec45468d787920d248a09ac0e6995a18ef6e2dbe205f4973cbd4d9",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/desktop_packaging.md",
+      "sha256": "cd8fe25505168ac42656c8f64d5b4a7d6e142233f069262a99922c6dfc32cc79",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "docs/packaging_lifecycle_operations.md",
+      "sha256": "9afaad5a6ae85a2462132ec6826caabe046f8fb576259303edf3565c4a2f0a78",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/package-linux-worker.mk",
+      "sha256": "252da896ecddc6056fadcd61338dca838d3385fe67da08a45816cf15d3c0159b",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "make/release.mk",
+      "sha256": "225a5aebcb1728eb3fe9706cfd41da4cddf05a5e19faab3d2be2e6403704ca6b",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/agent_session/owned_command.py",
+      "sha256": "a37178c9bb893a18da689fab5e2cb52cefa7bf63be67b74efc61ff36932ad08f",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/agent_session/sample_retention.py",
+      "sha256": "238cb115a74ce4a21597889a595e16f844f16ee37b33730e2691d1881f0d83f3",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/cfd_evidence.py",
+      "sha256": "e7dfa855f14e0f0fb3db1078e755c5e4df538cffb05130f2204c3274a148d1d6",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/check_desktop_process_audit.py",
+      "sha256": "954cd692fced52d5b753f42ba9b54f2f733898cde1a1805ccee7db299e7f5905",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/contract_proof.py",
+      "sha256": "559d35e1419ea4dcba2437099401c2225f657264ecb327d0bc644bd5e39ea23e",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/desktop_replace.py",
+      "sha256": "35cd84d4cdd83f7aaa23ed92096569e2afc6b3f37880146a730a9bb980faf8ce",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/macos_bundle.py",
+      "sha256": "b9c4442b7fbcafccc1018026b0bda761d780be601e03418ffa616156db664d0c",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/macos_bundle_engine.sh",
+      "sha256": "6ee500b405b73fab104a6aa680186be8f02ffdac68174fe37d1266924f577906",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/package_proof.py",
+      "sha256": "bd1575c32afab408c39498179b2d905e1a290ce123724cdf015d0e75c39ac0e3",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "scripts/package_transaction.py",
+      "sha256": "94fadec6b0d671d1c178294b6e2260b63f73d4a9e408af237e81ec2b3cb5662d",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_desktop_process_audit.py",
+      "sha256": "ce8256184719c289ee946dc903f5c7dda2d305861327a339fce3c3ec5e613c78",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_desktop_replace.py",
+      "sha256": "313dec1b4f0319baaf113045b981a80227099612bf12e89e885a9f3279d9ba83",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_linux_desktop_installer.py",
+      "sha256": "ae2bf4775d96072e92d3a5ee4d907c8da5ae127d4579a3bdd1fb989edbe7069d",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_macos_bundle_lifecycle.py",
+      "sha256": "f01ae13f448d9b27a67ed4fd43222d6ce770f17dc7aef13a54b48e30dd0e2229",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_owned_command.py",
+      "sha256": "b2479751181bc86d8e2c4181a6dc3dd7bf90163c4de9ab8fb8a5dcede182ce6f",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_package_outputs.py",
+      "sha256": "c70abc7e392d4489d9c69132b18e76bf34b03487307d64a0d978ba9dcc45e86a",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_package_proof.py",
+      "sha256": "d7e2bc119a37167713304d51a4baea8f02c51c7aae39cd2616a896f2f75a2309",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tests/test_package_transaction.py",
+      "sha256": "10d3fd98dd2c66916a96d08f67ebcf77e6fbbc937b44c98f6fcd96795dd626bf",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tools/packaging/linux/install-desktop-entry.py",
+      "sha256": "3ebce1193bb3d180adb9e70cc5e5fb4cbd4febba4821e4a68ca3f449bc0c6c4c",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tools/packaging/linux/install-desktop-entry.sh",
+      "sha256": "0fdf2d1aa8644f22a63bc3442dbaa6e1f02c769ef6e0f6467b709b7a31122492",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tools/packaging/macos/bundle-dylibs.sh",
+      "sha256": "b83b8ff26f8d753403467903e13d0d2fd00ab4c9a7b4c22956ab5d8cae666e27",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    },
+    {
+      "path": "tools/packaging/validate_macos_session.py",
+      "sha256": "8c1472c5c4525087cf28c89f256a66a966b3ce4be33987fa2f1b0c026600bf18",
+      "matches_latest_adoption_receipt": true,
+      "superseded_by_help_only": false
+    }
+  ],
+  "commands": [
+    {
+      "command": [
+        "make",
+        "help",
+        "CLANG=false",
+        "PKG_CONFIG=false"
+      ],
+      "exit": 0
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0
+    }
+  ],
+  "passing_logs": [
+    "20261007-private-launcher-config/launcher-final-control-tests.log",
+    "20261007-packaging-adoption/focused-tests.log",
+    "20261007-packaging-adoption/test_package_outputs.py.repaired.log",
+    "20261007-packaging-adoption/test_package_transaction.py.integrated.log",
+    "20261007-packaging-adoption/test_package_proof.py.integrated.log",
+    "20261007-packaging-adoption/test_owned_command.py.integrated.log",
+    "20261007-packaging-adoption/test_desktop_replace.py.integrated.log",
+    "20261007-packaging-adoption/test_desktop_process_audit.py.integrated.log",
+    "20261007-packaging-adoption/test_clean_reservations.py.integrated.log",
+    "20261007-packaging-adoption/launcher-regression.log"
+  ],
+  "requirements": [
+    {
+      "number": 1,
+      "status": "source-complete",
+      "evidence": "canonical-owned-build/adoption.json and profile-roundtrip.json; exact adopted source hashes; direct canonical build/clean-plan logs",
+      "limits": "Destructive proof used disposable roots; no live broad cleanup."
+    },
+    {
+      "number": 2,
+      "status": "complete",
+      "evidence": "data/experiments/backup-preparations/20261007-final-focused-preservation/current-readback.json; archive-import-state.json and retrieved-verification.json; 16,475 exact members, hashes, sizes and modes",
+      "limits": "Exact frozen snapshot; full workspace/Git history, reference environments, other experiment families and later closure metadata excluded."
+    },
+    {
+      "number": 3,
+      "status": "source-complete",
+      "evidence": "private-launcher-config receipt and 37 passing real-shell fixture methods",
+      "limits": "No installed runtime migration or GUI acceptance."
+    },
+    {
+      "number": 4,
+      "status": "complete",
+      "evidence": "cleanup_operations.md, launcher_configuration_recovery.md, packaging_lifecycle_operations.md, aligned read-first CLI docs, read-only make help; focused_cleanup_closeout.md supplies final archive coverage and receipt",
+      "limits": "Historical implementation-stage notes and frozen archive docs retain their original pre-transfer state; current closeout supersedes them."
+    },
+    {
+      "number": 5,
+      "status": "source-complete-with-platform-limits",
+      "evidence": "packaging-adoption receipt, 181 affected methods, native Mach-O dependency readback",
+      "limits": "No Linux desktop-file-validate/real session or full signed package/install acceptance."
+    }
+  ],
+  "deferred": [
+    "Deliberate reconciliation of independently dirty Main Edit with canonical repairs",
+    "Real installed-app/platform acceptance under separate authority",
+    "Historical output retirement, aggregate history retention and quotas",
+    "Full power-loss and hostile concurrent writer qualification"
+  ],
+  "prohibited_actions_performed": false,
+  "independent_preservation_receipt": "data/experiments/backup-preparations/20261007-final-focused-preservation/current-readback.json",
+  "source_freeze": {
+    "canonical_files": 1396,
+    "only_changes_after_freeze": [
+      "docs/README.md",
+      "docs/cleanup_operations.md",
+      "docs/current_truth.md",
+      "docs/focused_cleanup_completion_plan.md",
+      "docs/focused_cleanup_progress.md",
+      "docs/packaging_lifecycle_operations.md"
+    ],
+    "new_closure_document": "docs/focused_cleanup_closeout.md",
+    "all_behavior_source_still_matches": true
+  },
+  "doc_scan": {
+    "docs_scanned": 53,
+    "findings": 0
+  },
+  "changed_source_after_backup": "closure-only documentation, no behavior changes",
+  "scope_not_expanded": true
+}

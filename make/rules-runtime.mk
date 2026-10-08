@@ -26,7 +26,21 @@ video:
 # One validated inventory owns all normal compilation cleanup.
 CLEAN_EXECUTABLES = $(TARGET) $(VF2D_PACK_TOOL_BIN) $(VF2D_DATASET_TOOL_BIN) $(PHYSICS_TRACE_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN) $(if $(SESSION_WORKER_BIN),$(SESSION_WORKER_BIN),physics_sim_session_worker) $(SHAPE_SANITY_TOOL_BIN) $(SHAPE_MASK_TOOL_BIN) $(SHAPE_ASSET_TOOL_BIN)
 CLEAN_ARGUMENTS = --build-root "$(BUILD_DIR)" --experiment-root "$(EXPERIMENT_DIR)" --tools-root "$(REFERENCE_TOOLS_DIR)" --test-root "$(TEST_TMP_DIR)" $(foreach output,$(CLEAN_EXECUTABLES),--executable "$(output)")
-.PHONY: clean clean-plan
+.PHONY: help clean clean-plan
+help:
+	@echo "PhysicsSim local source workflow (run each command separately):"
+	@echo "  make physics_sim_headless                            Build the selected owned profile"
+	@echo "  make test-physics-sim-headless-water-mode             Water smoke; resets its named tmp output"
+	@echo "  make test-physics-sim-headless-scene-project-cache-output  Scene-cache proof; resets its named tmp output"
+	@echo "  make clean-plan                                      Inspect selected compiler outputs without deletion"
+	@echo "  make clean                                           Remove only admitted owned compiler outputs"
+	@echo "Selected build profile: $(BUILD_DIR)"
+	@echo "Retained evidence: data/experiments/; reference tools: data/tools/"
+	@echo "Unknown or changed outputs hold cleanup; preserve them and inspect the refusal."
+	@echo "Use disposable checkouts for fixtures when their output directories contain retained work."
+	@echo "Read docs/cleanup_operations.md and docs/launcher_configuration_recovery.md for recovery."
+	@echo "Packaging, installation and release require their separate operating authority."
+
 clean-plan:
 	python3 scripts/clean_outputs.py $(CLEAN_ARGUMENTS)
 
