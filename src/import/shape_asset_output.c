@@ -31,4 +31,3 @@ bool physics_sim_shape_asset_publish(const ShapeAsset *asset, const char *input,
     shape_asset_json_text_free(text);
     return ok;
 }
-
