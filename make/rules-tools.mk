@@ -1023,7 +1023,7 @@ test-agent-box3d: $(SESSION_WORKER_BIN)
 
 # Offline general-fluid/atmosphere source contract; no native solver mutation.
 .PHONY: test-surface-source-receiver
-test-surface-source-receiver:
+test-surface-source-receiver: $(SESSION_WORKER_BIN)
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_surface_source_receiver.py -v
 
 # Qualified body-free passive scalar lane; existing native momentum sources unchanged.

@@ -23,7 +23,6 @@ for entry in "${cases[@]}"; do
   name="${entry%%:*}"
   scene="${entry#*:}"
   case_dir="$OUT_DIR/$name"
-  mkdir -p "$case_dir"
   "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
     --runtime-scene "$scene" \
     --frames "$FRAMES" \
@@ -36,7 +35,7 @@ for entry in "${cases[@]}"; do
     --progress "$case_dir/run_progress.json" \
     --overwrite \
     --save-render-frames \
-    --save-wind-projection-frames >"$case_dir/headless.log" 2>&1
+    --save-wind-projection-frames >"$OUT_DIR/${name}_headless.log" 2>&1
 done
 
 python3 - "$OUT_DIR" "$REPORT" "$JSON_SUMMARY" "$FRAMES" "$STEPS_PER_FRAME" "$GRID" "$MODE" "${cases[@]}" <<'PY'
