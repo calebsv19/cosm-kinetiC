@@ -1,4 +1,16 @@
 # Ecosystem Core & Kit Catalog
+
+## BBF7 point/plane query adoption checkpoint — 2026-10-07
+
+`core_collision3d 0.1.1` is committed and independently tested. Ball Bounce retained Main Edit consumes it in actual multi-sphere wall queries through its normal live shared root; the minimum supported version is0.1.1. Both native compiler variants preserve complete original2400-tick trajectories and pass shared-query refusal/recovery, native/app MCP, full-cache and protected B5/B6 tests. Actual desktop and isolated development-package qualification are distinct from canonical/install/release adoption. FP contraction is scoped inside the query implementation, preserving existing app solver flags.
+
+Connected Mechanics surface3d static-plane integration remains pending its active BE2 owner's reserved writer boundary and default managed adoption. Its planned minimum is0.1.1; copied seam tests are qualified contract evidence, not current adoption. A sanctioned module-only managed rollout has been prepared in a clean temporary clone and changes only the six new module files, retaining every existing vendor path/pin. No original CMS source/vendor/index was modified. World construction, integration, response, XPBD/materials, accepted-state, sessions, caches, UI and rendering remain app-owned. Full BBF7 and its separate secondary closure remain pending.
+
+
+## BBF7 shared point/plane query foundation — 2026-10-07
+
+`core_collision3d 0.1.0` supplies a renderer-free, allocation-free C11 double-precision point/plane signed distance and clearance gap. It rejects invalid input without changing caller output; callers declare one Cartesian meter frame and retain integration, response, contacts, material, lifecycle and presentation policy. FP contraction is disabled for the documented arithmetic order. Core math float vectors cannot preserve this double contract; core_space remains the coordinate conversion owner. The initial adoption targets are Ball Bounce multi-sphere room walls and Connected Mechanics surface3d static-plane predicates. Production consumer cutover and qualification are pending; copied seam probes do not establish adoption. See `core/core_collision3d/README.md`. No general 3D collision solver is claimed.
+
 ## Purpose
 This document is the canonical catalog of shared ecosystem components.
 It describes what exists now, what is planned next, and how responsibilities stay separated.
@@ -445,8 +457,37 @@ worker-capability semantic contract for cross-program compute.
 ---
 
 ### core_sim (BOOTSTRAP)
+
+T6 qualification (0.8.1): additive T1–T4 APIs and the T5 reference host pass fresh strict/sanitizer, header and legacy/trace gates. No API/version or application-adoption change in T6. Real adapter/solver proof remains separate.
+
+
+T5 qualification update (0.8.1): optional standalone POSIX reference host with
+two independent-rate toy participants, exact source conservation and a bounded
+return response. Process tests prove disabled/zero parity, nonzero analytical
+response, observation-FPS invariance and persisted restart equivalence. No
+library API change or real simulation application adoption is claimed.
+
+T4 source update (0.8.0): optional complete joint-window candidate validation,
+explicit phase availability, proposed accepted-state transitions and restart
+metadata checks. A compact last-window ledger classifies replay/conflict;
+durable publication, immutable content verification and native rollback remain
+host-owned. No new application adoption is claimed.
+
+T3 source update (0.7.0): optional typed channel/record metadata admission,
+explicit exact/hold/linear sample rules, replay/conflict pair classification and
+uniform-rate interval-overlap fractions. Physical field evaluation, payload
+content verification and accepted ledgers remain adapter/host-owned. No new
+application adoption is claimed.
+
+T2 source update (0.6.0): optional independent participant schedules, indexed
+exchange windows and steps, and exact rational observation brackets. This is
+planning metadata; payload admission, field interpolation and app adoption remain
+separate.
 **Role:** Shared simulation control-plane foundation.
 **Responsibilities (initial):**
+- Additive v0.5.0 exact model-time primitives: domain-bound points/durations,
+  rational seconds, bounded timebase derivation and checked arithmetic;
+  standalone T1 qualification only, without schedule or exchange execution
 - Fixed-step accumulator policy
 - Pause/play/single-step control state
 - Max ticks per frame clamp

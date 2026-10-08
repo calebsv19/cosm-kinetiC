@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CORE_SIM_VERSION_STRING "0.4.0"
+#define CORE_SIM_VERSION_STRING "0.8.1"
 #define CORE_SIM_ARTIFACT_SCHEMA_VERSION "core_sim_artifact_v1"
 
 typedef enum CoreSimStatus {

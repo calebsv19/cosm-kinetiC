@@ -9,6 +9,7 @@ This document defines what each shared library owns so behavior does not overlap
 - `core_data`: structured in-memory data containers and typed table/object model.
 - `core_memdb`: active durable SQLite connection, query, migration, event/replay, and graph-storage boundary; CLI and agent workflows remain higher tooling layers in the same shared subtree.
 - `core_math`: generic numeric primitives and math helpers.
+- `core_collision3d`: allocation-free double point/plane distance and clearance gap in a caller-declared frame; no solver, conversion, response, session or renderer policy.
 - `core_collision2d`: UI-free 2D collision shape, geometry, AABB, manifold, bounded compound-descriptor and compound mass-property helpers, and primitive contact-generation semantics.
 - `core_rigid2d`: UI-free 2D rigid-body descriptors, mass/inertia helpers, integration helpers, and deterministic contact-solver primitives over `core_collision2d`.
 - `core_time`: monotonic time reads and duration arithmetic (no sleep/scheduler behavior).
@@ -57,7 +58,7 @@ This document defines what each shared library owns so behavior does not overlap
   outside the module.
 - `core_pane_module`: renderer-agnostic pane-module descriptor registry and binding validation semantics.
 - `core_trace`: trace capture/ingest/export primitives.
-- `core_sim`: UI-free simulation control-plane semantics for fixed-step accumulation, pause/play/single-step state, max-tick clamping, ordered pass execution, and deterministic frame outcomes.
+- `core_sim`: UI-free simulation control-plane semantics for fixed-step accumulation, pause/play/single-step state, max-tick clamping, ordered pass execution, and deterministic frame outcomes. Version 0.5.0 adds optional exact model-time points/durations, rational conversion, checked timebase derivation and arithmetic in `core_sim_time.h`; version 0.6.0 adds independent fixed-step schedule validation, indexed exchange-window/step enumeration and exact observation brackets in `core_sim_schedule.h`. Version 0.7.0 adds typed channel/record metadata admission, explicit exact/hold/linear temporal sampling rules, pairwise identity classification and uniform-rate interval-overlap fractions in `core_sim_exchange.h`. Version 0.8.0 adds pure joint-candidate validation and proposed accepted-state transitions, with explicit phase availability and a compact last-window replay ledger in `core_sim_progress.h`. Version 0.8.1 adds an optional POSIX reference host that demonstrates those host responsibilities with toy participants; it adds no library API. T6 qualifies the combined additive framework at the same 0.8.1 source version; real solver adoption remains separate. The library APIs do not own monotonic measurement, physical field interpolation, payload/evidence content verification, native solver state, durable publication, rollback or persistence.
 - `core_sim_trace`: optional `core_sim` to `core_trace` adapter for shared simulation control-plane trace lanes and frame/reason markers.
 - `core_pane`: renderer-agnostic pane tree layout semantics (split ratios, constraints, splitter hit/drag math). It does not own app snapshot selection, session fallback policy, or host build dependency hygiene around those structs.
 - `core_theme`: tokenized color + spacing presets.
