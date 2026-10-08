@@ -1,0 +1,964 @@
+[
+  {
+    "packet": "20261006-b2-split-record",
+    "status": "unsealed"
+  },
+  {
+    "packet": "20261006-final",
+    "status": "verified",
+    "files": 85,
+    "manifest_sha256": "b3e60956785ada451d9e3a3d0864b83b29f2677e2f29912b395a695e03411234"
+  },
+  {
+    "packet": "20261007-archive-completed",
+    "status": "verified",
+    "files": 22,
+    "manifest_sha256": "90d8a15cb2d201236b5cc8f5106dfcf912b278c641c8eb48c4b13f8199340e99"
+  },
+  {
+    "packet": "20261007-archive-prepared",
+    "status": "verified",
+    "files": 5,
+    "manifest_sha256": "873f55d9021db552c8b82ad439d2c64b003761f3fc30cd67a7777329f0d9a930"
+  },
+  {
+    "packet": "20261007-asset-input-admission",
+    "status": "verified",
+    "files": 55,
+    "manifest_sha256": "a21c95797bea2a13b1bda30437e445d2dd0b6702a78ca5c5696803895f478675"
+  },
+  {
+    "packet": "20261007-asset-roundtrip-policy",
+    "status": "verified",
+    "files": 50,
+    "manifest_sha256": "8276c80d378c7c36639728edadb67662a1806c0b658c6ff5b430c70a90adb66f"
+  },
+  {
+    "packet": "20261007-atmosphere-contract-writers",
+    "status": "verified",
+    "files": 229,
+    "manifest_sha256": "8006814987a38c0cc4d6dd8db124f3dae431c075ca4c566d0aefb3af58857bac"
+  },
+  {
+    "packet": "20261007-atmosphere-execution-ownership",
+    "status": "verified",
+    "files": 247,
+    "manifest_sha256": "51bce18d4be6ae51cffe979504fac86185668edf143d70172e0361ef5dc61176"
+  },
+  {
+    "packet": "20261007-atmosphere-retained-attempts",
+    "status": "verified",
+    "files": 19,
+    "manifest_sha256": "a3d439fc88170666096131310c2d68bcdbf749002b790ab962b2eb8aaa5d19f3"
+  },
+  {
+    "packet": "20261007-atmosphere-worker-configuration",
+    "status": "verified",
+    "files": 231,
+    "manifest_sha256": "dc131d583168bbb5847671df7c71074adebeab68760397d4607e527d7071a2c1"
+  },
+  {
+    "packet": "20261007-atmosphere-worker-selection",
+    "status": "verified",
+    "files": 230,
+    "manifest_sha256": "124927a40c5e3923949366303fa7d5c78a7e6936a12591d40a08bc0257eef0f7"
+  },
+  {
+    "packet": "20261007-atomic-publication",
+    "status": "verified",
+    "files": 16,
+    "manifest_sha256": "7e17dc5b9d74ec6a117cbf96d8e590f79700f58981316636cb68b59b554aee0c"
+  },
+  {
+    "packet": "20261007-b2",
+    "status": "verified",
+    "files": 143,
+    "manifest_sha256": "9b17ece53da584ef888c837b1f36ebc8239996d698b0a8c0f4051871a71898c4"
+  },
+  {
+    "packet": "20261007-backend-storage-admission",
+    "status": "verified",
+    "files": 57,
+    "manifest_sha256": "b68f613069b08af3438b127c85b7b9c486892af0890069540c2005ddb4d33ab6"
+  },
+  {
+    "packet": "20261007-bounded-tool-identity",
+    "status": "verified",
+    "files": 73,
+    "manifest_sha256": "d57ba88d0afd620fa25c61d90c88e9af4f767f1440ddde9dffbe82881deafbd1"
+  },
+  {
+    "packet": "20261007-bounded-zip-payload-validation",
+    "status": "verified",
+    "files": 21,
+    "manifest_sha256": "84d29961568daebc5116b95c3ada2287658cc56c6acc8195040c9bd38839cedd"
+  },
+  {
+    "packet": "20261007-brush-admission",
+    "status": "verified",
+    "files": 58,
+    "manifest_sha256": "3a77701540bfe0feb002bd91b4c0c4226c3b3f350aa88b1cf42eb66340b7de1b"
+  },
+  {
+    "packet": "20261007-build-dependency-admission",
+    "status": "verified",
+    "files": 17,
+    "manifest_sha256": "a6f2c776ead74eedcdc1116d9a390bf70af18b253e3377b02c155d7812b31a68"
+  },
+  {
+    "packet": "20261007-build-environment",
+    "status": "verified",
+    "files": 15,
+    "manifest_sha256": "3d92c28d0629ded7d18bba55eafc1dcb2de422bf7a38742437f59e0095276b3e"
+  },
+  {
+    "packet": "20261007-build-hierarchy",
+    "status": "verified",
+    "files": 12,
+    "manifest_sha256": "188b44dd2992bb33b311fc4326ea128725244b4d56c1219530cb889be09cba72"
+  },
+  {
+    "packet": "20261007-build-input-content",
+    "status": "verified",
+    "files": 16,
+    "manifest_sha256": "819a58ad894233d5deb7c48dfeba9c49861b29f73956e7a300d8bce15b1b17b6"
+  },
+  {
+    "packet": "20261007-build-ownership",
+    "status": "verified",
+    "files": 22,
+    "manifest_sha256": "6fb5baa85c30e398ff065502a011d31bcded07d9813cc8cb2c4018756ad1cccf"
+  },
+  {
+    "packet": "20261007-cache-compiler-profiles",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-copy-integrity",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-inventory-admission",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-manifest-intent",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-payload-validation",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-publication-recovery",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-publish-admission",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-publish-transaction",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-source-witness",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-staged-witness",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-cache-status-admission",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-canonical-clean-guard-candidate",
+    "status": "verified",
+    "files": 18,
+    "manifest_sha256": "5467a17f45fff72b41321b76fde4418f53c64fdddb9efebc0af7e6c7b5444520"
+  },
+  {
+    "packet": "20261007-cfd-run-group-anchor",
+    "status": "verified",
+    "files": 14,
+    "manifest_sha256": "e5810099be10a0ad3a935dfd7e5c3f357fdc063636ebb7d3480d1aa3811c7c82"
+  },
+  {
+    "packet": "20261007-clean-inventory-budget",
+    "status": "verified",
+    "files": 16,
+    "manifest_sha256": "6d111919949cde1c650263b821f74cfa945c35235f73e4aeb05120b2a519d76e"
+  },
+  {
+    "packet": "20261007-clean-json-bounds",
+    "status": "verified",
+    "files": 17,
+    "manifest_sha256": "0aa7f97883ca1512ae11ff6746047ce55b50ee86ae539a08b81e271250122b32"
+  },
+  {
+    "packet": "20261007-clean-reservation-schema",
+    "status": "verified",
+    "files": 19,
+    "manifest_sha256": "2da8880c88810ac1a999a1160e6d828e3eafc3c89ca8adf65907a326995b5209"
+  },
+  {
+    "packet": "20261007-clean-reservations",
+    "status": "verified",
+    "files": 18,
+    "manifest_sha256": "6c9843c27ed041b5afcc08c7e691b9831064faddc074cf646b8a2425cba9239a"
+  },
+  {
+    "packet": "20261007-cleanup-audit",
+    "status": "verified",
+    "files": 11,
+    "manifest_sha256": "9021fde60174959c426456bd926b5dcc7964de8b452d150cdd8fece5942ccad2"
+  },
+  {
+    "packet": "20261007-cli-object-identity",
+    "status": "verified",
+    "files": 59,
+    "manifest_sha256": "1acef4d1c61da98bc8f41223d7f4b84d29f9863c496d20c49111126410e0e88c"
+  },
+  {
+    "packet": "20261007-compiler-group-anchor",
+    "status": "verified",
+    "files": 17,
+    "manifest_sha256": "1e20e1c271809d0b78725708401441137e59116ae019cd801431c73b16f98256"
+  },
+  {
+    "packet": "20261007-compiler-input-boundary",
+    "status": "verified",
+    "files": 70,
+    "manifest_sha256": "f1679fe812f91cdcb1b4ac4d1575c4ee86c9734223340f34b24eba66fe61f5a3"
+  },
+  {
+    "packet": "20261007-compiler-predecessor-admission",
+    "status": "verified",
+    "files": 30,
+    "manifest_sha256": "0d08e2d002c747093ac56ef6fb0c8e83a06c4d86334b304bf6b8aec66d69043d"
+  },
+  {
+    "packet": "20261007-completed-summary-required",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-config-json-contract",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-config-option-persistence",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-config-read-admission",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-config-save-lifecycle",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-configuration-predecessor-admission",
+    "status": "verified",
+    "files": 64,
+    "manifest_sha256": "381dfc91047c6ab6d646c61ed91daac4a96f0bcf64dc0451652ba2ec81d7c87b"
+  },
+  {
+    "packet": "20261007-contract-fixture-ownership",
+    "status": "verified",
+    "files": 25,
+    "manifest_sha256": "cbe8beb014ce77d347600b947f6602ddebb7a9c13e5d5eace91b3ecd60ba8e62"
+  },
+  {
+    "packet": "20261007-desktop-preservation",
+    "status": "verified",
+    "files": 9,
+    "manifest_sha256": "a3421502a31dc75a62b57dd910ab0dd444b5ebe6ddf2ab529cf0b209ab3de613"
+  },
+  {
+    "packet": "20261007-desktop-recovery",
+    "status": "verified",
+    "files": 8,
+    "manifest_sha256": "6b9e5fe0fb613bad67057098b0ce3c1d87f1fd4f8898e4c02b26558e2bc3fd4c"
+  },
+  {
+    "packet": "20261007-disposable-output-ownership",
+    "status": "verified",
+    "files": 31,
+    "manifest_sha256": "232e95d5e2671ac70acb9c91175a2e659acc38ee51ebb4a6b289a9cff52f5a79"
+  },
+  {
+    "packet": "20261007-editor-import-publication",
+    "status": "verified",
+    "files": 55,
+    "manifest_sha256": "0ff88298ec118f7c96a3d6df1e278510da8f92be60d9de7f4a505eb8b225379b"
+  },
+  {
+    "packet": "20261007-editor-picker-transaction",
+    "status": "verified",
+    "files": 48,
+    "manifest_sha256": "973873e75e4e920318814c3e5aaac7f6405cf724a56c5494d7a4ef9643468a71"
+  },
+  {
+    "packet": "20261007-emitter-argument-admission",
+    "status": "verified",
+    "files": 30,
+    "manifest_sha256": "40610e160925d5da9ad8a2ac8381149ec1acb8341c949339df68f2eb51a6884f"
+  },
+  {
+    "packet": "20261007-emitter-object-identity",
+    "status": "verified",
+    "files": 33,
+    "manifest_sha256": "9096ac34fd3599552dd984ea509f4d3ab6b26b4b1c3cc4a079c6321f61bf8b53"
+  },
+  {
+    "packet": "20261007-entrypoint-audit",
+    "status": "verified",
+    "files": 52,
+    "manifest_sha256": "98b68b2108c22ff48069618e9f03a86f1af38640652f8e8dbcb3276d8d1738a7"
+  },
+  {
+    "packet": "20261007-evidence-retirement-plan",
+    "status": "verified",
+    "files": 14,
+    "manifest_sha256": "b1213d1e0d89343d12f00261239f34027bdf34f0c87dc60fb3394199a3db6680"
+  },
+  {
+    "packet": "20261007-executable-isolation",
+    "status": "verified",
+    "files": 41,
+    "manifest_sha256": "7395cc52d57308e66439fc7337994c95352aad6c1f9c879934339af84692496c"
+  },
+  {
+    "packet": "20261007-factor-compiler-transactions",
+    "status": "verified",
+    "files": 297,
+    "manifest_sha256": "23952ac0d7f59986e71f8fd3d42d8cc39263153677293ab0276129e364bf3518"
+  },
+  {
+    "packet": "20261007-factor-native-control",
+    "status": "verified",
+    "files": 16,
+    "manifest_sha256": "6dee065a9a67599ca01e08515266aa173cc88c597b52dacaf8d99bfca4c5f7cb"
+  },
+  {
+    "packet": "20261007-final-artifact-and-bound-refresh",
+    "status": "verified",
+    "files": 19,
+    "manifest_sha256": "4358a3119b07adca4cbca35731e23ff62afe030a6660e50fbcb4c341ec38b505"
+  },
+  {
+    "packet": "20261007-fixture-group-anchor",
+    "status": "verified",
+    "files": 132,
+    "manifest_sha256": "4c0418be38b78887f89eadc239373c74ae30431f1fb96c7d87b60e9a316d7593"
+  },
+  {
+    "packet": "20261007-fixture-isolation",
+    "status": "verified",
+    "files": 335,
+    "manifest_sha256": "f3f823b98c8b9dce8091336d6f4e5ed74309c0cf5aba7417209f919ac539f692"
+  },
+  {
+    "packet": "20261007-fixture-session-lifetime",
+    "status": "verified",
+    "files": 119,
+    "manifest_sha256": "8cc4668dd7a0931ebf299daacfad1b6e73c778f94689ef2558300fb6ac0af273"
+  },
+  {
+    "packet": "20261007-grid-identity-admission",
+    "status": "verified",
+    "files": 73,
+    "manifest_sha256": "f9a26db018290d82a7ddce5eb207eb8af6b2702731e219e052d9f11d522049fc"
+  },
+  {
+    "packet": "20261007-import-mask-admission",
+    "status": "verified",
+    "files": 57,
+    "manifest_sha256": "53e2d7f1ef47cde2f46a52077740cabba53a5489c7fe667036f7d112e9f2ca71"
+  },
+  {
+    "packet": "20261007-independent-restore-rehearsal",
+    "status": "verified",
+    "files": 23,
+    "manifest_sha256": "6b12a439b4d657ba81a15273f4e512893187924e5911a40a095749c715b5c735"
+  },
+  {
+    "packet": "20261007-job-file-preparation",
+    "status": "unsealed"
+  },
+  {
+    "packet": "20261007-job-pair-forward",
+    "status": "unsealed"
+  },
+  {
+    "packet": "20261007-job-pair-hold",
+    "status": "unsealed"
+  },
+  {
+    "packet": "20261007-job-pair-producer-digests",
+    "status": "unsealed"
+  },
+  {
+    "packet": "20261007-job-pair-recovery",
+    "status": "unsealed"
+  },
+  {
+    "packet": "20261007-job-pair-staging",
+    "status": "unsealed"
+  },
+  {
+    "packet": "20261007-job-report-coherence",
+    "status": "verified",
+    "files": 15,
+    "manifest_sha256": "cb9b543236632f0a30d20ec48c3f4bbb79f2514d4cb523dbf2cf8b9d49f2549b"
+  },
+  {
+    "packet": "20261007-job-report-predecessor",
+    "status": "unsealed"
+  },
+  {
+    "packet": "20261007-job-report-preflight",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-later-archive-prepared",
+    "status": "verified",
+    "files": 11,
+    "manifest_sha256": "78305ce340636940e48e802c97d1a0a539f7482b01c2c225f1a672241a358b09"
+  },
+  {
+    "packet": "20261007-library-input-admission",
+    "status": "verified",
+    "files": 54,
+    "manifest_sha256": "02128b9d1d67fb6816e5172b922ab51f0a0a2d6a05c6a7dea9db2c61dd8f7e5e"
+  },
+  {
+    "packet": "20261007-link-input-identity",
+    "status": "verified",
+    "files": 73,
+    "manifest_sha256": "0f1da70d4475c297b168ef832b9efdde0d6c3f39aec3d22c171c5a21d70a1a67"
+  },
+  {
+    "packet": "20261007-linker-input-selection",
+    "status": "verified",
+    "files": 52,
+    "manifest_sha256": "98587d9f557614e8132fbb23440bd5fa5535f06b6f11e0d985da788d86299fa3"
+  },
+  {
+    "packet": "20261007-linux-desktop-installer",
+    "status": "verified",
+    "files": 95,
+    "manifest_sha256": "eef11484309f22649391c583ce19002d7d1e05557ce5d18b445dbf9c831bdc03"
+  },
+  {
+    "packet": "20261007-local-artifact-transactions",
+    "status": "verified",
+    "files": 135,
+    "manifest_sha256": "9ea8591b846a53f9c3e2c351a5524f1efd03bca678dbaff54809ba7dae69b36f"
+  },
+  {
+    "packet": "20261007-local-doctor",
+    "status": "verified",
+    "files": 26,
+    "manifest_sha256": "1dd586bad8c895265fb310bfb13cba16575305ad8f3e8278605eded9abe12f13"
+  },
+  {
+    "packet": "20261007-macos-bundler-lifecycle",
+    "status": "verified",
+    "files": 108,
+    "manifest_sha256": "e2b0f465b374bd41258ccdc40e8ec4defe181fd036902726f5a74af4b22b81a3"
+  },
+  {
+    "packet": "20261007-make-group-anchor",
+    "status": "verified",
+    "files": 14,
+    "manifest_sha256": "562d3c51f6510a5fbe5d25bdd53aa6d790682e1a51947e41125b60f63914567f"
+  },
+  {
+    "packet": "20261007-motion-admission",
+    "status": "verified",
+    "files": 61,
+    "manifest_sha256": "3ab7ba34e84e7b6d37e573c93ffbb9ae035258e78b7cd310f5f0e9ef4493ae63"
+  },
+  {
+    "packet": "20261007-native-headless-output-retention",
+    "status": "verified",
+    "files": 85,
+    "manifest_sha256": "82e2937aa7ce63d8b23f26dcdf8589719e9c3f09d5dc0b275f1516ebce68908d"
+  },
+  {
+    "packet": "20261007-native-job-consistency",
+    "status": "verified",
+    "files": 143,
+    "manifest_sha256": "75b4c4d08a6faeab2fa9923898ed2ed0b7ce4f5bfb91ec793e0f52036fedc95d"
+  },
+  {
+    "packet": "20261007-native-job-field-admission",
+    "status": "verified",
+    "files": 149,
+    "manifest_sha256": "460c390b642c24d70b8e746f6ddebe550e325fc51a1341ccd40e47b6e450f561"
+  },
+  {
+    "packet": "20261007-native-job-json-admission",
+    "status": "verified",
+    "files": 118,
+    "manifest_sha256": "94a2c973698b26fb5b121b7d967add34aaa50ea3ce71d7cf15e7b863ab7ca3e3"
+  },
+  {
+    "packet": "20261007-native-job-log-handoff",
+    "status": "verified",
+    "files": 116,
+    "manifest_sha256": "7b964cad73a197ed122166dd781b2f04b1f25c718da073f263101af505bad953"
+  },
+  {
+    "packet": "20261007-native-job-metadata-publication",
+    "status": "verified",
+    "files": 126,
+    "manifest_sha256": "5794566a2c06e3d14bcfd84eae1b837c0057f83ccdd759346d5774a2ff5ea057"
+  },
+  {
+    "packet": "20261007-native-job-operation-ownership",
+    "status": "verified",
+    "files": 128,
+    "manifest_sha256": "d172737ae4652b3ecdf77fa96248245fb688feb136b415ff61427f6b221087fa"
+  },
+  {
+    "packet": "20261007-native-job-path-admission",
+    "status": "verified",
+    "files": 113,
+    "manifest_sha256": "033592afe6c52a69d4125f9ef4684ae2f17f42ae8d4e240d570034314a6dd504"
+  },
+  {
+    "packet": "20261007-native-job-startup-observation",
+    "status": "verified",
+    "files": 113,
+    "manifest_sha256": "a6d80666081715dc6d62fbe6646c1ae4cda57b04091eb58dbacedaf24c7abc8a"
+  },
+  {
+    "packet": "20261007-native-job-state-time-admission",
+    "status": "verified",
+    "files": 107,
+    "manifest_sha256": "5da22964a0e65af80cbd2eaaba9bd23cabdb4fbefe4f2c84974f0dd5146a773b"
+  },
+  {
+    "packet": "20261007-native-job-summary-consistency",
+    "status": "verified",
+    "files": 109,
+    "manifest_sha256": "15dd7c1c098179802d928d58dd727d8393261b3d29377f61e08b0c4445e1d1e1"
+  },
+  {
+    "packet": "20261007-native-persistence",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-native-sidecar-admission",
+    "status": "verified",
+    "files": 114,
+    "manifest_sha256": "d1d8641b1854f2ec9fda6d21426369cc25bdb312ca1912f9694e75087b545833"
+  },
+  {
+    "packet": "20261007-native-sidecar-atomic-publication",
+    "status": "verified",
+    "files": 114,
+    "manifest_sha256": "38570cd37e205c7e2f7c7dfd46cd1b4857b3f02f4877ec22a241f4900b01bca9"
+  },
+  {
+    "packet": "20261007-notary-archive-and-staple-binding",
+    "status": "verified",
+    "files": 20,
+    "manifest_sha256": "31536fd9747ce22d75ab302ed35197fbd0026f66c42c5593e9f84e11b76160a8"
+  },
+  {
+    "packet": "20261007-notary-journal-foundation",
+    "status": "verified",
+    "files": 21,
+    "manifest_sha256": "ca51203d3a8e82d42b1f104c8a11d39a5e9c5310af0850495b5bb75dfa6042df"
+  },
+  {
+    "packet": "20261007-object-dependency-coverage",
+    "status": "verified",
+    "files": 72,
+    "manifest_sha256": "aa09190137399e64d0669f4c5fc8f3750a07399cd4621fa5dd76047a88b9f915"
+  },
+  {
+    "packet": "20261007-object-raster-admission",
+    "status": "verified",
+    "files": 54,
+    "manifest_sha256": "166fa7befd420d24c03a8ad0cccc219645c8147e9b360070016e1d27be7e7c4d"
+  },
+  {
+    "packet": "20261007-output-completion-marker",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-output-read-admission",
+    "status": "verified",
+    "files": 20,
+    "manifest_sha256": "ab6e7acd3ced7b3c5a25e0527cf962614839c1290e564cc5c127ba5bbf1335cf"
+  },
+  {
+    "packet": "20261007-output-retirement-marker",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-package-aggregate-inventory",
+    "status": "verified",
+    "files": 16,
+    "manifest_sha256": "3c8729a957e759248a3fcf244c8107bee21a12e46c6a813822923ab072a77ff4"
+  },
+  {
+    "packet": "20261007-package-assembly-command-bounds",
+    "status": "verified",
+    "files": 37,
+    "manifest_sha256": "bf95d3533b66c223c5aa97e542fc5f795e5a59e43c42cf2eb4d7d4a752546109"
+  },
+  {
+    "packet": "20261007-package-inventory-bounds",
+    "status": "verified",
+    "files": 26,
+    "manifest_sha256": "0fb9145192acc754213757ba2a04fe88dce68bf7f90ed0198cb895d8f9fe33bf"
+  },
+  {
+    "packet": "20261007-package-launcher-inspection",
+    "status": "verified",
+    "files": 226,
+    "manifest_sha256": "5121352ca994786ba9ff795976ac4188e603d3b9b63b11a5ce675f62d02d46cf"
+  },
+  {
+    "packet": "20261007-package-proof-command-bounds",
+    "status": "verified",
+    "files": 22,
+    "manifest_sha256": "2a331c17aa9c1370501e21509cc6de5e22ddb92b146a988e0132e7bbfed812c0"
+  },
+  {
+    "packet": "20261007-package-proof-lifetime",
+    "status": "verified",
+    "files": 17,
+    "manifest_sha256": "6cc6e87ec64dc7b53f3411eed7edd4ecefaacbde7a09f690478f60c84fea3849"
+  },
+  {
+    "packet": "20261007-package-recovery",
+    "status": "verified",
+    "files": 11,
+    "manifest_sha256": "c8a288fee71b259673f12f8b1412e95d2aa2597f7efd5a024894474dd14ae9e6"
+  },
+  {
+    "packet": "20261007-package-reset-admission",
+    "status": "verified",
+    "files": 15,
+    "manifest_sha256": "abaca5678936fd3bdba3e7cce434e927d205aeb45cbcabc43fb46c8d41716fd3"
+  },
+  {
+    "packet": "20261007-package-transactions",
+    "status": "verified",
+    "files": 14,
+    "manifest_sha256": "bf5a87702f4a3a3f106c622e396b7a22f7d08e18d9d85617f22f973c001024b1"
+  },
+  {
+    "packet": "20261007-passed-summary-receipt",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-periodic-retained-jsonl",
+    "status": "verified",
+    "files": 18,
+    "manifest_sha256": "253da7ba92d194a12fb4d3cf9b3a7b1d1c3ee5f93711b9f933e689fba420f807"
+  },
+  {
+    "packet": "20261007-process-audit-guard",
+    "status": "verified",
+    "files": 14,
+    "manifest_sha256": "82355aff1a5f84483956e17a73f3dc400c3186fdf5a0adec427794c604154f08"
+  },
+  {
+    "packet": "20261007-public-headless",
+    "status": "verified",
+    "files": 42,
+    "manifest_sha256": "aeb231f222c4c5db312b5a0eb9a9514a67a859bb9480ab194d2f77ffe84fa1a5"
+  },
+  {
+    "packet": "20261007-python-writer-inventory",
+    "status": "verified",
+    "files": 3,
+    "manifest_sha256": "639ab7d238b106b4fb3684ef7368aa9244ad8954d689931c609aba97cad42a59"
+  },
+  {
+    "packet": "20261007-reference-artifact-inventory",
+    "status": "verified",
+    "files": 400,
+    "manifest_sha256": "7ad14e7f02f639cfae15aa75ba4f24cba3ec8fabecf45b9f00ebaa049435d9b1"
+  },
+  {
+    "packet": "20261007-reference-environment-lifetime",
+    "status": "verified",
+    "files": 29,
+    "manifest_sha256": "dbd2664d1a2f0f3aac6cc3bddf8125fc3061643635be62c28ddb0c450a10dfb3"
+  },
+  {
+    "packet": "20261007-reference-factor-supervision",
+    "status": "verified",
+    "files": 293,
+    "manifest_sha256": "3d4aa6fbd746d389e9f57de34d93f50e66afed6e870a41800f3c15e3c29d8fbd"
+  },
+  {
+    "packet": "20261007-reference-hash-budget",
+    "status": "verified",
+    "files": 403,
+    "manifest_sha256": "5a9ce66d7671d8936c02336002ae96c7531cf9008101432108c9207daf082b61"
+  },
+  {
+    "packet": "20261007-reference-make-borrowing",
+    "status": "verified",
+    "files": 216,
+    "manifest_sha256": "275b6c3257fb6329568b776578746ba1117341065db421ec814017c2d069e4c9"
+  },
+  {
+    "packet": "20261007-reference-namespace-ownership",
+    "status": "verified",
+    "files": 409,
+    "manifest_sha256": "c8a1b4875109b67bbd8165e17d73b283aca6fef61addf8975f49e94bb9ce05f8"
+  },
+  {
+    "packet": "20261007-reference-plain-supervision",
+    "status": "verified",
+    "files": 128,
+    "manifest_sha256": "608955410ae1e108f956a3888be47025c0cd1ca6bcaf3f6c06851d59ab41f1e2"
+  },
+  {
+    "packet": "20261007-reference-receipt-publication",
+    "status": "verified",
+    "files": 409,
+    "manifest_sha256": "64d126fb1479d29aacbd6c55280bd6d68109f1ed3d4316ce47243dc99f458e7a"
+  },
+  {
+    "packet": "20261007-reference-receipt-recovery",
+    "status": "verified",
+    "files": 12,
+    "manifest_sha256": "4b03acd3d952f6ac8ce95bee0a5f3d3e26961fe937e253ee640c8babad6718b5"
+  },
+  {
+    "packet": "20261007-reference-record-admission",
+    "status": "verified",
+    "files": 398,
+    "manifest_sha256": "99ae72cf693cf7fb980c7129551189a00b48f853e25947a96f1f2b6af8ec260c"
+  },
+  {
+    "packet": "20261007-reference-root-admission",
+    "status": "verified",
+    "files": 406,
+    "manifest_sha256": "d24c3d9bb7971a63cdb9917ac6d280d69ef44934b3228d5aa12974c2e831b058"
+  },
+  {
+    "packet": "20261007-refined-contract-writers",
+    "status": "verified",
+    "files": 222,
+    "manifest_sha256": "0d377f5d211fdc93f204dee67b864ca4dadf2d0b73e4a77aa0a1439c5b6d577d"
+  },
+  {
+    "packet": "20261007-refined-retained-series",
+    "status": "verified",
+    "files": 9,
+    "manifest_sha256": "b64cebab008b50071fcb0e70e6be8f7ee5834c69bb4d352123258082747befb2"
+  },
+  {
+    "packet": "20261007-release-app-stage-foundation",
+    "status": "verified",
+    "files": 21,
+    "manifest_sha256": "66249337f9879276f36f9a4ac4a6d450088bfa0f8f4276a7384eb410e7e3f9cd"
+  },
+  {
+    "packet": "20261007-release-audit-writers",
+    "status": "verified",
+    "files": 33,
+    "manifest_sha256": "76be314902992179b1a332f2bc025387a02c8bfe4cb3511990302edbdf0c6842"
+  },
+  {
+    "packet": "20261007-release-audit-writers-final",
+    "status": "verified",
+    "files": 82,
+    "manifest_sha256": "ceb0f9125ca44899271a774774f7fd166da35c05431b8e979b4d1120388cf361"
+  },
+  {
+    "packet": "20261007-release-make-cutover",
+    "status": "verified",
+    "files": 21,
+    "manifest_sha256": "a3e929a419deded7d95b6b3af77ff2c9b691e41f8e0bfa53e7b23b19f865d73a"
+  },
+  {
+    "packet": "20261007-retained-box-contracts",
+    "status": "verified",
+    "files": 37,
+    "manifest_sha256": "55c37c66498fb5ef02743dd17cba388d3c5f7111844fe848bbd65f7ac81c47df"
+  },
+  {
+    "packet": "20261007-retained-command-group-anchor",
+    "status": "verified",
+    "files": 25,
+    "manifest_sha256": "a864d816bcda112bb2f9c15d0b03a69a64341690fd1cf9f6313223e2b1078574"
+  },
+  {
+    "packet": "20261007-retained-compiler-lifecycle",
+    "status": "verified",
+    "files": 76,
+    "manifest_sha256": "5b484d250658ba8166971ec25c33789e0d4feeea31151a743c1b1918a2b61f36"
+  },
+  {
+    "packet": "20261007-retained-convergence-report",
+    "status": "verified",
+    "files": 10,
+    "manifest_sha256": "8dc5b5a5bb7eae95cccf366491bc38dcbda5bc75fbc2e4e7ff9ec4137edbbdeb"
+  },
+  {
+    "packet": "20261007-retained-evidence-admission",
+    "status": "verified",
+    "files": 56,
+    "manifest_sha256": "0dc0444e4f3f98461a0bb478647b53de8e802c79c3ba3f79310613cec7d3e67f"
+  },
+  {
+    "packet": "20261007-retained-session-attempts",
+    "status": "verified",
+    "files": 24,
+    "manifest_sha256": "85a9d1e380914a81c2101c96657a3044f5c53f34bc1027a704d40191d8bbfce7"
+  },
+  {
+    "packet": "20261007-retention-policy-audit",
+    "status": "verified",
+    "files": 15,
+    "manifest_sha256": "ee35bd0963b2b58433ff41d5abe2cc5c93527819c334e6dbcd493574c86c2309"
+  },
+  {
+    "packet": "20261007-runtime-directory-lifecycle",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-session-attempt-input-capture",
+    "status": "verified",
+    "files": 28,
+    "manifest_sha256": "66529f891e2e54c423b9fee2bf1a9807990d0c0997fca7ab49606bf739c0ae69"
+  },
+  {
+    "packet": "20261007-session-path-admission",
+    "status": "verified",
+    "files": 15,
+    "manifest_sha256": "63866f82d14fd5285df74730b4eda0ec4c369f46e96fef91bcf44f8e9d299e81"
+  },
+  {
+    "packet": "20261007-session-sample-preservation",
+    "status": "verified",
+    "files": 16,
+    "manifest_sha256": "4fc75d5babb5ac07cc801f8f9f6b42b604dea9538a8b0f05bfcf161bf00cf5fc"
+  },
+  {
+    "packet": "20261007-session-storage-witnesses",
+    "status": "verified",
+    "files": 10,
+    "manifest_sha256": "35e7ccb9c8cf4dab2b695cc14d40ef9bc5667bbc24a611a637be96255b46c184"
+  },
+  {
+    "packet": "20261007-shape-asset-publication",
+    "status": "verified",
+    "files": 55,
+    "manifest_sha256": "cf0f0dd4f952ccb4606bd663df4f73fbf89a63d52567bf77652c6f08ecc9f027"
+  },
+  {
+    "packet": "20261007-shape-input-admission",
+    "status": "verified",
+    "files": 63,
+    "manifest_sha256": "2920cb68c5708e5002ab44312bb9ed19dcdcae518f8aad10f7629a04cd13eac8"
+  },
+  {
+    "packet": "20261007-shape-link-objects",
+    "status": "verified",
+    "files": 34,
+    "manifest_sha256": "cb7f731b386271048691f5639188c8474f029e0d67ca3212ddb1bf1bd613dfec"
+  },
+  {
+    "packet": "20261007-shape-mask-publication",
+    "status": "verified",
+    "files": 34,
+    "manifest_sha256": "d6c01ef0703f445ea118b1286825ff95d39d99ab9b31f5b8b61ce12ef74878d3"
+  },
+  {
+    "packet": "20261007-shape-numeric-admission",
+    "status": "verified",
+    "files": 22,
+    "manifest_sha256": "23acc9e35c2f902f358ec0836de7b660744075c0b897fcb752eccb2c82e1e34b"
+  },
+  {
+    "packet": "20261007-shape-raster-admission",
+    "status": "verified",
+    "files": 43,
+    "manifest_sha256": "24469f23bbd9586a5b2f960fe078e08b8892218723e3bce62d113521b9de9d40"
+  },
+  {
+    "packet": "20261007-snapshot-publication",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  },
+  {
+    "packet": "20261007-status-resilience",
+    "status": "verified",
+    "files": 8,
+    "manifest_sha256": "b2cb4a9bf621113709ba56698213b70ed8964917a38c87d19480ca897885fb3f"
+  },
+  {
+    "packet": "20261007-tool-capture-group-anchor",
+    "status": "verified",
+    "files": 113,
+    "manifest_sha256": "8404eae83ae7d77076f0eafbbb9a386493c4f687f04c03e877b811b34c3fd409"
+  },
+  {
+    "packet": "20261007-top-level-assessment-current",
+    "status": "verified",
+    "files": 9,
+    "manifest_sha256": "22f5894dba6195c1107fb01e72ce504e4ccf53d4c3c61d819d3a2df2fb068e1e"
+  },
+  {
+    "packet": "20261007-top-level-hardening",
+    "status": "verified",
+    "files": 21,
+    "manifest_sha256": "12f3c7c157e4f4c3e2e0bda98bf8a8867eef56be80b7ae6f3b507f50adcc7a12"
+  },
+  {
+    "packet": "20261007-wind-probe-lifecycle",
+    "status": "verified",
+    "files": 260,
+    "manifest_sha256": "d5fa3171a65be196bfc4786bce12fb9c75172aefb72caecdbb6d4b02e20e9c33"
+  },
+  {
+    "packet": "20261007-worker-capture-bounds",
+    "status": "verified",
+    "files": 20,
+    "manifest_sha256": "a5b9a3eee2f33548d4356d189d9cf35178f34a9189d67c1ec0785c7a94af85cd"
+  },
+  {
+    "packet": "20261007-writer-discovery",
+    "status": "failed-verification",
+    "error": "Invalid or empty retained manifest"
+  }
+]

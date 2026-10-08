@@ -14,15 +14,20 @@ endif
 
 SRC_DIR   := src
 INC_DIR   := include
-BUILD_DIR := build
-TARGET    := physics_sim
+BUILD_DIR ?= build/profiles/local-owned
+TEST_TMP_DIR ?= tmp/tests
+EXPERIMENT_DIR ?= data/experiments
+REFERENCE_TOOLS_DIR ?= data/tools
+SESSION_WORKER_BIN ?= $(BUILD_DIR)/bin/physics_sim_session_worker
+BIN_DIR := $(BUILD_DIR)/bin
+TARGET := $(BIN_DIR)/physics_sim
 DIST_DIR  := dist
 CODEWORK_WORKSPACE_ROOT := $(abspath $(shell git rev-parse --path-format=absolute --git-common-dir)/../..)
 FISICS_INCLUDE_DIR ?= $(CODEWORK_WORKSPACE_ROOT)/fisiCs/include
-CLANG_BUILD_DIR := $(BUILD_DIR)/clang
+CLANG_BUILD_DIR := $(BIN_DIR)
 FISICS_BUILD_DIR := $(BUILD_DIR)/fisics
-CLANG_TARGET := $(CLANG_BUILD_DIR)/$(TARGET)
-FISICS_TARGET := $(FISICS_BUILD_DIR)/$(TARGET)
+CLANG_TARGET := $(TARGET)
+FISICS_TARGET := $(FISICS_BUILD_DIR)/bin/physics_sim
 PACKAGE_TOOLCHAIN ?= clang
 SEMA_SRC := $(SRC_DIR)/import/runtime_scene_solver_projection_domain.c
 SEMA_OBJ := $(FISICS_BUILD_DIR)/runtime_scene_solver_projection_domain.o
@@ -94,3 +99,5 @@ RELEASE_CHANNEL ?= stable
 RELEASE_PRODUCT_NAME := kinetiC
 RELEASE_PROGRAM_KEY := physics_sim
 RELEASE_BUNDLE_ID := com.cosm.kinetic
+
+export PHYSICS_SIM_BUILD_ROOT := $(abspath $(BUILD_DIR))

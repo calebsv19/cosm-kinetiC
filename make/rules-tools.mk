@@ -1,36 +1,36 @@
 # =========================
 #  CLI tool rules
 # =========================
-shape_sanity_tool: $(SHAPE_SANITY_TOOL_OBJ)
+$(SHAPE_SANITY_TOOL_BIN): $(SHAPE_SANITY_TOOL_OBJ)
 	@mkdir -p $(dir $(SHAPE_SANITY_TOOL_OBJ))
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(filter %.o,$^) $(LIBS)
 
-shape_mask_tool: $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
+$(SHAPE_MASK_TOOL_BIN): $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
 
-shape_asset_tool: $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
+$(SHAPE_ASSET_TOOL_BIN): $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
 
 # legacy alias
 shape_import_tool: shape_mask_tool
 
-vf2d_pack_tool: $(CORE_PACK_TOOL_SRCS)
-	$(CC) $(CSTD) $(WARN) $(DEBUG) $(CORE_PACK_TOOL_INCS) -o $(VF2D_PACK_TOOL_BIN) $(CORE_PACK_TOOL_SRCS)
+$(VF2D_PACK_TOOL_BIN): $(CORE_PACK_TOOL_SRCS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CSTD) $(WARN) $(DEBUG) $(CORE_PACK_TOOL_INCS) -o $(VF2D_PACK_TOOL_BIN) $(CORE_PACK_TOOL_SRCS)
 
-vf2d_dataset_tool: $(VF2D_DATASET_TOOL_SRCS)
-	$(CC) $(CSTD) $(WARN) $(DEBUG) $(VF2D_DATASET_TOOL_INCS) -o $(VF2D_DATASET_TOOL_BIN) $(VF2D_DATASET_TOOL_SRCS) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
+$(VF2D_DATASET_TOOL_BIN): $(VF2D_DATASET_TOOL_SRCS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CSTD) $(WARN) $(DEBUG) $(VF2D_DATASET_TOOL_INCS) -o $(VF2D_DATASET_TOOL_BIN) $(VF2D_DATASET_TOOL_SRCS) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
 
-physics_trace_tool: $(PHYSICS_TRACE_TOOL_SRCS)
-	$(CC) $(CSTD) $(WARN) $(DEBUG) $(PHYSICS_TRACE_TOOL_INCS) -o $(PHYSICS_TRACE_TOOL_BIN) $(PHYSICS_TRACE_TOOL_SRCS)
+$(PHYSICS_TRACE_TOOL_BIN): $(PHYSICS_TRACE_TOOL_SRCS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CSTD) $(WARN) $(DEBUG) $(PHYSICS_TRACE_TOOL_INCS) -o $(PHYSICS_TRACE_TOOL_BIN) $(PHYSICS_TRACE_TOOL_SRCS)
 
-physics_sim_headless: $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
-	$(CC) $(LDFLAGS) -o $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(HEADLESS_WORKER_LIBS)
+$(PHYSICS_SIM_HEADLESS_TOOL_BIN): $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(HEADLESS_WORKER_LIBS)
 
-physics-sim-job-runner: $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
-	$(CC) $(LDFLAGS) -o $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(HEADLESS_WORKER_LIBS)
+$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN): $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(HEADLESS_WORKER_LIBS)
 
-runtime_scene_emitter_diag_tool: $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS)
-	$(CC) $(CFLAGS) \
+$(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN): $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) \
 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
 		-I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/../../shape/external -I$(CORE_IO_DIR)/include \
 		-I/opt/homebrew/Cellar/json-c/0.18/include -I/opt/homebrew/Cellar/json-c/0.18/include/json-c \
@@ -130,13 +130,43 @@ manifest_to_trace: physics_trace_tool
 	fi
 
 # Trusted-local S1 background simulation owner.
-physics_sim_session_worker: $(BUILD_DIR)/tools/cli/physics_sim_session_worker.o $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
-	$(CC) $(LDFLAGS) -o $@ $^ $(HEADLESS_WORKER_LIBS)
+$(SESSION_WORKER_BIN): $(BUILD_DIR)/tools/cli/physics_sim_session_worker.o $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(filter %.o,$^) $(HEADLESS_WORKER_LIBS)
 
 test-agent-session: physics_sim_session_worker
 	python3 -m unittest discover -s tests -p 'test_agent_session*.py' -v
 
 .PHONY: test-agent-session test-session-observation
 test-session-observation: $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/session_observation_test tests/session_observation_test.c $^ $(HEADLESS_WORKER_LIBS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/session_observation_test tests/session_observation_test.c $(filter %.o,$^) $(HEADLESS_WORKER_LIBS)
 	$(BUILD_DIR)/session_observation_test
+
+.PHONY: vf2d_pack_tool
+vf2d_pack_tool: $(VF2D_PACK_TOOL_BIN)
+
+.PHONY: vf2d_dataset_tool
+vf2d_dataset_tool: $(VF2D_DATASET_TOOL_BIN)
+
+.PHONY: physics_trace_tool
+physics_trace_tool: $(PHYSICS_TRACE_TOOL_BIN)
+
+.PHONY: physics_sim_headless
+physics_sim_headless: $(PHYSICS_SIM_HEADLESS_TOOL_BIN)
+
+.PHONY: physics-sim-job-runner
+physics-sim-job-runner: $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)
+
+.PHONY: runtime_scene_emitter_diag_tool
+runtime_scene_emitter_diag_tool: $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN)
+
+.PHONY: shape_sanity_tool
+shape_sanity_tool: $(SHAPE_SANITY_TOOL_BIN)
+
+.PHONY: shape_mask_tool
+shape_mask_tool: $(SHAPE_MASK_TOOL_BIN)
+
+.PHONY: shape_asset_tool
+shape_asset_tool: $(SHAPE_ASSET_TOOL_BIN)
+
+.PHONY: physics_sim_session_worker
+physics_sim_session_worker: $(SESSION_WORKER_BIN)

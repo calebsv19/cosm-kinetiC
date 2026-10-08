@@ -1,0 +1,34 @@
+{
+  "schema": "report-inbox-codex-exec-result/v1",
+  "thread_id": "physics-focused-preservation-20261007d-apply",
+  "status": "completed",
+  "result_type": "codex_exec",
+  "executor": "linuxpc-codex-exec-runner",
+  "task_profile": "linux_pc_cold_archive_control",
+  "cwd": "/srv/codework-inbox/report-inbox/physics-focused-preservation-20261007d-apply",
+  "started_at": "2026-10-08T05:08:32Z",
+  "completed_at": "2026-10-08T05:08:33Z",
+  "finished_at": "2026-10-08T05:08:33Z",
+  "exit_code": 0,
+  "log_path": "/srv/codework-inbox/report-inbox/physics-focused-preservation-20261007d-apply/vps/exec_run.log",
+  "output_path": "/srv/codework-inbox/report-inbox/physics-focused-preservation-20261007d-apply/vps/exec_output.md",
+  "summary": "Fixed helper executed.",
+  "artifacts": [
+    {
+      "path": "vps/reply_summary.json",
+      "kind": "reply_summary"
+    },
+    {
+      "path": "vps/reply_body.md",
+      "kind": "reply_body"
+    },
+    {
+      "path": "vps/exec_result.json",
+      "kind": "exec_result"
+    },
+    {
+      "path": "vps/exec_run.log",
+      "kind": "exec_log"
+    }
+  ]
+}

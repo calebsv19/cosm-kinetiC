@@ -1,0 +1,197 @@
+{
+  "source": "/Users/calebsv/Desktop/CodeWork/_worktrees/physics_sim_main_edit",
+  "scope": "dependency discovery, not adoption or verification",
+  "files": [
+    {
+      "path": "scripts/atomic_output.py",
+      "bytes": 18388,
+      "sha256": "99d5bf063794c62a044d7bcfd3966af7aaa58479a745c5c91f4a34f5b0886281"
+    },
+    {
+      "path": "scripts/build_identity.py",
+      "bytes": 18528,
+      "sha256": "8980a9b27f93ebf6ba56b1e795ad83f3425a930f2b49099e6c7662e8f680b038"
+    },
+    {
+      "path": "scripts/build_outputs.py",
+      "bytes": 19094,
+      "sha256": "9fa8f5639f19f6de002ad0a8a0a875734a04394f99fa40dff0d4962f7de9e41c"
+    },
+    {
+      "path": "scripts/build_owner.py",
+      "bytes": 13934,
+      "sha256": "2dfe36f5baa9d13a278c5d78b95287229ce1473f723db9f7d3d20104588f93dd"
+    },
+    {
+      "path": "scripts/check_clean_root.py",
+      "bytes": 16249,
+      "sha256": "523e2ab1863222a5d2136fc0dedb2de9296bcf6ad8bdd23a7ddebdde39e3f290"
+    },
+    {
+      "path": "scripts/clean_outputs.py",
+      "bytes": 4766,
+      "sha256": "d37882382923eaa6cc3ea8889b1af3c2259bc7e27019a3d8c02f8f2e241442a2"
+    },
+    {
+      "path": "scripts/package_outputs.py",
+      "bytes": 4727,
+      "sha256": "541bdabdcda275b7a38b1d6db18653cf2ba68f2ffb69af9d8a7a5d853cb04abe"
+    },
+    {
+      "path": "scripts/tool_probe.py",
+      "bytes": 8559,
+      "sha256": "0ceada2c80491cf24723b614c6f8d6f0e8b5ee5fce44a360ddb24571c9ec80e9"
+    },
+    {
+      "path": "tests/test_atomic_output.py",
+      "bytes": 11530,
+      "sha256": "10eed4b190c52fd11af15ea086ffb10b2746f839bea5e0bfbeb51602ad2b8fa5"
+    },
+    {
+      "path": "tests/test_build_identity.py",
+      "bytes": 4621,
+      "sha256": "cb92125cf26ed74bd504adad6b414ed6a133fb4397d04f272fbf3ca312192001"
+    },
+    {
+      "path": "tests/test_build_output_isolation.py",
+      "bytes": 3456,
+      "sha256": "87a3d5c495a97404b7d2cba6db876cdf6b3876aa2bd721e7980197b40b865453"
+    },
+    {
+      "path": "tests/test_build_owner.py",
+      "bytes": 16151,
+      "sha256": "2f90edb6078607ea050877bbbbcd4f1cf0befb5310e25d018d2618e41bcfb6e4"
+    },
+    {
+      "path": "tests/test_clean_inventory_budget.py",
+      "bytes": 5864,
+      "sha256": "8a3578160d47a6238b54f0c3056ed53d5fc89605092acff309338ae25c3ca989"
+    },
+    {
+      "path": "tests/test_clean_json_bounds.py",
+      "bytes": 2264,
+      "sha256": "0b7b038d6ea36ebeec91e8317b88996ab3329434b2f5898c467ff7746ac7850e"
+    },
+    {
+      "path": "tests/test_clean_outputs.py",
+      "bytes": 12191,
+      "sha256": "a09bbb1219054734c19af59c927573151dc326c97c4bf1c48c170d8f645b991d"
+    },
+    {
+      "path": "tests/test_clean_reservation_schema.py",
+      "bytes": 3526,
+      "sha256": "692109ffedcb6fef68b1d2ba119004896e1939f137f624682f826f68ebd0d188"
+    },
+    {
+      "path": "tests/test_clean_reservations.py",
+      "bytes": 5599,
+      "sha256": "86bb1891b27a91f06bbdc405ba06c1c849090ac7c0ef307480895d68b1d3419b"
+    }
+  ],
+  "import_edges": [
+    [
+      "tests/test_atomic_output.py",
+      "scripts/build_outputs.py"
+    ],
+    [
+      "scripts/build_outputs.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "scripts/build_outputs.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "tests/test_clean_reservation_schema.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "tests/test_clean_reservation_schema.py",
+      "scripts/package_outputs.py"
+    ],
+    [
+      "scripts/package_outputs.py",
+      "scripts/clean_outputs.py"
+    ],
+    [
+      "scripts/clean_outputs.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "scripts/clean_outputs.py",
+      "scripts/build_outputs.py"
+    ],
+    [
+      "tests/test_clean_reservations.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "tests/test_clean_reservations.py",
+      "scripts/clean_outputs.py"
+    ],
+    [
+      "tests/test_clean_reservations.py",
+      "scripts/build_outputs.py"
+    ],
+    [
+      "tests/test_clean_json_bounds.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "tests/test_clean_inventory_budget.py",
+      "scripts/build_outputs.py"
+    ],
+    [
+      "tests/test_clean_inventory_budget.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "tests/test_clean_inventory_budget.py",
+      "scripts/clean_outputs.py"
+    ],
+    [
+      "tests/test_clean_outputs.py",
+      "scripts/clean_outputs.py"
+    ],
+    [
+      "tests/test_clean_outputs.py",
+      "scripts/build_outputs.py"
+    ],
+    [
+      "scripts/atomic_output.py",
+      "scripts/clean_outputs.py"
+    ],
+    [
+      "scripts/atomic_output.py",
+      "scripts/build_owner.py"
+    ],
+    [
+      "scripts/atomic_output.py",
+      "scripts/build_outputs.py"
+    ],
+    [
+      "scripts/atomic_output.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "scripts/build_owner.py",
+      "scripts/clean_outputs.py"
+    ],
+    [
+      "scripts/build_identity.py",
+      "scripts/clean_outputs.py"
+    ],
+    [
+      "scripts/build_identity.py",
+      "scripts/build_outputs.py"
+    ],
+    [
+      "scripts/build_identity.py",
+      "scripts/check_clean_root.py"
+    ],
+    [
+      "scripts/build_identity.py",
+      "scripts/tool_probe.py"
+    ]
+  ]
+}

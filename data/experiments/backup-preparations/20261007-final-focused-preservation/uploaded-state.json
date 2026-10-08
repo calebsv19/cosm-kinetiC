@@ -1,0 +1,17 @@
+{
+  "schema": "linux_pc_export_dropbox_state_v1",
+  "items": [
+    {
+      "item_id": "20261008T050409Z--physics-focused-preservation-20261007d",
+      "source_name": "physics-focused-preservation-20261007d",
+      "source_kind": "directory",
+      "source_path": "/private/tmp/physics-focused-preservation-20261007d/queue/physics-focused-preservation-20261007d",
+      "source_key": "/private/tmp/physics-focused-preservation-20261007d/queue/physics-focused-preservation-20261007d::1791435822937455919::96",
+      "staging_dir": "/private/tmp/physics-focused-preservation-20261007d/staged/20261008T050409Z--physics-focused-preservation-20261007d",
+      "status": "uploaded",
+      "prepared_at": "2026-10-08T05:04:09Z",
+      "remote_path": "/srv/codework-inbox/export-dropbox/20261008T050409Z--physics-focused-preservation-20261007d",
+      "uploaded_at": "2026-10-08T05:07:22Z"
+    }
+  ]
+}

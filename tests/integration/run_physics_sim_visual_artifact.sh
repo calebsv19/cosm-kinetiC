@@ -15,7 +15,7 @@ REPORT="$ARTIFACT_ROOT/visual_artifact_report.json"
 rm -rf "$ARTIFACT_ROOT"
 mkdir -p "$RUN_DIR"
 
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 1 \
   --sim-steps-per-frame 4 \

@@ -1,0 +1,10 @@
+{
+  "user_authorization": "Yes, I approve the current request to unblock that final step. Please just continue through this. I give all authorization needed.",
+  "recorded_utc": "2026-10-08T05:08:40.776407+00:00",
+  "export_item_id": "20261008T050409Z--physics-focused-preservation-20261007d",
+  "remote_source": "/srv/codework-inbox/export-dropbox/20261008T050409Z--physics-focused-preservation-20261007d",
+  "destination": "/mnt/cold_archive_500g/codework-archive/generated-runs/physics-focused-preservation-20261007d/20261008T050409Z--physics-focused-preservation-20261007d",
+  "preflight": "dry_run_ready",
+  "payload_sha256": "d2546e02ba988902b7e0f665dfb41c465cff2da8e2dc2f9a9503cbf638998253",
+  "independent_retrieval_verified": false
+}

@@ -1,0 +1,9 @@
+{
+  "schema": "physics_sim_artifact_owner_v1",
+  "artifact_class": "local_package_staging",
+  "attempt_id": "04f04223-76be-4de4-9237-c3b70629199e",
+  "root": "/private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt",
+  "output": "/private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt/fixture.app",
+  "state": "fresh_reserved_attempt",
+  "release_authority_granted": false
+}

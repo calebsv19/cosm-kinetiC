@@ -2,6 +2,25 @@
 
 Last updated: 2026-10-04
 
+## Local lifecycle source adoption — 2026-10-07
+
+Uncommitted canonical working-tree changes now use the owned compilation profile
+`build/profiles/local-owned`, guarded cleanup, private staged launcher
+configuration, retained macOS dependency bundling, coherent optional Linux desktop
+entry installation, and retained Linux package transactions/proofs. Existing
+build roots, package outputs and evidence are preserved. See
+`cleanup_operations.md`, `launcher_configuration_recovery.md` and
+`packaging_lifecycle_operations.md` for current commands, proofs and limits.
+
+The canonical headless build passed; disposable build/clean/rebuild, Water,
+scene-cache and CLI proofs passed. Packaging adoption passed the focused fixture
+suites and a native Mach-O dependency readback. These are source/fixture results,
+not installed-app, signing, publication or human GUI acceptance. VERSION and
+WORKER_VERSION remain unchanged. The frozen repairs and evidence were independently
+archived and retrieved/verified; `focused_cleanup_closeout.md` records the exact
+coverage and limits. Main Edit's separate dirty source has not been bulk-adopted
+or reset.
+
 ## Persistent Main Edit Development Identity
 
 - Canonical source remains `main`; functional development uses the persistent

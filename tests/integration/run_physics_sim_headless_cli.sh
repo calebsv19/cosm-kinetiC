@@ -7,8 +7,9 @@ RUNTIME_SCENE="${PHYSICS_SIM_HEADLESS_RUNTIME_SCENE:-$DEFAULT_RUNTIME_SCENE}"
 OUT_DIR="$PHYSICS_DIR/tmp/headless_cli_portable_retained_scene"
 SUMMARY="$OUT_DIR/run_summary.json"
 PROGRESS="$OUT_DIR/run_progress.json"
-STEP_LOG="/private/tmp/physics_sim_headless_step_progress.out"
-VERSION_JSON="$($PHYSICS_DIR/physics_sim_headless --version)"
+STEP_LOG="$PHYSICS_DIR/tmp/headless_cli_step_progress.out"
+EXISTING_LOG="$PHYSICS_DIR/tmp/headless_cli_existing.out"
+VERSION_JSON="$("${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" --version)"
 
 printf '%s' "$VERSION_JSON" | python3 -c '
 import json
@@ -40,7 +41,7 @@ if [ ! -f "$RUNTIME_SCENE" ]; then
 fi
 
 rm -rf "$OUT_DIR"
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 2 \
   --output-root "$OUT_DIR" \
@@ -63,22 +64,22 @@ rg -q '"sim_steps_completed_in_frame"[[:space:]]*:[[:space:]]*0' "$PROGRESS"
 rg -q '"sim_steps_total_in_frame"[[:space:]]*:[[:space:]]*0' "$PROGRESS"
 test -d "$OUT_DIR/volume_frames"
 
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 1 \
   --output-root "$OUT_DIR" \
-  --save-volume-frames >/tmp/physics_sim_headless_existing.out 2>&1 && {
-    cat /tmp/physics_sim_headless_existing.out >&2
+  --save-volume-frames >"$EXISTING_LOG" 2>&1 && {
+    cat "$EXISTING_LOG" >&2
     echo "expected existing output root run to fail without --overwrite" >&2
     exit 1
   }
-rg -q 'output root already exists and is not empty' /tmp/physics_sim_headless_existing.out
-rg -q 'stage=prepare_output' /tmp/physics_sim_headless_existing.out
-rg -q "output_root=$OUT_DIR" /tmp/physics_sim_headless_existing.out
-rg -q 'action=choose a new output root or pass --overwrite' /tmp/physics_sim_headless_existing.out
+rg -q 'output root already exists and is not empty' "$EXISTING_LOG"
+rg -q 'stage=prepare_output' "$EXISTING_LOG"
+rg -q "output_root=$OUT_DIR" "$EXISTING_LOG"
+rg -q 'action=choose a new output root or pass --overwrite' "$EXISTING_LOG"
 
 rm -f "$STEP_LOG"
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 1 \
   --sim-steps-per-frame 2 \

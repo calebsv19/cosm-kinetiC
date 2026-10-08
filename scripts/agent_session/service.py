@@ -62,7 +62,7 @@ def number(value, low, high, integral=False):
 class Service:
     def __init__(self, root=None, worker=None):
         self.root = Path(root or os.environ.get('PHYSICS_SIM_SESSION_ROOT', REPO / 'data/runtime/agent_sessions')).resolve()
-        self.worker = Path(worker or os.environ.get('PHYSICS_SIM_SESSION_WORKER', REPO / 'physics_sim_session_worker')).resolve()
+        self.worker = Path(worker or os.environ.get('PHYSICS_SIM_SESSION_WORKER', REPO / 'build/profiles/local-owned/bin/physics_sim_session_worker')).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         for name in ('scenes', 'runs'):
             (self.root / name).mkdir(exist_ok=True)

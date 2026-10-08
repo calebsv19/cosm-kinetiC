@@ -1,0 +1,8 @@
+Bundler retained: /private/tmp/physics-packaging-adoption-20261007/native-source/data/experiments/package-bundler-attempts/bundle-4ff1d14dd3b549019459e5b586992d04
+Traceback (most recent call last):
+  File "/private/tmp/physics-packaging-adoption-20261007/native-bundler-proof.py", line 26, in <module>
+    assert '@executable_path/../Frameworks/libphysics_fixture.dylib' in id_readback,id_readback
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: /private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt/fixture.app/Contents/Frameworks/libphysics_fixture.dylib:
+@loader_path/libphysics_fixture.dylib
+

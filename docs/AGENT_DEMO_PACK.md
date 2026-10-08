@@ -21,8 +21,8 @@ make -C physics_sim physics_sim_headless
 
 Expected output:
 
-- standalone clone: `physics_sim_headless`
-- CodeWork workspace parent: `physics_sim/physics_sim_headless`
+- standalone clone: `build/profiles/local-owned/bin/physics_sim_headless`
+- CodeWork workspace parent: `physics_sim/build/profiles/local-owned/bin/physics_sim_headless`
 
 This proves the local source checkout can build the supported headless
 entrypoint. It does not prove desktop packaging, notarization, website
@@ -43,7 +43,7 @@ make -C physics_sim test-physics-sim-headless-water-mode
 Equivalent direct command shape in a standalone clone:
 
 ```bash
-./physics_sim_headless \
+./build/profiles/local-owned/bin/physics_sim_headless \
   --water-mode \
   --frames 2 \
   --sim-steps-per-frame 1 \
@@ -55,7 +55,7 @@ Equivalent direct command shape in a standalone clone:
 ```
 
 From the CodeWork workspace parent, the binary path is
-`physics_sim/physics_sim_headless` and the output root is
+`physics_sim/build/profiles/local-owned/bin/physics_sim_headless` and the output root is
 `physics_sim/tmp/headless_water_mode`.
 
 Expected files:
@@ -114,7 +114,7 @@ Equivalent direct command shape in a standalone clone:
 mkdir -p tmp
 cp -R tests/fixtures/scene_project_cache_output_minimal tmp/scene_project_cache_output_minimal
 PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-test-0001 \
-./physics_sim_headless \
+./build/profiles/local-owned/bin/physics_sim_headless \
   --scene-project tmp/scene_project_cache_output_minimal \
   --frames 1 \
   --grid 8x8x8 \

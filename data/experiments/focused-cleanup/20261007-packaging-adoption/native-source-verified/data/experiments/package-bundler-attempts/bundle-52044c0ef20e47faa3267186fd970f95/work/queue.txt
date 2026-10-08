@@ -1,0 +1,2 @@
+/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dist/native-attempt/fixture.app/Contents/MacOS/physics-sim-bin
+/private/tmp/physics-packaging-adoption-20261007/native-source-verified/dist/native-attempt/fixture.app/Contents/Frameworks/libphysics_fixture.dylib

@@ -18,7 +18,7 @@ cp "$FIXTURE_DIR/scene_authoring.json" "$PROJECT_DIR/scene_authoring.json"
 cp "$FIXTURE_DIR/scene_runtime.json" "$PROJECT_DIR/scene_runtime.json"
 cp "$PROJECT_DIR/scene_authoring.json" "$AUTHORING_BEFORE"
 
-PHYSICS_SIM_PROJECT_CACHE_RUN_ID="$RUN_ID" "$PHYSICS_DIR/physics_sim_headless" \
+PHYSICS_SIM_PROJECT_CACHE_RUN_ID="$RUN_ID" "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --scene-project "$PROJECT_DIR" \
   --frames 1 \
   --grid 8x8x8 \

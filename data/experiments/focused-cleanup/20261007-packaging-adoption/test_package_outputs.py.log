@@ -1,0 +1,23 @@
+FF......
+======================================================================
+FAIL: test_actual_linux_clean_recipes_preserve_package_and_archive (__main__.PackageOutputs.test_actual_linux_clean_recipes_preserve_package_and_archive)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/calebsv/Desktop/CodeWork/physics_sim/tests/test_package_outputs.py", line 86, in test_actual_linux_clean_recipes_preserve_package_and_archive
+    self.assertNotEqual(result.returncode,0);self.assertEqual(receipt.read_text(),'{"signed":true}')
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+======================================================================
+FAIL: test_actual_release_clean_recipe_preserves_predecessor_and_bad_override (__main__.PackageOutputs.test_actual_release_clean_recipe_preserves_predecessor_and_bad_override)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/calebsv/Desktop/CodeWork/physics_sim/tests/test_package_outputs.py", line 96, in test_actual_release_clean_recipe_preserves_predecessor_and_bad_override
+    self.assertNotEqual(result.returncode,0)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 == 0
+
+----------------------------------------------------------------------
+Ran 8 tests in 0.151s
+
+FAILED (failures=2)

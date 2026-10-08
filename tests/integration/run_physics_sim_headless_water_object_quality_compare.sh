@@ -26,7 +26,7 @@ run_profile() {
   local steps="$4"
   local profile_root="$OUT_DIR/$label"
 
-  "$PHYSICS_DIR/physics_sim_headless" \
+  "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
     --water-mode \
     --frames "$frames" \
     --sim-steps-per-frame "$steps" \

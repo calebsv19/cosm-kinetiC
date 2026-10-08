@@ -8,7 +8,7 @@ if [[ ! -x "$RUNNER" ]]; then
   RUNNER="$ROOT_DIR/build/tools/cli/physics_sim_job_runner"
 fi
 if [[ ! -x "$RUNNER" ]]; then
-  RUNNER="$ROOT_DIR/physics_sim_job_runner"
+  RUNNER="$ROOT_DIR/build/profiles/local-owned/bin/physics_sim_job_runner"
 fi
 
 DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"

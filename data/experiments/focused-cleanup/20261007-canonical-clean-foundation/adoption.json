@@ -1,0 +1,74 @@
+{
+  "state": "cleanup foundation adopted; build-writer integration pending",
+  "canonical_base": "3fa1ad5f6fb2384a7626e83c5e22fa7821cb7ed5",
+  "files": [
+    {
+      "path": "makefile",
+      "before_sha256": "b2b3e9309a0591b51a511889bd2c3853b0cdfea207c6b9a5e0fc29b0f10160f7",
+      "after_sha256": "babd89d553badaf2bb28025700be189af9aec1185b0345b4e6975e8d094af33a"
+    },
+    {
+      "path": "make/config.mk",
+      "before_sha256": "a41e62252db915ee1334ad17cbca1868c66a47ef12cb6f14c62b60c7320e7f51",
+      "after_sha256": "3b81bb2dfbc5a60d73f8a33f49e698aacdba9e9368fde833f608acdda2dce6f1"
+    },
+    {
+      "path": "make/rules-runtime.mk",
+      "before_sha256": "048f079b793b220591608d21e46eb94ce0f7329d73473c3cd33c714737de7ec2",
+      "after_sha256": "125d842b42894eaa4e68353a82e713186cff0775a468301176d49c3a53b62800"
+    },
+    {
+      "path": "scripts/check_clean_root.py",
+      "before_sha256": null,
+      "after_sha256": "523e2ab1863222a5d2136fc0dedb2de9296bcf6ad8bdd23a7ddebdde39e3f290"
+    },
+    {
+      "path": "scripts/build_outputs.py",
+      "before_sha256": null,
+      "after_sha256": "9fa8f5639f19f6de002ad0a8a0a875734a04394f99fa40dff0d4962f7de9e41c"
+    },
+    {
+      "path": "scripts/clean_outputs.py",
+      "before_sha256": null,
+      "after_sha256": "d37882382923eaa6cc3ea8889b1af3c2259bc7e27019a3d8c02f8f2e241442a2"
+    },
+    {
+      "path": "scripts/package_outputs.py",
+      "before_sha256": null,
+      "after_sha256": "541bdabdcda275b7a38b1d6db18653cf2ba68f2ffb69af9d8a7a5d853cb04abe"
+    },
+    {
+      "path": "tests/test_clean_outputs.py",
+      "before_sha256": null,
+      "after_sha256": "a09bbb1219054734c19af59c927573151dc326c97c4bf1c48c170d8f645b991d"
+    },
+    {
+      "path": "tests/test_clean_inventory_budget.py",
+      "before_sha256": null,
+      "after_sha256": "8a3578160d47a6238b54f0c3056ed53d5fc89605092acff309338ae25c3ca989"
+    },
+    {
+      "path": "tests/test_clean_json_bounds.py",
+      "before_sha256": null,
+      "after_sha256": "0b7b038d6ea36ebeec91e8317b88996ab3329434b2f5898c467ff7746ac7850e"
+    },
+    {
+      "path": "tests/test_clean_reservations.py",
+      "before_sha256": null,
+      "after_sha256": "86bb1891b27a91f06bbdc405ba06c1c849090ac7c0ef307480895d68b1d3419b"
+    },
+    {
+      "path": "tests/test_clean_reservation_schema.py",
+      "before_sha256": null,
+      "after_sha256": "692109ffedcb6fef68b1d2ba119004896e1939f137f624682f826f68ebd0d188"
+    }
+  ],
+  "staged_tests_passed": 52,
+  "live_cleanup_run": false,
+  "independent_backup": false,
+  "canonical_make_control_test": {
+    "command": "make test-top-level-cleanup PKG_CONFIG=false CLANG=false",
+    "tests": 18,
+    "status": "passed"
+  }
+}

@@ -1,0 +1,4191 @@
+fatal: not a git repository (or any of the parent directories): .git
+python3 scripts/clean_outputs.py --build-root "build" --experiment-root "data/experiments" --tools-root "data/tools" --test-root "tmp/tests" --executable "build/bin/physics_sim" --executable "build/bin/vf2d_pack_tool" --executable "build/bin/vf2d_dataset_tool" --executable "build/bin/physics_trace_tool" --executable "build/bin/physics_sim_headless" --executable "build/bin/physics_sim_job_runner" --executable "build/bin/runtime_scene_emitter_diag_tool" --executable "build/bin/physics_sim_session_worker" --executable "build/bin/shape_sanity_tool" --executable "build/bin/shape_mask_tool" --executable "build/bin/shape_asset_tool" --apply
+{
+  "status": "cleaned",
+  "removed": [
+    "/private/tmp/physics-focused-build-20261007/repo/build"
+  ],
+  "plan": {
+    "schema": "physics_sim_clean_plan_v2",
+    "owned_files": [
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/.configuration/active.json",
+        "identity": [
+          16777231,
+          252202799,
+          33152,
+          96,
+          1791434314406458877,
+          1791434314406644168
+        ],
+        "sha256": "1b6556fd12bb570641c8fa726af6cc4163f44b437a8d4a3df53f5ea4ebbbee11"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/.configuration/be5592aa9a083222670e4d4a83c5cdb7545e56cb2e71c15aca500d332e4be3ca-1.json",
+        "identity": [
+          16777231,
+          252202795,
+          33152,
+          12239,
+          1791434314403939646,
+          1791434314404256810
+        ],
+        "sha256": "be5592aa9a083222670e4d4a83c5cdb7545e56cb2e71c15aca500d332e4be3ca"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/app_config.d",
+        "identity": [
+          16777231,
+          252203243,
+          33188,
+          270,
+          1791434322696124921,
+          1791434322746453215
+        ],
+        "sha256": "86068e2cc61e9fc43f315020aa7c549af7be5b14ec7db9872b59af313630bcac"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/app_config.o",
+        "identity": [
+          16777231,
+          252203242,
+          33188,
+          8480,
+          1791434322695925964,
+          1791434322746595839
+        ],
+        "sha256": "ca9106b4df9c1804c59bdde8400597ff167a62e91331f13bdb172dca6c254372"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/atmospheric/atmospheric_field.d",
+        "identity": [
+          16777231,
+          252203251,
+          33188,
+          560,
+          1791434322856565776,
+          1791434322883423535
+        ],
+        "sha256": "292b742daf72b27c29ab3be8fb83c5852ba382fa13eb919c7e0156e0e60ed9e4"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/atmospheric/atmospheric_field.o",
+        "identity": [
+          16777231,
+          252203250,
+          33188,
+          27600,
+          1791434322856314444,
+          1791434322883572867
+        ],
+        "sha256": "44ea85d8b63567b98d64de427bacf7aa65cf674a6d5f28c2c0526ae7b6ddda6e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/atmospheric/atmospheric_warm_start.d",
+        "identity": [
+          16777231,
+          252203281,
+          33188,
+          7621,
+          1791434323531734821,
+          1791434323597170254
+        ],
+        "sha256": "074cebc76aff8bd2cd029ac5d66358961bab32e271412440a894ceb9dbd4ef96"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/atmospheric/atmospheric_warm_start.o",
+        "identity": [
+          16777231,
+          252203267,
+          33188,
+          60168,
+          1791434323531464948,
+          1791434323597299003
+        ],
+        "sha256": "dd4bf7df99212f22f15a7df5a21c34fa16b952eefd827a49fa6276bc56c29e47"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/data_paths.d",
+        "identity": [
+          16777231,
+          252202986,
+          33188,
+          215,
+          1791434317777392854,
+          1791434317824617338
+        ],
+        "sha256": "838c9a7c1bffe70d19516cdb8263d007d21a6f6396beec8bf6888926a8bc306e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/data_paths.o",
+        "identity": [
+          16777231,
+          252202984,
+          33188,
+          17832,
+          1791434317777206689,
+          1791434317824774087
+        ],
+        "sha256": "c2408aaa491e860429c5b85c58e2016c416f1beeef512173c55b6e4c0fb1b58f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/editor/scene_editor_viewport.d",
+        "identity": [
+          16777231,
+          252203571,
+          33188,
+          636,
+          1791434329295589386,
+          1791434329315974443
+        ],
+        "sha256": "1c23271635afe7409ad111a35ce56f73204a7483b5d2c3aec33a78711d6d5e9b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/editor/scene_editor_viewport.o",
+        "identity": [
+          16777231,
+          252203567,
+          33188,
+          32896,
+          1791434329295365512,
+          1791434329316109984
+        ],
+        "sha256": "1871f6e9726f58cb4258ee37c1325f7ba1c4503d559bc704d68612630fbc411e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/editor/scene_editor_wind_setup.d",
+        "identity": [
+          16777231,
+          252203553,
+          33188,
+          1658,
+          1791434328943049411,
+          1791434328980618133
+        ],
+        "sha256": "5366021f9fa271eb3fab8c8b6e97ae0e88b57ef54b56cb6f29d325558229948c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/editor/scene_editor_wind_setup.o",
+        "identity": [
+          16777231,
+          252203551,
+          33188,
+          25648,
+          1791434328942806788,
+          1791434328980760798
+        ],
+        "sha256": "08ef584fdd753c9b8d9b80e0c6747da49347306f6f36feb992901d50dbb5a6ce"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/menu/menu_settings_provider_water.d",
+        "identity": [
+          16777231,
+          252203350,
+          33188,
+          559,
+          1791434324988723167,
+          1791434325042979932
+        ],
+        "sha256": "6491119562657f1277815f4fe029ba86e13c6509bd7e127732d258244170d771"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/menu/menu_settings_provider_water.o",
+        "identity": [
+          16777231,
+          252203349,
+          33188,
+          4576,
+          1791434324988493419,
+          1791434325043119223
+        ],
+        "sha256": "5a8b40890b088ced5ca2c8ece3e8a2e04160190076b54a5db4496fc6604a5e1d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_app_main.d",
+        "identity": [
+          16777231,
+          252203209,
+          33188,
+          275,
+          1791434322049142791,
+          1791434322091801350
+        ],
+        "sha256": "846ca629d8de84fd0be1df1fd5601f156c68c366090806e354681c509428adda"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_app_main.o",
+        "identity": [
+          16777231,
+          252203208,
+          33188,
+          19568,
+          1791434322048853960,
+          1791434322091977891
+        ],
+        "sha256": "55b32c2f72e9b62214737bbdb0ec17bc42b8dca93568f148156270df36e1537a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_cli_helpers.d",
+        "identity": [
+          16777231,
+          252203339,
+          33188,
+          271,
+          1791434324789763223,
+          1791434324811229814
+        ],
+        "sha256": "2af54ea081dd177d1d1ecc6395a6c5bcaeba2b3bb31c26f7a4d922c53748eacc"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_cli_helpers.o",
+        "identity": [
+          16777231,
+          252203338,
+          33188,
+          4512,
+          1791434324789531808,
+          1791434324811373938
+        ],
+        "sha256": "5540e2a5b3094ae8fa641ec8a338e321d8bcf49ccbb2eb6c486ae145ed0b2140"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_diagnostic_helpers.d",
+        "identity": [
+          16777231,
+          252203074,
+          33188,
+          184,
+          1791434319248298013,
+          1791434319305344716
+        ],
+        "sha256": "09a61ad8eecf57731a3ffead9264305cf25db1b02326c9257a44394ef485e7ea"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_diagnostic_helpers.o",
+        "identity": [
+          16777231,
+          252203071,
+          33188,
+          2728,
+          1791434319248088306,
+          1791434319305498173
+        ],
+        "sha256": "595cc85445624afb8b3ffcdb85c4d412948212ff27942a2798e4401ca17208dc"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_file_helpers.d",
+        "identity": [
+          16777231,
+          252203520,
+          33188,
+          275,
+          1791434328401397584,
+          1791434328438033355
+        ],
+        "sha256": "d551b8f8847f2f96d2bab1d96303ae56c80f33290d44fb063c795db492c88080"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_file_helpers.o",
+        "identity": [
+          16777231,
+          252203518,
+          33188,
+          12272,
+          1791434328401138461,
+          1791434328438215770
+        ],
+        "sha256": "421455b037b7b9809d7b9a33e211b5a4808b1ac2556220bf91495f360eca7c7a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_headless_job_bundle.d",
+        "identity": [
+          16777231,
+          252203182,
+          33188,
+          2078,
+          1791434321410065269,
+          1791434321442450321
+        ],
+        "sha256": "bfd85a974f0846caf79ba6f8014ac4f541564e8dfa44895669058d78cb90696d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_headless_job_bundle.o",
+        "identity": [
+          16777231,
+          252203181,
+          33188,
+          29976,
+          1791434321409727188,
+          1791434321442592861
+        ],
+        "sha256": "1fd05c7d397cf4dbb379c495143011d65f2810bf93555bf01958635ba9c8c8ae"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_job_runner.d",
+        "identity": [
+          16777231,
+          252203195,
+          33188,
+          1963,
+          1791434321574044972,
+          1791434321638642245
+        ],
+        "sha256": "d008a36abbe3e82cbf49123d2adb529d08696de6645f93cb6f69b2d14d213ea7"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_job_runner.o",
+        "identity": [
+          16777231,
+          252203188,
+          33188,
+          41688,
+          1791434321571901238,
+          1791434321638784494
+        ],
+        "sha256": "2119813c5040f141a28ce4e77f7aefdf7317fbcd859f91642f91820c6a1271cb"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_job_runner_paths.d",
+        "identity": [
+          16777231,
+          252203078,
+          33188,
+          2240,
+          1791434319276079682,
+          1791434319316536716
+        ],
+        "sha256": "0f290ca107169ad795385b49e7e348d403dc16c8f29fc0e66fa6b717a15d7a21"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_job_runner_paths.o",
+        "identity": [
+          16777231,
+          252203070,
+          33188,
+          19800,
+          1791434319275801393,
+          1791434319316665132
+        ],
+        "sha256": "464a0da3562bf3acec727576d4ef7a1bc97e68eebe31405be356074c4fa24dbe"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_job_runner_status.d",
+        "identity": [
+          16777231,
+          252203115,
+          33188,
+          1981,
+          1791434319927748986,
+          1791434319981941669
+        ],
+        "sha256": "b350a6d1c835c4c4f3f7ad6353dff35e0c740ad54a97bd53c5d20df90f4d05f1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_job_runner_status.o",
+        "identity": [
+          16777231,
+          252203107,
+          33188,
+          36272,
+          1791434319927453738,
+          1791434319982242125
+        ],
+        "sha256": "7ca7409baf9b3b12427d97a8543b88005d72dd0cca74fe723d51314d36c1cff5"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_json_helpers.d",
+        "identity": [
+          16777231,
+          252203054,
+          33188,
+          156,
+          1791434318962566336,
+          1791434319011142435
+        ],
+        "sha256": "742fb79bff320260f8f069e0cc824adf4c7a5af75c02c18fc492525cd4294eaf"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/physics_sim_json_helpers.o",
+        "identity": [
+          16777231,
+          252203053,
+          33188,
+          5048,
+          1791434318962326129,
+          1791434319011296517
+        ],
+        "sha256": "af499f7f755b84cddfc305a568e92c52d615fd924fc56959a8c61ca86887ac2f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/platform/physics_sim_file_picker.d",
+        "identity": [
+          16777231,
+          252203111,
+          33188,
+          303,
+          1791434319877317984,
+          1791434319911911687
+        ],
+        "sha256": "73c5d81f8ebe39eab70ed0ae8670de055a4b9f7ab5e508b01fb01a0274aa65c1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/platform/physics_sim_file_picker.o",
+        "identity": [
+          16777231,
+          252203106,
+          33188,
+          10104,
+          1791434319877014195,
+          1791434319912061602
+        ],
+        "sha256": "17a69e4fbcab4b66899b503a078bf75ff3ac70e8b7dcc3eaa6e4b573f5e7eef6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/platform/physics_sim_path_opener.d",
+        "identity": [
+          16777231,
+          252203105,
+          33188,
+          303,
+          1791434319793287856,
+          1791434319837123240
+        ],
+        "sha256": "053282aa069359c01358e59563b8bea932032b060b73ee871de4a8cd40aab1c8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/platform/physics_sim_path_opener.o",
+        "identity": [
+          16777231,
+          252203104,
+          33188,
+          6960,
+          1791434319793002067,
+          1791434319837283531
+        ],
+        "sha256": "764c6e1e7ce3eee190eca0ec1a184881dce0b2663e975838f3a0147093fdaf15"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/preset_io.d",
+        "identity": [
+          16777231,
+          252203223,
+          33188,
+          628,
+          1791434322242611068,
+          1791434322290635921
+        ],
+        "sha256": "c2fca82a0e917eb7a01bf8417299d1cc406dd1b3f98762dc25e7a081466d8645"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/preset_io.o",
+        "identity": [
+          16777231,
+          252203216,
+          33188,
+          56232,
+          1791434322242360153,
+          1791434322290777961
+        ],
+        "sha256": "4300f3264411190618051dc4c77ac7fa97dc97f6ee02051e42f63a694c1b7eac"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/preset_io_library.d",
+        "identity": [
+          16777231,
+          252203302,
+          33188,
+          412,
+          1791434324147153643,
+          1791434324187813176
+        ],
+        "sha256": "d194a0b14e51cf20d4009e4f2425996ff38021322c57bb21a4c9f7092f2240b4"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/preset_io_library.o",
+        "identity": [
+          16777231,
+          252203301,
+          33188,
+          13200,
+          1791434324146890312,
+          1791434324187959133
+        ],
+        "sha256": "609fb60ab5915ee34e110411169ccc84745cc9567ce9c77f7557d1a5e3801e6c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/preset_io_save.d",
+        "identity": [
+          16777231,
+          252203140,
+          33188,
+          406,
+          1791434320515066224,
+          1791434320550130048
+        ],
+        "sha256": "c60b863413ee8b721d435d9e8d1b4981ecaf424a8468c1497e872437af44aeb8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/preset_io_save.o",
+        "identity": [
+          16777231,
+          252203138,
+          33188,
+          18200,
+          1791434320514663060,
+          1791434320550264880
+        ],
+        "sha256": "a890d8607ae63e0d6340695ffc98da391bb8766f20904949747dd95ab48d333e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/quality_profiles.d",
+        "identity": [
+          16777231,
+          252203453,
+          33188,
+          294,
+          1791434327110975382,
+          1791434327119908816
+        ],
+        "sha256": "cff663e05797fed4a2b24c86a49393856e6e1f3a75df7049e80f5993a5757c79"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/quality_profiles.o",
+        "identity": [
+          16777231,
+          252203452,
+          33188,
+          11336,
+          1791434327110766759,
+          1791434327120066690
+        ],
+        "sha256": "7b24ad4252e16b38d1ace099d597c2283aa3dbe2f634d4aea9490945e3fa74be"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_apply.d",
+        "identity": [
+          16777231,
+          252203215,
+          33188,
+          7497,
+          1791434322095959486,
+          1791434322158527273
+        ],
+        "sha256": "b2597950ed7c34bfdd7271a3c5392c9802ed268b051a243afc53dfcd0456f2e1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_apply.o",
+        "identity": [
+          16777231,
+          252203203,
+          33188,
+          37080,
+          1791434322095674196,
+          1791434322158681105
+        ],
+        "sha256": "4153922bce86a02c94960b6af878666026fefff6261a9fefffd08128fff2ebee"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_controller.d",
+        "identity": [
+          16777231,
+          252203187,
+          33188,
+          9193,
+          1791434321473644548,
+          1791434321553619665
+        ],
+        "sha256": "7a32d131891053c420e17b2ea5ec5cc81616747c3c668bf21dd33838665af99e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_controller.o",
+        "identity": [
+          16777231,
+          252203177,
+          33188,
+          114536,
+          1791434321473299801,
+          1791434321553767955
+        ],
+        "sha256": "79cbbfc59cc31051db72c4cffd8aedb957004d7b7b9fbc969333d41415dcf563"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_controller_stroke_sampler.d",
+        "identity": [
+          16777231,
+          252202893,
+          33188,
+          7561,
+          1791434316527652517,
+          1791434316609263789
+        ],
+        "sha256": "4d6a73cb4829b2799009c363af2e37a23d123fea6db4efd942895e1c218bd56e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_controller_stroke_sampler.o",
+        "identity": [
+          16777231,
+          252202888,
+          33188,
+          40408,
+          1791434316527372185,
+          1791434316609391454
+        ],
+        "sha256": "3f126b778ffb7b0d661a4d26312c8a7ff4bd8dbda19c2eae22fbfb66d4a4eb89"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_controller_util.d",
+        "identity": [
+          16777231,
+          252203359,
+          33188,
+          7537,
+          1791434325140218796,
+          1791434325208194376
+        ],
+        "sha256": "54a112b610870ea86c4c60fe67de860c4a726aa62f8f00ac8f88d36cac8fdfba"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_controller_util.o",
+        "identity": [
+          16777231,
+          252203346,
+          33188,
+          38768,
+          1791434325139908298,
+          1791434325208328959
+        ],
+        "sha256": "0b4cd96ec13f57405a354c817fd942daa4cdfc36aca888ad99275bba386308e5"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_core_sim_runtime_step.d",
+        "identity": [
+          16777231,
+          252203414,
+          33188,
+          8073,
+          1791434326214318558,
+          1791434326267742329
+        ],
+        "sha256": "eb8bcb3c87e1ff0805a1510f23f4a8ad747fafa9bfc35fe131d9eb8b7ddfe1c1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_core_sim_runtime_step.o",
+        "identity": [
+          16777231,
+          252203399,
+          33188,
+          51080,
+          1791434326214021226,
+          1791434326267898744
+        ],
+        "sha256": "996cb3e40fca1af3222d98e867b21eecb0b3fa41fa8a11330f96ed28e3cdeb04"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_imports.d",
+        "identity": [
+          16777231,
+          252203493,
+          33188,
+          7700,
+          1791434327955311635,
+          1791434328003809276
+        ],
+        "sha256": "93c68668a3a3505dc67bc94c6e8c4f15f0bdeabf0dc3acf44828e8e3693767a1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_imports.o",
+        "identity": [
+          16777231,
+          252203485,
+          33188,
+          41488,
+          1791434327955011554,
+          1791434328003991317
+        ],
+        "sha256": "ce56d5839d1a21ae686bc1f9535a4df05aa46f63b598310af3fde8b68b046fd1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_loop_diag.d",
+        "identity": [
+          16777231,
+          252203380,
+          33188,
+          239,
+          1791434325582751480,
+          1791434325620318786
+        ],
+        "sha256": "3ac2ea357bcc8acdfa8b3149d45833564bd8fbeaf8bc79ebadd24d707689eb5c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_loop_diag.o",
+        "identity": [
+          16777231,
+          252203378,
+          33188,
+          7776,
+          1791434325582455857,
+          1791434325620483785
+        ],
+        "sha256": "02e37f263ba3ddf8fb088e914b9c6f2913f9bf0920d18866386e49b914bef0ac"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_loop_policy.d",
+        "identity": [
+          16777231,
+          252202894,
+          33188,
+          247,
+          1791434316536712283,
+          1791434316590033763
+        ],
+        "sha256": "bd93a629e3da3b02ca890f1a581cd386427076846cf06e1574813c020e20c61e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_loop_policy.o",
+        "identity": [
+          16777231,
+          252202892,
+          33188,
+          4176,
+          1791434316536514493,
+          1791434316590201304
+        ],
+        "sha256": "b19a3145206a26813d705e5179c1557ac03d90313b138db9c154212d37ec77f8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_masks.d",
+        "identity": [
+          16777231,
+          252203584,
+          33188,
+          7497,
+          1791434329592568063,
+          1791434329667935256
+        ],
+        "sha256": "a2e934e53ab7f92f3913d6a1daf3033f6af6b1410495eccc89baf1c0f386840c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_masks.o",
+        "identity": [
+          16777231,
+          252203575,
+          33188,
+          37688,
+          1791434329586602899,
+          1791434329668063214
+        ],
+        "sha256": "06c7dd8c19d44142ed042910146a382e30648c7d6cbe2f6828f91878b534cc4b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_objects.d",
+        "identity": [
+          16777231,
+          252203536,
+          33188,
+          7505,
+          1791434328715187013,
+          1791434328799038560
+        ],
+        "sha256": "dfdd052d7587105a511e97689534cec978e10f720fdb1af0a91c5d5efb607497"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_objects.o",
+        "identity": [
+          16777231,
+          252203526,
+          33188,
+          41744,
+          1791434328714954640,
+          1791434328799236683
+        ],
+        "sha256": "6c9415e1fff4e5b573f58c88e0c425e67d722e974c3f5663c81409d3976331ae"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_presets.d",
+        "identity": [
+          16777231,
+          252203336,
+          33188,
+          296,
+          1791434324731350822,
+          1791434324800798933
+        ],
+        "sha256": "d85e5dcfb284f622ce2bffdf78bd0e46f6d0cb4396907f455cb1d377a078ab20"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_presets.o",
+        "identity": [
+          16777231,
+          252203335,
+          33188,
+          952968,
+          1791434324731120240,
+          1791434324800942015
+        ],
+        "sha256": "3a157db63ba84888c84cbba04ae0b1b0afe1f20e86a82d45d1b62a7da1fe75bc"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_project_cache_output.d",
+        "identity": [
+          16777231,
+          252203371,
+          33188,
+          370,
+          1791434325396639732,
+          1791434325444323963
+        ],
+        "sha256": "ba4331b561a6f8c752dd8a3d83558662d152495dfdfb1add82f39ad98871e5c6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_project_cache_output.o",
+        "identity": [
+          16777231,
+          252203367,
+          33188,
+          50984,
+          1791434325396076111,
+          1791434325444463711
+        ],
+        "sha256": "420f86f220c57e76e8fb6037277e4e82b2ad20877606cef12097847dbc4e6df1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_runtime_launch_projection.d",
+        "identity": [
+          16777231,
+          252203031,
+          33188,
+          7792,
+          1791434318615535112,
+          1791434318706467147
+        ],
+        "sha256": "8640b29ffe3a5a82498b146891283c0d540613f930265f6f5463aa03490ad481"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_runtime_launch_projection.o",
+        "identity": [
+          16777231,
+          252203018,
+          33188,
+          12944,
+          1791434318615191073,
+          1791434318706648229
+        ],
+        "sha256": "1280ff26572a85e52c7edf9cfb7f5b96e55686e6a171ec2ea8bf642ba81a0ed9"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_state.d",
+        "identity": [
+          16777231,
+          252203159,
+          33188,
+          7611,
+          1791434320830674973,
+          1791434320928370166
+        ],
+        "sha256": "b3cfaaccc913db96b9218d9dcc60f1b1fe50f5611871ee5ae1aa3470c7b17dbc"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/scene_state.o",
+        "identity": [
+          16777231,
+          252203149,
+          33188,
+          44776,
+          1791434320830383141,
+          1791434320928535124
+        ],
+        "sha256": "058f9fee0df1cd669cea2df0a3cb58c4801f9ca4690845133fb19790f332aeb8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/session_observation.d",
+        "identity": [
+          16777231,
+          252202961,
+          33188,
+          9218,
+          1791434317489199903,
+          1791434317607349363
+        ],
+        "sha256": "73ebad3fb98ab4af0627deb0f53af10fe6ecd02e33a05eb86447680c521b68fa"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/session_observation.o",
+        "identity": [
+          16777231,
+          252202948,
+          33188,
+          64152,
+          1791434317488880238,
+          1791434317607486528
+        ],
+        "sha256": "483b827d3e0bb93bde344639f77be5c8456588fb0c48105e33dcdc1f00272a9e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/shape_lookup.d",
+        "identity": [
+          16777231,
+          252203488,
+          33188,
+          877,
+          1791434327799003000,
+          1791434327856167077
+        ],
+        "sha256": "9ed75314fdabca9a38ee9f65cbc9933cd74db436234223555d9333024eae5c47"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/shape_lookup.o",
+        "identity": [
+          16777231,
+          252203487,
+          33188,
+          5384,
+          1791434327798712627,
+          1791434327856362867
+        ],
+        "sha256": "acb75eca199d562fe55931303ac8fbd5c88cd88d3a11a6dbf72522b2de1c6bcd"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_atmospheric.d",
+        "identity": [
+          16777231,
+          252203460,
+          33188,
+          7571,
+          1791434327157435163,
+          1791434327235288796
+        ],
+        "sha256": "c3f1949d9b1b07820cd5bdd0373c41b227118a7a4e665bff3563c87d0f016e04"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_atmospheric.o",
+        "identity": [
+          16777231,
+          252203444,
+          33188,
+          37368,
+          1791434327157167874,
+          1791434327235404836
+        ],
+        "sha256": "927487638059743fc0d9232a4bddefdcf2de64b3e389a6362fb24abbaf3dc0d5"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_box.d",
+        "identity": [
+          16777231,
+          252203434,
+          33188,
+          7462,
+          1791434326510269659,
+          1791434326594194580
+        ],
+        "sha256": "a764479520d2c732babb6cd7794309f6b00b1543540ee22f207fd8bdae7a83fa"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_box.o",
+        "identity": [
+          16777231,
+          252203425,
+          33188,
+          36816,
+          1791434326510021953,
+          1791434326594343162
+        ],
+        "sha256": "df53843f7bacf8858e53e796fce52170601e19747dcca1e1cf64b0277998481e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_dispatch.d",
+        "identity": [
+          16777231,
+          252203406,
+          33188,
+          628,
+          1791434326096440138,
+          1791434326155804324
+        ],
+        "sha256": "d3bb050cfe3c0194e233c0cefb29a70695a16ab13ceee702387b686038439a05"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_dispatch.o",
+        "identity": [
+          16777231,
+          252203404,
+          33188,
+          14296,
+          1791434326096054516,
+          1791434326155946698
+        ],
+        "sha256": "51f66fd91a08277822aaea5adffed740e3598322298eb09a65c47f1f807559e1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_water.d",
+        "identity": [
+          16777231,
+          252203459,
+          33188,
+          7659,
+          1791434327151322625,
+          1791434327235842708
+        ],
+        "sha256": "cf597877f259eab6c9bbb3d9371dadb819895d39fdbc0c279066f2c254fb5575"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_water.o",
+        "identity": [
+          16777231,
+          252203443,
+          33188,
+          40824,
+          1791434327151021669,
+          1791434327236002499
+        ],
+        "sha256": "4b2a9c9d079d57d16199e99cc42cf1e93d6e1fa18d8df76712250cbfb920eb86"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_wind.d",
+        "identity": [
+          16777231,
+          252203446,
+          33188,
+          7464,
+          1791434326983878697,
+          1791434327059731886
+        ],
+        "sha256": "581f66251b5fe73ca0b9df749b1d48c45b13ea3aa5e74270a8a1d0149137429f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_modes/sim_mode_wind.o",
+        "identity": [
+          16777231,
+          252203441,
+          33188,
+          41504,
+          1791434326983590075,
+          1791434327059847635
+        ],
+        "sha256": "464ed0dcd7810ec20f11a63adc879cff7117b06d36dc05a09c7b0405f9324684"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_anchor.d",
+        "identity": [
+          16777231,
+          252203017,
+          33188,
+          7681,
+          1791434318350216241,
+          1791434318434667949
+        ],
+        "sha256": "1c98364fb8b47e593405212c9189097b77541200fdeab2d17566e084c403c9b1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_anchor.o",
+        "identity": [
+          16777231,
+          252203000,
+          33188,
+          41960,
+          1791434318349824869,
+          1791434318434818323
+        ],
+        "sha256": "9071ee5aa008370f6384bd61e8b10dea800cdc60d999802a8bccd4d681a5347d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_brick_store.d",
+        "identity": [
+          16777231,
+          252203272,
+          33188,
+          537,
+          1791434323329894356,
+          1791434323344708997
+        ],
+        "sha256": "bd51cae6fe7817927615ac0f4878d8aa1c630b95f744bd2bdd97551167a2e3d7"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_brick_store.o",
+        "identity": [
+          16777231,
+          252203270,
+          33188,
+          39624,
+          1791434323329562067,
+          1791434323344851829
+        ],
+        "sha256": "b8f286b428ee0e710798b1b72769ceaa7aa18484f43e802ab4cb43c0d2fb903d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_domain.d",
+        "identity": [
+          16777231,
+          252203154,
+          33188,
+          1533,
+          1791434320794729905,
+          1791434320819469681
+        ],
+        "sha256": "27ae832d52a4af2a303123bbba26d70af9453a9f0800455d48c09b2463116d2b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_domain.o",
+        "identity": [
+          16777231,
+          252203153,
+          33188,
+          38704,
+          1791434320794473949,
+          1791434320819621721
+        ],
+        "sha256": "3951618ac10cebc336bdba57e43e35f6c1b38d7907804a4b3ca01d9b10f144ed"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_footprint.d",
+        "identity": [
+          16777231,
+          252203009,
+          33188,
+          525,
+          1791434318227973270,
+          1791434318271068993
+        ],
+        "sha256": "82e4ada6e859133e3f79e113096d2e09ae59dcfddb538e4f95fa3ea6c96add24"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_footprint.o",
+        "identity": [
+          16777231,
+          252203008,
+          33188,
+          10808,
+          1791434318227722355,
+          1791434318271255158
+        ],
+        "sha256": "81c6a675afa168d6ab6472af173e0d885e449f1e388effe4119a35db14a0bb2f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_solver.d",
+        "identity": [
+          16777231,
+          252203127,
+          33188,
+          652,
+          1791434320185602911,
+          1791434320224365416
+        ],
+        "sha256": "8a6608be1f7b53e03b016210a33ab38fa352d9b3ec28c03f9be62aacf30d2cc6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_solver.o",
+        "identity": [
+          16777231,
+          252203125,
+          33188,
+          11512,
+          1791434320185364872,
+          1791434320224514124
+        ],
+        "sha256": "a0d18cdae1d4c89d637e5c9b26ab6eb8a6bebade46507402b9f31e596f41869d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_solver_core_sim.d",
+        "identity": [
+          16777231,
+          252203535,
+          33188,
+          896,
+          1791434328710400216,
+          1791434328760472053
+        ],
+        "sha256": "3f011eba15298376f6c74a1e380938cbe2dab2383f951650e21287f0ed49e7b0"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_solver_core_sim.o",
+        "identity": [
+          16777231,
+          252203534,
+          33188,
+          13776,
+          1791434328710156801,
+          1791434328760724718
+        ],
+        "sha256": "5807cbe959fcb0fd51d9e12331d72e41f0f61e394f3ee77d8baeff0e2162fc4f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_solver_step.d",
+        "identity": [
+          16777231,
+          252203095,
+          33188,
+          666,
+          1791434319581323757,
+          1791434319596927517
+        ],
+        "sha256": "f47f309cf5c319f1a044eeb73b8585895091898fe56893a7a3d5cca93a70bd70"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_solver_step.o",
+        "identity": [
+          16777231,
+          252203092,
+          33188,
+          38792,
+          1791434319581001843,
+          1791434319597153932
+        ],
+        "sha256": "4ad70d3dea3abfaacd6bffc008b659e16b20a60d8f1e1677cb0f364241bd0bd8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_space.d",
+        "identity": [
+          16777231,
+          252203319,
+          33188,
+          509,
+          1791434324357513670,
+          1791434324413417132
+        ],
+        "sha256": "b54d0d40a7f314df2eb8f4c4e2e7945d95d2b9d53b419e79a39806de376c40c2"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_3d_space.o",
+        "identity": [
+          16777231,
+          252203318,
+          33188,
+          6896,
+          1791434324357296380,
+          1791434324413581839
+        ],
+        "sha256": "1fb7920d708e572c2bed7e42350a19abc211b2339a08e01a6e455eea378f9aed"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend.d",
+        "identity": [
+          16777231,
+          252202945,
+          33188,
+          6276,
+          1791434317160783083,
+          1791434317236899978
+        ],
+        "sha256": "647611bd6b840130eacd5072fe718ba00c373e6aa9b40b09cbea35ffcd7da91d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend.o",
+        "identity": [
+          16777231,
+          252202911,
+          33188,
+          45896,
+          1791434317156712404,
+          1791434317237040768
+        ],
+        "sha256": "5744fb70fc190062d4424aad392f117d4bfc4a0792dce8c9e74e0ef8dca6fcaf"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_2d.d",
+        "identity": [
+          16777231,
+          252203315,
+          33188,
+          8189,
+          1791434324294550553,
+          1791434324374850792
+        ],
+        "sha256": "aee7a07514376af455dcc34efd2a15acdc06b5e82399b24b82729a01f4c05c23"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_2d.o",
+        "identity": [
+          16777231,
+          252203296,
+          33188,
+          80088,
+          1791434324294212764,
+          1791434324374999166
+        ],
+        "sha256": "016efb960d3a0581d7eb5e19fbf37b124a47539b26cb57d35650fa09a43075ab"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_2d_runtime_fields.d",
+        "identity": [
+          16777231,
+          252202930,
+          33188,
+          7843,
+          1791434317028377729,
+          1791434317103238300
+        ],
+        "sha256": "f400b935c022da481c18be36185e09247913e68ffddeebb78c60a2c8623aa8c1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_2d_runtime_fields.o",
+        "identity": [
+          16777231,
+          252202895,
+          33188,
+          71376,
+          1791434317028048398,
+          1791434317103368632
+        ],
+        "sha256": "bb4192a384898d19c4c8e97f7f1352ee10330a6eb041dbac4ca4748800fa82a9"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_emitter_shapes.d",
+        "identity": [
+          16777231,
+          252203538,
+          33188,
+          7998,
+          1791434328744444464,
+          1791434328834302215
+        ],
+        "sha256": "23ab4cea0356d9143cd61eb5c1b9aee9db3a3baa9e402d8f630621ee615f9415"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_emitter_shapes.o",
+        "identity": [
+          16777231,
+          252203527,
+          33188,
+          53216,
+          1791434328744155216,
+          1791434328834449006
+        ],
+        "sha256": "d6994c4ae4aba250c91a0f9a96802d62c240b0775c4e7233710cdb28306505cb"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_emitters.d",
+        "identity": [
+          16777231,
+          252203236,
+          33188,
+          8190,
+          1791434322579008287,
+          1791434322627915467
+        ],
+        "sha256": "f1dc93ee362b687f1464c5f2a2e0a7643339cafb7c4ca2c02907a3ebf7c53de8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_emitters.o",
+        "identity": [
+          16777231,
+          252203230,
+          33188,
+          84264,
+          1791434322578210168,
+          1791434322628069258
+        ],
+        "sha256": "ce3ff87b5f1b7d1cd05dbf93d36b1f6cbf1f0446227ceb99c5cb30836d9b2a14"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_mesh_obstacle_proxy.d",
+        "identity": [
+          16777231,
+          252203304,
+          33188,
+          7953,
+          1791434324151785859,
+          1791434324226266850
+        ],
+        "sha256": "a77227f2a60fde086cb0e247fe88a891dcd67e5b690dcd2efb7629cdffc381bf"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_mesh_obstacle_proxy.o",
+        "identity": [
+          16777231,
+          252203288,
+          33188,
+          44416,
+          1791434324151473653,
+          1791434324226423223
+        ],
+        "sha256": "e92c9eb064c7b5bdaba25a3dbd329c9c016a139e3994e2791404064cb96d1c21"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_obstacle_sources.d",
+        "identity": [
+          16777231,
+          252203412,
+          33188,
+          8010,
+          1791434326163321143,
+          1791434326253943931
+        ],
+        "sha256": "e6fbcbaeaec950031a259d39d0c98a6462bbcd8a0de9ff6d47f4a2f16d94e84f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_obstacle_sources.o",
+        "identity": [
+          16777231,
+          252203392,
+          33188,
+          52824,
+          1791434326162949938,
+          1791434326254092305
+        ],
+        "sha256": "4517a62d9e3e57b3adb78f017eed2be51d6c92c8db36cf074b47f1afa2fd062d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_obstacles.d",
+        "identity": [
+          16777231,
+          252202962,
+          33188,
+          7828,
+          1791434317510139581,
+          1791434317578537283
+        ],
+        "sha256": "82fada29e0858b9f5990228c1c8418df5ff5ce5375b67fcba2b273852ce2d4db"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_obstacles.o",
+        "identity": [
+          16777231,
+          252202947,
+          33188,
+          72144,
+          1791434317509849000,
+          1791434317578694199
+        ],
+        "sha256": "1a4be79cc9d022bdcdf3cd0ff7229d8960455af38f4d3d2b3d1a78150db869dd"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_oriented_box.d",
+        "identity": [
+          16777231,
+          252202869,
+          33188,
+          648,
+          1791434315939153038,
+          1791434315981583182
+        ],
+        "sha256": "2a127533e17f2e0fa962c9a0343e1341c415cb036998de4778be371d1adbca00"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_oriented_box.o",
+        "identity": [
+          16777231,
+          252202866,
+          33188,
+          11064,
+          1791434315938936831,
+          1791434315981837722
+        ],
+        "sha256": "8b115aec8e030a57195a5d4ac770cc15120e8953490bfe9f82bee7378fe75241"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_runtime.d",
+        "identity": [
+          16777231,
+          252203596,
+          33188,
+          8006,
+          1791434329742730119,
+          1791434329805606988
+        ],
+        "sha256": "412b60aa1c3a40874e090eded0dca10717c9dfa0ca461216e5cd8ba7b7776108"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_runtime.o",
+        "identity": [
+          16777231,
+          252203576,
+          33188,
+          71784,
+          1791434329742424372,
+          1791434329805755570
+        ],
+        "sha256": "899749043f8bed2796fb5719910c8c6b3ecff215cea8b9d2671f137f98d33bb0"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_scaffold.d",
+        "identity": [
+          16777231,
+          252203510,
+          33188,
+          8107,
+          1791434328120837535,
+          1791434328183966985
+        ],
+        "sha256": "0ca3003fe9da855ecea1dcc249e0bdda02a14c40606febf5e125cb18e6b033c6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_scaffold.o",
+        "identity": [
+          16777231,
+          252203489,
+          33188,
+          76424,
+          1791434328120540746,
+          1791434328184089151
+        ],
+        "sha256": "b22bbcfa02dbda9129549a82d1c2763683217f8183a6639731452d7a97b3a552"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_scaffold_views.d",
+        "identity": [
+          16777231,
+          252203068,
+          33188,
+          6862,
+          1791434319168643519,
+          1791434319246555317
+        ],
+        "sha256": "12183a8e9efd64a250e73b16040cb1b1db35b328a8d2419ea7cc40d4db05ab9d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_scaffold_views.o",
+        "identity": [
+          16777231,
+          252203046,
+          33188,
+          33032,
+          1791434319168329896,
+          1791434319246826732
+        ],
+        "sha256": "de87ff539bad600caa06b57d4ea1d3f21d6c0e5d61010e81357ee47e617e0dcf"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_wind.d",
+        "identity": [
+          16777231,
+          252203614,
+          33188,
+          7818,
+          1791434330188257781,
+          1791434330240639852
+        ],
+        "sha256": "62c997f4005679bfedafc5526fe4e20dcffea175bbb9f8e290700202376d9e1c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_backend_3d_wind.o",
+        "identity": [
+          16777231,
+          252203602,
+          33188,
+          64824,
+          1791434330183591732,
+          1791434330240758392
+        ],
+        "sha256": "563436bb5a7d65ea9aecc93eb5d2f5c23d9193b0d68504368398c9c9fff988e3"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_emitter.d",
+        "identity": [
+          16777231,
+          252203172,
+          33188,
+          719,
+          1791434321111435520,
+          1791434321150964853
+        ],
+        "sha256": "70c809a833eb8e841cc55dee3a76c42be73beca507b06031a63e89729a98176f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_emitter.o",
+        "identity": [
+          16777231,
+          252203170,
+          33188,
+          23576,
+          1791434321111206064,
+          1791434321151113643
+        ],
+        "sha256": "481ac1c086feb75618879829fd97918ecbc4f340a4f6f776f7491c5e3b6af54b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_mesh_accel.d",
+        "identity": [
+          16777231,
+          252203039,
+          33188,
+          827,
+          1791434318736650757,
+          1791434318761578198
+        ],
+        "sha256": "df079229b4c2e45d718021b73f262989161c4372f0293e9bd1c7867959dc93c1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_mesh_accel.o",
+        "identity": [
+          16777231,
+          252203033,
+          33188,
+          24552,
+          1791434318736411759,
+          1791434318761730780
+        ],
+        "sha256": "929a4faf153ec78df8fff3b53e258eb7e2d7bca06ae9e5a2b854ba6a892848c7"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_mesh_diagnostics.d",
+        "identity": [
+          16777231,
+          252203370,
+          33188,
+          1460,
+          1791434325374049483,
+          1791434325394797079
+        ],
+        "sha256": "d60ef07de768daecd3fa3068689e3b1aa636dcafc01dbc4e39e138b4d65dba6a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_mesh_diagnostics.o",
+        "identity": [
+          16777231,
+          252203366,
+          33188,
+          24344,
+          1791434325373785443,
+          1791434325394918662
+        ],
+        "sha256": "88d2a2b2a8690d9b83a6cda2c6ed74188a448c5ccf4e9c5586c59e278f801e48"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_mesh_obstacle_proxy.d",
+        "identity": [
+          16777231,
+          252202883,
+          33188,
+          1529,
+          1791434316233848899,
+          1791434316269826633
+        ],
+        "sha256": "3d03bd61573d600e778583eed12ae1d6d47b17194926760e7617a58389010342"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_mesh_obstacle_proxy.o",
+        "identity": [
+          16777231,
+          252202881,
+          33188,
+          62672,
+          1791434316233589651,
+          1791434316269988673
+        ],
+        "sha256": "63d9d75c897764be5e7061ca4736990077ce76698c285083c450f88716ffe7df"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_obstacle.d",
+        "identity": [
+          16777231,
+          252203002,
+          33188,
+          509,
+          1791434318142961108,
+          1791434318183092477
+        ],
+        "sha256": "bc7c51e8f5a7f4b3b9c732bdbc6fbe99965b52a9d4b41bd4b878f98428813a90"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/sim_runtime_obstacle.o",
+        "identity": [
+          16777231,
+          252203001,
+          33188,
+          11872,
+          1791434318142759734,
+          1791434318183233935
+        ],
+        "sha256": "96d269ffb9b43edb830f37dfe9b2bdb57dcc2415c4d90b844f624c57ba46ff82"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/space_mode_adapter.d",
+        "identity": [
+          16777231,
+          252202977,
+          33188,
+          618,
+          1791434317643026140,
+          1791434317689567129
+        ],
+        "sha256": "d6201e237d8f7ede9f74c7cbe4110b7f5ad546e190ee5cc2f1de3ce3da60f0dc"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/space_mode_adapter.o",
+        "identity": [
+          16777231,
+          252202974,
+          33188,
+          17584,
+          1791434317642790559,
+          1791434317689678503
+        ],
+        "sha256": "eb6247bc5bee6b6c2764d2eeafea8142c2eb80d3cc640e7492f549e3b03a4bad"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/water_mode.d",
+        "identity": [
+          16777231,
+          252203578,
+          33188,
+          392,
+          1791434329439250239,
+          1791434329482766792
+        ],
+        "sha256": "1746b7e7fae60071451ff12285713b403e595c4093f2d5f17c8394e38abf5d20"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/water_mode.o",
+        "identity": [
+          16777231,
+          252203577,
+          33188,
+          19240,
+          1791434329438435745,
+          1791434329482911499
+        ],
+        "sha256": "a70b1189895cd20ca170c02f7e5466a2953700e5ed6d6c64ad2ed78fe86a1cee"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/water_object_coupling.d",
+        "identity": [
+          16777231,
+          252203289,
+          33188,
+          7602,
+          1791434323759676261,
+          1791434323812027790
+        ],
+        "sha256": "67456204f3f5cbdb3eb32dd7612bec401b0115b40dc42d7ab2d12f203e3df028"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/water_object_coupling.o",
+        "identity": [
+          16777231,
+          252203276,
+          33188,
+          47216,
+          1791434323759361388,
+          1791434323812184622
+        ],
+        "sha256": "258d1ad43ca96fabcd5aa526b7afc1eea6554bbb1ce56ce9b3d4dca09d761e9a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/wind_tunnel_3d.d",
+        "identity": [
+          16777231,
+          252203139,
+          33188,
+          290,
+          1791434320483607748,
+          1791434320518655780
+        ],
+        "sha256": "7fc10973b25a2cdea3a3d812d3e181e03ad6ad3dee402072846c54dd642bc8f4"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/wind_tunnel_3d.o",
+        "identity": [
+          16777231,
+          252203137,
+          33188,
+          17928,
+          1791434320483335084,
+          1791434320518789571
+        ],
+        "sha256": "9c6bc01d9ac9586edaafb9d7047cbdc9942f05303605486a9dd2319771866caf"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/wind_tunnel_3d_analysis.d",
+        "identity": [
+          16777231,
+          252203261,
+          33188,
+          6365,
+          1791434323061015346,
+          1791434323138093026
+        ],
+        "sha256": "ebec635ef50ff986682ea9f10ffc09a5dc88047014bcf3ea80ecf5e5fe368395"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/wind_tunnel_3d_analysis.o",
+        "identity": [
+          16777231,
+          252203244,
+          33188,
+          23656,
+          1791434323060343934,
+          1791434323138245400
+        ],
+        "sha256": "de39db5f5d60cdc03a8127d459aa180bb0ecbcf5a4dfabaf5c32d19af923a00d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/wind_tunnel_3d_inspector.d",
+        "identity": [
+          16777231,
+          252203492,
+          33188,
+          6369,
+          1791434327947548443,
+          1791434328036986573
+        ],
+        "sha256": "dec776cde038928b3de3b43cfc230c6eb6fd64f07e5f6d70454cce1a739c86e1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/app/wind_tunnel_3d_inspector.o",
+        "identity": [
+          16777231,
+          252203486,
+          33188,
+          30720,
+          1791434327947303819,
+          1791434328037124530
+        ],
+        "sha256": "97cfedac661648269991e30cddf9e6e82047abcc2d57a343159dc53e53832721"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/bin/physics_sim_headless",
+        "identity": [
+          16777231,
+          252204468,
+          33261,
+          2430792,
+          1791434344268067694,
+          1791434344290042198
+        ],
+        "sha256": "0b36e428ee298bb91ec3fbd450871689dc019a82dd66cc3f3f36a3c827be0712"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/command/command_bus.d",
+        "identity": [
+          16777231,
+          252203702,
+          33188,
+          239,
+          1791434331585030238,
+          1791434331634250833
+        ],
+        "sha256": "ddea3c66682f3070eff7be5dfed5de68784d93c66ec3d8a2d7d046c9dc64cdda"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/command/command_bus.o",
+        "identity": [
+          16777231,
+          252203701,
+          33188,
+          8768,
+          1791434331584828865,
+          1791434331634381707
+        ],
+        "sha256": "b3f864eb62168b8be7b044a615653dd77679e5ca0ee6047584c176b0ade2f39f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/config/config_loader.d",
+        "identity": [
+          16777231,
+          252203606,
+          33188,
+          298,
+          1791434330053631069,
+          1791434330083185434
+        ],
+        "sha256": "4e749115b5164294cb7d692c9cef40589d0f35f2d74e1aeed612428b120213b3"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/config/config_loader.o",
+        "identity": [
+          16777231,
+          252203604,
+          33188,
+          42016,
+          1791434330053422279,
+          1791434330083321099
+        ],
+        "sha256": "7b33040c749d7ad11b73c31214d837229c0d774913add116ad12907eaf38b2e4"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_base/core_base.d",
+        "identity": [
+          16777231,
+          252204159,
+          33188,
+          342,
+          1791434339400833954,
+          1791434339458901525
+        ],
+        "sha256": "67e70706687a7f76135d4f5981eab5fc3303b0c816393dd2d330e5838d5f9b52"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_base/core_base.o",
+        "identity": [
+          16777231,
+          252204156,
+          33188,
+          7496,
+          1791434339400579039,
+          1791434339459026315
+        ],
+        "sha256": "953cc033bb91c0bea012e3a43935fe55dd22cd607ecfe434f9f5a7b644ec6542"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_data/core_data.d",
+        "identity": [
+          16777231,
+          252204182,
+          33188,
+          473,
+          1791434339641422591,
+          1791434339688674117
+        ],
+        "sha256": "de27508c9ab2fb3168fbbf776eacf8fcb9f2ad7922a65593cdaca201da5339bc"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_data/core_data.o",
+        "identity": [
+          16777231,
+          252204178,
+          33188,
+          32360,
+          1791434339641235426,
+          1791434339688786574
+        ],
+        "sha256": "d61ca911cf5bc874523087e400dd7bde9dfc9422818af3217730cdd5ff8fe5cd"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_font/core_font.d",
+        "identity": [
+          16777231,
+          252204382,
+          33188,
+          473,
+          1791434342599484663,
+          1791434342642813177
+        ],
+        "sha256": "115f3c702130c66e7f206a508c169e46271e74bc896613d429b52af0705a6c30"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_font/core_font.o",
+        "identity": [
+          16777231,
+          252204378,
+          33188,
+          31032,
+          1791434342599264748,
+          1791434342642957759
+        ],
+        "sha256": "34164ab4b8a27badbc4f4fb4e57dc24ae09d338819992a57c51538d9b3c89b53"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_headless_job/core_headless_job.d",
+        "identity": [
+          16777231,
+          252204377,
+          33188,
+          406,
+          1791434342548075461,
+          1791434342601656773
+        ],
+        "sha256": "903dbc2d2ed1459eed9859dc398d50c735ca32128ce747611c362eaa743b85c2"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_headless_job/core_headless_job.o",
+        "identity": [
+          16777231,
+          252204375,
+          33188,
+          9680,
+          1791434342547767754,
+          1791434342601802772
+        ],
+        "sha256": "1d29c2deafabe5d511f4dcd56188ad1c4dd767c91b287aa5c57879b9e6327462"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_io/core_io.d",
+        "identity": [
+          16777231,
+          252204181,
+          33188,
+          457,
+          1791434339633152236,
+          1791434339688596951
+        ],
+        "sha256": "44c96b91896e0ec814457f384c510dadf15f8b47ebef266b4fa4d7281dc02dba"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_io/core_io.o",
+        "identity": [
+          16777231,
+          252204179,
+          33188,
+          18080,
+          1791434339632934946,
+          1791434339688717158
+        ],
+        "sha256": "6eff8d986ecde29f6bf193170092cd8e179b50ae380b573a354c5298ac50e3ab"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_mesh_asset/core_mesh_asset.d",
+        "identity": [
+          16777231,
+          252204251,
+          33188,
+          795,
+          1791434340724987491,
+          1791434340755694056
+        ],
+        "sha256": "7ad849f41fdc84623fdbf9210bcabc1febb31de4c5f1131a3305a487b34ed965"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_mesh_asset/core_mesh_asset.o",
+        "identity": [
+          16777231,
+          252204247,
+          33188,
+          33088,
+          1791434340724790826,
+          1791434340755807055
+        ],
+        "sha256": "8496ccab1f47026d81b6054623eb7dd626e3e846eac00015a01e448f161349e6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_mesh_asset/core_mesh_asset_authoring_document.d",
+        "identity": [
+          16777231,
+          252204262,
+          33188,
+          1143,
+          1791434340854557157,
+          1791434340927672450
+        ],
+        "sha256": "e012b6259d12f5202afb179d52ff67a5dd5d4d2e944a68713ec0322b4efce5e7"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_mesh_asset/core_mesh_asset_authoring_document.o",
+        "identity": [
+          16777231,
+          252204259,
+          33188,
+          56408,
+          1791434340854326576,
+          1791434340927882906
+        ],
+        "sha256": "4f6ce144bdde88a97e26a8f9d1774c4d1b86b2270566e978cda4549893a2c2fd"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_mesh_asset/core_mesh_asset_runtime_document.d",
+        "identity": [
+          16777231,
+          252204277,
+          33188,
+          1139,
+          1791434341210032402,
+          1791434341263152884
+        ],
+        "sha256": "1bcaf58cb939bf5162c97343f37bda2517b0b20d171e94819c0358df69360374"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_mesh_asset/core_mesh_asset_runtime_document.o",
+        "identity": [
+          16777231,
+          252204272,
+          33188,
+          53512,
+          1791434341209544864,
+          1791434341263398507
+        ],
+        "sha256": "4f3da9cc916a8825249bba7f6a2833d780b795628d6de0a3346b8adb4d032b14"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_mesh_preview/core_mesh_preview.d",
+        "identity": [
+          16777231,
+          252204297,
+          33188,
+          1166,
+          1791434341400803865,
+          1791434341459820012
+        ],
+        "sha256": "daa5c5ca24d2d4961292b170c1e1f2dc9abada9558bfd06d5a48e51bee64c54d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_mesh_preview/core_mesh_preview.o",
+        "identity": [
+          16777231,
+          252204285,
+          33188,
+          99592,
+          1791434341400576284,
+          1791434341459934511
+        ],
+        "sha256": "df76a53695f622975171ebe58c59161f1e4dc38883792a89af4b05bfd4f57957"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_object/core_object.d",
+        "identity": [
+          16777231,
+          252204294,
+          33188,
+          489,
+          1791434341364155970,
+          1791434341409512176
+        ],
+        "sha256": "3bc0f04964b5a26cf3b4ed469a58b16d676210178167ac422885694085007751"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_object/core_object.o",
+        "identity": [
+          16777231,
+          252204288,
+          33188,
+          11928,
+          1791434341363905222,
+          1791434341409626217
+        ],
+        "sha256": "81f786f061a2c003c045daf1f6c18f38533b877fa3a40c8cff65ff1696ab904a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_pack/core_pack.d",
+        "identity": [
+          16777231,
+          252204204,
+          33188,
+          473,
+          1791434339983071272,
+          1791434340008824581
+        ],
+        "sha256": "60ff3fa19722c0bc88101b4f43374d521d0bf7f08cae1b09f72e3090fc7e461e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_pack/core_pack.o",
+        "identity": [
+          16777231,
+          252204203,
+          33188,
+          48816,
+          1791434339982823732,
+          1791434340008977288
+        ],
+        "sha256": "3cd042910df77d949b5500088ff64587cccf0d3504396956619c7f6bb6346eda"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_pack/core_pack_vf2d.d",
+        "identity": [
+          16777231,
+          252204212,
+          33188,
+          606,
+          1791434340055118822,
+          1791434340103569130
+        ],
+        "sha256": "40d5e14cd19ab478b099af51c35c3fe9a73cf26244b56909f751b36b989af4ed"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_pack/core_pack_vf2d.o",
+        "identity": [
+          16777231,
+          252204208,
+          33188,
+          13512,
+          1791434340054899824,
+          1791434340103709296
+        ],
+        "sha256": "bf250f6d7280f1db221751aead6f1fe4a6b00c8127e457cd9f5d8994848c2f3e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_pack/core_pack_vf3d.d",
+        "identity": [
+          16777231,
+          252204225,
+          33188,
+          606,
+          1791434340261876625,
+          1791434340311429425
+        ],
+        "sha256": "44e681fd9d7504e5c3d1b48085dc57b06c8b60a28e5c8acd04bd92e67c22cd37"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_pack/core_pack_vf3d.o",
+        "identity": [
+          16777231,
+          252204221,
+          33188,
+          14488,
+          1791434340261597794,
+          1791434340311565841
+        ],
+        "sha256": "44e11b93593dacaf8b29f24be90e4c618391b545da7bae7d53b963b651d3dbb6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_pane/core_pane.d",
+        "identity": [
+          16777231,
+          252204349,
+          33188,
+          342,
+          1791434342043317237,
+          1791434342081195957
+        ],
+        "sha256": "3321a887eff209f678da1a080a891191cc310c5e2ea14f53eacb04c8fa66842e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_pane/core_pane.o",
+        "identity": [
+          16777231,
+          252204342,
+          33188,
+          27072,
+          1791434342038574147,
+          1791434342081315248
+        ],
+        "sha256": "51102f429677235929605773f0157832193a2e612bbab58d38fbf49374a06acd"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_scene/core_scene.d",
+        "identity": [
+          16777231,
+          252204220,
+          33188,
+          755,
+          1791434340229983028,
+          1791434340254747470
+        ],
+        "sha256": "8c1a6d9a1c3c42dfe41d1031863725a17a1b5ccdc728e76b7b0f066412c75158"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_scene/core_scene.o",
+        "identity": [
+          16777231,
+          252204219,
+          33188,
+          49096,
+          1791434340229678572,
+          1791434340254925052
+        ],
+        "sha256": "45eabf68d06ff7481198b094d3750a980f6bb71d4ec0a7df24d546c81194bd06"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_scene_compile/core_scene_compile.d",
+        "identity": [
+          16777231,
+          252204243,
+          33188,
+          1077,
+          1791434340602330440,
+          1791434340696533410
+        ],
+        "sha256": "7eb5ed368868d052f76495e57f765e3e8297a65e854a0f4cfed6341e4ba8c907"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_scene_compile/core_scene_compile.o",
+        "identity": [
+          16777231,
+          252204238,
+          33188,
+          81136,
+          1791434340602107734,
+          1791434340696677034
+        ],
+        "sha256": "bcd8bb0337a606e1bc99a575790f9ebc14a254499cdf8d3bb17fbaefea8925ab"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_scene_view/core_scene_view.d",
+        "identity": [
+          16777231,
+          252204241,
+          33188,
+          598,
+          1791434340564189930,
+          1791434340623525950
+        ],
+        "sha256": "99d7a06d74cd841cedf3162887a08c380e20b7f51beaf70c1baca12fcd8bba63"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_scene_view/core_scene_view.o",
+        "identity": [
+          16777231,
+          252204240,
+          33188,
+          20616,
+          1791434340563888641,
+          1791434340623674199
+        ],
+        "sha256": "99f8763b1621611661bcbb5becdccdf4db9f5976d930a2e3264ddc5f7a463ce9"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_screen_pick/core_screen_pick.d",
+        "identity": [
+          16777231,
+          252204345,
+          33188,
+          529,
+          1791434342013178877,
+          1791434342032318569
+        ],
+        "sha256": "b1c2f0d181211ef0c7f0383fefc5c9a24b0e974e4c22ec1c9635d4c839bc13d0"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_screen_pick/core_screen_pick.o",
+        "identity": [
+          16777231,
+          252204343,
+          33188,
+          20000,
+          1791434342012575756,
+          1791434342032439609
+        ],
+        "sha256": "4d120c20994fb93f0665a2072322953db4b233ac781e1aabd5859f7db541add7"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_sim/core_sim.d",
+        "identity": [
+          16777231,
+          252204361,
+          33188,
+          334,
+          1791434342221563043,
+          1791434342261532206
+        ],
+        "sha256": "904d898d5f85193ec293884d168e687ad62c35a8285e9d856f1fdb100c577d74"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_sim/core_sim.o",
+        "identity": [
+          16777231,
+          252204359,
+          33188,
+          25992,
+          1791434342221350253,
+          1791434342261660705
+        ],
+        "sha256": "dbeb9eeeb808e98a3841c86d79e25cfcb5f54164a1d2bffdefc46c336b02e571"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_theme/core_theme.d",
+        "identity": [
+          16777231,
+          252204374,
+          33188,
+          481,
+          1791434342506605226,
+          1791434342555968402
+        ],
+        "sha256": "ac56962a28ed05d98b5a1eb05abd2b523cf6af073e7ccc94f28748ada538da34"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_theme/core_theme.o",
+        "identity": [
+          16777231,
+          252204373,
+          33188,
+          12992,
+          1791434342506146896,
+          1791434342556085360
+        ],
+        "sha256": "579feb724f9a5ea7ff24c268298c84d386a924aee7634abb5781afbe6c252501"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_units/core_units.d",
+        "identity": [
+          16777231,
+          252204308,
+          33188,
+          481,
+          1791434341520858727,
+          1791434341565418856
+        ],
+        "sha256": "99daf8638944a115c196bd21cdbb7ee077751893adba50f167daa5edb2d2995f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_units/core_units.o",
+        "identity": [
+          16777231,
+          252204307,
+          33188,
+          13296,
+          1791434341520646312,
+          1791434341565539397
+        ],
+        "sha256": "127b0f352c9af3bb3e96ebf42754d4c0da9813d24d155d7de6dff1f425bf6a2c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_viewport2d/core_viewport2d.d",
+        "identity": [
+          16777231,
+          252204328,
+          33188,
+          521,
+          1791434341786886301,
+          1791434341819892849
+        ],
+        "sha256": "abde98c3bfe574ff4f1687e297aba6ea141ec2d0626aa03bf86862b5256bb6de"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/core_viewport2d/core_viewport2d.o",
+        "identity": [
+          16777231,
+          252204325,
+          33188,
+          22984,
+          1791434341786672678,
+          1791434341820015973
+        ],
+        "sha256": "16e01077ab1b7afeda22c1e8aa2897022cf02944b0482416f30d255822e3813e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/export_paths.d",
+        "identity": [
+          16777231,
+          252203924,
+          33188,
+          239,
+          1791434335135217889,
+          1791434335186463760
+        ],
+        "sha256": "43ac0d7e58cab453d7f634c6181553e4cb6bf596152d28f032fb3fffbc7daadc"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/export_paths.o",
+        "identity": [
+          16777231,
+          252203921,
+          33188,
+          8056,
+          1791434335134942891,
+          1791434335186586425
+        ],
+        "sha256": "a00e66d12e0f88daef697ac906aba1f63ae12eac0b172b4fcb40bbfe9149855b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/render_frames.d",
+        "identity": [
+          16777231,
+          252203876,
+          33188,
+          308,
+          1791434334424271649,
+          1791434334461052751
+        ],
+        "sha256": "66b26177a32c5eb9f5c5fbcf712523afb68dfaba5ef9ef81acd2eb3e5d64fd74"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/render_frames.o",
+        "identity": [
+          16777231,
+          252203875,
+          33188,
+          8688,
+          1791434334424009234,
+          1791434334461174626
+        ],
+        "sha256": "37fc2a098dfd809d66d0ab0c7fecfddd1986e2b35fab50a72eb86268003a82ce"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/volume_frames.d",
+        "identity": [
+          16777231,
+          252203945,
+          33188,
+          8299,
+          1791434335707807611,
+          1791434335779144458
+        ],
+        "sha256": "1292d64a052a916c5725fbbe98c782c9687b8c241356ce1c764bbf49e29cfb20"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/volume_frames.o",
+        "identity": [
+          16777231,
+          252203931,
+          33188,
+          92648,
+          1791434335706959993,
+          1791434335779328999
+        ],
+        "sha256": "6540a57b8b6cf50047e237d414e51217176d52137dbfde0475011d6ab6fb98ff"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/volume_frames_vf3d.d",
+        "identity": [
+          16777231,
+          252203898,
+          33188,
+          7644,
+          1791434334774511433,
+          1791434334821789333
+        ],
+        "sha256": "63cdd12b8fecf90a7c09b297b9b4acae702c70948eda8d24467ffd76ed38ab46"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/volume_frames_vf3d.o",
+        "identity": [
+          16777231,
+          252203881,
+          33188,
+          62904,
+          1791434334769019974,
+          1791434334821905707
+        ],
+        "sha256": "e21b427276d4ade0cc636e400baed3a68a78594413440f5d8a4eff38732a9ac2"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/water_surface_artifacts.d",
+        "identity": [
+          16777231,
+          252203905,
+          33188,
+          7810,
+          1791434334824352939,
+          1791434334884642743
+        ],
+        "sha256": "0a13fa13ff1c30cf4af8d88d1519dfbcda01d7bca2376e73e8883fe2746df41d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/water_surface_artifacts.o",
+        "identity": [
+          16777231,
+          252203880,
+          33188,
+          84848,
+          1791434334824097066,
+          1791434334884765742
+        ],
+        "sha256": "e04053f23629349fae7c61d0210157bdadda0ee2fcc19e72fd00bdf62ec0d27a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/wind_projection_frames.d",
+        "identity": [
+          16777231,
+          252203933,
+          33188,
+          7620,
+          1791434335453535242,
+          1791434335536151130
+        ],
+        "sha256": "2b9c6cbaa7227a31a739ed7fcd99db1959908e16e828bdc9d07c88cb05f2cfba"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/export/wind_projection_frames.o",
+        "identity": [
+          16777231,
+          252203919,
+          33188,
+          103992,
+          1791434335453268494,
+          1791434335536303963
+        ],
+        "sha256": "e5c3858930dce1513cc2fc6af4680dc00d3d160d45ee4206fb6d94250183d20e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/geo/shape_asset.d",
+        "identity": [
+          16777231,
+          252203647,
+          33188,
+          1162,
+          1791434330782966256,
+          1791434330814566981
+        ],
+        "sha256": "97812b6d678b448403925f33a7e6e714d9e8b10eb5884f54836b931b1af82627"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/geo/shape_asset.o",
+        "identity": [
+          16777231,
+          252203645,
+          33188,
+          28952,
+          1791434330782731883,
+          1791434330814699647
+        ],
+        "sha256": "5fc3af80d29ef853902773651821442dad793db25c27c090c6fd559c02ba3bf8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/geo/shape_library.d",
+        "identity": [
+          16777231,
+          252203662,
+          33188,
+          965,
+          1791434331041617092,
+          1791434331081307632
+        ],
+        "sha256": "b8414e19e9dd06e2cacf632fbc31daae27be4120c6cad2b214fd5aee449b8a2e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/geo/shape_library.o",
+        "identity": [
+          16777231,
+          252203661,
+          33188,
+          9808,
+          1791434331041330720,
+          1791434331081529464
+        ],
+        "sha256": "69387c634e10bd011f47628176cc06b94abe2e95df4c0ddf1c0945694b25e685"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_mesh_preview_bridge.d",
+        "identity": [
+          16777231,
+          252203950,
+          33188,
+          2731,
+          1791434335798156859,
+          1791434335869219000
+        ],
+        "sha256": "2a97cfd88596771c5f1c56cb1d0382a9d496cf9240de4b5976f3bc1118428466"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_mesh_preview_bridge.o",
+        "identity": [
+          16777231,
+          252203946,
+          33188,
+          49752,
+          1791434335797890903,
+          1791434335869335624
+        ],
+        "sha256": "c1757ebf0e7b4bae0606ae7ceafabdcd774491d572fa45861c4960bd2b679754"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_mesh_preview_path_resolver.d",
+        "identity": [
+          16777231,
+          252203934,
+          33188,
+          323,
+          1791434335474427212,
+          1791434335519522795
+        ],
+        "sha256": "e3473afcf7117832c2f8e9a81093dfe3436119937f8194d433cf53c4e6eca0ef"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_mesh_preview_path_resolver.o",
+        "identity": [
+          16777231,
+          252203932,
+          33188,
+          7792,
+          1791434335474216547,
+          1791434335519646711
+        ],
+        "sha256": "7faf4c1b61170365cd9fef0a850b2fa3d4213bbdaec7ce447196b7cec40e6ed9"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_bridge.d",
+        "identity": [
+          16777231,
+          252203965,
+          33188,
+          3563,
+          1791434336162244040,
+          1791434336198765312
+        ],
+        "sha256": "9814b04e3f4325020d184457550b1c85cef7f72b77a42c656854afa2f9359b70"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_bridge.o",
+        "identity": [
+          16777231,
+          252203956,
+          33188,
+          98704,
+          1791434336161954626,
+          1791434336198921269
+        ],
+        "sha256": "8bff49428dafb46acd0172a860f1523fa78c61b46f4ea952aae1f5a934221a63"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_solver_projection.d",
+        "identity": [
+          16777231,
+          252203994,
+          33188,
+          3269,
+          1791434336733717646,
+          1791434336785258556
+        ],
+        "sha256": "55fd4ccd80e5a3dbe7f43dc2e01aa23991a05de1c7fbccf7b19d9f9f06983787"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_solver_projection.o",
+        "identity": [
+          16777231,
+          252203989,
+          33188,
+          16368,
+          1791434336733487189,
+          1791434336785392222
+        ],
+        "sha256": "c2a09c1edd50aaa4a53b3d727709a7b68d4308c2f1ea64bff1fae044c405deb2"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_solver_projection_domain.d",
+        "identity": [
+          16777231,
+          252204015,
+          33188,
+          3431,
+          1791434337051579544,
+          1791434337107981002
+        ],
+        "sha256": "0dd2b1cd42a3366eb7ae5a03bf2e0ed5ee7316cec0b87fb6e2a33b77d27cb123"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_solver_projection_domain.o",
+        "identity": [
+          16777231,
+          252204003,
+          33188,
+          49888,
+          1791434337051351171,
+          1791434337108098584
+        ],
+        "sha256": "950f1351c474882c57f6f541a0a703aaf8ae2ebece6d5378b6bbf8d8c41ecc32"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_solver_projection_emitters.d",
+        "identity": [
+          16777231,
+          252203975,
+          33188,
+          3585,
+          1791434336421893702,
+          1791434336454277338
+        ],
+        "sha256": "6a8b2dd47c78652da55d4fbcacbaf79ba3d256c41d3d0b8eff0d388e77dee769"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_solver_projection_emitters.o",
+        "identity": [
+          16777231,
+          252203972,
+          33188,
+          24912,
+          1791434336421606830,
+          1791434336454414253
+        ],
+        "sha256": "7bea0bbd0aaa848c62d5dadfaa74bd2a2c2564035767a13ba093e3987146a3a3"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_solver_projection_objects.d",
+        "identity": [
+          16777231,
+          252203988,
+          33188,
+          3433,
+          1791434336667321512,
+          1791434336706689513
+        ],
+        "sha256": "68377103143b982165cadac1d0d6ba80bf5f401ef0e199600a01def883ef3885"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_solver_projection_objects.o",
+        "identity": [
+          16777231,
+          252203987,
+          33188,
+          26200,
+          1791434336667016431,
+          1791434336706826428
+        ],
+        "sha256": "fc3ce03b50e2f8a337c8a252881902775af45147a912915b6b35168ca48f3305"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_view_packet_readout.d",
+        "identity": [
+          16777231,
+          252203976,
+          33188,
+          613,
+          1791434336432906454,
+          1791434336479255195
+        ],
+        "sha256": "f82675d052a43298895753573a11329409d1e130a7e0a8a204d548832bcf332e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/runtime_scene_view_packet_readout.o",
+        "identity": [
+          16777231,
+          252203973,
+          33188,
+          9440,
+          1791434336432686539,
+          1791434336479795691
+        ],
+        "sha256": "6d2d76b59603041a54cee41c9b7aa19a541eb3bc15d84a1fc91dea51bdf16c0b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/shape_import.d",
+        "identity": [
+          16777231,
+          252203961,
+          33188,
+          977,
+          1791434336105639709,
+          1791434336140942198
+        ],
+        "sha256": "a55aac68a3c642b96a059f33a50ffaeef632e7c4ceb4fe64fa6a5c4d3fd4ce83"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/import/shape_import.o",
+        "identity": [
+          16777231,
+          252203957,
+          33188,
+          16664,
+          1791434336105395544,
+          1791434336141066530
+        ],
+        "sha256": "fb184ef09578fc66368ddb0abd891752b08027df2d2ea1468cc21d4793621a50"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/input/input.d",
+        "identity": [
+          16777231,
+          252203629,
+          33188,
+          4581,
+          1791434330428006215,
+          1791434330523379343
+        ],
+        "sha256": "b8aa7142370a2a2df1b3fce4287055227bb971b298d9638e59750e333a02629e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/input/input.o",
+        "identity": [
+          16777231,
+          252203619,
+          33188,
+          36832,
+          1791434330427743801,
+          1791434330523522509
+        ],
+        "sha256": "91ea02dde424f5046c00ee8fc7550c8a4b992994c77f920ae9b470dc54f0e377"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/input/input_context.d",
+        "identity": [
+          16777231,
+          252203646,
+          33188,
+          4491,
+          1791434330774090239,
+          1791434330859705189
+        ],
+        "sha256": "fd5e8197d12bb680a6265e815b137e2c79c36734b81266bbbb8eba835661983c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/input/input_context.o",
+        "identity": [
+          16777231,
+          252203639,
+          33188,
+          19928,
+          1791434330773858282,
+          1791434330859840104
+        ],
+        "sha256": "3e0a90eeb350d3b0ca178d3505d408ea0f2d548f43f80319856d52c247a409d5"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/input/stroke_buffer.d",
+        "identity": [
+          16777231,
+          252203630,
+          33188,
+          4666,
+          1791434330505433059,
+          1791434330553217205
+        ],
+        "sha256": "c103055a5e168ba0aecb194b1e93a68b2d7763f0f7ce0a1a73510a1a030f4250"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/input/stroke_buffer.o",
+        "identity": [
+          16777231,
+          252203621,
+          33188,
+          6072,
+          1791434330505171186,
+          1791434330553344246
+        ],
+        "sha256": "f8e00d4af334fd8ee766dc3587b09bc7d92d7b9f1f98d1a0cb4e617149daffce"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_pane/kit_pane.d",
+        "identity": [
+          16777231,
+          252204420,
+          33188,
+          992,
+          1791434343189582881,
+          1791434343228747550
+        ],
+        "sha256": "b6002e26c109a5499e3d6cf1650ed0fa87f851b1e39b13fd371a89892d551183"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_pane/kit_pane.o",
+        "identity": [
+          16777231,
+          252204419,
+          33188,
+          29464,
+          1791434343189376924,
+          1791434343228881840
+        ],
+        "sha256": "d07e9d55adef0d26445639d041633ac69b90f3f8f90fb99e7b1fb047710ecb8b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_render/kit_render.d",
+        "identity": [
+          16777231,
+          252204402,
+          33188,
+          885,
+          1791434343029505274,
+          1791434343060023215
+        ],
+        "sha256": "54e47a3cffed9d8d9abf5372ca14317a47c2bc330619af6fcee197ace582ac49"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_render/kit_render.o",
+        "identity": [
+          16777231,
+          252204401,
+          33188,
+          29336,
+          1791434343028078910,
+          1791434343060171922
+        ],
+        "sha256": "6ba90e765460a015104e9099421a8107ee5c802001c854249fe9f849ba03ab0e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_render/kit_render_backend_null.d",
+        "identity": [
+          16777231,
+          252204408,
+          33188,
+          911,
+          1791434343080054192,
+          1791434343129712324
+        ],
+        "sha256": "2e6920f135587a05ce361ab2e0103e59bd447f998cbc6165f806b2d4efa04340"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_render/kit_render_backend_null.o",
+        "identity": [
+          16777231,
+          252204403,
+          33188,
+          14880,
+          1791434343079676694,
+          1791434343129860073
+        ],
+        "sha256": "f808a2ef353cd27dd0be04c00a9b805e46d787c444a7f40d923c1a0e53abebf0"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_ui/kit_ui.d",
+        "identity": [
+          16777231,
+          252204426,
+          33188,
+          845,
+          1791434343266673936,
+          1791434343290909382
+        ],
+        "sha256": "43340ae6c5de23130c96dc7308251bfbcf8640b0f16239eb8170748db59b1904"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_ui/kit_ui.o",
+        "identity": [
+          16777231,
+          252204422,
+          33188,
+          43488,
+          1791434343266471979,
+          1791434343291024339
+        ],
+        "sha256": "74cba752982187662ff44a81d7366735539ac902b0380ca2826c79402abcb614"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_ui/kit_ui_button.d",
+        "identity": [
+          16777231,
+          252204437,
+          33188,
+          859,
+          1791434343512633616,
+          1791434343565339226
+        ],
+        "sha256": "32b804d1abd22eb23d89f6d47e2ad6056be05a419052b9ca376c39afa2078753"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_ui/kit_ui_button.o",
+        "identity": [
+          16777231,
+          252204436,
+          33188,
+          27496,
+          1791434343512361285,
+          1791434343565480350
+        ],
+        "sha256": "da3f369425adf3b45f681b128649084fa84513f18ea1b6386b5b6fdd71f07ff9"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_viz/kit_viz.d",
+        "identity": [
+          16777231,
+          252204391,
+          33188,
+          454,
+          1791434342719019655,
+          1791434342760625847
+        ],
+        "sha256": "2540fb7987f69330b0b1b2cc1b32a4c2ba3c2f67f542255c9a3d6c1fccd8705f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_viz/kit_viz.o",
+        "identity": [
+          16777231,
+          252204389,
+          33188,
+          20144,
+          1791434342718804906,
+          1791434342760769638
+        ],
+        "sha256": "96d5aebe0b2d4683ab19daab178f7d978d4d19fe689ef3a7ccdc115554cb1feb"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_workspace_authoring/kit_workspace_authoring.d",
+        "identity": [
+          16777231,
+          252204001,
+          33188,
+          713,
+          1791434336916743417,
+          1791434336968445034
+        ],
+        "sha256": "00520a72c0ca0d298844a47ab1b5f83354073fe8721a65170a7e5190c61657e6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_workspace_authoring/kit_workspace_authoring.o",
+        "identity": [
+          16777231,
+          252204000,
+          33188,
+          12688,
+          1791434336916493085,
+          1791434336968582866
+        ],
+        "sha256": "45ff3ee25379463ceaca348f5f49f9b621a0e7361b547019869db3bd04106bf8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_workspace_authoring/ui/kit_workspace_authoring_ui_font_theme.d",
+        "identity": [
+          16777231,
+          252204034,
+          33188,
+          1152,
+          1791434337341995770,
+          1791434337373719035
+        ],
+        "sha256": "d4889fc8433841d69935c127739c269e4dccd9c010efad76edb47f3c1daa357a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_workspace_authoring/ui/kit_workspace_authoring_ui_font_theme.o",
+        "identity": [
+          16777231,
+          252204032,
+          33188,
+          29304,
+          1791434337341723772,
+          1791434337373844534
+        ],
+        "sha256": "b5c79ae9259c76c264c0314b4f3d84e849d1eeb9359658bc1de3899d31f28825"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_workspace_authoring/ui/kit_workspace_authoring_ui_overlay.d",
+        "identity": [
+          16777231,
+          252204027,
+          33188,
+          1146,
+          1791434337199170285,
+          1791434337243701914
+        ],
+        "sha256": "8484c4aed60d9c1f450fd72fef2c7717038ffd32f8bd72036f35a3c1a94340d3"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/kit_workspace_authoring/ui/kit_workspace_authoring_ui_overlay.o",
+        "identity": [
+          16777231,
+          252204026,
+          33188,
+          10288,
+          1791434337198940662,
+          1791434337243825288
+        ],
+        "sha256": "80159b09c233beaec4222433fbd99ac9cab07ed8a87b8217f762cb01610aca16"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/fluid2d/fluid2d.d",
+        "identity": [
+          16777231,
+          252203724,
+          33188,
+          1178,
+          1791434331939722865,
+          1791434331984447117
+        ],
+        "sha256": "6b178088ce4fd150480705bd8595895d78dc76440659cd1c2f4bd4dabbdf2097"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/fluid2d/fluid2d.o",
+        "identity": [
+          16777231,
+          252203719,
+          33188,
+          41984,
+          1791434331938921537,
+          1791434331984565866
+        ],
+        "sha256": "2ecfedca4854fd4edb0bcee7a67b9c54d85a556fa42c3784fd914329af028600"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/fluid2d/fluid2d_boundary.d",
+        "identity": [
+          16777231,
+          252203732,
+          33188,
+          836,
+          1791434332155304853,
+          1791434332194452396
+        ],
+        "sha256": "83479918c55b76c5ffa2a77a068d3fe337953232dcc62e4654c353fa02ed9373"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/fluid2d/fluid2d_boundary.o",
+        "identity": [
+          16777231,
+          252203730,
+          33188,
+          29984,
+          1791434332155012438,
+          1791434332195070683
+        ],
+        "sha256": "24d1fdc1075706b5f20a04a2f0963224f2d8b2a79480d4bd572093e2e8cd04ae"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/math/math2d.d",
+        "identity": [
+          16777231,
+          252203820,
+          33188,
+          120,
+          1791434333352463995,
+          1791434333365484191
+        ],
+        "sha256": "4cdfb122583bf1e54865f0c77c9bec8ff0d2e15109c4735f8aecb331fdd10e9f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/math/math2d.o",
+        "identity": [
+          16777231,
+          252203817,
+          33188,
+          336,
+          1791434333352311788,
+          1791434333365616815
+        ],
+        "sha256": "ed3fc958e3d44c45e966203be34fc716c8ab4304f89c8613c442e5c4f2692b1f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/objects/object_manager.d",
+        "identity": [
+          16777231,
+          252203819,
+          33188,
+          611,
+          1791434333349734557,
+          1791434333387686276
+        ],
+        "sha256": "1fe1879261cab5eac591bc6283ce71da491edf8773ffa2628470c06f08cc4138"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/objects/object_manager.o",
+        "identity": [
+          16777231,
+          252203815,
+          33188,
+          18752,
+          1791434333349543975,
+          1791434333387819192
+        ],
+        "sha256": "9110016e645cc231597bf2fce3a7d36a3f85418d577f0b3a3d42d2f9ead3b9c1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/objects/physics_object_builder.d",
+        "identity": [
+          16777231,
+          252203795,
+          33188,
+          921,
+          1791434333217854241,
+          1791434333259931513
+        ],
+        "sha256": "72eda2fc239e788c1fef5775835354d5f5acc22c965fbd0cebb034179a904da7"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/objects/physics_object_builder.o",
+        "identity": [
+          16777231,
+          252203794,
+          33188,
+          6416,
+          1791434333217635701,
+          1791434333260085596
+        ],
+        "sha256": "7bc4f5d59487b20eff82383f56dd32850bbf67170f195d885279ba1373d7b5b4"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/particles/particles2d.d",
+        "identity": [
+          16777231,
+          252203818,
+          33188,
+          824,
+          1791434333348674107,
+          1791434333397765243
+        ],
+        "sha256": "116be547d25c23d8e01f5b730f8dd3b4e1b765580e828c24e60ddbddc2960790"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/particles/particles2d.o",
+        "identity": [
+          16777231,
+          252203816,
+          33188,
+          13656,
+          1791434333348426442,
+          1791434333397884659
+        ],
+        "sha256": "9b8ff754ebee54668022d7512935dfcb2e70218d1aecaf98114cf461d5ae391d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/collider_builder.d",
+        "identity": [
+          16777231,
+          252203758,
+          33188,
+          1657,
+          1791434332616543316,
+          1791434332649236074
+        ],
+        "sha256": "7a7b06b699161f38f2456a1ad88bb24870eafa5a2aee2cf90bcdd8b919f955e1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/collider_builder.o",
+        "identity": [
+          16777231,
+          252203756,
+          33188,
+          30320,
+          1791434332616284859,
+          1791434332649380989
+        ],
+        "sha256": "40f44e93b6043c484a5b640724401be29006b791a4c31c568260d66b4c00eaa2"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/collider_geom.d",
+        "identity": [
+          16777231,
+          252203745,
+          33188,
+          498,
+          1791434332266181824,
+          1791434332314641590
+        ],
+        "sha256": "df3c3489abebd8521622fab8009389ad446f27459b0f980a3feb995f871101f0"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/collider_geom.o",
+        "identity": [
+          16777231,
+          252203741,
+          33188,
+          10336,
+          1791434332265976700,
+          1791434332314781839
+        ],
+        "sha256": "641ad16da8e8fa1c9b267717ccc4a0a19d28381298de72d3e3eead63096004a1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/collider_legacy.d",
+        "identity": [
+          16777231,
+          252203772,
+          33188,
+          1454,
+          1791434332827125383,
+          1791434332885045996
+        ],
+        "sha256": "e89d9ce8e31b600383f290b5f3a4256d51c535caaab96114ea4035fe04656bd1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/collider_legacy.o",
+        "identity": [
+          16777231,
+          252203767,
+          33188,
+          32520,
+          1791434332826860884,
+          1791434332885704241
+        ],
+        "sha256": "6dba0e3fc492871a0d071d365f99d26cd6bb7ba46ba6248a073c8411ca6a02d9"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/collider_tagging.d",
+        "identity": [
+          16777231,
+          252203768,
+          33188,
+          1290,
+          1791434332774396856,
+          1791434332833755375
+        ],
+        "sha256": "d5dff2e1aca6427dbcdc922215cf1b976408fa424b120192be319ff97e13dc7c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/collider_tagging.o",
+        "identity": [
+          16777231,
+          252203763,
+          33188,
+          22936,
+          1791434332774166399,
+          1791434332833886957
+        ],
+        "sha256": "e931dde17570e32e4c19761eb3c2e7fdafba1ca9d3b1902c96032b76c2c74f16"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/rigid2d.d",
+        "identity": [
+          16777231,
+          252203769,
+          33188,
+          591,
+          1791434332787680008,
+          1791434332806706534
+        ],
+        "sha256": "31b27974feff8a05af83ccd655800663c2207abe7eec267ec9cd3b3441ed9693"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/rigid2d.o",
+        "identity": [
+          16777231,
+          252203766,
+          33188,
+          25304,
+          1791434332787453718,
+          1791434332806914157
+        ],
+        "sha256": "71f2626b5f35ae7ebc88b31a21460ae4a0127c1dea539a716e7489d8bb01c858"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/rigid2d_collision.d",
+        "identity": [
+          16777231,
+          252203740,
+          33188,
+          615,
+          1791434332211276564,
+          1791434332244123070
+        ],
+        "sha256": "a7f79dae5391473509a76da2c1f7e94ebc0c3715c3fcde60c7d448e9bfdecb34"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/rigid/rigid2d_collision.o",
+        "identity": [
+          16777231,
+          252203729,
+          33188,
+          35768,
+          1791434332211055232,
+          1791434332244264278
+        ],
+        "sha256": "27693aa82270660a56345302a008830eb3f2f6ce48a9bf9c12799fc162c56eb5"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/smoke/smoke_field.d",
+        "identity": [
+          16777231,
+          252203700,
+          33188,
+          144,
+          1791434331555106626,
+          1791434331611627584
+        ],
+        "sha256": "38e742293a14798789c1145e262da488c42bbfe9dd5f33d65962dbdc2ed12c5c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/smoke/smoke_field.o",
+        "identity": [
+          16777231,
+          252203699,
+          33188,
+          3616,
+          1791434331554918794,
+          1791434331611818499
+        ],
+        "sha256": "069c747034f1df7603f302d626c0a2a55bd3ebead8af7c3943f958a41a66a6d1"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/soft/soft_body.d",
+        "identity": [
+          16777231,
+          252203846,
+          33188,
+          506,
+          1791434333742239529,
+          1791434333771166356
+        ],
+        "sha256": "d7f0e5adbc81b8fb0e37c140d10bb91fe1d3aaba794d1ea15e3c94ea4f46f9d9"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/soft/soft_body.o",
+        "identity": [
+          16777231,
+          252203845,
+          33188,
+          26320,
+          1791434333742028197,
+          1791434333771311564
+        ],
+        "sha256": "d02b32b20ea4fc7c13bbd7d7644bf8bdc83fcacaf5af342030dc4f03c529accf"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/structural/structural_scene.d",
+        "identity": [
+          16777231,
+          252203853,
+          33188,
+          307,
+          1791434333861452605,
+          1791434333882890571
+        ],
+        "sha256": "51f2bcb05ca613fbc205cfdf9d3a598ef47410e616302bf8e639bdaa3a0ea4a0"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/structural/structural_scene.o",
+        "identity": [
+          16777231,
+          252203850,
+          33188,
+          32160,
+          1791434333861202023,
+          1791434333883045278
+        ],
+        "sha256": "65c925926d300b579ccc2670520fe30dceeae9b42714ba9be0c223357491eead"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/structural/structural_solver.d",
+        "identity": [
+          16777231,
+          252203860,
+          33188,
+          656,
+          1791434333908952462,
+          1791434333969111767
+        ],
+        "sha256": "347c214a1f32b4ab363c7aa78b639a6851375381aa9badd38c879fc8dde31d5b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/structural/structural_solver.o",
+        "identity": [
+          16777231,
+          252203851,
+          33188,
+          47864,
+          1791434333908635922,
+          1791434333969244432
+        ],
+        "sha256": "e5440b22ef3403bf3de59f023d20360f93c31c0a1b649f9041c2c347570d5cfe"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/structural/structural_sparse_matrix.d",
+        "identity": [
+          16777231,
+          252203852,
+          33188,
+          432,
+          1791434333837892862,
+          1791434333888779319
+        ],
+        "sha256": "ba17516bcdf44af2440ce3eed22a278be9cc885c2aba4c2955df0facead51a6a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/physics/structural/structural_sparse_matrix.o",
+        "identity": [
+          16777231,
+          252203849,
+          33188,
+          10376,
+          1791434333837704072,
+          1791434333888901318
+        ],
+        "sha256": "de33e7361b68e2e4d2fe8ac1ae12eb0f1c3dbfa2412c17bbefc72ba1067eddbc"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/field_overlay.d",
+        "identity": [
+          16777231,
+          252203706,
+          33188,
+          7784,
+          1791434331632190474,
+          1791434331722831803
+        ],
+        "sha256": "10942d9ae3fdecc7d81727acbe8a6786f9fc0353c62f47b7612c121c314e6448"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/field_overlay.o",
+        "identity": [
+          16777231,
+          252203697,
+          33188,
+          72608,
+          1791434331631885059,
+          1791434331722949302
+        ],
+        "sha256": "d487dacd018436c22c31ad87a19111bde6871f7d985908292bc1577bba887394"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/import_project.d",
+        "identity": [
+          16777231,
+          252203666,
+          33188,
+          813,
+          1791434331069182305,
+          1791434331124740894
+        ],
+        "sha256": "f5a13910cb31474ab30384d10d6b8ba685f6c3b228ddfc6102783814d889449b"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/import_project.o",
+        "identity": [
+          16777231,
+          252203663,
+          33188,
+          6392,
+          1791434331068888474,
+          1791434331124893101
+        ],
+        "sha256": "e33e08bbb29f24e9716fdc6cd2ebb583431274e75decb821002e80ac38289984"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/kit_render_backend_vk_headless_stub.d",
+        "identity": [
+          16777231,
+          252204448,
+          33188,
+          929,
+          1791434343744839440,
+          1791434343759251958
+        ],
+        "sha256": "ac045aa25d81173aec4835fb973cfdf88cca86bf5d1eee2bd4595a9b399690db"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/kit_render_backend_vk_headless_stub.o",
+        "identity": [
+          16777231,
+          252204447,
+          33188,
+          9312,
+          1791434343744648025,
+          1791434343759368499
+        ],
+        "sha256": "bbf0893dcf0e4345726c147531ac1a33a3d206e6988a18671423a728c97ced92"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/kit_viz_field_adapter.d",
+        "identity": [
+          16777231,
+          252203683,
+          33188,
+          527,
+          1791434331300037514,
+          1791434331359733614
+        ],
+        "sha256": "31245d4c977c9f2918fa263b192795e4bd33a3a94231c8166de8ca63413e99f5"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/kit_viz_field_adapter.o",
+        "identity": [
+          16777231,
+          252203682,
+          33188,
+          10040,
+          1791434331299829598,
+          1791434331359916487
+        ],
+        "sha256": "5aeeffa4dfd36d6963920202152329042b2a08575df63a4979ddce2af058099e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/renderer_sdl_headless_stub.d",
+        "identity": [
+          16777231,
+          252204452,
+          33188,
+          7624,
+          1791434343837853085,
+          1791434343876223426
+        ],
+        "sha256": "9ead01a1a40f4e51827405f2ca8d1c47bec6e5309477eff3959521dcfb28f5ac"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/renderer_sdl_headless_stub.o",
+        "identity": [
+          16777231,
+          252204446,
+          33188,
+          53880,
+          1791434343837591504,
+          1791434343876346300
+        ],
+        "sha256": "7f9c07ed89a62adaf30cd5dcba46534506bffbecfb8f19f502bc5f62f5b01424"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/retained_runtime_scene_overlay_headless_stub.d",
+        "identity": [
+          16777231,
+          252204460,
+          33188,
+          7617,
+          1791434343901277283,
+          1791434343959644726
+        ],
+        "sha256": "c7d574fe10a594203c194477cecd2683af61d7848b88037a83953e72f31df32e"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/render/retained_runtime_scene_overlay_headless_stub.o",
+        "identity": [
+          16777231,
+          252204449,
+          33188,
+          37200,
+          1791434343900974577,
+          1791434343959768183
+        ],
+        "sha256": "908a5738681ad4fc0c6cdcec19b5da733914840f8a1fe5f20a0e209529b364ff"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/api/time_scope.d",
+        "identity": [
+          16777231,
+          252204100,
+          33188,
+          2962,
+          1791434338455003702,
+          1791434338477663992
+        ],
+        "sha256": "dd923b8700b0a80755e3d9d19ba843ef54c2f4aace8de3633165d10853cf6477"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/api/time_scope.o",
+        "identity": [
+          16777231,
+          252204098,
+          33188,
+          34816,
+          1791434338454743662,
+          1791434338477823450
+        ],
+        "sha256": "912605ae017e4a951e83746b30441543647fbd9b292cecf307fc5a3d37931993"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/config/settings_loader.d",
+        "identity": [
+          16777231,
+          252204087,
+          33188,
+          2446,
+          1791434338211657544,
+          1791434338250998753
+        ],
+        "sha256": "eb053cf7441eae49257707be65880f65bdcad698bc8aaf711e84d1cfa84ae28d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/config/settings_loader.o",
+        "identity": [
+          16777231,
+          252204084,
+          33188,
+          34168,
+          1791434338211397338,
+          1791434338251114294
+        ],
+        "sha256": "e86c27f6c1b78e8d9d9ad3b8b519548566f503f57149439ab2925af4b3301289"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/frame_tracker.d",
+        "identity": [
+          16777231,
+          252204075,
+          33188,
+          2481,
+          1791434338004598618,
+          1791434338062860770
+        ],
+        "sha256": "aeb2bd138b1e78e71a2cac1fb90cca8f9b6643782d66dc6ca39e476708d76d5c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/frame_tracker.o",
+        "identity": [
+          16777231,
+          252204074,
+          33188,
+          8168,
+          1791434338004085497,
+          1791434338063029686
+        ],
+        "sha256": "efb9501402d8a944c8f58ac323699f018d0143c470c7db3d8a819d41a5414bbb"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/session.d",
+        "identity": [
+          16777231,
+          252204053,
+          33188,
+          1809,
+          1791434337639762359,
+          1791434337694813494
+        ],
+        "sha256": "734bdb5ab49a76c3c9502b52b24f58f5013ca0f3ea3ef6fb681b77d261db3b28"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/session.o",
+        "identity": [
+          16777231,
+          252204051,
+          33188,
+          9152,
+          1791434337639187864,
+          1791434337694963409
+        ],
+        "sha256": "6ed7baaae6974010fc381c5553e4e471a442033ffdf7147e1840d452508041ef"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/time_utils.d",
+        "identity": [
+          16777231,
+          252204046,
+          33188,
+          343,
+          1791434337494325184,
+          1791434337552914876
+        ],
+        "sha256": "f5a9cbf894228bf81b9fef341afe8c3146a399305a291ce36d192faa51d68acf"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/time_utils.o",
+        "identity": [
+          16777231,
+          252204045,
+          33188,
+          3808,
+          1791434337494129686,
+          1791434337553032125
+        ],
+        "sha256": "ff64f9d891ce46794d79412b8bbe19c8958439d6aede138e86793a09c20975f6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/timer.d",
+        "identity": [
+          16777231,
+          252204060,
+          33188,
+          448,
+          1791434337738257297,
+          1791434337792197940
+        ],
+        "sha256": "de8833d44f7e04c4608fa30fb8a8c00b8a4b8b7fde4ec4a4b4f67d591aa211aa"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/timer.o",
+        "identity": [
+          16777231,
+          252204058,
+          33188,
+          8224,
+          1791434337738052632,
+          1791434337792343689
+        ],
+        "sha256": "e1424106e1f397b939cc6fbc4ce95f031ed675d42471023a8aa1f8ce01617497"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/timer_manager.d",
+        "identity": [
+          16777231,
+          252204068,
+          33188,
+          1793,
+          1791434337824941072,
+          1791434337879227129
+        ],
+        "sha256": "db03f22debc808c844e7d6b4bef5eeaeb3fd7aa70d9ee50f533aec67abc7777a"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/core/timer_manager.o",
+        "identity": [
+          16777231,
+          252204064,
+          33188,
+          9624,
+          1791434337824757240,
+          1791434337879384086
+        ],
+        "sha256": "b3e3369e2b068d704e3c8a9c81b9fc2051e3ae3e37e0fc3e640430814cc24061"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/events/event_tracker.d",
+        "identity": [
+          16777231,
+          252204106,
+          33188,
+          1957,
+          1791434338526314258,
+          1791434338575299020
+        ],
+        "sha256": "c910c28846dbb949a2eac3fa262f62ddb072fa1482e4b23d8ea81c741c5ade01"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/events/event_tracker.o",
+        "identity": [
+          16777231,
+          252204104,
+          33188,
+          9384,
+          1791434338526105342,
+          1791434338575410019
+        ],
+        "sha256": "6235c36a52682c4b3fcb0e63b4a1ac5e09663272a9540c259490a09c7cbee5ab"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/history/history_compression.d",
+        "identity": [
+          16777231,
+          252204091,
+          33188,
+          528,
+          1791434338254683309,
+          1791434338268577623
+        ],
+        "sha256": "c771df3fec5b5a8d0a525032097ca7f6096a7f1f94b66908bdf0cb781c82f547"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/history/history_compression.o",
+        "identity": [
+          16777231,
+          252204088,
+          33188,
+          4168,
+          1791434338254496644,
+          1791434338268724830
+        ],
+        "sha256": "d0d0b9eee071ead0da73e5e7da50751fb25854f74e65a313699a833c997545b7"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/hud/hud_format.d",
+        "identity": [
+          16777231,
+          252204119,
+          33188,
+          220,
+          1791434338737358738,
+          1791434338745102181
+        ],
+        "sha256": "1cf8a5e00538fd233e8ec1a43b5d1585c293ce28dca09b40b3c05ca06eaf4e69"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/hud/hud_format.o",
+        "identity": [
+          16777231,
+          252204116,
+          33188,
+          5024,
+          1791434338737132949,
+          1791434338745236597
+        ],
+        "sha256": "e42ab47648d23b9253d2f5abbc9133a4a501e53fa7d09b53713528878b6c7285"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/hud/hud_renderer.d",
+        "identity": [
+          16777231,
+          252204137,
+          33188,
+          2169,
+          1791434339044237801,
+          1791434339074816117
+        ],
+        "sha256": "9a985dd17d5f81433eb28e5f1e82c79ecdb32663c7a82e024d540881d99814ac"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/hud/hud_renderer.o",
+        "identity": [
+          16777231,
+          252204136,
+          33188,
+          23904,
+          1791434339043940262,
+          1791434339074927907
+        ],
+        "sha256": "25f2c5d3f113a01dd9f98277e2ee61e3b47da460fb134b3a0088789160f587b6"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/hud/hud_snapshot.d",
+        "identity": [
+          16777231,
+          252204145,
+          33188,
+          2165,
+          1791434339104164066,
+          1791434339136448286
+        ],
+        "sha256": "290959b8d999b1f06818770a7d116adcce75ff7839e0af506d774840c1652013"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/hud/hud_snapshot.o",
+        "identity": [
+          16777231,
+          252204140,
+          33188,
+          20504,
+          1791434339103947318,
+          1791434339136574659
+        ],
+        "sha256": "bf0cc18953bda41756ffec26e662787f0240ac640e7a7b486116ab6dabe28a41"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/logging/logger.d",
+        "identity": [
+          16777231,
+          252204125,
+          33188,
+          2100,
+          1791434338778332935,
+          1791434338836339548
+        ],
+        "sha256": "acbcd82a162fcf3a7406da6c51524d9fe79b70b795501f716b60c76351719348"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud/logging/logger.o",
+        "identity": [
+          16777231,
+          252204123,
+          33188,
+          11848,
+          1791434338778094145,
+          1791434338836453797
+        ],
+        "sha256": "9ed99c8fec5d95982df9457917fe8f0b97512984f9123cad66bc3ad729693246"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud_external/cJSON.d",
+        "identity": [
+          16777231,
+          252204157,
+          33188,
+          208,
+          1791434339379343571,
+          1791434339440064456
+        ],
+        "sha256": "26f2aeeee1287b778762a94a3aea91601a38c0a10f11426198387742f9b1cab7"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timer_hud_external/cJSON.o",
+        "identity": [
+          16777231,
+          252204154,
+          33188,
+          73040,
+          1791434339379102407,
+          1791434339440184621
+        ],
+        "sha256": "f1924d860e6e586ec30c380d830b471ccd11f92dcaa15ab721731f888a5d8a4d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timing.d",
+        "identity": [
+          16777231,
+          252203891,
+          33188,
+          4486,
+          1791434334554998390,
+          1791434334621224359
+        ],
+        "sha256": "2f6877b55d76805b98b756b19ecab1876b26fe3ac51a7907f134543717ffba12"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/timing.o",
+        "identity": [
+          16777231,
+          252203873,
+          33188,
+          6752,
+          1791434334554769725,
+          1791434334621356900
+        ],
+        "sha256": "fcde4d11d025431eafca612075cce6059a77548106689557d6c1c9af021bbcd4"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/ShapeLib/shape_core.d",
+        "identity": [
+          16777231,
+          252202852,
+          33188,
+          601,
+          1791434315564054354,
+          1791434315609875224
+        ],
+        "sha256": "1b6cdde24dfc39e4057b55b0e8c1c8914d35a06401ff8ca82f9a4060e234890d"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/ShapeLib/shape_core.o",
+        "identity": [
+          16777231,
+          252202851,
+          33188,
+          4096,
+          1791434315563833731,
+          1791434315610014473
+        ],
+        "sha256": "e5f7c08e1b2432b1e213a07c07891e0b386c689d1cd28fa6cc211fb4712b7f04"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/ShapeLib/shape_draw_sdl.d",
+        "identity": [
+          16777231,
+          252202868,
+          33188,
+          5381,
+          1791434315932805876,
+          1791434316013245031
+        ],
+        "sha256": "5836500dab51cd8ca42643b39a96db8b776e9831be831a4170a85586e15a63a8"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/ShapeLib/shape_draw_sdl.o",
+        "identity": [
+          16777231,
+          252202853,
+          33188,
+          7816,
+          1791434315932566962,
+          1791434316013396114
+        ],
+        "sha256": "95754a18d1b1c69972fe8cb4215c9f374d012b79379d0db5ff3fdd2795f1ae90"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/ShapeLib/shape_flatten.d",
+        "identity": [
+          16777231,
+          252202823,
+          33188,
+          867,
+          1791434314997739295,
+          1791434315036200260
+        ],
+        "sha256": "9e5aac98b259298e4f8b638b4ec1a7fd4886000da21d66d4f954601fceda0b42"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/ShapeLib/shape_flatten.o",
+        "identity": [
+          16777231,
+          252202820,
+          33188,
+          11008,
+          1791434314997490130,
+          1791434315036320009
+        ],
+        "sha256": "c0eec38de0820d23bf8ec36a65cc0e0679f43a4d6cbdfae56a985aba11127b87"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/ShapeLib/shape_json.d",
+        "identity": [
+          16777231,
+          252202824,
+          33188,
+          1042,
+          1791434314998934369,
+          1791434315035965303
+        ],
+        "sha256": "74f389616c02853688d9a8a52aa40e7442659b1a34ae05135c63e4e49a9ed71f"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/ShapeLib/shape_json.o",
+        "identity": [
+          16777231,
+          252202821,
+          33188,
+          17224,
+          1791434314998623788,
+          1791434315036080719
+        ],
+        "sha256": "1c27a2bebe8d5b8808db943bf655175be223478744e3d74509736ad4c850e78c"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/cli/physics_sim_headless.d",
+        "identity": [
+          16777231,
+          252202849,
+          33188,
+          8007,
+          1791434315523832693,
+          1791434315591534401
+        ],
+        "sha256": "5a10c70fdc67844fa92d534b76d66f8da2fff7299d4717c5fddef367f83900a3"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/tools/cli/physics_sim_headless.o",
+        "identity": [
+          16777231,
+          252202835,
+          33188,
+          94152,
+          1791434315523477238,
+          1791434315591652692
+        ],
+        "sha256": "4e29211e092d9b7c9823b4bd4a005ba5b558bf36e9886f072bcd0e5baec02608"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/ui/text_input.d",
+        "identity": [
+          16777231,
+          252202839,
+          33188,
+          4463,
+          1791434315307796542,
+          1791434315363899877
+        ],
+        "sha256": "0aaf46063ab431963abaead1dd4a0a0221516fbc07f3d57cca76bae5fcad7ac5"
+      },
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build/ui/text_input.o",
+        "identity": [
+          16777231,
+          252202822,
+          33188,
+          12040,
+          1791434315307571210,
+          1791434315364029709
+        ],
+        "sha256": "11f4b3bab3b0d7b4c197de0b8cbbacdaf06a1f68de8f23c85b97d1a6ba2b63e0"
+      }
+    ],
+    "repo": "/private/tmp/physics-focused-build-20261007/repo",
+    "build_root": "/private/tmp/physics-focused-build-20261007/repo/build",
+    "targets": [
+      {
+        "path": "/private/tmp/physics-focused-build-20261007/repo/build",
+        "identity": [
+          16777231,
+          252202793,
+          16877,
+          1344,
+          1791434344083218770
+        ]
+      }
+    ]
+  }
+}

@@ -23,7 +23,7 @@ for entry in "${cases[@]}"; do
   scene="${entry#*:}"
   case_dir="$OUT_DIR/$name"
   mkdir -p "$case_dir"
-  "$PHYSICS_DIR/physics_sim_headless" \
+  "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
     --runtime-scene "$scene" \
     --frames "$FRAMES" \
     --sim-steps-per-frame "$STEPS_PER_FRAME" \

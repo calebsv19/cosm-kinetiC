@@ -1,0 +1,185 @@
+{
+  "files": [
+    {
+      "path": "docs/AGENT_CONTROL.md",
+      "before_sha256": "413cc2c33777deb7a9b794ffaab78be0583841f876874d35b6e3dec7d9e42261",
+      "after_sha256": "413cc2c33777deb7a9b794ffaab78be0583841f876874d35b6e3dec7d9e42261"
+    },
+    {
+      "path": "docs/AGENT_DEMO_PACK.md",
+      "before_sha256": "798989737570ca566c5f96d64f34093fe9e614eac24327eb3c393a0a854d533d",
+      "after_sha256": "6502315ab322616ae8b518aeaae163faf1c09f2cde8434c62116238674d32283"
+    },
+    {
+      "path": "docs/cleanup_operations.md",
+      "before_sha256": null,
+      "after_sha256": "229a4ab46f95a59fe0dc2fc5b06a5da95ee826488ca0aa94e2b95062f8a5e811"
+    },
+    {
+      "path": "docs/headless_cli.md",
+      "before_sha256": "adfa3428410be8dd38441e2c82a25e3683838b1c89463c7aa97bc672e883a4da",
+      "after_sha256": "687210d080842abddc0dc60fbc898d49af78e234cc31888a69d53088cdddf47a"
+    },
+    {
+      "path": "make/build-identity.mk",
+      "before_sha256": null,
+      "after_sha256": "8ffb5290cd5ab643ed23f737332c13c3450564e3206857aa8aeeacb5cabae9dc"
+    },
+    {
+      "path": "make/config.mk",
+      "before_sha256": "3b81bb2dfbc5a60d73f8a33f49e698aacdba9e9368fde833f608acdda2dce6f1",
+      "after_sha256": "2c1a718c2f9b57b2709d14c07910e656ac7370aa109cf95bdf31a7818dfc9e22"
+    },
+    {
+      "path": "make/objects.mk",
+      "before_sha256": "73ac98578d2b65b616a3020ec2bfa4e19e7166e890c5e6a3b0c5f5a588586212",
+      "after_sha256": "430c7ad2856b041f33d6b0c153c0da588d9dc3cd4deda97360f9da0f1cefd06e"
+    },
+    {
+      "path": "make/rules-build.mk",
+      "before_sha256": "94751ec19562200e660fab731a8040b9ee6114cca261e2fa46bddac1ed8bb818",
+      "after_sha256": "cf009dad2f2109585b60125d066530013c986b4b7bb10c651bbb48009a1f1ca6"
+    },
+    {
+      "path": "make/rules-tools.mk",
+      "before_sha256": "947aec1ff10ef8b18db5380851e9fcce52e0214ba2257660869af1c45d7ef6b6",
+      "after_sha256": "c09d9be6d097e4efc19762f63b425ac82e45371d77ac591342f9ef6ca60e07cb"
+    },
+    {
+      "path": "make/sources-tools.mk",
+      "before_sha256": "a2ea2f4b11afd34b0aac0c16f9396ce86fb8c565f8fa29630879a0b74d7ae161",
+      "after_sha256": "d1cd8301dcdbe824c27b22aff1132db33f533147ea06e985190acf626abc5303"
+    },
+    {
+      "path": "makefile",
+      "before_sha256": "babd89d553badaf2bb28025700be189af9aec1185b0345b4e6975e8d094af33a",
+      "after_sha256": "68123f7df46ed98e199cec5cb2d1b4ff037582e56a300bfb62cf010cba067660"
+    },
+    {
+      "path": "scripts/agent_session/service.py",
+      "before_sha256": "64fc784dbfce3543656f3ca24afabcafa0ec2fb046431232ba1535133c814c98",
+      "after_sha256": "5d9f3fda7773f862122e260d7fcd788a4ca5c27390a236d77949c1cbc200e565"
+    },
+    {
+      "path": "scripts/atomic_output.py",
+      "before_sha256": null,
+      "after_sha256": "99d5bf063794c62a044d7bcfd3966af7aaa58479a745c5c91f4a34f5b0886281"
+    },
+    {
+      "path": "scripts/build_identity.py",
+      "before_sha256": null,
+      "after_sha256": "8980a9b27f93ebf6ba56b1e795ad83f3425a930f2b49099e6c7662e8f680b038"
+    },
+    {
+      "path": "scripts/build_owner.py",
+      "before_sha256": null,
+      "after_sha256": "5a722934630ac55e0bf843a9fbc7afe43b7fd1a9ce5dfc8d1d03a5dae38743be"
+    },
+    {
+      "path": "scripts/tool_probe.py",
+      "before_sha256": null,
+      "after_sha256": "0ceada2c80491cf24723b614c6f8d6f0e8b5ee5fce44a360ddb24571c9ec80e9"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_cli.sh",
+      "before_sha256": "73859de61be02de26cdb49f9a820d4c7404978a2aa362b99961b2875c76ed0ab",
+      "after_sha256": "a267523faa6b54a92fdaaf67456ec316171bfed099cd13d053bbb8dfef44cf38"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_dragonwind_orientation_probe.sh",
+      "before_sha256": "4c428321fda7a7f80890c435c9ad82d49abb88857d78d87f76c77ea6d2b5c7f9",
+      "after_sha256": "f914e2c9b4d94103742f7a35f92361c9a6d40ea1509efc83ff76916a7859e753"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_scene_project_cache_output.sh",
+      "before_sha256": "54d1f2578dfa34fdbfbd7889fa8676b192f2a53566ddd1eaa52256dc9858c6bc",
+      "after_sha256": "3c77200553a214107e3c1062630a1a963c982594b8e0aa51656799c76f5cfcd3"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_mode.sh",
+      "before_sha256": "72cc2077ca02e152526de3e8135115d686caf40587ee98674fba31619d5a502a",
+      "after_sha256": "0e6f51139c75d5cd8ad38a408a0564baf9b312ac5692068bde79e5ebe2ec63bb"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_object_coupling.sh",
+      "before_sha256": "6a1835bfbf6f38f309828956da08817480712a40555216e7c53a91efa1d5275a",
+      "after_sha256": "aa620012ae976b1e265bd43c2b5a834ba2b9f3ee5512d531f8a761d263dc82cf"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_water_object_quality_compare.sh",
+      "before_sha256": "06b70abc2f061734a0e32766e16eaf682120a8e9ad434cd7929079f5d5dd50bb",
+      "after_sha256": "6d685db2438cefa98041b2104e75481b565eff76b24bb90f2f05d63dd8e250e3"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_analysis.sh",
+      "before_sha256": "7c01b2234e31dd3fc41ff5a17c82fd10715d2320b5f387656c1b8405ebaef460",
+      "after_sha256": "cfbab78a0f11c6a53cc47fa3a5d326e97adca2b18beaa863420e1067c4c18f8d"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_long_tunnel_video.sh",
+      "before_sha256": "f415b167e4a50bf09bb656748c04c993b6196ed78d74447b7f8778735ae33855",
+      "after_sha256": "5c78ecd7b5e9351782ffe53b456955ba51a046894aa665908c3b114a93b1febf"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh",
+      "before_sha256": "4b1ad450341db020976ae6ed240b299d8dacded20b78a1e3879bcb127e866e8c",
+      "after_sha256": "a4454c3d6a5a142908f112e7b4515bb2c5cd246f392a6cfb93d380e38cd79855"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_mesh_probe.sh",
+      "before_sha256": "b122d04d5753b888f593eda9e73b3f954cf092ea792ddba4ecb00aa6b2bf9638",
+      "after_sha256": "9beef1679457ec80b94481a8a70131195574d6b0cecb7015f46eb2eb4b28a6ca"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_object_comparison.sh",
+      "before_sha256": "c6653425ca89e0daaf70de1394ba3e927f321db17278e479e02508b8e9861131",
+      "after_sha256": "58b30ab766c33b4e441012e5ce20280e2b5a6636c50cbd0b5d2ca3a1405db491"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_headless_wind_orientation_probe.sh",
+      "before_sha256": "a217480daadee884639276bf236e4f4196e56f5879750ade9a52bf5c039276a2",
+      "after_sha256": "5928263b28ffc9008ad490e1ca293622b60ccbddcd2f419c3c6e2fc0608d5033"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_bundle_smoke.sh",
+      "before_sha256": "35a29c36a67f1fcfffb8d57ea08097c9e655ab1d01a0de852b0ede8d0d1e31d1",
+      "after_sha256": "ad374b023aa33c843da3821b8e51b281f3648d3e60d0ea8fd7daee7421a05607"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_policy.sh",
+      "before_sha256": "8c716eeeb711cf281846c4afab7ef01800be22ebfc14153a9f7260cf4b96d7f8",
+      "after_sha256": "c740817305f2f2e9d89d1d0e28037d4800c2a97b2e9c482a75e71858f0c915fa"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_job_runner_smoke.sh",
+      "before_sha256": "a1f37e47fa87cc23a89bb33cbab56d7aa8f76df0792a9229988ad7745c84c70a",
+      "after_sha256": "d5eeb93b2420bd40787881a282900f7a4d19cce0397d87a39a89e84b85f9effe"
+    },
+    {
+      "path": "tests/integration/run_physics_sim_visual_artifact.sh",
+      "before_sha256": "53199e2e1b489eb82f467d7b8bf5c24ccccba96c4e44d01065c6f5900eab69b6",
+      "after_sha256": "d7d95fba4885e72ae56caa51fc31eabc114ed5b4f4b4ec7e68d6640829839e23"
+    },
+    {
+      "path": "tests/test_atomic_output.py",
+      "before_sha256": null,
+      "after_sha256": "10eed4b190c52fd11af15ea086ffb10b2746f839bea5e0bfbeb51602ad2b8fa5"
+    },
+    {
+      "path": "tests/test_build_identity.py",
+      "before_sha256": null,
+      "after_sha256": "cb92125cf26ed74bd504adad6b414ed6a133fb4397d04f272fbf3ca312192001"
+    },
+    {
+      "path": "tests/test_build_output_isolation.py",
+      "before_sha256": null,
+      "after_sha256": "87a3d5c495a97404b7d2cba6db876cdf6b3876aa2bd721e7980197b40b865453"
+    },
+    {
+      "path": "tests/test_build_owner.py",
+      "before_sha256": null,
+      "after_sha256": "2f90edb6078607ea050877bbbbcd4f1cf0befb5310e25d018d2618e41bcfb6e4"
+    }
+  ],
+  "status": "proposed, final profile acceptance pending"
+}

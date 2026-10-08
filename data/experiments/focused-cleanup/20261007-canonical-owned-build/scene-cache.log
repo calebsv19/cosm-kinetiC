@@ -1,0 +1,15 @@
+fatal: not a git repository (or any of the parent directories): .git
+python3 -B scripts/build_owner.py --root 'build' -- /Applications/Xcode.app/Contents/Developer/usr/bin/make -f 'makefile' 'test-physics-sim-headless-scene-project-cache-output'
+fatal: not a git repository (or any of the parent directories): .git
+USING MAKEFILE AT: /private/tmp/physics-focused-build-20261007/repo/makefile
+bash tests/integration/run_physics_sim_headless_scene_project_cache_output.sh
+[scene] Space mode 3D requested; using controlled 3D lane with scaffold backend and compatibility XY projection.
+[physics_sim_headless] progress: frame=0/1 step=0/0 stage=pending
+[physics_sim_headless] progress: frame=0/1 step=1/1 stage=simulating_frame
+[physics_sim_headless] progress: frame=1/1 step=0/0 stage=finishing final
+[physics_sim_headless] PASS
+[physics_sim_headless] runtime: /private/tmp/physics-focused-build-20261007/repo/tmp/scene_project_cache_output/project/scene_runtime.json
+[physics_sim_headless] output:  /private/tmp/physics-focused-build-20261007/repo/tmp/scene_project_cache_output/project/physics_sim/runs/physics-run-test-0001
+[physics_sim_headless] summary: /private/tmp/physics-focused-build-20261007/repo/tmp/scene_project_cache_output/project/physics_sim/runs/physics-run-test-0001/run_summary.json
+[physics_sim_headless] progress: /private/tmp/physics-focused-build-20261007/repo/tmp/scene_project_cache_output/project/physics_sim/runs/physics-run-test-0001/run_progress.json
+physics_sim headless scene project cache output passed: /private/tmp/physics-focused-build-20261007/repo/tmp/scene_project_cache_output/project/physics_sim/active_cache_manifest.json

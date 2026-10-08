@@ -1,0 +1,26 @@
+python3 -B tests/test_linux_desktop_installer.py
+.................................
+----------------------------------------------------------------------
+Ran 33 tests in 1.462s
+
+OK
+python3 -B tests/test_macos_bundle_lifecycle.py
+...Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-l0ogj99w/checkout with spaces/data/experiments/package-bundler-attempts/bundle-a6138a63fdd5480eb69371d9538ebd6c
+.Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-pq7os53h/checkout with spaces/data/experiments/package-bundler-attempts/bundle-f79981eedfee4930b3d21597d90fe73a
+.Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-22bha_w7/checkout with spaces/data/experiments/package-bundler-attempts/bundle-d936b9ea4cf44456a3c81def718ed534
+.Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-np0_f96_/checkout with spaces/data/experiments/package-bundler-attempts/bundle-2a97b9fb44fb43d1885220258be81e6f
+.Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-ahdvz7x0/checkout with spaces/data/experiments/package-bundler-attempts/bundle-f9442ca0ab0e4242bc7cd56fbfeea3c1
+...Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-96qk4ksj/checkout with spaces/data/experiments/package-bundler-attempts/bundle-281da2810a574cf49aadb9820d28d421
+..Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-4wh8ttl6/checkout with spaces/data/experiments/package-bundler-attempts/bundle-85b974af705142f294d587673ca13cbb
+..Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-9metoih1/checkout with spaces/data/experiments/package-bundler-attempts/bundle-3072d96770424b37b445948f86cedead
+.Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-djdfc3p_/checkout with spaces/data/experiments/package-bundler-attempts/bundle-84977cb165a24bf7b65c639e3bcbaf89
+..Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-xb6puwyz/checkout with spaces/data/experiments/package-bundler-attempts/bundle-ad6c44a31ec24df1b0341dc31a115be6
+.Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-pzp49_13/checkout with spaces/data/experiments/package-bundler-attempts/bundle-96718191bf754f5bae455fee21a8fc27
+Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-pzp49_13/checkout with spaces/data/experiments/package-bundler-attempts/bundle-fee94b8ec4404a9eae778e70ec296523
+...Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-r_9u4nr8/checkout with spaces/data/experiments/package-bundler-attempts/bundle-9067b95b286945f4839f73a151c64c86
+..Bundler retained: /private/var/folders/bp/24z6xk2j42x898v7prtk1p7w0000gn/T/physics-bundler-7mygy04j/checkout with spaces/data/experiments/package-bundler-attempts/bundle-5210447b1fdf4c5eb029e1c7ec0d90fb
+.
+----------------------------------------------------------------------
+Ran 24 tests in 4.347s
+
+OK

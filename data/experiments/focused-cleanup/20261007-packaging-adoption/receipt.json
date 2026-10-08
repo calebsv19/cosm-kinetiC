@@ -1,0 +1,202 @@
+{
+  "state": "canonical working-tree source adopted, uncommitted",
+  "base": "3fa1ad5f6fb2384a7626e83c5e22fa7821cb7ed5",
+  "files": [
+    {
+      "path": "docs/README.md",
+      "bytes": 17343,
+      "sha256": "918473b2a402b9e5f8db65a9268309256db0ce915e34cbd85589b8c94abc9c1d"
+    },
+    {
+      "path": "docs/cleanup_operations.md",
+      "bytes": 3549,
+      "sha256": "76959866bb0fe8a11c54a61aa83c47a1aa458f73dc1f6323e7581ca7bb9533ef"
+    },
+    {
+      "path": "docs/current_truth.md",
+      "bytes": 62569,
+      "sha256": "6a9dbb4efeec45468d787920d248a09ac0e6995a18ef6e2dbe205f4973cbd4d9"
+    },
+    {
+      "path": "docs/desktop_packaging.md",
+      "bytes": 16169,
+      "sha256": "cd8fe25505168ac42656c8f64d5b4a7d6e142233f069262a99922c6dfc32cc79"
+    },
+    {
+      "path": "docs/focused_cleanup_progress.md",
+      "bytes": 5441,
+      "sha256": "ced85a13d13ea70d29c30dfdf68474a7410a18cc755b3d1913bc5779d996bd28"
+    },
+    {
+      "path": "docs/packaging_lifecycle_operations.md",
+      "bytes": 4910,
+      "sha256": "9afaad5a6ae85a2462132ec6826caabe046f8fb576259303edf3565c4a2f0a78"
+    },
+    {
+      "path": "make/package-linux-desktop.mk",
+      "bytes": 16496,
+      "sha256": "67b3630a76bce4aaff201dc42356020cdc9549fda5b302769c7ce927f1d882ad"
+    },
+    {
+      "path": "make/package-linux-worker.mk",
+      "bytes": 13413,
+      "sha256": "252da896ecddc6056fadcd61338dca838d3385fe67da08a45816cf15d3c0159b"
+    },
+    {
+      "path": "make/package-macos.mk",
+      "bytes": 16037,
+      "sha256": "d4db77690b31e1b5d219df91227657a320a220ac176277e5174676118475fb76"
+    },
+    {
+      "path": "make/release.mk",
+      "bytes": 10085,
+      "sha256": "225a5aebcb1728eb3fe9706cfd41da4cddf05a5e19faab3d2be2e6403704ca6b"
+    },
+    {
+      "path": "make/rules-runtime.mk",
+      "bytes": 2229,
+      "sha256": "7de4c95c41d4db3661109f7bd02e387000a71283c27f2049e6b78bd0ed24a1b9"
+    },
+    {
+      "path": "makefile",
+      "bytes": 2430,
+      "sha256": "b7bc5cb2760a94f583e224519f4b5cd9804552a9f1e560b999a3fed5a1a1b377"
+    },
+    {
+      "path": "scripts/agent_session/owned_command.py",
+      "bytes": 8427,
+      "sha256": "a37178c9bb893a18da689fab5e2cb52cefa7bf63be67b74efc61ff36932ad08f"
+    },
+    {
+      "path": "scripts/agent_session/sample_retention.py",
+      "bytes": 7210,
+      "sha256": "238cb115a74ce4a21597889a595e16f844f16ee37b33730e2691d1881f0d83f3"
+    },
+    {
+      "path": "scripts/cfd_evidence.py",
+      "bytes": 8448,
+      "sha256": "e7dfa855f14e0f0fb3db1078e755c5e4df538cffb05130f2204c3274a148d1d6"
+    },
+    {
+      "path": "scripts/check_desktop_process_audit.py",
+      "bytes": 2907,
+      "sha256": "954cd692fced52d5b753f42ba9b54f2f733898cde1a1805ccee7db299e7f5905"
+    },
+    {
+      "path": "scripts/contract_proof.py",
+      "bytes": 15600,
+      "sha256": "559d35e1419ea4dcba2437099401c2225f657264ecb327d0bc644bd5e39ea23e"
+    },
+    {
+      "path": "scripts/desktop_replace.py",
+      "bytes": 22713,
+      "sha256": "35cd84d4cdd83f7aaa23ed92096569e2afc6b3f37880146a730a9bb980faf8ce"
+    },
+    {
+      "path": "scripts/macos_bundle.py",
+      "bytes": 8060,
+      "sha256": "b9c4442b7fbcafccc1018026b0bda761d780be601e03418ffa616156db664d0c"
+    },
+    {
+      "path": "scripts/macos_bundle_engine.sh",
+      "bytes": 3857,
+      "sha256": "6ee500b405b73fab104a6aa680186be8f02ffdac68174fe37d1266924f577906"
+    },
+    {
+      "path": "scripts/package_proof.py",
+      "bytes": 7012,
+      "sha256": "bd1575c32afab408c39498179b2d905e1a290ce123724cdf015d0e75c39ac0e3"
+    },
+    {
+      "path": "scripts/package_transaction.py",
+      "bytes": 23353,
+      "sha256": "94fadec6b0d671d1c178294b6e2260b63f73d4a9e408af237e81ec2b3cb5662d"
+    },
+    {
+      "path": "tests/test_clean_reservations.py",
+      "bytes": 5599,
+      "sha256": "86bb1891b27a91f06bbdc405ba06c1c849090ac7c0ef307480895d68b1d3419b"
+    },
+    {
+      "path": "tests/test_desktop_process_audit.py",
+      "bytes": 5324,
+      "sha256": "ce8256184719c289ee946dc903f5c7dda2d305861327a339fce3c3ec5e613c78"
+    },
+    {
+      "path": "tests/test_desktop_replace.py",
+      "bytes": 13761,
+      "sha256": "313dec1b4f0319baaf113045b981a80227099612bf12e89e885a9f3279d9ba83"
+    },
+    {
+      "path": "tests/test_linux_desktop_installer.py",
+      "bytes": 20348,
+      "sha256": "ae2bf4775d96072e92d3a5ee4d907c8da5ae127d4579a3bdd1fb989edbe7069d"
+    },
+    {
+      "path": "tests/test_macos_bundle_lifecycle.py",
+      "bytes": 12792,
+      "sha256": "f01ae13f448d9b27a67ed4fd43222d6ce770f17dc7aef13a54b48e30dd0e2229"
+    },
+    {
+      "path": "tests/test_owned_command.py",
+      "bytes": 5713,
+      "sha256": "b2479751181bc86d8e2c4181a6dc3dd7bf90163c4de9ab8fb8a5dcede182ce6f"
+    },
+    {
+      "path": "tests/test_package_outputs.py",
+      "bytes": 6899,
+      "sha256": "c70abc7e392d4489d9c69132b18e76bf34b03487307d64a0d978ba9dcc45e86a"
+    },
+    {
+      "path": "tests/test_package_proof.py",
+      "bytes": 13926,
+      "sha256": "d7e2bc119a37167713304d51a4baea8f02c51c7aae39cd2616a896f2f75a2309"
+    },
+    {
+      "path": "tests/test_package_transaction.py",
+      "bytes": 24588,
+      "sha256": "10d3fd98dd2c66916a96d08f67ebcf77e6fbbc937b44c98f6fcd96795dd626bf"
+    },
+    {
+      "path": "tools/packaging/linux/install-desktop-entry.py",
+      "bytes": 17882,
+      "sha256": "3ebce1193bb3d180adb9e70cc5e5fb4cbd4febba4821e4a68ca3f449bc0c6c4c"
+    },
+    {
+      "path": "tools/packaging/linux/install-desktop-entry.sh",
+      "bytes": 141,
+      "sha256": "0fdf2d1aa8644f22a63bc3442dbaa6e1f02c769ef6e0f6467b709b7a31122492"
+    },
+    {
+      "path": "tools/packaging/macos/bundle-dylibs.sh",
+      "bytes": 141,
+      "sha256": "b83b8ff26f8d753403467903e13d0d2fd00ab4c9a7b4c22956ab5d8cae666e27"
+    },
+    {
+      "path": "tools/packaging/validate_macos_session.py",
+      "bytes": 3689,
+      "sha256": "8c1472c5c4525087cf28c89f256a66a966b3ce4be33987fa2f1b0c026600bf18"
+    }
+  ],
+  "distinct_tests": 181,
+  "native_macho_readback": "passed; no signing or execution",
+  "doc_scan": {
+    "docs": 52,
+    "findings": 0,
+    "committed_window": "HEAD..HEAD",
+    "memory_read_write": "skipped; direct user scope and current source evidence used"
+  },
+  "independent_backup": false,
+  "installed_changed": false,
+  "release_changed": false,
+  "main_edit_synchronized": false,
+  "platform_limits": [
+    "No Linux desktop-file-validate or real desktop session",
+    "No full GUI package signing/install acceptance",
+    "No full power-loss/hostile-writer/aggregate-quota qualification"
+  ],
+  "remaining": [
+    "independent archive transfer and retrieval verification",
+    "final requirement-by-requirement completion audit"
+  ]
+}

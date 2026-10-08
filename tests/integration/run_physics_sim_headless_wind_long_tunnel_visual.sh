@@ -20,7 +20,7 @@ RENDER_BLOCKER="$OUT_DIR/renderer_blocker.txt"
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 6 \
   --sim-steps-per-frame 8 \
@@ -125,7 +125,7 @@ report.write_text(
 PY
 
 set +e
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 6 \
   --sim-steps-per-frame 8 \

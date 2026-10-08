@@ -149,231 +149,229 @@ $(FISICS_BUILD_DIR):
 
 $(CLANG_TARGET): $(OBJS) | $(CLANG_BUILD_DIR)
 	@mkdir -p $(dir $@)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
 
-$(TARGET): $(CLANG_TARGET)
-	cp $(CLANG_TARGET) $(TARGET)
 
 $(FISICS_TARGET): $(FISICS_OBJS) | $(FISICS_BUILD_DIR)
 	@mkdir -p $(dir $@)
-	$(CLANG) $(LDFLAGS) -o $@ $(FISICS_OBJS) $(LIBS) $(FISICS_MEMCHECK_LINK_LIBS)
+	python3 -B scripts/atomic_output.py -- $(CLANG) $(LDFLAGS) -o $@ $(FISICS_OBJS) $(LIBS) $(FISICS_MEMCHECK_LINK_LIBS)
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/timer_hud/%.o: $(TIMER_HUD_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/timer_hud/%.o: $(TIMER_HUD_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/timer_hud_external/%.o: $(TIMER_HUD_DIR)/external/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/timer_hud_external/%.o: $(TIMER_HUD_DIR)/external/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/vk_renderer/%.o: $(VK_RENDERER_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/vk_renderer/%.o: $(VK_RENDERER_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/vk_runtime/%.o: $(VK_RUNTIME_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/vk_runtime/%.o: $(VK_RUNTIME_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/kit_workspace_authoring/%.o: $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/kit_workspace_authoring/%.o: $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_base/%.o: $(CORE_BASE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_base/%.o: $(CORE_BASE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_io/%.o: $(CORE_IO_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_io/%.o: $(CORE_IO_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_data/%.o: $(CORE_DATA_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_data/%.o: $(CORE_DATA_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_pack/%.o: $(CORE_PACK_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_pack/%.o: $(CORE_PACK_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_scene/%.o: $(CORE_SCENE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_scene/%.o: $(CORE_SCENE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_scene_compile/%.o: $(CORE_SCENE_COMPILE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_scene_compile/%.o: $(CORE_SCENE_COMPILE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_scene_view/%.o: $(CORE_SCENE_VIEW_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_scene_view/%.o: $(CORE_SCENE_VIEW_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_mesh_asset/%.o: $(CORE_MESH_ASSET_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_mesh_asset/%.o: $(CORE_MESH_ASSET_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_mesh_preview/%.o: $(CORE_MESH_PREVIEW_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_mesh_preview/%.o: $(CORE_MESH_PREVIEW_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_object/%.o: $(CORE_OBJECT_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_object/%.o: $(CORE_OBJECT_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_units/%.o: $(CORE_UNITS_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_units/%.o: $(CORE_UNITS_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_viewport2d/%.o: $(CORE_VIEWPORT2D_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(BUILD_DIR)/core_screen_pick/%.o: $(CORE_SCREEN_PICK_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_viewport2d/%.o: $(CORE_VIEWPORT2D_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_pane/%.o: $(CORE_PANE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_pane/%.o: $(CORE_PANE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_sim/%.o: $(CORE_SIM_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_sim/%.o: $(CORE_SIM_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_theme/%.o: $(CORE_THEME_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_theme/%.o: $(CORE_THEME_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_font/%.o: $(CORE_FONT_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_font/%.o: $(CORE_FONT_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/core_headless_job/%.o: $(CORE_HEADLESS_JOB_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/core_headless_job/%.o: $(CORE_HEADLESS_JOB_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/kit_viz/%.o: $(KIT_VIZ_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/kit_viz/%.o: $(KIT_VIZ_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/kit_render/%.o: $(KIT_RENDER_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/kit_render/%.o: $(KIT_RENDER_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/kit_pane/%.o: $(KIT_PANE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/kit_pane/%.o: $(KIT_PANE_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
 
 $(BUILD_DIR)/kit_ui/%.o: $(KIT_UI_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
 
 $(FISICS_BUILD_DIR)/kit_ui/%.o: $(KIT_UI_DIR)/src/%.c
 	@mkdir -p $(dir $@)
-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@

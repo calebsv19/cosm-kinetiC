@@ -10,7 +10,7 @@ the same headless CLI.
 Inspect the exact compiled worker identity without starting a simulation:
 
 ```bash
-./physics_sim_headless --version
+./build/profiles/local-owned/bin/physics_sim_headless --version
 ```
 
 The command prints one JSON object containing `program`, `worker_slug`,
@@ -31,9 +31,9 @@ make -C physics_sim physics_sim_headless
 ```
 
 Fresh external agents should start with the standalone clone form. Use
-`./physics_sim_headless` for direct commands and keep generated outputs under
+`./build/profiles/local-owned/bin/physics_sim_headless` for direct commands and keep generated outputs under
 local roots such as `tmp/`. If you are operating from a CodeWork workspace
-parent, replace `./physics_sim_headless` with `physics_sim/physics_sim_headless`
+parent, replace `./build/profiles/local-owned/bin/physics_sim_headless` with `physics_sim/build/profiles/local-owned/bin/physics_sim_headless`
 and prefix repo-local fixture/output paths with `physics_sim/`.
 
 Smallest supported source-checkout proof:
@@ -51,7 +51,7 @@ desktop package download.
 Run a bounded retained-scene volume simulation:
 
 ```bash
-./physics_sim_headless \
+./build/profiles/local-owned/bin/physics_sim_headless \
   --runtime-scene tests/fixtures/scene_project_cache_output_minimal/scene_runtime.json \
   --frames 2 \
   --sim-steps-per-frame 1 \
@@ -68,7 +68,7 @@ Run a scene project cache update:
 mkdir -p tmp
 cp -R tests/fixtures/scene_project_cache_output_minimal tmp/scene_project_cache_output_minimal
 PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-example-0001 \
-./physics_sim_headless \
+./build/profiles/local-owned/bin/physics_sim_headless \
   --scene-project tmp/scene_project_cache_output_minimal \
   --frames 1 \
   --sim-steps-per-frame 1 \
@@ -100,7 +100,7 @@ generated cache into `assets/vf3d/active`, `assets/physics/active`, retained
 Run a standalone Water Basin simulation:
 
 ```bash
-./physics_sim_headless \
+./build/profiles/local-owned/bin/physics_sim_headless \
   --water-mode \
   --frames 2 \
   --sim-steps-per-frame 1 \
@@ -588,7 +588,7 @@ When `--save-volume-frames` is enabled, long warm-up runs can avoid writing
 every intermediate VF3D/PACK frame by selecting retained exports directly:
 
 ```bash
-./physics_sim_headless \
+./build/profiles/local-owned/bin/physics_sim_headless \
   --water-mode \
   --frames 1041 \
   --save-volume-frames \
@@ -608,9 +608,9 @@ Detached runner:
 ```bash
 make physics-sim-job-runner
 
-./physics_sim_job_runner submit --request <request.json>
-./physics_sim_job_runner status --job-id <job_id>
-./physics_sim_job_runner cancel --job-id <job_id>
+./build/profiles/local-owned/bin/physics_sim_job_runner submit --request <request.json>
+./build/profiles/local-owned/bin/physics_sim_job_runner status --job-id <job_id>
+./build/profiles/local-owned/bin/physics_sim_job_runner cancel --job-id <job_id>
 ```
 
 From a CodeWork workspace parent, use `make -C physics_sim ...` and

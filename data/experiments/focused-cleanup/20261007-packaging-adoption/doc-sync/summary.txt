@@ -1,0 +1,6 @@
+git_root=/Users/calebsv/Desktop/CodeWork/physics_sim
+diff_window=HEAD..HEAD
+committed_changed_files=0
+staged_changed_files=0
+unstaged_changed_files=36
+untracked_files=134

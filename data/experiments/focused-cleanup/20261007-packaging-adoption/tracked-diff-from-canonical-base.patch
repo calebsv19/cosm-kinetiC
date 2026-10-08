@@ -1,0 +1,706 @@
+diff --git a/docs/README.md b/docs/README.md
+index 957a617..8e06a67 100644
+--- a/docs/README.md
++++ b/docs/README.md
+@@ -14,6 +14,10 @@ Command context:
+   verification lists below
+ 
+ ## Scaffold State
++- `docs/cleanup_operations.md`: owned compilation profiles, guarded clean, retained storage, and legacy-output preservation.
++- `docs/launcher_configuration_recovery.md`: private packaged configuration, legacy adoption, retained attempts, and interruption holds.
++- `docs/packaging_lifecycle_operations.md`: preserved package outputs, retained bundling/proofs, and optional Linux installer recovery.
++- `docs/focused_cleanup_progress.md`: current adoption evidence and remaining focused cleanup work.
+ - `docs/current_truth.md`: current runtime structure, truthful `3D` export state, and verification snapshot.
+ - `docs/main_edit_worktree.md`: persistent functional-development lane,
+   isolated `kinetiC Main Edit.app` identity, verification, integration, and
+diff --git a/docs/current_truth.md b/docs/current_truth.md
+index 5dd654a..15e78de 100644
+--- a/docs/current_truth.md
++++ b/docs/current_truth.md
+@@ -2,6 +2,23 @@
+ 
+ Last updated: 2026-10-04
+ 
++## Local lifecycle source adoption — 2026-10-07
++
++Uncommitted canonical working-tree changes now use the owned compilation profile
++`build/profiles/local-owned`, guarded cleanup, private staged launcher
++configuration, retained macOS dependency bundling, coherent optional Linux desktop
++entry installation, and retained Linux package transactions/proofs. Existing
++build roots, package outputs and evidence are preserved. See
++`cleanup_operations.md`, `launcher_configuration_recovery.md` and
++`packaging_lifecycle_operations.md` for current commands, proofs and limits.
++
++The canonical headless build passed; disposable build/clean/rebuild, Water,
++scene-cache and CLI proofs passed. Packaging adoption passed the focused fixture
++suites and a native Mach-O dependency readback. These are source/fixture results,
++not installed-app, signing, publication or human GUI acceptance. VERSION and
++WORKER_VERSION remain unchanged. Independent backup of the newest work remains
++pending, and Main Edit's separate dirty source has not been bulk-adopted or reset.
++
+ ## Persistent Main Edit Development Identity
+ 
+ - Canonical source remains `main`; functional development uses the persistent
+diff --git a/docs/desktop_packaging.md b/docs/desktop_packaging.md
+index 8fe02f4..95c3202 100644
+--- a/docs/desktop_packaging.md
++++ b/docs/desktop_packaging.md
+@@ -2,6 +2,12 @@
+ 
+ Last updated: 2026-09-03
+ 
++2026-10-07 source update: use `packaging_lifecycle_operations.md` for guarded
++package preservation, retained attempts/proofs, optional desktop installer
++recovery and current validation limits. Use `launcher_configuration_recovery.md`
++for private runtime configuration. The source changes are uncommitted; installed
++packages and public release state have not changed.
++
+ ## Bundle Targets
+ - `make -C physics_sim package-desktop`
+ - `make -C physics_sim package-desktop-smoke`
+diff --git a/make/package-linux-desktop.mk b/make/package-linux-desktop.mk
+index 82858a9..ece212e 100644
+--- a/make/package-linux-desktop.mk
++++ b/make/package-linux-desktop.mk
+@@ -15,6 +15,7 @@ LINUX_DESKTOP_LAUNCHER_SRC := tools/packaging/linux/physics-sim-launcher
+ LINUX_DESKTOP_ENTRY_SRC := tools/packaging/linux/kinetic.desktop
+ LINUX_DESKTOP_ICON_SRC := tools/packaging/linux/icons/kinetic.svg
+ LINUX_DESKTOP_INSTALLER_SRC := tools/packaging/linux/install-desktop-entry.sh
++LINUX_DESKTOP_INSTALLER_HELPER_SRC := tools/packaging/linux/install-desktop-entry.py
+ LINUX_DESKTOP_ENTRY := $(LINUX_DESKTOP_SHARE_DIR)/applications/kinetic.desktop
+ LINUX_DESKTOP_ICON := $(LINUX_DESKTOP_SHARE_DIR)/icons/hicolor/scalable/apps/kinetic.svg
+ LINUX_DESKTOP_INSTALLER := $(LINUX_DESKTOP_SHARE_DIR)/install-desktop-entry.sh
+@@ -43,8 +44,8 @@ package-linux-desktop-contract:
+ 	@echo "  installer:     share/install-desktop-entry.sh"
+ 
+ package-linux-desktop-clean:
+-	@rm -rf "$(LINUX_DESKTOP_DIR)" "$(LINUX_DESKTOP_ARCHIVE)" "$(LINUX_DESKTOP_SHA256)" "$(RELEASE_DIR)/linux-desktop-self-test"
+-	@echo "Removed Linux desktop package artifacts: $(LINUX_DESKTOP_BASENAME)"
++	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(LINUX_DESKTOP_DIR)" --file "$(LINUX_DESKTOP_ARCHIVE)" --file "$(LINUX_DESKTOP_SHA256)" --directory "$(RELEASE_DIR)/linux-desktop-self-test"
++	@echo "No existing Linux desktop artifacts selected for removal"
+ 
+ package-linux-desktop-host-check:
+ 	@if [ "$$(uname -s)" != "Linux" ]; then \
+@@ -57,14 +58,29 @@ package-linux-desktop-host-check:
+ 	fi
+ 
+ package-linux-desktop: package-linux-desktop-host-check visual-harness
++	+@python3 -B scripts/package_transaction.py --root "$(RELEASE_DIR)" \
++		--directory "LINUX_DESKTOP_DIR=$(LINUX_DESKTOP_DIR)" --file "LINUX_DESKTOP_ARCHIVE=$(LINUX_DESKTOP_ARCHIVE)" --file "LINUX_DESKTOP_SHA256=$(LINUX_DESKTOP_SHA256)" \
++		--map "LINUX_DESKTOP_BIN_DIR=$(LINUX_DESKTOP_BIN_DIR)" --map "LINUX_DESKTOP_RESOURCES_DIR=$(LINUX_DESKTOP_RESOURCES_DIR)" --map "LINUX_DESKTOP_SHARE_DIR=$(LINUX_DESKTOP_SHARE_DIR)" \
++		--map "LINUX_DESKTOP_ENTRY=$(LINUX_DESKTOP_ENTRY)" --map "LINUX_DESKTOP_ICON=$(LINUX_DESKTOP_ICON)" --map "LINUX_DESKTOP_INSTALLER=$(LINUX_DESKTOP_INSTALLER)" \
++		--map "LINUX_DESKTOP_MANIFEST_JSON=$(LINUX_DESKTOP_MANIFEST_JSON)" --map "LINUX_DESKTOP_PACKAGE_MANIFEST=$(LINUX_DESKTOP_PACKAGE_MANIFEST)" \
++		--identity "program=$(RELEASE_VERSION)" --identity "platform=$(LINUX_DESKTOP_PLATFORM)" --identity "epoch=$(LINUX_DESKTOP_PACKAGE_EPOCH)" --identity "channel=$(RELEASE_CHANNEL)" --identity "program-key=$(RELEASE_PROGRAM_KEY)" --identity "product=$(RELEASE_PRODUCT_NAME)" --identity "class=$(LINUX_DESKTOP_PACKAGE_CLASS)" --identity "role=$(LINUX_DESKTOP_ARTIFACT_ROLE)" --identity "runtime=$(LINUX_DESKTOP_RUNTIME)" \
++		--input "$(CLANG_TARGET)" --input "$(SHARED_ASSETS_DIR)/fonts" --input "$(VK_RENDERER_DIR)/shaders" \
++		--input "$(LINUX_DESKTOP_LAUNCHER_SRC)" --input "$(LINUX_DESKTOP_ENTRY_SRC)" --input "$(LINUX_DESKTOP_ICON_SRC)" --input "$(LINUX_DESKTOP_INSTALLER_SRC)" --input makefile --input make --input scripts --input tools/packaging --input config --input docs --input README.md --input VERSION --input WORKER_VERSION \
++		--tool "$(SHELL)" --tool tar --tool sha256sum --tool cp --tool chmod --tool find --tool sort --tool gzip --tool python3 \
++		-- $(MAKE) -f makefile _package-linux-desktop-assemble
++
++.PHONY: _package-linux-desktop-assemble
++_package-linux-desktop-assemble:
+ 	@echo "Preparing Linux desktop package..."
+-	@rm -rf "$(LINUX_DESKTOP_DIR)" "$(LINUX_DESKTOP_ARCHIVE)" "$(LINUX_DESKTOP_SHA256)"
++	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(LINUX_DESKTOP_DIR)" --file "$(LINUX_DESKTOP_ARCHIVE)" --file "$(LINUX_DESKTOP_SHA256)" --declare
+ 	@mkdir -p "$(LINUX_DESKTOP_BIN_DIR)" "$(LINUX_DESKTOP_RESOURCES_DIR)" "$(dir $(LINUX_DESKTOP_ENTRY))" "$(dir $(LINUX_DESKTOP_ICON))" "$(LINUX_DESKTOP_RESOURCES_DIR)/data/runtime" "$(LINUX_DESKTOP_RESOURCES_DIR)/data/snapshots"
+ 	@cp "$(CLANG_TARGET)" "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-bin"
++	@cp tools/packaging/runtime-config.sh "$(LINUX_DESKTOP_RESOURCES_DIR)/runtime-config.sh"
+ 	@cp "$(LINUX_DESKTOP_LAUNCHER_SRC)" "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-launcher"
+ 	@cp "$(LINUX_DESKTOP_ENTRY_SRC)" "$(LINUX_DESKTOP_ENTRY)"
+ 	@cp "$(LINUX_DESKTOP_ICON_SRC)" "$(LINUX_DESKTOP_ICON)"
+ 	@cp "$(LINUX_DESKTOP_INSTALLER_SRC)" "$(LINUX_DESKTOP_INSTALLER)"
++	@cp "$(LINUX_DESKTOP_INSTALLER_HELPER_SRC)" "$(LINUX_DESKTOP_SHARE_DIR)/install-desktop-entry.py"
+ 	@chmod +x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-bin" "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-launcher" "$(LINUX_DESKTOP_INSTALLER)"
+ 	@cp -R config "$(LINUX_DESKTOP_RESOURCES_DIR)/"
+ 	@if [ -d "$(SHARED_ASSETS_DIR)/fonts" ]; then \
+@@ -116,17 +132,24 @@ package-linux-desktop: package-linux-desktop-host-check visual-harness
+ 	@printf '# kinetiC Linux desktop package\n\n' > "$(LINUX_DESKTOP_DIR)/README.md"
+ 	@printf 'Private proof package for the PhysicsSim windowed Linux GUI.\n\n' >> "$(LINUX_DESKTOP_DIR)/README.md"
+ 	@printf 'Run `bin/physics-sim-launcher --self-test` after unpacking. Launching the GUI requires a real desktop session with SDL2 and Vulkan runtime support.\n' >> "$(LINUX_DESKTOP_DIR)/README.md"
++	@printf 'Optional per-user desktop installation requires Python 3: `share/install-desktop-entry.sh --plan`, then `share/install-desktop-entry.sh`. Interrupted attempts are retained; use `--recover ID` to resume the exact attempt.\n' >> "$(LINUX_DESKTOP_DIR)/README.md"
+ 	@cd "$(RELEASE_DIR)" && find "$(LINUX_DESKTOP_BASENAME)" -print0 | LC_ALL=C sort -z | tar --null --no-recursion --files-from - --format=posix --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime --mtime="@$(LINUX_DESKTOP_PACKAGE_EPOCH)" --owner=0 --group=0 --numeric-owner -cf - | gzip -n > "$(abspath $(LINUX_DESKTOP_ARCHIVE))"
+ 	@cd "$(RELEASE_DIR)" && sha256sum "$(notdir $(LINUX_DESKTOP_ARCHIVE))" > "$(notdir $(LINUX_DESKTOP_SHA256))"
+ 	@echo "Linux desktop package ready: $(LINUX_DESKTOP_ARCHIVE)"
+ 
+ package-linux-desktop-self-test: package-linux-desktop
++	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name linux-desktop-self-test --input "$(LINUX_DESKTOP_DIR)" --input "$(LINUX_DESKTOP_ARCHIVE)" --input "$(LINUX_DESKTOP_SHA256)" --map "LINUX_DESKTOP_PROOF_DIR=." --map "LINUX_DESKTOP_SELF_TEST_RUNTIME_DIR=runtime" --map "LINUX_DESKTOP_SELF_TEST_STATE_DIR=state" -- $(MAKE) -f makefile _package-linux-desktop-proof
++
++.PHONY: _package-linux-desktop-proof
++_package-linux-desktop-proof:
++	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public package proof target"; exit 2)
+ 	@$(MAKE) test-physics-sim-file-picker
+ 	@test -x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-launcher" || (echo "Missing Linux launcher"; exit 1)
+ 	@test -x "$(LINUX_DESKTOP_BIN_DIR)/physics-sim-bin" || (echo "Missing app binary"; exit 1)
+ 	@test -f "$(LINUX_DESKTOP_ENTRY)" || (echo "Missing Linux desktop entry"; exit 1)
+ 	@test -f "$(LINUX_DESKTOP_ICON)" || (echo "Missing Linux desktop icon"; exit 1)
+ 	@test -x "$(LINUX_DESKTOP_INSTALLER)" || (echo "Missing Linux desktop installer"; exit 1)
++	@test -f "$(LINUX_DESKTOP_SHARE_DIR)/install-desktop-entry.py" || (echo "Missing Linux desktop installer helper"; exit 1)
+ 	@test -f "$(LINUX_DESKTOP_MANIFEST_JSON)" || (echo "Missing manifest.json"; exit 1)
+ 	@test -f "$(LINUX_DESKTOP_PACKAGE_MANIFEST)" || (echo "Missing package_manifest.json"; exit 1)
+ 	@test -f "$(LINUX_DESKTOP_RESOURCES_DIR)/config/app.json" || (echo "Missing config/app.json"; exit 1)
+@@ -137,25 +160,27 @@ package-linux-desktop-self-test: package-linux-desktop
+ 	@test -f "$(LINUX_DESKTOP_RESOURCES_DIR)/shaders/textured.vert.spv" || (echo "Missing bundled runtime shader"; exit 1)
+ 	@test -f "$(LINUX_DESKTOP_ARCHIVE)" || (echo "Missing Linux desktop archive"; exit 1)
+ 	@test -f "$(LINUX_DESKTOP_SHA256)" || (echo "Missing Linux desktop checksum"; exit 1)
+-	@rm -rf "$(RELEASE_DIR)/linux-desktop-self-test"
+-	@mkdir -p "$(RELEASE_DIR)/linux-desktop-self-test/unpack" "$(RELEASE_DIR)/linux-desktop-self-test/home" "$(RELEASE_DIR)/linux-desktop-self-test/xdg-data" "$(LINUX_DESKTOP_SELF_TEST_RUNTIME_DIR)" "$(LINUX_DESKTOP_SELF_TEST_STATE_DIR)"
++	@mkdir -p "$(LINUX_DESKTOP_PROOF_DIR)/unpack" "$(LINUX_DESKTOP_PROOF_DIR)/home" "$(LINUX_DESKTOP_PROOF_DIR)/xdg-data" "$(LINUX_DESKTOP_SELF_TEST_RUNTIME_DIR)" "$(LINUX_DESKTOP_SELF_TEST_STATE_DIR)"
+ 	@cd "$(RELEASE_DIR)" && sha256sum -c "$(notdir $(LINUX_DESKTOP_SHA256))"
+-	@tar -xzf "$(LINUX_DESKTOP_ARCHIVE)" -C "$(RELEASE_DIR)/linux-desktop-self-test/unpack"
+-	@HOME="$(abspath $(RELEASE_DIR)/linux-desktop-self-test/home)" XDG_DATA_HOME="$(abspath $(RELEASE_DIR)/linux-desktop-self-test/xdg-data)" "$(RELEASE_DIR)/linux-desktop-self-test/unpack/$(LINUX_DESKTOP_BASENAME)/share/install-desktop-entry.sh" >/dev/null
+-	@test -f "$(RELEASE_DIR)/linux-desktop-self-test/xdg-data/applications/kinetic.desktop" || (echo "Installer did not write kinetic.desktop"; exit 1)
+-	@test -f "$(RELEASE_DIR)/linux-desktop-self-test/xdg-data/icons/hicolor/scalable/apps/kinetic.svg" || (echo "Installer did not write kinetic.svg"; exit 1)
+-	@PHYSICS_SIM_RUNTIME_DIR="$(LINUX_DESKTOP_SELF_TEST_RUNTIME_DIR)" XDG_STATE_HOME="$(LINUX_DESKTOP_SELF_TEST_STATE_DIR)" "$(RELEASE_DIR)/linux-desktop-self-test/unpack/$(LINUX_DESKTOP_BASENAME)/bin/physics-sim-launcher" --self-test
++	@tar -xzf "$(LINUX_DESKTOP_ARCHIVE)" -C "$(LINUX_DESKTOP_PROOF_DIR)/unpack"
++	@HOME="$(abspath $(LINUX_DESKTOP_PROOF_DIR)/home)" XDG_DATA_HOME="$(abspath $(LINUX_DESKTOP_PROOF_DIR)/xdg-data)" "$(LINUX_DESKTOP_PROOF_DIR)/unpack/$(LINUX_DESKTOP_BASENAME)/share/install-desktop-entry.sh" >/dev/null
++	@test -f "$(LINUX_DESKTOP_PROOF_DIR)/xdg-data/applications/kinetic.desktop" || (echo "Installer did not write kinetic.desktop"; exit 1)
++	@test -f "$(LINUX_DESKTOP_PROOF_DIR)/xdg-data/icons/hicolor/scalable/apps/kinetic.svg" || (echo "Installer did not write kinetic.svg"; exit 1)
++	@PHYSICS_SIM_RUNTIME_DIR="$(LINUX_DESKTOP_SELF_TEST_RUNTIME_DIR)" XDG_STATE_HOME="$(LINUX_DESKTOP_SELF_TEST_STATE_DIR)" "$(LINUX_DESKTOP_PROOF_DIR)/unpack/$(LINUX_DESKTOP_BASENAME)/bin/physics-sim-launcher" --self-test
+ 	@echo "package-linux-desktop-self-test passed."
+ 
+ package-linux-desktop-determinism-test: package-linux-desktop-self-test
++	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name linux-desktop-determinism --input "$(LINUX_DESKTOP_DIR)" --input "$(LINUX_DESKTOP_ARCHIVE)" --input "$(LINUX_DESKTOP_SHA256)" --map "LINUX_DESKTOP_COMPARISON_DIR=comparison" -- $(MAKE) -f makefile _package-linux-desktop-determinism-proof
++
++.PHONY: _package-linux-desktop-determinism-proof
++_package-linux-desktop-determinism-proof:
++	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public determinism proof target"; exit 2)
+ 	@release_dir="$(abspath $(RELEASE_DIR))"; \
+-		archive_path="$(abspath $(LINUX_DESKTOP_ARCHIVE))"; \
+-		sha_path="$(abspath $(LINUX_DESKTOP_SHA256))"; \
+-		first_sha="$$(cut -d ' ' -f 1 "$$sha_path")"; \
+-		rm -f "$$archive_path" "$$sha_path"; \
+-		cd "$$release_dir" && find "$(LINUX_DESKTOP_BASENAME)" -print0 | LC_ALL=C sort -z | tar --null --no-recursion --files-from - --format=posix --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime --mtime="@$(LINUX_DESKTOP_PACKAGE_EPOCH)" --owner=0 --group=0 --numeric-owner -cf - | gzip -n > "$(abspath $(LINUX_DESKTOP_ARCHIVE))"; \
+-		cd "$$release_dir" && sha256sum "$(notdir $(LINUX_DESKTOP_ARCHIVE))" > "$(notdir $(LINUX_DESKTOP_SHA256))"; \
+-		second_sha="$$(cut -d ' ' -f 1 "$$sha_path")"; \
++		first_sha="$$(cut -d ' ' -f 1 "$(abspath $(LINUX_DESKTOP_SHA256))")"; \
++		comparison_dir="$(LINUX_DESKTOP_COMPARISON_DIR)"; mkdir -p "$$comparison_dir" || exit 2; \
++		comparison_archive="$$comparison_dir/second.tar.gz"; \
++		cd "$$release_dir" && find "$(LINUX_DESKTOP_BASENAME)" -print0 | LC_ALL=C sort -z | tar --null --no-recursion --files-from - --format=posix --pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime --mtime="@$(LINUX_DESKTOP_PACKAGE_EPOCH)" --owner=0 --group=0 --numeric-owner -cf - | gzip -n > "$$comparison_archive"; \
++		second_sha="$$(sha256sum "$$comparison_archive" | cut -d ' ' -f 1)"; \
+ 		if [ "$$first_sha" != "$$second_sha" ]; then \
+ 			echo "package-linux-desktop determinism failed: $$first_sha != $$second_sha"; \
+ 			exit 1; \
+diff --git a/make/package-linux-worker.mk b/make/package-linux-worker.mk
+index a105985..065259e 100644
+--- a/make/package-linux-worker.mk
++++ b/make/package-linux-worker.mk
+@@ -65,12 +65,24 @@ package-linux-worker-host-check:
+ 	fi
+ 
+ package-linux-worker-clean:
+-	@rm -rf "$(LINUX_WORKER_DIR)" "$(LINUX_WORKER_ARCHIVE)" "$(LINUX_WORKER_SHA256)" "$(LINUX_WORKER_ARTIFACT_MANIFEST)"
+-	@echo "Removed Linux worker package artifacts: $(LINUX_WORKER_BASENAME)"
++	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(LINUX_WORKER_DIR)" --file "$(LINUX_WORKER_ARCHIVE)" --file "$(LINUX_WORKER_SHA256)" --file "$(LINUX_WORKER_ARTIFACT_MANIFEST)"
++	@echo "No existing Linux worker artifacts selected for removal"
+ 
+ package-linux-worker: package-linux-worker-host-check physics_sim_headless physics-sim-job-runner
++	+@python3 -B scripts/package_transaction.py --root "$(RELEASE_DIR)" \
++		--directory "LINUX_WORKER_DIR=$(LINUX_WORKER_DIR)" \
++		--file "LINUX_WORKER_ARCHIVE=$(LINUX_WORKER_ARCHIVE)" --file "LINUX_WORKER_SHA256=$(LINUX_WORKER_SHA256)" --file "LINUX_WORKER_ARTIFACT_MANIFEST=$(LINUX_WORKER_ARTIFACT_MANIFEST)" \
++		--map "LINUX_WORKER_BIN_DIR=$(LINUX_WORKER_BIN_DIR)" --map "LINUX_WORKER_CONFIG_DIR=$(LINUX_WORKER_CONFIG_DIR)" --map "LINUX_WORKER_DOCS_DIR=$(LINUX_WORKER_DOCS_DIR)" \
++		--map "LINUX_WORKER_MANIFEST_JSON=$(LINUX_WORKER_MANIFEST_JSON)" --map "LINUX_WORKER_MANIFEST=$(LINUX_WORKER_MANIFEST)" \
++		--identity "worker=$(WORKER_VERSION)" --identity "program=$(RELEASE_VERSION)" --identity "platform=$(LINUX_WORKER_PLATFORM)" --identity "slug=$(LINUX_WORKER_SLUG)" --identity "glibc=$(LINUX_WORKER_MAX_GLIBC)" --identity "program-key=$(RELEASE_PROGRAM_KEY)" --identity "capability=$(LINUX_WORKER_PLATFORM_CAPABILITY)" \
++		--input "$(PHYSICS_SIM_HEADLESS_TOOL_BIN)" --input "$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)" --input "$(LINUX_WORKER_ARTIFACT_MANIFEST_WRITER)" --input makefile --input make --input scripts --input tools/packaging --input config --input docs --input README.md --input VERSION --input WORKER_VERSION \
++		--tool "$(SHELL)" --tool tar --tool sha256sum --tool cp --tool chmod --tool python3 \
++		-- $(MAKE) -f makefile _package-linux-worker-assemble
++
++.PHONY: _package-linux-worker-assemble
++_package-linux-worker-assemble:
+ 	@echo "Preparing Linux worker package..."
+-	@rm -rf "$(LINUX_WORKER_DIR)"
++	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(LINUX_WORKER_DIR)" --file "$(LINUX_WORKER_ARCHIVE)" --file "$(LINUX_WORKER_SHA256)" --file "$(LINUX_WORKER_ARTIFACT_MANIFEST)" --declare
+ 	@mkdir -p "$(LINUX_WORKER_BIN_DIR)" "$(LINUX_WORKER_CONFIG_DIR)" "$(LINUX_WORKER_DOCS_DIR)"
+ 	@cp "$(PHYSICS_SIM_HEADLESS_TOOL_BIN)" "$(LINUX_WORKER_BIN_DIR)/physics_sim_headless"
+ 	@cp "$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)" "$(LINUX_WORKER_BIN_DIR)/physics_sim_job_runner"
+@@ -118,7 +130,7 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
+ 	@printf '}\n' >> "$(LINUX_WORKER_MANIFEST)"
+ 	@mkdir -p "$(RELEASE_DIR)"
+ 	@tar -czf "$(LINUX_WORKER_ARCHIVE)" -C "$(RELEASE_DIR)" "$(LINUX_WORKER_BASENAME)"
+-	@sha256sum "$(LINUX_WORKER_ARCHIVE)" > "$(LINUX_WORKER_SHA256)"
++	@cd "$(RELEASE_DIR)" && sha256sum "$(notdir $(LINUX_WORKER_ARCHIVE))" > "$(notdir $(LINUX_WORKER_SHA256))"
+ 	@python3 "$(LINUX_WORKER_ARTIFACT_MANIFEST_WRITER)" \
+ 		--archive "$(LINUX_WORKER_ARCHIVE)" \
+ 		--checksum "$(LINUX_WORKER_SHA256)" \
+@@ -132,6 +144,11 @@ package-linux-worker: package-linux-worker-host-check physics_sim_headless physi
+ 	@echo "Linux worker package ready: $(LINUX_WORKER_ARCHIVE)"
+ 
+ package-linux-worker-self-test: package-linux-worker
++	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name linux-worker-self-test --input "$(LINUX_WORKER_DIR)" --input "$(LINUX_WORKER_ARCHIVE)" --input "$(LINUX_WORKER_SHA256)" --input "$(LINUX_WORKER_ARTIFACT_MANIFEST)" -- $(MAKE) -f makefile _package-linux-worker-proof
++
++.PHONY: _package-linux-worker-proof
++_package-linux-worker-proof:
++	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public worker proof target"; exit 2)
+ 	@test -x "$(LINUX_WORKER_BIN_DIR)/physics_sim_headless" || (echo "Missing physics_sim_headless"; exit 1)
+ 	@test -x "$(LINUX_WORKER_BIN_DIR)/physics_sim_job_runner" || (echo "Missing physics_sim_job_runner"; exit 1)
+ 	@test -x "$(LINUX_WORKER_BIN_DIR)/run_worker.sh" || (echo "Missing run_worker.sh"; exit 1)
+@@ -162,6 +179,11 @@ package-linux-worker-x86_64-self-test:
+ 	@$(MAKE) LINUX_WORKER_PLATFORM=linux-x86_64 package-linux-worker-self-test
+ 
+ package-linux-worker-dry-run: package-linux-worker-self-test
++	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name linux-worker-dry-run --input "$(LINUX_WORKER_DIR)" --input "$(LINUX_WORKER_ARCHIVE)" --input "$(LINUX_WORKER_SHA256)" --input "$(LINUX_WORKER_ARTIFACT_MANIFEST)" -- $(MAKE) -f makefile _package-linux-worker-dry-proof
++
++.PHONY: _package-linux-worker-dry-proof
++_package-linux-worker-dry-proof:
++	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public worker proof target"; exit 2)
+ 	@python3 "$(LINUX_WORKER_PACKAGE_VALIDATOR)" \
+ 		--stage-dir "$(LINUX_WORKER_DIR)" \
+ 		--archive "$(LINUX_WORKER_ARCHIVE)" \
+diff --git a/make/package-macos.mk b/make/package-macos.mk
+index f8a22d6..3f26c80 100644
+--- a/make/package-macos.mk
++++ b/make/package-macos.mk
+@@ -19,7 +19,7 @@ package-desktop-refresh-authority:
+ 
+ package-desktop: $(PACKAGE_SOURCE_BIN) physics_sim_session_worker
+ 	@echo "Preparing desktop package..."
+-	@rm -rf "$(PACKAGE_APP_DIR)"
++	@python3 -B scripts/package_outputs.py --root "$(DIST_DIR)" --directory "$(PACKAGE_APP_DIR)" --declare
+ 	@mkdir -p "$(PACKAGE_MACOS_DIR)" "$(PACKAGE_RESOURCES_DIR)" "$(PACKAGE_FRAMEWORKS_DIR)"
+ 	@cp "$(PACKAGE_INFO_PLIST_SRC)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
+ 	@/usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $(PACKAGE_BUNDLE_ID)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
+@@ -31,11 +31,12 @@ package-desktop: $(PACKAGE_SOURCE_BIN) physics_sim_session_worker
+ 	@/usr/libexec/PlistBuddy -c "Add :PhysicsSimLogNamespace string $(PACKAGE_LOG_NAMESPACE)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
+ 	@/usr/libexec/PlistBuddy -c "Add :PhysicsSimBuildLabel string $(PACKAGE_BUILD_LABEL)" "$(PACKAGE_CONTENTS_DIR)/Info.plist"
+ 	@cp "$(PACKAGE_SOURCE_BIN)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin"
+-	@cp physics_sim_session_worker "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"
++	@cp "$(SESSION_WORKER_BIN)" "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker"
+ 	@mkdir -p "$(PACKAGE_RESOURCES_DIR)/scripts/agent_session"
+ 	@cp scripts/physics_sim_session.py "$(PACKAGE_RESOURCES_DIR)/scripts/"
+ 	@cp scripts/agent_session/*.py "$(PACKAGE_RESOURCES_DIR)/scripts/agent_session/"
+ 	@PACKAGE_DEP_SEARCH_ROOTS="$(TARGET_DEP_SEARCH_ROOTS)" "$(PACKAGE_DYLIB_BUNDLER)" "$(PACKAGE_MACOS_DIR)/physics_sim_session_worker" "$(PACKAGE_FRAMEWORKS_DIR)"
++	@cp tools/packaging/runtime-config.sh "$(PACKAGE_RESOURCES_DIR)/runtime-config.sh"
+ 	@cp "$(PACKAGE_LAUNCHER_SRC)" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
+ 	@PACKAGE_DEP_SEARCH_ROOTS="$(TARGET_DEP_SEARCH_ROOTS)" "$(PACKAGE_DYLIB_BUNDLER)" "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_FRAMEWORKS_DIR)"
+ 	@chmod +x "$(PACKAGE_MACOS_DIR)/physics-sim-bin" "$(PACKAGE_MACOS_DIR)/physics-sim-launcher"
+@@ -106,18 +107,22 @@ package-desktop-smoke: package-desktop
+ 	@echo "package-desktop-smoke passed."
+ 
+ package-desktop-self-test: package-desktop-smoke
+-	@python3 tools/packaging/validate_macos_session.py --app "$(PACKAGE_APP_DIR)"
+-	@support="$$(mktemp -d "$(CURDIR)/$(BUILD_DIR)/package-self-test.XXXXXX")"; \
++	+@python3 -B scripts/package_proof.py --root "$(DIST_DIR)" --name macos-self-test --input "$(PACKAGE_APP_DIR)" --identity "profile=$(PACKAGE_PROFILE)" -- $(MAKE) -f makefile _package-desktop-proof
++
++.PHONY: _package-desktop-proof
++_package-desktop-proof:
++	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public package proof/refresh target"; exit 2)
++	@python3 tools/packaging/validate_macos_session.py --app "$(PACKAGE_APP_DIR)" --output-root "$(PACKAGE_PROOF_DIR)/session-proof"
++	@support="$(PACKAGE_PROOF_DIR)/support"; mkdir -p "$$support"; \
+ 	PHYSICS_SIM_APP_SUPPORT_DIR="$$support" PHYSICS_SIM_LOG_DIR="$$support/logs" \
+ 		"$(PACKAGE_MACOS_DIR)/physics-sim-launcher" --self-test; result=$$?; \
+-	if [ "$$result" = 0 ]; then rm -rf "$$support"; else echo "package-desktop self-test failed; evidence: $$support"; fi; \
++	echo "package-desktop self-test evidence retained: $$support"; \
+ 	exit "$$result"
+ 	@echo "package-desktop-self-test passed."
+ 
+ package-desktop-copy-desktop: package-desktop-refresh-authority package-desktop
+ 	@mkdir -p "$(dir $(DESKTOP_APP_DIR))"
+-	@rm -rf "$(DESKTOP_APP_DIR)"
+-	@/usr/bin/ditto "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
++	@python3 -B scripts/desktop_replace.py --source "$(PACKAGE_APP_DIR)" --destination "$(DESKTOP_APP_DIR)" --bundle-id "$(PACKAGE_BUNDLE_ID)"
+ 	@echo "Copied $(PACKAGE_APP_NAME) to $(DESKTOP_APP_DIR)"
+ 
+ package-desktop-sync: package-desktop-copy-desktop
+@@ -127,16 +132,16 @@ package-desktop-open: package-desktop
+ 	@open "$(PACKAGE_APP_DIR)"
+ 
+ package-desktop-remove:
+-	@rm -rf "$(PACKAGE_APP_DIR)"
+-	@echo "Removed desktop package: $(PACKAGE_APP_DIR)"
++	@python3 -B scripts/package_outputs.py --root "$(DIST_DIR)" --directory "$(PACKAGE_APP_DIR)"
++	@echo "No desktop package present: $(PACKAGE_APP_DIR)"
+ 
+ package-desktop-refresh: package-desktop-refresh-authority package-desktop
+ 	@mkdir -p "$(dir $(DESKTOP_APP_DIR))"
+-	@rm -rf "$(DESKTOP_APP_DIR)"
+-	@/usr/bin/ditto "$(PACKAGE_APP_DIR)" "$(DESKTOP_APP_DIR)"
++	@python3 -B scripts/desktop_replace.py --source "$(PACKAGE_APP_DIR)" --destination "$(DESKTOP_APP_DIR)" --bundle-id "$(PACKAGE_BUNDLE_ID)"
+ 	@echo "Refreshed $(PACKAGE_APP_NAME) at $(DESKTOP_APP_DIR)"
+ 
+ package-desktop-main-edit:
++	@test -s "$(PACKAGE_APP_ICON_SRC)" || test -d "$(PACKAGE_APP_ICONSET_SRC)" || (echo "Missing Main Edit icon input: $(PACKAGE_APP_ICON_SRC)"; exit 1)
+ 	@test -f "$(MEW1_TOOL)" || (echo "Missing shared MEW1 helper: $(MEW1_TOOL)"; exit 1)
+ 	@before="$$(python3 "$(MEW1_TOOL)" fingerprint --repo "$(CURDIR)")"; \
+ 	$(MAKE) package-desktop-smoke \
+@@ -151,13 +156,20 @@ package-desktop-main-edit:
+ 		PACKAGE_EMBED_BUILD_IDENTITY=1 || exit 1; \
+ 	after="$$(python3 "$(MEW1_TOOL)" fingerprint --repo "$(CURDIR)")"; \
+ 	if [ "$$before" != "$$after" ]; then \
+-		rm -rf "$(MAIN_EDIT_APP_DIR)"; \
+-		echo "Source changed during Main Edit packaging; discarded generated package."; \
++		echo "Source changed during Main Edit packaging; retained failed package at $(MAIN_EDIT_APP_DIR)."; \
+ 		exit 1; \
+ 	fi
+ 	@echo "Main Edit desktop package ready: $(MAIN_EDIT_APP_DIR)"
+ 
+ package-desktop-main-edit-self-test: package-desktop-main-edit
++	+@python3 -B scripts/package_proof.py --root "$(MAIN_EDIT_DIST_DIR)" --name main-edit-self-test --input "$(MAIN_EDIT_APP_DIR)" --identity "profile=$(MAIN_EDIT_PROFILE)" --input "$(MEW1_TOOL)" --input "$(PACKAGE_APP_ICON_SRC)" --input "$(PACKAGE_APP_ICONSET_SRC)" --map "MAIN_EDIT_SELF_TEST_DIR=." -- $(MAKE) -f makefile _package-main-edit-proof
++
++.PHONY: _package-main-edit-proof
++_package-main-edit-proof:
++	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public package proof/refresh target"; exit 2)
++	@test -s "$(MAIN_EDIT_APP_DIR)/Contents/Resources/$(PACKAGE_APP_ICON_FILE)" || (echo "Missing bundled Main Edit icon"; exit 1)
++	@test "$$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' "$(MAIN_EDIT_APP_DIR)/Contents/Info.plist")" = "$(PACKAGE_APP_ICON_NAME)" || (echo "Main Edit icon metadata mismatch"; exit 1)
++	@if [ -f "$(PACKAGE_APP_ICON_SRC)" ]; then cmp "$(PACKAGE_APP_ICON_SRC)" "$(MAIN_EDIT_APP_DIR)/Contents/Resources/$(PACKAGE_APP_ICON_FILE)" || exit 1; fi
+ 	@test "$$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleIdentifier' "$(MAIN_EDIT_APP_DIR)/Contents/Info.plist")" = "$(MAIN_EDIT_BUNDLE_ID)"
+ 	@test "$$('/usr/libexec/PlistBuddy' -c 'Print :CFBundleDisplayName' "$(MAIN_EDIT_APP_DIR)/Contents/Info.plist")" = "$(MAIN_EDIT_DISPLAY_NAME)"
+ 	@test "$$('/usr/libexec/PlistBuddy' -c 'Print :PhysicsSimPackageProfile' "$(MAIN_EDIT_APP_DIR)/Contents/Info.plist")" = "$(MAIN_EDIT_PROFILE)"
+@@ -173,8 +185,7 @@ package-desktop-main-edit-self-test: package-desktop-main-edit
+ 		--product kinetiC \
+ 		--version "$(RELEASE_VERSION)"
+ 	@set -e; \
+-	fake_home="$(CURDIR)/$(MAIN_EDIT_SELF_TEST_DIR)/home"; \
+-	rm -rf "$$fake_home"; \
++	fake_home="$(MAIN_EDIT_SELF_TEST_DIR)/home"; \
+ 	mkdir -p "$$fake_home"; \
+ 	HOME="$$fake_home" "$(MAIN_EDIT_APP_DIR)/Contents/MacOS/physics-sim-launcher" --self-test; \
+ 	config="$$(HOME="$$fake_home" "$(MAIN_EDIT_APP_DIR)/Contents/MacOS/physics-sim-launcher" --print-config)"; \
+@@ -189,16 +200,17 @@ package-desktop-main-edit-self-test: package-desktop-main-edit
+ 	@echo "package-desktop-main-edit-self-test passed."
+ 
+ package-desktop-main-edit-refresh: package-desktop-main-edit-self-test
++	+@python3 -B scripts/package_proof.py --root "$(MAIN_EDIT_DIST_DIR)" --name main-edit-refresh --input "$(MAIN_EDIT_APP_DIR)" --identity "destination=$(MAIN_EDIT_DESKTOP_APP_DIR)" --input "$(MEW1_TOOL)" --map "MAIN_EDIT_PROCESS_RECEIPT=process-audit.json" -- $(MAKE) -f makefile _package-main-edit-refresh
++
++.PHONY: _package-main-edit-refresh
++_package-main-edit-refresh:
++	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public package proof/refresh target"; exit 2)
+ 	@test "$(MAIN_EDIT_DESKTOP_APP_DIR)" != "$(DESKTOP_APP_DIR)" || (echo "Refusing canonical Desktop destination"; exit 1)
+ 	@mkdir -p "$(dir $(MAIN_EDIT_PROCESS_RECEIPT))"
+ 	@python3 "$(MEW1_TOOL)" process-audit --match "$(MAIN_EDIT_DISPLAY_NAME)" --path "$(MAIN_EDIT_DESKTOP_APP_DIR)" > "$(MAIN_EDIT_PROCESS_RECEIPT)"
+-	@if grep -Fq '"running": true' "$(MAIN_EDIT_PROCESS_RECEIPT)"; then \
+-		echo "Refusing to replace a running $(MAIN_EDIT_APP_NAME); process receipt: $(MAIN_EDIT_PROCESS_RECEIPT)"; \
+-		exit 1; \
+-	fi
++	@python3 -B scripts/check_desktop_process_audit.py --receipt "$(MAIN_EDIT_PROCESS_RECEIPT)" --match "$(MAIN_EDIT_DISPLAY_NAME)" --path "$(MAIN_EDIT_DESKTOP_APP_DIR)"
+ 	@mkdir -p "$$(dirname "$(MAIN_EDIT_DESKTOP_APP_DIR)")"
+-	@rm -rf "$(MAIN_EDIT_DESKTOP_APP_DIR)"
+-	@/usr/bin/ditto "$(MAIN_EDIT_APP_DIR)" "$(MAIN_EDIT_DESKTOP_APP_DIR)"
++	@python3 -B scripts/desktop_replace.py --source "$(MAIN_EDIT_APP_DIR)" --destination "$(MAIN_EDIT_DESKTOP_APP_DIR)" --bundle-id "$(MAIN_EDIT_BUNDLE_ID)"
+ 	@echo "Refreshed $(MAIN_EDIT_APP_NAME) at $(MAIN_EDIT_DESKTOP_APP_DIR)"
+ 
+ main-edit-package-contract-checks:
+diff --git a/make/release.mk b/make/release.mk
+index 9c526fe..b37fde4 100644
+--- a/make/release.mk
++++ b/make/release.mk
+@@ -17,8 +17,8 @@ release-contract:
+ 	@echo "  team_id_set: $$( [ -n \"$(APPLE_TEAM_ID)\" ] && echo yes || echo no )"
+ 
+ release-clean:
+-	@rm -rf "$(RELEASE_DIR)"
+-	@echo "Removed release dir: $(RELEASE_DIR)"
++	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(RELEASE_DIR)"
++	@echo "Release outputs retained; no removal performed"
+ 
+ release-build: all
+ 	@echo "Release build complete: $(TARGET)"
+diff --git a/make/rules-runtime.mk b/make/rules-runtime.mk
+index 28adceb..0b8797c 100644
+--- a/make/rules-runtime.mk
++++ b/make/rules-runtime.mk
+@@ -23,5 +23,27 @@ VIDEO_FPS ?= 30
+ video:
+ 	ffmpeg -y -framerate $(VIDEO_FPS) -i export/render_frames/frame_%06d.bmp -pix_fmt yuv420p export/render_vid/output.mp4
+ 
++# One validated inventory owns all normal compilation cleanup.
++CLEAN_EXECUTABLES = $(TARGET) $(VF2D_PACK_TOOL_BIN) $(VF2D_DATASET_TOOL_BIN) $(PHYSICS_TRACE_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN) $(if $(SESSION_WORKER_BIN),$(SESSION_WORKER_BIN),physics_sim_session_worker) $(SHAPE_SANITY_TOOL_BIN) $(SHAPE_MASK_TOOL_BIN) $(SHAPE_ASSET_TOOL_BIN)
++CLEAN_ARGUMENTS = --build-root "$(BUILD_DIR)" --experiment-root "$(EXPERIMENT_DIR)" --tools-root "$(REFERENCE_TOOLS_DIR)" --test-root "$(TEST_TMP_DIR)" $(foreach output,$(CLEAN_EXECUTABLES),--executable "$(output)")
++.PHONY: clean clean-plan
++clean-plan:
++	python3 scripts/clean_outputs.py $(CLEAN_ARGUMENTS)
++
+ clean:
+-	rm -rf $(BUILD_DIR) $(TARGET) $(VF2D_PACK_TOOL_BIN) $(VF2D_DATASET_TOOL_BIN) $(PHYSICS_TRACE_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN)
++	python3 scripts/clean_outputs.py $(CLEAN_ARGUMENTS) --apply
++
++.PHONY: test-top-level-cleanup
++test-top-level-cleanup:
++	python3 -B tests/test_clean_outputs.py
++
++.PHONY: test-package-launcher-lifecycle
++test-package-launcher-lifecycle:
++	python3 -B tests/test_package_launcher_lifecycle.py
++
++.PHONY: test-linux-desktop-installer test-macos-bundle-lifecycle
++test-linux-desktop-installer:
++	python3 -B tests/test_linux_desktop_installer.py
++
++test-macos-bundle-lifecycle:
++	python3 -B tests/test_macos_bundle_lifecycle.py
+diff --git a/makefile b/makefile
+index 03cac3f..8c513dd 100644
+--- a/makefile
++++ b/makefile
+@@ -1,4 +1,38 @@
++# Cleanup inspection must not load compiler or package configuration.
++CONTROL_GOALS := test-linux-desktop-installer test-macos-bundle-lifecycle clean clean-plan test-top-level-cleanup test-package-launcher-lifecycle
++ifneq ($(filter clean,$(MAKECMDGOALS)),)
++ifneq ($(filter-out $(CONTROL_GOALS),$(MAKECMDGOALS)),)
++$(error Run clean and build as separate operations)
++endif
++endif
++CONTROL_ONLY :=
++ifneq ($(strip $(MAKECMDGOALS)),)
++ifeq ($(strip $(filter-out $(CONTROL_GOALS),$(MAKECMDGOALS))),)
++CONTROL_ONLY := 1
++endif
++endif
++ifeq ($(CONTROL_ONLY),1)
+ include make/config.mk
++include make/sources-tools.mk
++include make/rules-runtime.mk
++else
++include make/config.mk
++# Build mutations enter ownership before compiler probes/configuration selection.
++owner_quote = '$(subst ','"'"',$(1))'
++OWNER_FLAGS := $(firstword $(MAKEFLAGS))
++OWNER_READ_ONLY :=
++ifeq ($(filter --%,$(OWNER_FLAGS)),)
++OWNER_READ_ONLY := $(or $(findstring n,$(OWNER_FLAGS)),$(findstring q,$(OWNER_FLAGS)))
++endif
++OWNER_STATE := $(shell python3 -B scripts/build_owner.py --root $(call owner_quote,$(BUILD_DIR)) --check-inherited)
++ifeq ($(strip $(OWNER_READ_ONLY)$(filter owned,$(OWNER_STATE))),)
++.DEFAULT_GOAL := owned-build
++.PHONY: owned-build $(MAKECMDGOALS)
++owned-build:
++	+python3 -B scripts/build_owner.py --root $(call owner_quote,$(BUILD_DIR)) -- $(MAKE) -f $(call owner_quote,$(firstword $(MAKEFILE_LIST))) $(foreach goal,$(MAKECMDGOALS),$(call owner_quote,$(goal)))
++$(MAKECMDGOALS): owned-build
++	@:
++else
+ include make/target.mk
+ include make/package-paths.mk
+ include make/shared-roots.mk
+@@ -21,6 +55,7 @@ include make/package-macos.mk
+ include make/package-linux-worker.mk
+ include make/package-linux-desktop.mk
+ include make/release.mk
++include make/build-identity.mk
+ 
+ # =========================
+ #  Diagnostics
+@@ -32,3 +67,7 @@ $(info USING MAKEFILE AT: $(abspath $(firstword $(MAKEFILE_LIST))))
+ #  Auto-generated deps
+ # =========================
+ -include $(DEPS)
++
++endif
++
++endif
+diff --git a/tools/packaging/linux/install-desktop-entry.sh b/tools/packaging/linux/install-desktop-entry.sh
+index ff09138..c7b0943 100755
+--- a/tools/packaging/linux/install-desktop-entry.sh
++++ b/tools/packaging/linux/install-desktop-entry.sh
+@@ -1,28 +1,4 @@
+ #!/usr/bin/env sh
+ set -eu
+-
+ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+-PACKAGE_ROOT="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+-DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+-APP_DIR="$DATA_HOME/applications"
+-ICON_DIR="$DATA_HOME/icons/hicolor/scalable/apps"
+-DESKTOP_FILE="$APP_DIR/kinetic.desktop"
+-ICON_FILE="$ICON_DIR/kinetic.svg"
+-
+-mkdir -p "$APP_DIR" "$ICON_DIR"
+-cp "$PACKAGE_ROOT/share/icons/hicolor/scalable/apps/kinetic.svg" "$ICON_FILE"
+-
+-cat > "$DESKTOP_FILE" <<EOF
+-[Desktop Entry]
+-Type=Application
+-Name=kinetiC
+-Comment=Physics simulation workspace
+-Exec=$PACKAGE_ROOT/bin/physics-sim-launcher
+-Icon=$ICON_FILE
+-Terminal=false
+-Categories=Education;Science;Physics;
+-StartupNotify=true
+-EOF
+-
+-chmod 0644 "$DESKTOP_FILE" "$ICON_FILE"
+-echo "$DESKTOP_FILE"
++exec python3 -B "$SCRIPT_DIR/install-desktop-entry.py" "$@"
+diff --git a/tools/packaging/macos/bundle-dylibs.sh b/tools/packaging/macos/bundle-dylibs.sh
+index ca4165f..a42be93 100755
+--- a/tools/packaging/macos/bundle-dylibs.sh
++++ b/tools/packaging/macos/bundle-dylibs.sh
+@@ -1,121 +1,4 @@
+ #!/bin/sh
+ set -eu
+-
+-if [ "$#" -ne 2 ]; then
+-    echo "usage: $0 <app_bin> <frameworks_dir>" >&2
+-    exit 1
+-fi
+-
+-APP_BIN="$1"
+-FRAMEWORKS_DIR="$2"
+-AWK_BIN="/usr/bin/awk"
+-GREP_BIN="/usr/bin/grep"
+-CP_BIN="/bin/cp"
+-CHMOD_BIN="/bin/chmod"
+-BASENAME_BIN="/usr/bin/basename"
+-OTOOL_BIN="/usr/bin/otool"
+-INSTALL_NAME_TOOL_BIN="/usr/bin/install_name_tool"
+-MKDIR_BIN="/bin/mkdir"
+-SEARCH_ROOTS_LIST="${PACKAGE_DEP_SEARCH_ROOTS:-/opt/homebrew:/usr/local}"
+-
+-"$MKDIR_BIN" -p "$FRAMEWORKS_DIR"
+-
+-WORK_TMP_DIR="${TMPDIR:-/tmp}/physicssim_bundle_dylibs.$$"
+-"$MKDIR_BIN" -p "$WORK_TMP_DIR"
+-QUEUE_FILE="$WORK_TMP_DIR/queue.txt"
+-SEEN_FILE="$WORK_TMP_DIR/seen.txt"
+-touch "$QUEUE_FILE" "$SEEN_FILE"
+-
+-resolve_search_root_dep() {
+-    dep_base="$1"
+-    old_ifs="${IFS}"
+-    IFS=":"
+-    for search_root in $SEARCH_ROOTS_LIST; do
+-        [ -n "$search_root" ] || continue
+-        if [ -f "$search_root/lib/$dep_base" ]; then
+-            IFS="${old_ifs}"
+-            printf '%s\n' "$search_root/lib/$dep_base"
+-            return 0
+-        fi
+-    done
+-    IFS="${old_ifs}"
+-    return 1
+-}
+-
+-cleanup() {
+-    rm -rf "$WORK_TMP_DIR" >/dev/null 2>&1 || true
+-}
+-trap cleanup EXIT INT TERM
+-
+-echo "$APP_BIN" >>"$QUEUE_FILE"
+-
+-while IFS= read -r current_file; do
+-    [ -n "$current_file" ] || continue
+-    if "$GREP_BIN" -Fxq "$current_file" "$SEEN_FILE"; then
+-        continue
+-    fi
+-    echo "$current_file" >>"$SEEN_FILE"
+-
+-    deps="$("$OTOOL_BIN" -L "$current_file" | "$AWK_BIN" 'NR>1 {print $1}' | "$GREP_BIN" -E '^/opt/homebrew|^/usr/local|^@rpath/' || true)"
+-    if [ -z "$deps" ]; then
+-        continue
+-    fi
+-
+-    echo "$deps" | while IFS= read -r dep; do
+-        [ -n "$dep" ] || continue
+-        dep_base="$("$BASENAME_BIN" "$dep")"
+-        dep_dst="$FRAMEWORKS_DIR/$dep_base"
+-        dep_src="$dep"
+-
+-        case "$dep" in
+-            @rpath/*)
+-                if [ -f "$FRAMEWORKS_DIR/$dep_base" ]; then
+-                    dep_src="$FRAMEWORKS_DIR/$dep_base"
+-                elif dep_src="$(resolve_search_root_dep "$dep_base")"; then
+-                    :
+-                else
+-                    echo "warning: unable to resolve $dep for $current_file" >&2
+-                    continue
+-                fi
+-                ;;
+-        esac
+-
+-        if [ ! -f "$dep_dst" ]; then
+-            "$CP_BIN" -fL "$dep_src" "$dep_dst"
+-            "$CHMOD_BIN" u+w "$dep_dst"
+-            "$INSTALL_NAME_TOOL_BIN" -id "@loader_path/$dep_base" "$dep_dst" || true
+-            echo "$dep_dst" >>"$QUEUE_FILE"
+-        fi
+-
+-        if [ "$current_file" = "$APP_BIN" ]; then
+-            replacement="@executable_path/../Frameworks/$dep_base"
+-        else
+-            replacement="@loader_path/$dep_base"
+-        fi
+-        "$INSTALL_NAME_TOOL_BIN" -change "$dep" "$replacement" "$current_file"
+-    done
+-done <"$QUEUE_FILE"
+-
+-# Explicitly bundle MoltenVK so Vulkan loader can be pinned to app-local ICD.
+-MOLTENVK_SRC=""
+-MOLTENVK_SRC="$(resolve_search_root_dep libMoltenVK.dylib || true)"
+-if [ -n "$MOLTENVK_SRC" ]; then
+-    MOLTENVK_DST="$FRAMEWORKS_DIR/libMoltenVK.dylib"
+-    if [ ! -f "$MOLTENVK_DST" ]; then
+-        "$CP_BIN" -fL "$MOLTENVK_SRC" "$MOLTENVK_DST"
+-        "$CHMOD_BIN" u+w "$MOLTENVK_DST"
+-    fi
+-    "$INSTALL_NAME_TOOL_BIN" -id "@loader_path/libMoltenVK.dylib" "$MOLTENVK_DST" || true
+-fi
+-
+-VULKAN_SRC="$(resolve_search_root_dep libvulkan.1.dylib || true)"
+-if [ -n "$VULKAN_SRC" ]; then
+-    VULKAN_DST="$FRAMEWORKS_DIR/libvulkan.1.dylib"
+-    if [ ! -f "$VULKAN_DST" ]; then
+-        "$CP_BIN" -fL "$VULKAN_SRC" "$VULKAN_DST"
+-        "$CHMOD_BIN" u+w "$VULKAN_DST"
+-    fi
+-    "$INSTALL_NAME_TOOL_BIN" -id "@loader_path/libvulkan.1.dylib" "$VULKAN_DST" || true
+-fi
+-
+-exit 0
++SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
++exec python3 -B "$SCRIPT_DIR/../../../scripts/macos_bundle.py" "$@"
+diff --git a/tools/packaging/validate_macos_session.py b/tools/packaging/validate_macos_session.py
+index 669f44e..579d9eb 100644
+--- a/tools/packaging/validate_macos_session.py
++++ b/tools/packaging/validate_macos_session.py
+@@ -12,6 +12,7 @@ import tempfile
+ def main():
+     parser = argparse.ArgumentParser(description=__doc__)
+     parser.add_argument('--app', type=Path, required=True)
++    parser.add_argument('--output-root',type=Path)
+     args = parser.parse_args()
+     if sys.version_info < (3, 9):
+         raise SystemExit('kinetiC local sessions require Python 3.9 or newer on PATH')
+@@ -26,13 +27,30 @@ def main():
+         {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call',
+          'params': {'name': 'capabilities', 'arguments': {}}},
+     ]
+-    with tempfile.TemporaryDirectory(prefix='physics-session-package-') as root:
+-        env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1',
+-                   PHYSICS_SIM_SESSION_WORKER=str(worker))
++    root = Path(os.path.abspath(args.output_root)) if args.output_root else Path(tempfile.mkdtemp(prefix='physics-session-package-'))
++    if args.output_root:
++        current=root
++        while current!=current.parent:
++            if current.is_symlink():raise SystemExit('Session proof refuses symlink output components')
++            current=current.parent
++        root.mkdir(parents=True,exist_ok=False)
++    print('Packaged session proof retained: '+str(root),file=sys.stderr)
++    payload=''.join(json.dumps(row)+'\n' for row in requests)
++    (root/'requests.jsonl').write_text(payload)
++    env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', PHYSICS_SIM_SESSION_WORKER=str(worker))
++    try:
+         result = subprocess.run(
+-            [sys.executable, str(script), '--root', root, '--worker', str(worker), '--mcp'],
+-            input=''.join(json.dumps(row) + '\n' for row in requests),
+-            text=True, capture_output=True, timeout=30, env=env, check=True)
++            [sys.executable, str(script), '--root', str(root/'session'), '--worker', str(worker), '--mcp'],
++            input=payload,text=True,capture_output=True,timeout=30,env=env)
++    except subprocess.TimeoutExpired as error:
++        for name,content in (('stdout.log',error.stdout),('stderr.log',error.stderr)):
++            (root/name).write_text(content.decode(errors='replace') if isinstance(content,bytes) else content or '')
++        (root/'execution.json').write_text(json.dumps({'state':'timed_out','output_root':str(root)}))
++        raise SystemExit('Packaged session proof timed out; retained '+str(root))
++    (root/'stdout.log').write_text(result.stdout);(root/'stderr.log').write_text(result.stderr)
++    (root/'execution.json').write_text(json.dumps({'state':'command_completed','exit_code':result.returncode,'output_root':str(root)}))
++    if result.returncode:
++        raise SystemExit('Packaged session command failed; retained '+str(root))
+     replies = [json.loads(line) for line in result.stdout.splitlines()]
+     if [row.get('id') for row in replies] != [1, 2, 3] or any('error' in row for row in replies):
+         raise SystemExit('packaged session MCP handshake failed')
+@@ -44,7 +62,7 @@ def main():
+     print(json.dumps({'status': 'passed', 'python': sys.executable,
+                       'python_version': sys.version.split()[0],
+                       'prerequisite': 'Python >=3.9 on user launch PATH',
+-                      'mcp_tools': sorted(names)}))
++                      'mcp_tools': sorted(names),'output_root':str(root)}))
+ 
+ 
+ if __name__ == '__main__':

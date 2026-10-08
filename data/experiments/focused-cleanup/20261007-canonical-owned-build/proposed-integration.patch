@@ -1,0 +1,2787 @@
+--- a/docs/AGENT_DEMO_PACK.md
++++ b/docs/AGENT_DEMO_PACK.md
+@@ -21,8 +21,8 @@
+ 
+ Expected output:
+ 
+-- standalone clone: `physics_sim_headless`
+-- CodeWork workspace parent: `physics_sim/physics_sim_headless`
++- standalone clone: `build/profiles/local-owned/bin/physics_sim_headless`
++- CodeWork workspace parent: `physics_sim/build/profiles/local-owned/bin/physics_sim_headless`
+ 
+ This proves the local source checkout can build the supported headless
+ entrypoint. It does not prove desktop packaging, notarization, website
+@@ -43,7 +43,7 @@
+ Equivalent direct command shape in a standalone clone:
+ 
+ ```bash
+-./physics_sim_headless \
++./build/profiles/local-owned/bin/physics_sim_headless \
+   --water-mode \
+   --frames 2 \
+   --sim-steps-per-frame 1 \
+@@ -55,7 +55,7 @@
+ ```
+ 
+ From the CodeWork workspace parent, the binary path is
+-`physics_sim/physics_sim_headless` and the output root is
++`physics_sim/build/profiles/local-owned/bin/physics_sim_headless` and the output root is
+ `physics_sim/tmp/headless_water_mode`.
+ 
+ Expected files:
+@@ -114,7 +114,7 @@
+ mkdir -p tmp
+ cp -R tests/fixtures/scene_project_cache_output_minimal tmp/scene_project_cache_output_minimal
+ PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-test-0001 \
+-./physics_sim_headless \
++./build/profiles/local-owned/bin/physics_sim_headless \
+   --scene-project tmp/scene_project_cache_output_minimal \
+   --frames 1 \
+   --grid 8x8x8 \
+--- a/docs/cleanup_operations.md
++++ b/docs/cleanup_operations.md
+@@ -0,0 +1,67 @@
++# PhysicsSim local build and cleanup operations
++
++The default compilation profile is `build/profiles/local-owned`. Make aliases
++such as `physics_sim_headless` remain stable; their executable is now
++`build/profiles/local-owned/bin/physics_sim_headless`. Existing root binaries and
++older build outputs are preserved. They are not the supported new build output.
++
++## Routine source proof
++
++Run each operation separately from the repository root:
++
++```sh
++make physics_sim_headless
++make test-physics-sim-headless-water-mode
++make test-physics-sim-headless-scene-project-cache-output
++make clean-plan
++make clean
++make physics_sim_headless
++```
++
++The fixtures above exercise and reset their named output directories under
++`tmp/`. Use a disposable checkout when those directories already contain work
++that needs retention. They do not classify pre-existing data as disposable.
++For a separate compilation profile, pass the same `BUILD_DIR=build/profiles/NAME`
++to every Make invocation. Make exports the selected headless path to fixtures.
++Direct executable commands must use that profile's `bin/` path.
++
++## Storage and deletion contract
++
++- `build/profiles/local-owned/`: default compiler output. Successful writers
++  record exact output ownership under `tmp/`; receipts survive clean.
++- `data/experiments/`: retained runs, repair evidence and receipts. Normal clean
++  does not delete these records.
++- `data/tools/`: retained reference environments/tools, separate from compilation.
++- `tmp/tests/`: separate test storage. Tests may own individual fixture outputs;
++  normal compilation clean does not remove this root.
++- Legacy build trees, root binaries, packages and user exports are not adopted
++  for deletion based on their names.
++
++`clean-plan` inspects without deleting and does not require a working compiler.
++`clean` acquires cleanup ownership, checks the entire selected inventory and
++revalidates before deletion. Unknown files/directories, changed outputs,
++unsafe paths and protected reservations hold cleanup. Mixed build/clean goals
++are refused. Builds and cleanup share cooperative locks; this is not a sandbox
++against an unrelated process deliberately replacing files.
++
++When inspection refuses a target, preserve the reported path and review its
++ownership. Do not bypass the hold with `rm -rf` or fabricate ownership receipts.
++Choose a fresh build profile to continue compilation while the old output is
++being assessed. Incomplete compiler attempts and semantic/contract outputs may
++require separate review; normal clean is not their retirement mechanism.
++
++## Recovery and preservation
++
++A failed compiler invocation does not publish its staged output as a successful
++build. An interrupted attempt may leave evidence that makes cleanup refuse it;
++retain it for inspection. This is not a claim of automatic rollback after power
++loss. Packaged launcher/installer recovery is a separate workflow and its
++configuration repairs remain tracked by the focused completion plan.
++
++The earlier CFD archive was independently verified. New focused-cleanup records
++under `data/experiments/focused-cleanup/` remain local until an archive transfer
++and independent retrieval receipt explicitly cover them. A local receipt,
++source test or prepared bundle is not proof of independent backup.
++
++No command in this guide authorizes package refresh, installation, signing,
++release, publication, version changes or remote worker execution.
+--- a/docs/headless_cli.md
++++ b/docs/headless_cli.md
+@@ -10,7 +10,7 @@
+ Inspect the exact compiled worker identity without starting a simulation:
+ 
+ ```bash
+-./physics_sim_headless --version
++./build/profiles/local-owned/bin/physics_sim_headless --version
+ ```
+ 
+ The command prints one JSON object containing `program`, `worker_slug`,
+@@ -31,9 +31,9 @@
+ ```
+ 
+ Fresh external agents should start with the standalone clone form. Use
+-`./physics_sim_headless` for direct commands and keep generated outputs under
++`./build/profiles/local-owned/bin/physics_sim_headless` for direct commands and keep generated outputs under
+ local roots such as `tmp/`. If you are operating from a CodeWork workspace
+-parent, replace `./physics_sim_headless` with `physics_sim/physics_sim_headless`
++parent, replace `./build/profiles/local-owned/bin/physics_sim_headless` with `physics_sim/build/profiles/local-owned/bin/physics_sim_headless`
+ and prefix repo-local fixture/output paths with `physics_sim/`.
+ 
+ Smallest supported source-checkout proof:
+@@ -51,7 +51,7 @@
+ Run a bounded retained-scene volume simulation:
+ 
+ ```bash
+-./physics_sim_headless \
++./build/profiles/local-owned/bin/physics_sim_headless \
+   --runtime-scene tests/fixtures/scene_project_cache_output_minimal/scene_runtime.json \
+   --frames 2 \
+   --sim-steps-per-frame 1 \
+@@ -68,7 +68,7 @@
+ mkdir -p tmp
+ cp -R tests/fixtures/scene_project_cache_output_minimal tmp/scene_project_cache_output_minimal
+ PHYSICS_SIM_PROJECT_CACHE_RUN_ID=physics-run-example-0001 \
+-./physics_sim_headless \
++./build/profiles/local-owned/bin/physics_sim_headless \
+   --scene-project tmp/scene_project_cache_output_minimal \
+   --frames 1 \
+   --sim-steps-per-frame 1 \
+@@ -100,7 +100,7 @@
+ Run a standalone Water Basin simulation:
+ 
+ ```bash
+-./physics_sim_headless \
++./build/profiles/local-owned/bin/physics_sim_headless \
+   --water-mode \
+   --frames 2 \
+   --sim-steps-per-frame 1 \
+@@ -588,7 +588,7 @@
+ every intermediate VF3D/PACK frame by selecting retained exports directly:
+ 
+ ```bash
+-./physics_sim_headless \
++./build/profiles/local-owned/bin/physics_sim_headless \
+   --water-mode \
+   --frames 1041 \
+   --save-volume-frames \
+@@ -608,9 +608,9 @@
+ ```bash
+ make physics-sim-job-runner
+ 
+-./physics_sim_job_runner submit --request <request.json>
+-./physics_sim_job_runner status --job-id <job_id>
+-./physics_sim_job_runner cancel --job-id <job_id>
++./build/profiles/local-owned/bin/physics_sim_job_runner submit --request <request.json>
++./build/profiles/local-owned/bin/physics_sim_job_runner status --job-id <job_id>
++./build/profiles/local-owned/bin/physics_sim_job_runner cancel --job-id <job_id>
+ ```
+ 
+ From a CodeWork workspace parent, use `make -C physics_sim ...` and
+--- a/make/build-identity.mk
++++ b/make/build-identity.mk
+@@ -0,0 +1,70 @@
++# Configuration changes are prerequisites, not a reason to ask operators to clean.
++BUILD_IDENTITY_KEYS := RUNTIME_SCENE_EMITTER_DIAG_TOOL_CFLAGS VF2D_PACK_TOOL_CFLAGS VF2D_DATASET_TOOL_CFLAGS PHYSICS_TRACE_TOOL_CFLAGS CC CLANG CFLAGS LDFLAGS LIBS CSTD TARGET_ARCH FISICS FISICS_FLAGS FISICS_CFLAGS FISICS_COMPILE_FLAGS FISICS_MEMCHECK_LINK_LIBS CFD_BUILD_OPT HEADLESS_WORKER_LIBS TARGET CLANG_TARGET FISICS_TARGET SESSION_WORKER_BIN PHYSICS_SIM_HEADLESS_TOOL_BIN PHYSICS_SIM_JOB_RUNNER_TOOL_BIN VF2D_PACK_TOOL_BIN VF2D_DATASET_TOOL_BIN PHYSICS_TRACE_TOOL_BIN RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN SHAPE_SANITY_TOOL_BIN SHAPE_MASK_TOOL_BIN SHAPE_ASSET_TOOL_BIN PASSIVE3D_WORKER ATMOSPHERE3D_WORKER OPEN_ATMOSPHERE3D_WORKER JSON_CFLAGS JSON_LIBS
++$(foreach key,$(BUILD_IDENTITY_KEYS),$(eval export PHYSICS_BUILD_$(key) := $($(key))))
++# Safe literal shell arguments, including embedded single quotes in flags.
++build_identity_quote = '$(subst ','"'"',$(1))'
++BUILD_IDENTITY_ENV = $(foreach key,$(BUILD_IDENTITY_KEYS),PHYSICS_BUILD_$(key)=$(call build_identity_quote,$($(key))))
++# Object rebuilds must invalidate links even on whole-second Make timestamps.
++BUILD_OBJECT_LINKS := $(sort $(CLANG_TARGET) $(FISICS_TARGET) $(SHAPE_SANITY_TOOL_BIN) $(SHAPE_MASK_TOOL_BIN) $(SHAPE_ASSET_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(SESSION_WORKER_BIN) $(VF2D_PACK_TOOL_BIN) $(VF2D_DATASET_TOOL_BIN) $(PHYSICS_TRACE_TOOL_BIN) $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN))
++# Darwin object-only links emit actual linker selection manifests.
++# Direct source-to-binary commands need a separate source/header closure contract.
++BUILD_IDENTITY_LINKS := $(foreach file,$(BUILD_LINK_OUTPUTS),--link-output $(call build_identity_quote,$(file)))
++BUILD_IDENTITY_DEPENDENCIES := $(foreach file,$(DEPS),--dependency $(call build_identity_quote,$(file)))
++BUILD_IDENTITY_FILES := $(foreach file,$(MAKEFILE_LIST),--makefile $(call build_identity_quote,$(file)))
++# Digest-named prerequisites work even with Make versions using whole-second mtimes.
++# Clean-only commands must not initialize a compiler environment or build output.
++ifneq ($(MAKECMDGOALS),clean)
++ifneq ($(MAKECMDGOALS),clean-plan)
++BUILD_CONFIGURATION_ADMISSION := $(shell env $(BUILD_IDENTITY_ENV) python3 scripts/build_identity.py --digest-only --selection-root "$(BUILD_DIR)" $(BUILD_IDENTITY_FILES) $(BUILD_IDENTITY_DEPENDENCIES) $(BUILD_IDENTITY_LINKS))
++BUILD_CONFIGURATION_DIGEST := $(firstword $(BUILD_CONFIGURATION_ADMISSION))
++BUILD_DEPENDENCY_REBUILDS := $(wordlist 2,$(words $(BUILD_CONFIGURATION_ADMISSION)),$(BUILD_CONFIGURATION_ADMISSION))
++ifneq ($(strip $(BUILD_DEPENDENCY_REBUILDS)),)
++.PHONY: build-dependency-content-changed
++build-dependency-content-changed:
++$(BUILD_DEPENDENCY_REBUILDS): build-dependency-content-changed
++build_link_content_rebuild = $(if $(filter $(2),$(BUILD_DEPENDENCY_REBUILDS)),$(eval $(1): build-dependency-content-changed))
++$(call build_link_content_rebuild,$(CLANG_TARGET),$(OBJS))
++$(call build_link_content_rebuild,$(FISICS_TARGET),$(FISICS_OBJS))
++$(call build_link_content_rebuild,$(SHAPE_SANITY_TOOL_BIN),$(SHAPE_SANITY_TOOL_OBJ))
++$(call build_link_content_rebuild,$(SHAPE_MASK_TOOL_BIN),$(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS) $(SHAPE_OUTPUT_OBJS) $(SHAPE_INPUT_OBJS))
++$(call build_link_content_rebuild,$(SHAPE_ASSET_TOOL_BIN),$(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS) $(SHAPE_OUTPUT_OBJS) $(SHAPE_INPUT_OBJS))
++$(call build_link_content_rebuild,$(PHYSICS_SIM_HEADLESS_TOOL_BIN),$(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS))
++$(call build_link_content_rebuild,$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN),$(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS))
++$(call build_link_content_rebuild,$(SESSION_WORKER_BIN),$(BUILD_DIR)/tools/cli/physics_sim_session_worker.o $(PHYSICS_SIM_HEADLESS_WORKER_OBJS))
++$(call build_link_content_rebuild,$(VF2D_PACK_TOOL_BIN),$(VF2D_PACK_TOOL_OBJS))
++$(call build_link_content_rebuild,$(VF2D_DATASET_TOOL_BIN),$(VF2D_DATASET_TOOL_OBJS))
++$(call build_link_content_rebuild,$(PHYSICS_TRACE_TOOL_BIN),$(PHYSICS_TRACE_TOOL_OBJS))
++$(call build_link_content_rebuild,$(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN),$(RUNTIME_SCENE_EMITTER_DIAG_TOOL_OBJS))
++endif
++ifeq ($(strip $(BUILD_CONFIGURATION_DIGEST)),)
++$(error Cannot establish build configuration identity)
++endif
++BUILD_CONFIGURATION_STAMP := $(BUILD_DIR)/.configuration/$(BUILD_CONFIGURATION_DIGEST).json
++$(BUILD_CONFIGURATION_STAMP): scripts/build_identity.py
++	python3 scripts/build_identity.py --output "$@" --expected-digest "$(BUILD_CONFIGURATION_DIGEST)" --selection-root "$(BUILD_DIR)" $(BUILD_IDENTITY_FILES) $(BUILD_IDENTITY_DEPENDENCIES) $(BUILD_IDENTITY_LINKS)
++
++BUILD_CONFIGURATION_OBJECTS := $(sort $(CLANG_DEPENDENCY_OBJECTS) $(OBJS) $(FISICS_OBJS))
++ifneq ($(strip $(BUILD_CONFIGURATION_OBJECTS)),)
++$(BUILD_CONFIGURATION_OBJECTS): $(BUILD_CONFIGURATION_STAMP)
++ifeq ($(wildcard $(BUILD_CONFIGURATION_STAMP)),)
++.PHONY: build-configuration-changed
++build-configuration-changed:
++$(BUILD_OBJECT_LINKS): build-configuration-changed
++$(BUILD_CONFIGURATION_OBJECTS): build-configuration-changed
++endif
++endif
++$(CLANG_TARGET) $(FISICS_TARGET) $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(SESSION_WORKER_BIN) $(VF2D_PACK_TOOL_BIN) $(VF2D_DATASET_TOOL_BIN) $(PHYSICS_TRACE_TOOL_BIN) $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN): $(BUILD_CONFIGURATION_STAMP)
++$(CFD_REFERENCE_SUPPORT_LIBS): $(BUILD_CONFIGURATION_STAMP)
++ifeq ($(wildcard $(BUILD_CONFIGURATION_STAMP)),)
++$(CFD_REFERENCE_SUPPORT_LIBS): build-configuration-changed
++endif
++BUILD_CONFIGURATION_WORKERS := $(PASSIVE3D_WORKER) $(ATMOSPHERE3D_WORKER) $(OPEN_ATMOSPHERE3D_WORKER)
++ifneq ($(strip $(BUILD_CONFIGURATION_WORKERS)),)
++$(BUILD_CONFIGURATION_WORKERS): $(BUILD_CONFIGURATION_STAMP)
++ifeq ($(wildcard $(BUILD_CONFIGURATION_STAMP)),)
++$(BUILD_CONFIGURATION_WORKERS): build-configuration-changed
++endif
++endif
++.DELETE_ON_ERROR:
++endif
++endif
+--- a/make/config.mk
++++ b/make/config.mk
+@@ -14,19 +14,20 @@
+ 
+ SRC_DIR   := src
+ INC_DIR   := include
+-BUILD_DIR ?= build
++BUILD_DIR ?= build/profiles/local-owned
+ TEST_TMP_DIR ?= tmp/tests
+ EXPERIMENT_DIR ?= data/experiments
+ REFERENCE_TOOLS_DIR ?= data/tools
+ SESSION_WORKER_BIN ?= $(BUILD_DIR)/bin/physics_sim_session_worker
+-TARGET    := physics_sim
++BIN_DIR := $(BUILD_DIR)/bin
++TARGET := $(BIN_DIR)/physics_sim
+ DIST_DIR  := dist
+ CODEWORK_WORKSPACE_ROOT := $(abspath $(shell git rev-parse --path-format=absolute --git-common-dir)/../..)
+ FISICS_INCLUDE_DIR ?= $(CODEWORK_WORKSPACE_ROOT)/fisiCs/include
+-CLANG_BUILD_DIR := $(BUILD_DIR)/clang
++CLANG_BUILD_DIR := $(BIN_DIR)
+ FISICS_BUILD_DIR := $(BUILD_DIR)/fisics
+-CLANG_TARGET := $(CLANG_BUILD_DIR)/$(TARGET)
+-FISICS_TARGET := $(FISICS_BUILD_DIR)/$(TARGET)
++CLANG_TARGET := $(TARGET)
++FISICS_TARGET := $(FISICS_BUILD_DIR)/bin/physics_sim
+ PACKAGE_TOOLCHAIN ?= clang
+ SEMA_SRC := $(SRC_DIR)/import/runtime_scene_solver_projection_domain.c
+ SEMA_OBJ := $(FISICS_BUILD_DIR)/runtime_scene_solver_projection_domain.o
+@@ -98,3 +99,5 @@
+ RELEASE_PRODUCT_NAME := kinetiC
+ RELEASE_PROGRAM_KEY := physics_sim
+ RELEASE_BUNDLE_ID := com.cosm.kinetic
++
++export PHYSICS_SIM_BUILD_ROOT := $(abspath $(BUILD_DIR))
+--- a/make/objects.mk
++++ b/make/objects.mk
+@@ -141,6 +141,7 @@
+ PHYSICS_SIM_HEADLESS_TOOL_OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(PHYSICS_SIM_HEADLESS_TOOL_SRC))
+ PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(PHYSICS_SIM_JOB_RUNNER_TOOL_SRC))
+ SHAPE_SHARED_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SHAPE_SHARED_SRCS))
++SHAPE_SHARED_OBJS := $(patsubst $(TIMER_HUD_DIR)/external/%.c,$(BUILD_DIR)/timer_hud_external/%.o,$(SHAPE_SHARED_OBJS))
+ 
+ $(PHYSICS_SIM_HEADLESS_TOOL_OBJ): $(RELEASE_VERSION_FILE) $(WORKER_VERSION_FILE)
+ $(PHYSICS_SIM_HEADLESS_TOOL_OBJ): CFLAGS += \
+@@ -152,3 +153,6 @@
+ FISICS_OBJS := $(patsubst $(BUILD_DIR)/%,$(FISICS_BUILD_DIR)/%,$(OBJS))
+ FISICS_VK_RENDERER_SDL_COMPAT_OBJS := $(patsubst $(BUILD_DIR)/%,$(FISICS_BUILD_DIR)/%,$(VK_RENDERER_SDL_COMPAT_OBJS))
+ $(FISICS_VK_RENDERER_SDL_COMPAT_OBJS): FISICS_COMPILE_FLAGS += $(VK_RENDERER_SDL_COMPAT_CFLAGS)
++
++CLANG_DEPENDENCY_OBJECTS := $(sort $(OBJS) $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(SHAPE_SHARED_OBJS) $(SHAPE_SANITY_TOOL_OBJ) $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_ASSET_TOOL_OBJ))
++DEPS := $(CLANG_DEPENDENCY_OBJECTS:.o=.d)
+--- a/make/rules-build.mk
++++ b/make/rules-build.mk
+@@ -149,231 +149,229 @@
+ 
+ $(CLANG_TARGET): $(OBJS) | $(CLANG_BUILD_DIR)
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+-
+-$(TARGET): $(CLANG_TARGET)
+-	cp $(CLANG_TARGET) $(TARGET)
++	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
++
+ 
+ $(FISICS_TARGET): $(FISICS_OBJS) | $(FISICS_BUILD_DIR)
+ 	@mkdir -p $(dir $@)
+-	$(CLANG) $(LDFLAGS) -o $@ $(FISICS_OBJS) $(LIBS) $(FISICS_MEMCHECK_LINK_LIBS)
++	python3 -B scripts/atomic_output.py -- $(CLANG) $(LDFLAGS) -o $@ $(FISICS_OBJS) $(LIBS) $(FISICS_MEMCHECK_LINK_LIBS)
+ 
+ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/timer_hud/%.o: $(TIMER_HUD_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/timer_hud/%.o: $(TIMER_HUD_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/timer_hud_external/%.o: $(TIMER_HUD_DIR)/external/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/timer_hud_external/%.o: $(TIMER_HUD_DIR)/external/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/vk_renderer/%.o: $(VK_RENDERER_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/vk_renderer/%.o: $(VK_RENDERER_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/vk_runtime/%.o: $(VK_RUNTIME_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/vk_runtime/%.o: $(VK_RUNTIME_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/kit_workspace_authoring/%.o: $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/kit_workspace_authoring/%.o: $(KIT_WORKSPACE_AUTHORING_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_base/%.o: $(CORE_BASE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_base/%.o: $(CORE_BASE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_io/%.o: $(CORE_IO_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_io/%.o: $(CORE_IO_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_data/%.o: $(CORE_DATA_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_data/%.o: $(CORE_DATA_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_pack/%.o: $(CORE_PACK_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_pack/%.o: $(CORE_PACK_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_scene/%.o: $(CORE_SCENE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_scene/%.o: $(CORE_SCENE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_scene_compile/%.o: $(CORE_SCENE_COMPILE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_scene_compile/%.o: $(CORE_SCENE_COMPILE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_scene_view/%.o: $(CORE_SCENE_VIEW_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_scene_view/%.o: $(CORE_SCENE_VIEW_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_mesh_asset/%.o: $(CORE_MESH_ASSET_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_mesh_asset/%.o: $(CORE_MESH_ASSET_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_mesh_preview/%.o: $(CORE_MESH_PREVIEW_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_mesh_preview/%.o: $(CORE_MESH_PREVIEW_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_object/%.o: $(CORE_OBJECT_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_object/%.o: $(CORE_OBJECT_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_units/%.o: $(CORE_UNITS_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_units/%.o: $(CORE_UNITS_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_viewport2d/%.o: $(CORE_VIEWPORT2D_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(BUILD_DIR)/core_screen_pick/%.o: $(CORE_SCREEN_PICK_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_viewport2d/%.o: $(CORE_VIEWPORT2D_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_pane/%.o: $(CORE_PANE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_pane/%.o: $(CORE_PANE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_sim/%.o: $(CORE_SIM_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_sim/%.o: $(CORE_SIM_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_theme/%.o: $(CORE_THEME_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_theme/%.o: $(CORE_THEME_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_font/%.o: $(CORE_FONT_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_font/%.o: $(CORE_FONT_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/core_headless_job/%.o: $(CORE_HEADLESS_JOB_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/core_headless_job/%.o: $(CORE_HEADLESS_JOB_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/kit_viz/%.o: $(KIT_VIZ_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/kit_viz/%.o: $(KIT_VIZ_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/kit_render/%.o: $(KIT_RENDER_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/kit_render/%.o: $(KIT_RENDER_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/kit_pane/%.o: $(KIT_PANE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/kit_pane/%.o: $(KIT_PANE_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+ 
+ $(BUILD_DIR)/kit_ui/%.o: $(KIT_UI_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+ 
+ $(FISICS_BUILD_DIR)/kit_ui/%.o: $(KIT_UI_DIR)/src/%.c
+ 	@mkdir -p $(dir $@)
+-	FISICS_MAX_PROCS=0 $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
++	FISICS_MAX_PROCS=0 python3 -B scripts/atomic_output.py -- $(FISICS) $(FISICS_FLAGS) $(FISICS_CFLAGS) $(FISICS_COMPILE_FLAGS) -c $< -o $@
+--- a/make/rules-tools.mk
++++ b/make/rules-tools.mk
+@@ -1,36 +1,36 @@
+ # =========================
+ #  CLI tool rules
+ # =========================
+-shape_sanity_tool: $(SHAPE_SANITY_TOOL_OBJ)
++$(SHAPE_SANITY_TOOL_BIN): $(SHAPE_SANITY_TOOL_OBJ)
+ 	@mkdir -p $(dir $(SHAPE_SANITY_TOOL_OBJ))
+-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(filter %.o,$^) $(LIBS)
+ 
+-shape_mask_tool: $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
+-	$(CC) $(LDFLAGS) -o $@ $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
++$(SHAPE_MASK_TOOL_BIN): $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(SHAPE_MASK_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
+ 
+-shape_asset_tool: $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
+-	$(CC) $(LDFLAGS) -o $@ $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
++$(SHAPE_ASSET_TOOL_BIN): $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(SHAPE_ASSET_TOOL_OBJ) $(SHAPE_SHARED_OBJS) -lm
+ 
+ # legacy alias
+ shape_import_tool: shape_mask_tool
+ 
+-vf2d_pack_tool: $(CORE_PACK_TOOL_SRCS)
+-	$(CC) $(CSTD) $(WARN) $(DEBUG) $(CORE_PACK_TOOL_INCS) -o $(VF2D_PACK_TOOL_BIN) $(CORE_PACK_TOOL_SRCS)
++$(VF2D_PACK_TOOL_BIN): $(CORE_PACK_TOOL_SRCS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(CSTD) $(WARN) $(DEBUG) $(CORE_PACK_TOOL_INCS) -o $(VF2D_PACK_TOOL_BIN) $(CORE_PACK_TOOL_SRCS)
+ 
+-vf2d_dataset_tool: $(VF2D_DATASET_TOOL_SRCS)
+-	$(CC) $(CSTD) $(WARN) $(DEBUG) $(VF2D_DATASET_TOOL_INCS) -o $(VF2D_DATASET_TOOL_BIN) $(VF2D_DATASET_TOOL_SRCS) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
++$(VF2D_DATASET_TOOL_BIN): $(VF2D_DATASET_TOOL_SRCS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(CSTD) $(WARN) $(DEBUG) $(VF2D_DATASET_TOOL_INCS) -o $(VF2D_DATASET_TOOL_BIN) $(VF2D_DATASET_TOOL_SRCS) $(filter-out -lSDL2 -lSDL2_ttf,$(LIBS))
+ 
+-physics_trace_tool: $(PHYSICS_TRACE_TOOL_SRCS)
+-	$(CC) $(CSTD) $(WARN) $(DEBUG) $(PHYSICS_TRACE_TOOL_INCS) -o $(PHYSICS_TRACE_TOOL_BIN) $(PHYSICS_TRACE_TOOL_SRCS)
++$(PHYSICS_TRACE_TOOL_BIN): $(PHYSICS_TRACE_TOOL_SRCS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(CSTD) $(WARN) $(DEBUG) $(PHYSICS_TRACE_TOOL_INCS) -o $(PHYSICS_TRACE_TOOL_BIN) $(PHYSICS_TRACE_TOOL_SRCS)
+ 
+-physics_sim_headless: $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+-	$(CC) $(LDFLAGS) -o $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(HEADLESS_WORKER_LIBS)
++$(PHYSICS_SIM_HEADLESS_TOOL_BIN): $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $(PHYSICS_SIM_HEADLESS_TOOL_BIN) $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(HEADLESS_WORKER_LIBS)
+ 
+-physics-sim-job-runner: $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+-	$(CC) $(LDFLAGS) -o $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(HEADLESS_WORKER_LIBS)
++$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN): $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN) $(PHYSICS_SIM_JOB_RUNNER_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS) $(HEADLESS_WORKER_LIBS)
+ 
+-runtime_scene_emitter_diag_tool: $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS)
+-	$(CC) $(CFLAGS) \
++$(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN): $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) \
+ 		-I$(CORE_BASE_DIR)/include -I$(CORE_SCENE_DIR)/include -I$(CORE_OBJECT_DIR)/include -I$(CORE_UNITS_DIR)/include \
+ 		-I$(CORE_MESH_ASSET_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/include -I$(CORE_MESH_PREVIEW_DIR)/../../shape/external -I$(CORE_IO_DIR)/include \
+ 		-I/opt/homebrew/Cellar/json-c/0.18/include -I/opt/homebrew/Cellar/json-c/0.18/include/json-c \
+@@ -130,13 +130,43 @@
+ 	fi
+ 
+ # Trusted-local S1 background simulation owner.
+-physics_sim_session_worker: $(BUILD_DIR)/tools/cli/physics_sim_session_worker.o $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+-	$(CC) $(LDFLAGS) -o $@ $^ $(HEADLESS_WORKER_LIBS)
++$(SESSION_WORKER_BIN): $(BUILD_DIR)/tools/cli/physics_sim_session_worker.o $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(LDFLAGS) -o $@ $(filter %.o,$^) $(HEADLESS_WORKER_LIBS)
+ 
+ test-agent-session: physics_sim_session_worker
+ 	python3 -m unittest discover -s tests -p 'test_agent_session*.py' -v
+ 
+ .PHONY: test-agent-session test-session-observation
+ test-session-observation: $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)
+-	$(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/session_observation_test tests/session_observation_test.c $^ $(HEADLESS_WORKER_LIBS)
++	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) $(CPPFLAGS) $(LDFLAGS) -o $(BUILD_DIR)/session_observation_test tests/session_observation_test.c $(filter %.o,$^) $(HEADLESS_WORKER_LIBS)
+ 	$(BUILD_DIR)/session_observation_test
++
++.PHONY: vf2d_pack_tool
++vf2d_pack_tool: $(VF2D_PACK_TOOL_BIN)
++
++.PHONY: vf2d_dataset_tool
++vf2d_dataset_tool: $(VF2D_DATASET_TOOL_BIN)
++
++.PHONY: physics_trace_tool
++physics_trace_tool: $(PHYSICS_TRACE_TOOL_BIN)
++
++.PHONY: physics_sim_headless
++physics_sim_headless: $(PHYSICS_SIM_HEADLESS_TOOL_BIN)
++
++.PHONY: physics-sim-job-runner
++physics-sim-job-runner: $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)
++
++.PHONY: runtime_scene_emitter_diag_tool
++runtime_scene_emitter_diag_tool: $(RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN)
++
++.PHONY: shape_sanity_tool
++shape_sanity_tool: $(SHAPE_SANITY_TOOL_BIN)
++
++.PHONY: shape_mask_tool
++shape_mask_tool: $(SHAPE_MASK_TOOL_BIN)
++
++.PHONY: shape_asset_tool
++shape_asset_tool: $(SHAPE_ASSET_TOOL_BIN)
++
++.PHONY: physics_sim_session_worker
++physics_sim_session_worker: $(SESSION_WORKER_BIN)
+--- a/make/sources-tools.mk
++++ b/make/sources-tools.mk
+@@ -5,16 +5,16 @@
+ SHAPE_ASSET_TOOL_SRC  := $(SRC_DIR)/tools/cli/shape_asset_tool.c
+ SHAPE_SANITY_TOOL_SRC := $(SRC_DIR)/tools/cli/shape_sanity_tool.c
+ VF2D_PACK_TOOL_SRC := $(SRC_DIR)/tools/cli/vf2d_pack_tool.c
+-VF2D_PACK_TOOL_BIN := vf2d_pack_tool
++VF2D_PACK_TOOL_BIN := $(BIN_DIR)/vf2d_pack_tool
+ VF2D_DATASET_TOOL_SRC := $(SRC_DIR)/tools/cli/vf2d_dataset_tool.c
+-VF2D_DATASET_TOOL_BIN := vf2d_dataset_tool
++VF2D_DATASET_TOOL_BIN := $(BIN_DIR)/vf2d_dataset_tool
+ PHYSICS_TRACE_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_trace_tool.c
+-PHYSICS_TRACE_TOOL_BIN := physics_trace_tool
++PHYSICS_TRACE_TOOL_BIN := $(BIN_DIR)/physics_trace_tool
+ PHYSICS_SIM_HEADLESS_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_sim_headless.c
+-PHYSICS_SIM_HEADLESS_TOOL_BIN := physics_sim_headless
++PHYSICS_SIM_HEADLESS_TOOL_BIN := $(BIN_DIR)/physics_sim_headless
+ PHYSICS_SIM_JOB_RUNNER_TOOL_SRC := $(SRC_DIR)/tools/cli/physics_sim_job_runner.c
+-PHYSICS_SIM_JOB_RUNNER_TOOL_BIN := physics_sim_job_runner
+-RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN := runtime_scene_emitter_diag_tool
++PHYSICS_SIM_JOB_RUNNER_TOOL_BIN := $(BIN_DIR)/physics_sim_job_runner
++RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN := $(BIN_DIR)/runtime_scene_emitter_diag_tool
+ RUNTIME_SCENE_EMITTER_DIAG_TOOL_SRCS = \
+ 	$(SRC_DIR)/tools/cli/runtime_scene_emitter_diag_tool.c \
+ 	$(SRC_DIR)/app/atmospheric/atmospheric_field.c \
+@@ -118,3 +118,12 @@
+ 	$(SRC_DIR)/import/shape_import.c \
+ 	$(SRC_DIR)/geo/shape_asset.c \
+ 	$(TIMER_HUD_DIR)/external/cJSON.c
++
++SHAPE_SANITY_TOOL_BIN := $(BIN_DIR)/shape_sanity_tool
++
++SHAPE_MASK_TOOL_BIN := $(BIN_DIR)/shape_mask_tool
++
++SHAPE_ASSET_TOOL_BIN := $(BIN_DIR)/shape_asset_tool
++
++export PHYSICS_SIM_HEADLESS_BIN := $(abspath $(PHYSICS_SIM_HEADLESS_TOOL_BIN))
++export PHYSICS_SIM_JOB_RUNNER_BIN := $(abspath $(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN))
+--- a/makefile
++++ b/makefile
+@@ -17,6 +17,22 @@
+ include make/rules-runtime.mk
+ else
+ include make/config.mk
++# Build mutations enter ownership before compiler probes/configuration selection.
++owner_quote = '$(subst ','"'"',$(1))'
++OWNER_FLAGS := $(firstword $(MAKEFLAGS))
++OWNER_READ_ONLY :=
++ifeq ($(filter --%,$(OWNER_FLAGS)),)
++OWNER_READ_ONLY := $(or $(findstring n,$(OWNER_FLAGS)),$(findstring q,$(OWNER_FLAGS)))
++endif
++OWNER_STATE := $(shell python3 -B scripts/build_owner.py --root $(call owner_quote,$(BUILD_DIR)) --check-inherited)
++ifeq ($(strip $(OWNER_READ_ONLY)$(filter owned,$(OWNER_STATE))),)
++.DEFAULT_GOAL := owned-build
++.PHONY: owned-build $(MAKECMDGOALS)
++owned-build:
++	+python3 -B scripts/build_owner.py --root $(call owner_quote,$(BUILD_DIR)) -- $(MAKE) -f $(call owner_quote,$(firstword $(MAKEFILE_LIST))) $(foreach goal,$(MAKECMDGOALS),$(call owner_quote,$(goal)))
++$(MAKECMDGOALS): owned-build
++	@:
++else
+ include make/target.mk
+ include make/package-paths.mk
+ include make/shared-roots.mk
+@@ -39,6 +55,7 @@
+ include make/package-linux-worker.mk
+ include make/package-linux-desktop.mk
+ include make/release.mk
++include make/build-identity.mk
+ 
+ # =========================
+ #  Diagnostics
+@@ -52,3 +69,5 @@
+ -include $(DEPS)
+ 
+ endif
++
++endif
+--- a/scripts/agent_session/service.py
++++ b/scripts/agent_session/service.py
+@@ -62,7 +62,7 @@
+ class Service:
+     def __init__(self, root=None, worker=None):
+         self.root = Path(root or os.environ.get('PHYSICS_SIM_SESSION_ROOT', REPO / 'data/runtime/agent_sessions')).resolve()
+-        self.worker = Path(worker or os.environ.get('PHYSICS_SIM_SESSION_WORKER', REPO / 'physics_sim_session_worker')).resolve()
++        self.worker = Path(worker or os.environ.get('PHYSICS_SIM_SESSION_WORKER', REPO / 'build/profiles/local-owned/bin/physics_sim_session_worker')).resolve()
+         self.root.mkdir(parents=True, exist_ok=True)
+         for name in ('scenes', 'runs'):
+             (self.root / name).mkdir(exist_ok=True)
+--- a/scripts/atomic_output.py
++++ b/scripts/atomic_output.py
+@@ -0,0 +1,355 @@
++"""Run a local compiler with staged output; publish only after successful completion."""
++import argparse
++import json
++import math
++import re
++import select
++import shutil
++import sys
++import time
++import os
++from pathlib import Path
++import signal
++import stat
++import subprocess
++import tempfile
++
++from clean_outputs import ROOT_EXECUTABLES, no_symlinks
++from build_owner import inherited, inherited_descriptors
++from build_outputs import record, verified, dependency_input_snapshot, linker_dependency_records, link_input_snapshot
++from check_clean_root import build_witness
++
++
++
++def compiler_anchor(result_fd, lifeline_fd, descriptors, command):
++    """Keep a direct live child anchoring the compiler's process group."""
++    for number in (signal.SIGINT, signal.SIGTERM):
++        signal.signal(number, lambda *_: None)
++    try:
++        child = subprocess.Popen(command, pass_fds=descriptors)
++        while child.poll() is None:
++            if select.select([lifeline_fd], [], [], .05)[0] and not os.read(lifeline_fd, 1):
++                os.killpg(os.getpgrp(), signal.SIGKILL)
++                raise RuntimeError('Compiler anchor self-cleanup failed')
++        result = str(child.returncode)
++    except OSError as error:
++        result = '!' + str(error.errno)
++    os.write(result_fd, (result + '\n').encode('ascii'))
++    os.close(result_fd)
++    while os.read(lifeline_fd, 1):
++        pass
++    os.killpg(os.getpgrp(), signal.SIGKILL)
++    raise RuntimeError('Compiler anchor self-cleanup failed')
++
++
++def signal_compiler_group(child, number):
++    """Signal only while the single waiter's direct anchor remains unreaped."""
++    if child.returncode is not None:
++        raise ValueError('Compiler anchor was already reaped')
++    observed = os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
++    if observed is None:
++        try:
++            if os.getpgid(child.pid) != child.pid:
++                raise ValueError('Compiler anchor group identity changed')
++        except ProcessLookupError:
++            if os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is None:
++                raise
++    try:
++        os.killpg(child.pid, number)
++        return True
++    except ProcessLookupError:
++        return False
++
++
++def supervise_compiler(command, descriptors=(), wall_cap=900):
++    """Observe compiler result and anchor cleanup before allowing publication.
++
++    This verifies the direct command/anchor only, not escaped descendants.
++    Unknown terminal ownership raises, leaving the staging directory held.
++    """
++    if type(wall_cap) not in (int, float) or not math.isfinite(wall_cap) or not 0 < wall_cap <= 86400:
++        raise ValueError('Invalid compiler wall-time bound')
++    if not all(hasattr(os, name) for name in ('waitid', 'P_PID', 'WEXITED', 'WNOHANG', 'WNOWAIT')):
++        raise ValueError('Compiler supervision requires non-reaping child observation')
++    child = None
++    result_read, result_write = os.pipe()
++    life_read, life_write = os.pipe()
++    os.set_blocking(result_read, False)
++    previous = {}
++    interrupted = []
++    errors = []
++    result_bytes = b''
++    code = None
++    launch_errno = None
++    observed = False
++    anchored = False
++    reaped = False
++
++    def read_result():
++        nonlocal result_bytes, code, launch_errno, observed
++        try:
++            chunk = os.read(result_read, 17)
++        except BlockingIOError:
++            return
++        if not chunk:
++            raise ValueError('Compiler result pipe closed prematurely')
++        result_bytes += chunk
++        if len(result_bytes) > 16:
++            raise ValueError('Compiler result protocol exceeded bound')
++        if b'\n' in result_bytes:
++            if re.fullmatch(rb'![0-9]{1,5}\n', result_bytes):
++                launch_errno = int(result_bytes[1:-1])
++            else:
++                if not re.fullmatch(rb'-?[0-9]{1,3}\n', result_bytes):
++                    raise ValueError('Malformed compiler result')
++                code = int(result_bytes)
++                if not -128 <= code <= 255:
++                    raise ValueError('Compiler result outside exit-code range')
++            observed = True
++
++    def forward(number, frame):
++        interrupted.append(number)
++        if child is not None:
++            try:
++                signal_compiler_group(child, number)
++            except (OSError, ValueError) as error:
++                errors.append(str(error))
++
++    try:
++        for number in (signal.SIGINT, signal.SIGTERM):
++            previous[number] = signal.signal(number, forward)
++        child = subprocess.Popen([sys.executable, '-B', str(Path(__file__).resolve()),
++            '--compiler-anchor', str(result_write), str(life_read), json.dumps(list(descriptors)),
++            json.dumps(list(command))], start_new_session=True,
++            pass_fds=(*descriptors, result_write, life_read))
++        os.close(result_write); result_write = None
++        os.close(life_read); life_read = None
++        deadline = time.monotonic() + wall_cap
++        while not observed:
++            if interrupted:
++                break
++            if time.monotonic() >= deadline:
++                raise ValueError('Compiler exceeded wall-time bound')
++            if os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None:
++                raise ValueError('Compiler anchor exited before result handoff')
++            if select.select([result_read], [], [], .05)[0]:
++                read_result()
++    finally:
++        prior_error = sys.exc_info()[1]
++        if child is not None:
++            if not observed:
++                try:
++                    signal_compiler_group(child, signal.SIGTERM)
++                except (OSError, ValueError) as error:
++                    errors.append(str(error))
++                deadline = time.monotonic() + 1
++                while not observed and time.monotonic() < deadline:
++                    try:
++                        if select.select([result_read], [], [], .05)[0]:
++                            read_result()
++                        if os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None:
++                            break
++                    except (OSError, ValueError) as error:
++                        errors.append(str(error)); break
++            try:
++                signal_compiler_group(child, signal.SIGKILL)
++                anchored = True
++            except (OSError, ValueError) as error:
++                errors.append(str(error))
++            os.close(life_write); life_write = None
++            try:
++                child.wait(timeout=5)
++                reaped = True
++            except (OSError, subprocess.TimeoutExpired) as error:
++                errors.append(str(error))
++        for fd in (result_read, result_write, life_read, life_write):
++            if fd is not None:
++                os.close(fd)
++        for number, handler in previous.items():
++            signal.signal(number, handler)
++        if child is not None and (errors or not anchored or not reaped or not observed):
++            raise ValueError('Compiler terminal ownership unverified; staging retained: ' +
++                '; '.join(errors or [str(prior_error or 'command result unobserved')]))
++    if launch_errno is not None:
++        raise OSError(launch_errno, 'Compiler launch failed')
++    return 128 + interrupted[-1] if interrupted else code if code >= 0 else 128 - code
++
++
++def dependency_text(path):
++    fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
++    try:
++        before=os.fstat(fd)
++        if not stat.S_ISREG(before.st_mode) or before.st_nlink!=1 or before.st_size>1024*1024:
++            raise ValueError('Unclassified generated compiler dependency')
++        with os.fdopen(fd,'rb',closefd=False) as stream:data=stream.read(before.st_size+1)
++        if (len(data)!=before.st_size or build_witness(os.fstat(fd))!=build_witness(before)
++                or build_witness(path.lstat())!=build_witness(before)):
++            raise ValueError('Generated compiler dependency changed during read')
++        return data.decode('utf-8')
++    finally:os.close(fd)
++
++
++def run(command, repo, link_provenance=False):
++    repo = repo.resolve()
++    if command.count('-o') != 1:
++        raise ValueError('Compiler command must declare exactly one -o output')
++    index = command.index('-o') + 1
++    if index >= len(command):
++        raise ValueError('Missing compiler output')
++    output = Path(os.path.abspath(command[index]))
++    # Normalize macOS temporary-directory aliases, without following checkout symlinks.
++    original = Path(os.path.abspath(Path.cwd()))
++    if output.is_relative_to(original) and original.resolve() == repo:
++        output = repo/output.relative_to(original)
++    no_symlinks(output, repo)
++    if not output.is_relative_to(repo/'build') and not (output.parent == repo and output.name in ROOT_EXECUTABLES):
++        raise ValueError('Undeclared compiler output: '+str(output))
++    if output.exists() and not stat.S_ISREG(output.stat().st_mode):
++        raise ValueError('Compiler output must be a regular file')
++    if any(value.startswith(('-MF','-MT','-MQ')) for value in command):
++        raise ValueError('Explicit dependency paths require a dedicated publication contract')
++    dependency = '-MMD' in command or '-MD' in command
++    if dependency and (command.count('-c')!=1 or output.suffix!='.o'):
++        raise ValueError('Dependency publication requires one object compilation')
++    if link_provenance:
++        if os.uname().sysname != 'Darwin' or dependency or '-c' in command or any(value.endswith(('.c','.cc','.cpp','.m','.mm')) for value in command):
++            raise ValueError('Link provenance requires a Darwin object-only link')
++        secondary_outputs=('-dependency_info','-map','-object_path_lto','-save-temps','--save-temps','-serialize-diagnostics','-ftime-trace','-fsave-optimization-record')
++        if any(option in value for value in command for option in secondary_outputs):
++            raise ValueError('Caller-selected secondary link outputs are unsupported')
++        if not output.is_relative_to(repo/'build'):
++            raise ValueError('Link provenance sidecars require an isolated build output')
++    link_manifest = output.with_name(output.name+'.link-inputs.json')
++    destinations = ([output.with_suffix('.d')] if dependency else []) + ([link_manifest] if link_provenance else []) + [output]
++    predecessors = {}
++    for path in destinations:
++        no_symlinks(path, repo)
++        predecessors[path] = verified(repo, path) if path.exists() else None
++    output.parent.mkdir(parents=True, exist_ok=True)
++    temporary = tempfile.mkdtemp(prefix='.'+output.name+'.staging-', dir=output.parent)
++    terminal_verified = False
++    retain_attempt = False
++    try:
++        staged = Path(temporary)/output.name
++        argv = list(command)
++        argv[index] = str(staged)
++        if dependency:
++            argv += ['-MF', str(staged.with_suffix('.d')), '-MQ', command[index]]
++        # A dylib's default install identity must not refer to the temporary path.
++        if '-dynamiclib' in argv and '-install_name' not in argv:
++            argv += ['-install_name', str(output)]
++        owner_root=os.environ.get('PHYSICS_SIM_BUILD_OWNER_ROOT')
++        owner_fds=()
++        if owner_root and inherited(repo,Path(owner_root)):
++            owner_fds=inherited_descriptors(repo,Path(owner_root))
++        before_inputs=None;before_witnesses=[];input_budget={'entries':0,'hash_bytes':0}
++        if dependency:
++            before_dep=Path(temporary)/'inputs-before.d'
++            preparation=[value for number,value in enumerate(command)
++                         if number not in (index-1,index) and value not in ('-c','-MMD','-MD')]
++            preparation += ['-M' if '-MD' in command else '-MM','-MF',str(before_dep),'-MQ',command[index]]
++            code=supervise_compiler(preparation,owner_fds)
++            terminal_verified=True
++            if code:return code if code>0 else 128-code
++            before_inputs=dependency_input_snapshot(repo,output.with_suffix('.d'),dependency_text(before_dep),input_budget,before_witnesses)
++        before_link=None; before_link_witnesses=[]; link_budget={'entries':0,'hash_bytes':0}
++        if link_provenance:
++            discovery = list(argv); discovery[index] = str(Path(temporary)/'discovery.bin')
++            discovery_trace = Path(temporary)/'discovery.dep'
++            discovery += ['-Wl,-dependency_info,'+str(discovery_trace)]
++            code = supervise_compiler(discovery, owner_fds)
++            terminal_verified = True
++            if code: return code if code>0 else 128-code
++            link_selection = linker_dependency_records(discovery_trace,repo,Path(temporary)/'discovery.bin')
++            before_link = link_input_snapshot(link_selection,link_budget,before_link_witnesses)
++            argv += ['-Wl,-dependency_info,'+str(Path(temporary)/'actual.dep')]
++        terminal_verified=False
++        code = supervise_compiler(argv, owner_fds)
++        terminal_verified = True
++        if code:
++            return code if code > 0 else 128-code
++        if not staged.is_file() or staged.is_symlink():
++            raise ValueError('Compiler succeeded without a regular staged output')
++        if dependency and not staged.with_suffix('.d').is_file():
++            raise ValueError('Compiler succeeded without staged dependencies')
++        input_snapshot=None
++        if dependency:
++            after_witnesses=[]
++            try:
++                input_snapshot=dependency_input_snapshot(repo,output.with_suffix('.d'),dependency_text(staged.with_suffix('.d')),input_budget,after_witnesses)
++                if input_snapshot!=before_inputs or after_witnesses!=before_witnesses:
++                    raise ValueError('Compiler input bytes, identities or dependency closure changed')
++            except (ValueError,OSError) as error:
++                retain_attempt=True
++                hold={'schema':'physics_sim_compiler_input_hold_v1','artifact_class':'retained_compiler_output',
++                      'reason':str(error),'output':str(output),'before':before_inputs,'after':input_snapshot}
++                with (Path(temporary)/'input-hold.json').open('x') as stream:
++                    json.dump(hold,stream,sort_keys=True);stream.write('\n');stream.flush();os.fsync(stream.fileno())
++                raise ValueError('Compiler inputs unconfirmed after execution; retained attempt: '+temporary) from error
++            input_snapshot['scope']='compiler_boundary_observation'
++        staged_link = Path(temporary)/'link-inputs.json'
++        if link_provenance:
++            after_link=None; after_link_witnesses=[]
++            try:
++                after_selection = linker_dependency_records(Path(temporary)/'actual.dep',repo,staged)
++                after_link = link_input_snapshot(after_selection,link_budget,after_link_witnesses)
++                if after_selection != link_selection or after_link != before_link or after_link_witnesses != before_link_witnesses:
++                    raise ValueError('Linker input contents, identities or search selection changed')
++                link_text=json.dumps({'schema':'physics_sim_link_manifest_v1','selection':after_selection,'snapshot':after_link},sort_keys=True)+'\n'
++                if len(link_text.encode())>1024*1024: raise ValueError('Link manifest byte bound exceeded')
++                with staged_link.open('x') as stream:
++                    stream.write(link_text);stream.flush();os.fsync(stream.fileno())
++            except (ValueError,OSError) as error:
++                retain_attempt=True
++                with (Path(temporary)/'link-input-hold.json').open('x') as stream:
++                    json.dump({'schema':'physics_sim_link_input_hold_v1','artifact_class':'retained_compiler_output',
++                        'reason':str(error),'output':str(output),'before':before_link,'after':after_link},stream,sort_keys=True)
++                    stream.write('\n');stream.flush();os.fsync(stream.fileno())
++                raise ValueError('Linker inputs unconfirmed; retained attempt: '+temporary) from error
++        # Flush both files before publication. Output is the final commit point.
++        for path in ([staged.with_suffix('.d')] if dependency else []) + [staged]:
++            with path.open('rb') as stream:
++                os.fsync(stream.fileno())
++        # Revalidate all predecessors before publishing either output. Unknown
++        # or changed files are never silently adopted by a successful build.
++        for path, predecessor in predecessors.items():
++            no_symlinks(path, repo)
++            if predecessor is None:
++                if path.exists():
++                    raise ValueError('Compiler destination appeared during build: '+str(path))
++            elif not path.exists() or verified(repo, path) != predecessor:
++                raise ValueError('Compiler predecessor changed during build: '+str(path))
++        if dependency:
++            os.replace(staged.with_suffix('.d'), output.with_suffix('.d'))
++        if link_provenance:
++            os.replace(staged_link,link_manifest)
++        os.replace(staged, output)
++        if dependency:
++            dep_record=record(repo, output.with_suffix('.d'), 'dependency',input_snapshot=input_snapshot)
++        link_record=record(repo,link_manifest,'linker-inputs') if link_provenance else None
++        record(repo, output, 'compiler',dependency_sha256=dep_record['sha256'] if dependency else None,
++               link_inputs_sha256=link_record['sha256'] if link_record else None)
++        return 0
++    finally:
++        # Forced death or uncertain cleanup never authorizes stage deletion.
++        if terminal_verified and not retain_attempt:
++            shutil.rmtree(temporary)
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--link-provenance',action='store_true')
++    parser.add_argument('command', nargs=argparse.REMAINDER)
++    args = parser.parse_args()
++    command = args.command[1:] if args.command[:1] == ['--'] else args.command
++    try:
++        raise SystemExit(run(command, Path.cwd(),args.link_provenance))
++    except (ValueError, OSError) as error:
++        parser.exit(2, str(error)+'\n')
++
++
++if __name__ == '__main__':
++    if len(sys.argv) == 6 and sys.argv[1] == '--compiler-anchor':
++        compiler_anchor(int(sys.argv[2]), int(sys.argv[3]), json.loads(sys.argv[4]), json.loads(sys.argv[5]))
++    else:
++        main()
+--- a/scripts/build_identity.py
++++ b/scripts/build_identity.py
+@@ -0,0 +1,335 @@
++"""Refresh a disposable build configuration stamp only when inputs change."""
++import argparse
++import hashlib
++import json
++import os
++import re
++from pathlib import Path
++import shlex
++import stat
++import shutil
++import subprocess
++import tempfile
++
++from clean_outputs import no_symlinks
++from build_outputs import record, verified, fingerprint, checked_path, receipt_path, dependency_syntax, dependency_input_snapshot, link_input_snapshot, LinkInputsChanged, validate_link_selection
++from check_clean_root import read_json, build_witness
++from tool_probe import probe
++
++KEYS = ('RUNTIME_SCENE_EMITTER_DIAG_TOOL_CFLAGS', 'VF2D_PACK_TOOL_CFLAGS', 'VF2D_DATASET_TOOL_CFLAGS', 'PHYSICS_TRACE_TOOL_CFLAGS', 'CC', 'CLANG', 'CFLAGS', 'LDFLAGS', 'LIBS', 'CSTD', 'TARGET_ARCH',
++        'FISICS', 'FISICS_FLAGS', 'FISICS_CFLAGS', 'FISICS_COMPILE_FLAGS',
++        'FISICS_MEMCHECK_LINK_LIBS', 'CFD_BUILD_OPT', 'HEADLESS_WORKER_LIBS',
++        'TARGET', 'CLANG_TARGET', 'FISICS_TARGET', 'SESSION_WORKER_BIN',
++        'PHYSICS_SIM_HEADLESS_TOOL_BIN', 'PHYSICS_SIM_JOB_RUNNER_TOOL_BIN',
++        'VF2D_PACK_TOOL_BIN', 'VF2D_DATASET_TOOL_BIN', 'PHYSICS_TRACE_TOOL_BIN',
++        'RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN', 'SHAPE_SANITY_TOOL_BIN',
++        'SHAPE_MASK_TOOL_BIN', 'SHAPE_ASSET_TOOL_BIN',
++        'PASSIVE3D_WORKER', 'ATMOSPHERE3D_WORKER', 'OPEN_ATMOSPHERE3D_WORKER',
++        'JSON_CFLAGS', 'JSON_LIBS')
++
++
++# Implicit include/link/toolchain settings used outside explicit Make flags.
++# Absent and present-empty values remain distinct, and path order is preserved.
++COMPILER_ENVIRONMENT_KEYS = (
++    'CPATH', 'C_INCLUDE_PATH', 'CPLUS_INCLUDE_PATH', 'OBJC_INCLUDE_PATH',
++    'LIBRARY_PATH', 'GCC_EXEC_PREFIX', 'COMPILER_PATH', 'SDKROOT',
++    'DEVELOPER_DIR', 'TOOLCHAINS', 'MACOSX_DEPLOYMENT_TARGET',
++    'IPHONEOS_DEPLOYMENT_TARGET', 'TVOS_DEPLOYMENT_TARGET',
++    'WATCHOS_DEPLOYMENT_TARGET', 'XROS_DEPLOYMENT_TARGET',
++    'CCC_OVERRIDE_OPTIONS', 'CCC_ADD_ARGS', 'CLANG_CONFIG_FILE_SYSTEM_DIR',
++    'CLANG_CONFIG_FILE_USER_DIR', 'SOURCE_DATE_EPOCH', 'ZERO_AR_DATE',
++    'LANG', 'LC_ALL', 'LC_CTYPE', 'LC_MESSAGES',
++)
++
++
++def compiler_environment():
++    values={key:os.environ.get(key) for key in COMPILER_ENVIRONMENT_KEYS}
++    if any(value is not None and len(value.encode())>65536 for value in values.values()):
++        raise ValueError('Compiler environment value byte bound exceeded')
++    if sum(len(value.encode()) for value in values.values() if value is not None)>1024*1024:
++        raise ValueError('Compiler environment aggregate byte bound exceeded')
++    return values
++
++
++def digest(path):
++    return fingerprint(path)['sha256']
++
++
++def checked_probe(command, timeout=15, limit=65536):
++    result = probe(command, timeout=timeout, limit=limit)
++    if result['status'] != 'passed':
++        raise ValueError('Cannot establish tool identity: '+str(command)+': '+result.get('reason', result.get('stderr', 'nonzero exit')))
++    return result
++
++
++def compiler(value):
++    command = shlex.split(value)
++    if not command:
++        return None
++    selected = shutil.which(command[0])
++    if selected is None:
++        return {'command': command, 'available': False}
++    executable = Path(selected).resolve()
++    before = fingerprint(executable)
++    row = executable.stat()
++    # Version output and resolved file identity bind tool selection. No shell.
++    result = checked_probe([str(executable), *command[1:], '--version'])
++    if fingerprint(executable) != before:
++        raise ValueError('Compiler changed during identity probe: '+str(executable))
++    return {'command': command, 'path': str(executable), 'bytes': row.st_size,
++            'mtime_ns': row.st_mtime_ns, 'sha256': before['sha256'], 'version': result['stdout']}
++
++
++def predecessor(repo, path):
++    no_symlinks(path, repo)
++    return verified(repo, path) if path.exists() else None
++
++
++def active_selection(repo, path):
++    previous = predecessor(repo, path)
++    if previous is None:
++        if path.parent.exists() and any(path.parent.iterdir()):
++            raise ValueError('Missing active selection beside retained configuration state; use a fresh build root')
++        return {}, None
++    row = read_json(path, 16384)
++    if (not isinstance(row, dict) or set(row) != {'digest', 'generation'}
++            or not isinstance(row['digest'], str) or not re.fullmatch('[0-9a-f]{64}', row['digest'])
++            or type(row['generation']) is not int or not 1 <= row['generation'] <= 1000000000):
++        raise ValueError('Invalid build configuration selection: '+str(path))
++    if predecessor(repo, path) != previous:
++        raise ValueError('Build configuration changed during inspection')
++    return row, previous
++
++
++def revalidate(repo, predecessors):
++    for path, previous in predecessors.items():
++        if predecessor(repo, path) != previous:
++            raise ValueError('Build configuration predecessor changed: '+str(path))
++
++
++def publish(repo, path, content):
++    descriptor, temporary = tempfile.mkstemp(prefix='.config-', dir=path.parent)
++    try:
++        with os.fdopen(descriptor, 'w') as stream:
++            stream.write(content); stream.flush(); os.fsync(stream.fileno())
++        os.replace(temporary, path)
++        record(repo, path, 'configuration')
++    finally:
++        Path(temporary).unlink(missing_ok=True)
++
++
++def admit_dependencies(repo,root,paths):
++    if len(paths)>10000:raise ValueError('Generated dependency count bound exceeded')
++    admitted=[];total=0
++    for raw in paths:
++        path=checked_path(raw,repo)
++        if not path.is_relative_to(root) or path.suffix!='.d':
++            raise ValueError('Generated dependency namespace mismatch')
++        try:info=path.lstat()
++        except FileNotFoundError:
++            if path.with_suffix('.o').exists():raise ValueError('Missing generated dependency beside object')
++            continue
++        if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_size>1024*1024:
++            raise ValueError('Unclassified generated dependency')
++        total+=info.st_size
++        if total>64*1024*1024:raise ValueError('Generated dependency aggregate byte bound exceeded')
++        admitted.append((path,info.st_size))
++    witnesses={};rebuild=[];input_budget={'entries':0,'hash_bytes':0}
++    for path,size in admitted:
++        receipt=receipt_path(repo,path);receipt_before=build_witness(receipt.lstat())
++        before=verified(repo,path)
++        ownership=read_json(receipt,16384)
++        if ownership.get('producer')!='dependency':
++            raise ValueError('Generated dependency producer mismatch')
++        fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
++        try:
++            info=os.fstat(fd)
++            if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_size!=size:
++                raise ValueError('Generated dependency changed before read')
++            with os.fdopen(fd,'rb',closefd=False) as stream:data=stream.read(size+1)
++            if len(data)!=size:raise ValueError('Generated dependency changed during read')
++        finally:os.close(fd)
++        text=data.decode('utf-8');dependency_syntax(repo,path,text)
++        object_path=path.with_suffix('.o')
++        if object_path.exists():
++            verified(repo,object_path)
++            object_owner=read_json(receipt_path(repo,object_path),16384)
++            saved=ownership.get('input_snapshot')
++            current=dependency_input_snapshot(repo,path,text,input_budget)
++            current['scope']='compiler_boundary_observation'
++            if saved is not None and (not isinstance(saved,dict) or set(saved)!=set(current)
++                    or saved.get('schema')!=current['schema'] or saved.get('scope') not in ('postcompiler_observation','compiler_boundary_observation')
++                    or type(saved.get('count')) is not int or not 1<=saved['count']<=10000
++                    or not isinstance(saved.get('sha256'),str) or not re.fullmatch('[0-9a-f]{64}',saved['sha256'])):
++                raise ValueError('Invalid generated dependency input snapshot')
++            if saved!=current or object_owner.get('dependency_sha256')!=before['sha256']:
++                name=str(object_path.relative_to(repo))
++                if re.search(r'[\s$;|%=:*?\\#]',name):raise ValueError('Unsupported dependency rebuild target')
++                rebuild.append(name)
++        if verified(repo,path)!=before:raise ValueError('Generated dependency changed during admission')
++        if build_witness(receipt.lstat())!=receipt_before:raise ValueError('Generated dependency receipt changed during admission')
++        witnesses[path]=(before,receipt,receipt_before)
++    for path,(before,receipt,receipt_before) in witnesses.items():
++        if verified(repo,path)!=before or build_witness(receipt.lstat())!=receipt_before:
++            raise ValueError('Generated dependency changed during complete admission')
++    return sorted(set(rebuild))
++
++
++def admit_links(repo, root, outputs):
++    if len(outputs)>1000: raise ValueError('Link output count bound exceeded')
++    rebuilt=[]; witnesses=[]; receipt_witnesses=[]; budget={'entries':0,'hash_bytes':0}; metadata=0
++    for raw in sorted(set(outputs)):
++        output=checked_path(raw,repo)
++        if not output.is_relative_to(root): raise ValueError('Link output namespace mismatch')
++        manifest=output.with_name(output.name+'.link-inputs.json')
++        owner=None; original=None
++        if output.exists():
++            original=verified(repo,output)
++            output_receipt=receipt_path(repo,output)
++            receipt_witnesses.append((output_receipt,build_witness(output_receipt.lstat())))
++            owner=read_json(output_receipt,16384)
++            if owner.get('producer')!='compiler': raise ValueError('Link output producer mismatch')
++        if not manifest.exists():
++            if owner is not None:
++                if owner.get('link_inputs_sha256') is not None: raise ValueError('Missing bound linker manifest')
++                rebuilt.append(output)
++            continue
++        info=manifest.lstat(); metadata+=info.st_size
++        if not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_size>1024*1024 or metadata>64*1024*1024:
++            raise ValueError('Link manifest metadata bound exceeded')
++        manifest_before=verified(repo,manifest)
++        receipt=receipt_path(repo,manifest); receipt_before=build_witness(receipt.lstat())
++        receipt_witnesses.append((receipt,receipt_before))
++        if read_json(receipt,16384).get('producer')!='linker-inputs': raise ValueError('Link manifest producer mismatch')
++        row=read_json(manifest,1024*1024)
++        if not isinstance(row,dict) or set(row)!= {'schema','selection','snapshot'} or row['schema']!='physics_sim_link_manifest_v1':
++            raise ValueError('Invalid link manifest schema')
++        validate_link_selection(row['selection'])
++        saved=row['snapshot']
++        if (not isinstance(saved,dict) or set(saved)!= {'schema','scope','selected_count','absent_count','sha256'}
++                or saved['schema']!='physics_sim_link_inputs_v1' or saved['scope']!='linker_boundary_observation'
++                or type(saved['selected_count']) is not int or not 1<=saved['selected_count']<=10000
++                or type(saved['absent_count']) is not int or not 0<=saved['absent_count']<=10000
++                or not isinstance(saved['sha256'],str) or not re.fullmatch('[0-9a-f]{64}',saved['sha256'])):
++            raise ValueError('Invalid link input snapshot')
++        if saved['selected_count']!=len(row['selection']['selected']) or saved['absent_count']!=len(row['selection']['absent']):
++            raise ValueError('Link input snapshot count mismatch')
++        if owner is not None:
++            if owner.get('link_inputs_sha256')!=manifest_before['sha256']:
++                raise ValueError('Executable and linker manifest binding mismatch')
++            try: current=link_input_snapshot(row['selection'],budget)
++            except LinkInputsChanged: current=None
++            if current!=saved: rebuilt.append(output)
++            witnesses.append((output,original))
++        witnesses.append((manifest,manifest_before))
++        if build_witness(receipt.lstat())!=receipt_before: raise ValueError('Link manifest receipt changed')
++    for path,before in witnesses:
++        if verified(repo,path)!=before: raise ValueError('Link inputs metadata changed during admission')
++    for path,before in receipt_witnesses:
++        if build_witness(path.lstat())!=before: raise ValueError('Link ownership receipt changed during admission')
++    names=[]
++    for output in rebuilt:
++        name=str(output.relative_to(repo))
++        if re.search(r'[\s$;|%=:*?\\#]',name): raise ValueError('Unsupported linker rebuild target')
++        names.append(name)
++    return sorted(set(names))
++
++
++def main():
++    parser = argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--output', type=Path)
++    parser.add_argument('--digest-only', action='store_true')
++    parser.add_argument('--expected-digest')
++    parser.add_argument('--selection-root', type=Path)
++    parser.add_argument('--link-output', type=Path, action='append', default=[])
++    parser.add_argument('--dependency', type=Path, action='append', default=[])
++    parser.add_argument('--makefile', type=Path, action='append', default=[])
++    args = parser.parse_args()
++    values = {key: os.environ.get('PHYSICS_BUILD_'+key, '').strip() for key in KEYS}
++    repo = Path.cwd().resolve()
++    if args.selection_root is None:
++        parser.error('--selection-root is required')
++    if args.selection_root:
++        repo = Path.cwd().resolve()
++        root = Path(os.path.abspath(args.selection_root))
++        no_symlinks(root, repo)
++        if not root.is_relative_to(repo/'build'):
++            raise ValueError('Compilation output must be inside checkout/build')
++        for key in ('TARGET', 'CLANG_TARGET', 'FISICS_TARGET', 'SESSION_WORKER_BIN',
++                    'PHYSICS_SIM_HEADLESS_TOOL_BIN', 'PHYSICS_SIM_JOB_RUNNER_TOOL_BIN',
++                    'VF2D_PACK_TOOL_BIN', 'VF2D_DATASET_TOOL_BIN', 'PHYSICS_TRACE_TOOL_BIN',
++                    'RUNTIME_SCENE_EMITTER_DIAG_TOOL_BIN', 'SHAPE_SANITY_TOOL_BIN',
++                    'SHAPE_MASK_TOOL_BIN', 'SHAPE_ASSET_TOOL_BIN',
++                    'PASSIVE3D_WORKER', 'ATMOSPHERE3D_WORKER', 'OPEN_ATMOSPHERE3D_WORKER'):
++            if not values[key]:
++                continue
++            output = Path(os.path.abspath(values[key]))
++            no_symlinks(output, repo)
++            if not output.is_relative_to(root):
++                raise ValueError('Undeclared compilation output '+key+': '+str(output))
++    rebuild=admit_dependencies(repo,root,args.dependency)
++    rebuild+=admit_links(repo,root,args.link_output)
++    active_path = root/'.configuration/active.json'
++    active, active_previous = active_selection(repo, active_path)
++    tools = {key: compiler(values[key]) for key in ('CC', 'CLANG')}
++    # fisiCs is optional until that profile is requested; file identity still binds it.
++    fisics = Path(values['FISICS'])
++    if values['FISICS'] and fisics.is_file():
++        tools['FISICS'] = {'path': str(fisics.resolve()), 'sha256': digest(fisics)}
++    config = {'schema': 'physics_sim_build_configuration_v1', 'configuration': values,
++              'compiler_environment': compiler_environment(),
++              'tools': tools, 'makefiles': {str(p): digest(p) for p in args.makefile},
++              'control_tools': {str(p): digest(p) for p in (
++                  Path('scripts/build_identity.py'), Path('scripts/build_owner.py'), Path('scripts/atomic_output.py'), Path('scripts/tool_probe.py'),
++                  Path('scripts/clean_outputs.py'), Path('scripts/check_clean_root.py'), Path('scripts/build_outputs.py')) if p.is_file()}}
++    if os.uname().sysname == 'Darwin':
++        selected = shutil.which('xcrun')
++        if selected is None:
++            raise ValueError('Cannot establish SDK tool identity: xcrun unavailable')
++        xcrun = Path(selected).resolve()
++        before = fingerprint(xcrun)
++        for label, arguments in (('sdk', ['--show-sdk-path']), ('clang', ['--find', 'clang'])):
++            result = checked_probe([str(xcrun), *arguments])
++            config[label] = result['stdout']
++        if fingerprint(xcrun) != before:
++            raise ValueError('SDK tool changed during identity probes')
++        config['sdk_tool'] = {'path': str(xcrun), 'sha256': before['sha256']}
++    content = json.dumps(config, indent=2, sort_keys=True)+'\n'
++    configuration_digest = hashlib.sha256(content.encode()).hexdigest()
++    generation = active.get('generation', 0) + (active.get('digest') != configuration_digest)
++    if generation > 1000000000:
++        raise ValueError('Build configuration generation exhausted; use a fresh build root')
++    selection = configuration_digest+'-'+str(generation)
++    selected_output = root/'.configuration'/(selection+'.json')
++    selected_previous = predecessor(repo, selected_output)
++    if selected_previous is not None and selected_output.read_text() != content:
++        raise ValueError('Existing configuration content does not match selected identity')
++    if args.digest_only:
++        revalidate(repo, {active_path: active_previous, selected_output: selected_previous})
++        print(' '.join([selection,*rebuild]))
++        return
++    if args.output is None:
++        parser.error('--output is required unless --digest-only')
++    if args.expected_digest and selection != args.expected_digest:
++        raise ValueError('Build configuration changed after graph selection')
++    output = Path(os.path.abspath(args.output))
++    no_symlinks(output, repo)
++    if output != root/'.configuration'/(selection+'.json'):
++        raise ValueError('Configuration output must be the exact selected identity path')
++    output_previous = selected_previous
++    revalidate(repo, {output: output_previous, active_path: active_previous})
++    output.parent.mkdir(parents=True, exist_ok=True)
++    if output_previous is None:
++        publish(repo, output, content)
++    active_content = json.dumps({'digest': configuration_digest, 'generation': generation})+'\n'
++    if active != {'digest': configuration_digest, 'generation': generation}:
++        # Stamp publication does not authorize replacing a concurrently changed selection.
++        revalidate(repo, {active_path: active_previous})
++        publish(repo, active_path, active_content)
++
++
++if __name__ == '__main__':
++    try:
++        main()
++    except (OSError, ValueError, subprocess.SubprocessError, RecursionError) as error:
++        raise SystemExit('Build configuration held: '+str(error))
+--- a/scripts/build_owner.py
++++ b/scripts/build_owner.py
+@@ -0,0 +1,330 @@
++"""Hold local build ownership across an entire Make process tree."""
++import argparse
++import math
++import select
++import sys
++import time
++from contextlib import contextmanager
++from contextvars import ContextVar
++from functools import wraps
++import fcntl
++import hashlib
++import os
++from pathlib import Path
++import signal
++import subprocess
++import re
++import json
++
++from clean_outputs import no_symlinks
++
++
++def lock_path(repo, root):
++    return repo/'tmp/locks'/('build-'+hashlib.sha256(str(root).encode()).hexdigest()+'.lock')
++
++
++def ownership_paths(repo, root):
++    """Ancestors are shared intentions; the selected subtree is exclusive."""
++    base = repo/'build'
++    if not root.is_relative_to(base):
++        raise ValueError('Build ownership requires checkout/build')
++    ancestors = list(reversed(root.relative_to(base).parents))
++    return [repo/'tmp/locks/clean.lock'] + [lock_path(repo, base/path) for path in ancestors] + [lock_path(repo, root)]
++
++
++def inherited_descriptors(repo, root):
++    if os.environ.get('PHYSICS_SIM_BUILD_OWNER_ROOT') != str(root):
++        return ()
++    try:
++        descriptors = json.loads(os.environ['PHYSICS_SIM_BUILD_HIERARCHY_FDS'])
++        paths = ownership_paths(repo, root)
++        if not isinstance(descriptors, list) or len(descriptors) != len(paths):
++            return ()
++        for index,(fd,path) in enumerate(zip(descriptors,paths)):
++            if type(fd) is not int:return ()
++            no_symlinks(path,repo)
++            witness=os.open(path,os.O_RDWR|os.O_NOFOLLOW)
++            try:
++                a=os.fstat(fd);b=os.fstat(witness)
++                if (a.st_dev,a.st_ino)!=(b.st_dev,b.st_ino):return ()
++                # Ancestor/shared locks must block an exclusive witness; the
++                # selected root/exclusive lock must also block a shared witness.
++                mode=fcntl.LOCK_SH if index==len(paths)-1 else fcntl.LOCK_EX
++                try:fcntl.flock(witness,mode|fcntl.LOCK_NB)
++                except BlockingIOError:pass
++                else:return ()
++            finally:os.close(witness)
++        if int(os.environ['PHYSICS_SIM_BUILD_GLOBAL_FD']) != descriptors[0]:return ()
++        if int(os.environ['PHYSICS_SIM_BUILD_ROOT_FD']) != descriptors[-1]:return ()
++        # Reaffirm through the claimed open descriptions: another owner's locks
++        # must not make unlocked descriptor metadata appear inherited.
++        for index in reversed(range(len(descriptors))):
++            mode=fcntl.LOCK_EX if index==len(descriptors)-1 else fcntl.LOCK_SH
++            try:fcntl.flock(descriptors[index],mode|fcntl.LOCK_NB)
++            except BlockingIOError:return ()
++        return tuple(descriptors)
++    except (KeyError,ValueError,OSError,TypeError):
++        return ()
++
++
++def inherited(repo, root):
++    return bool(inherited_descriptors(repo, root))
++
++
++def acquire(repo, root):
++    """Acquire the same cooperative hierarchy for build and execution owners."""
++    repo=repo.resolve();root=Path(os.path.abspath(root))
++    no_symlinks(root,repo)
++    if not root.is_relative_to(repo/'build'):
++        raise ValueError('Build ownership requires checkout/build')
++    locks=repo/'tmp/locks';no_symlinks(locks,repo);locks.mkdir(parents=True,exist_ok=True)
++    descriptors=[]
++    try:
++        paths=ownership_paths(repo,root)
++        for index,path in enumerate(paths):
++            mode=fcntl.LOCK_EX if index==len(paths)-1 else fcntl.LOCK_SH
++            fd=os.open(path,os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600);descriptors.append(fd)
++            try:fcntl.flock(fd,mode|fcntl.LOCK_NB)
++            except BlockingIOError:raise ValueError('Build held by active cleanup or another build: '+str(root))
++        return descriptors
++    except BaseException:
++        for fd in descriptors:os.close(fd)
++        raise
++
++
++_EXECUTION_FDS=ContextVar('physics_worker_execution_fds',default=())
++
++
++def execution_descriptors():
++    return _EXECUTION_FDS.get()
++
++
++@contextmanager
++def worker_execution(repo, worker):
++    """Hold a selected worker subtree across hashing, execution and acceptance."""
++    repo=repo.resolve();worker=Path(os.path.abspath(worker))
++    no_symlinks(worker,repo)
++    if not worker.is_relative_to(repo/'build'):
++        raise ValueError('Worker execution requires checkout/build; external workers need their owning lifecycle')
++    root=worker.parent
++    owner=os.environ.get('PHYSICS_SIM_BUILD_OWNER_ROOT')
++    borrowed=tuple(inherited_descriptors(repo,Path(owner))) if owner and worker.is_relative_to(Path(owner)) else ()
++    descriptors=borrowed or tuple(acquire(repo,root));token=None
++    try:
++        no_symlinks(worker,repo)
++        if not worker.is_file():raise ValueError('Selected worker is missing: '+str(worker))
++        token=_EXECUTION_FDS.set(descriptors)
++        yield worker
++    finally:
++        if token is not None:_EXECUTION_FDS.reset(token)
++        if not borrowed:
++            for fd in descriptors:os.close(fd)
++
++
++def owned_worker(repo):
++    def decorate(function):
++        @wraps(function)
++        def wrapped(request,worker,*args,**kwargs):
++            with worker_execution(repo,worker) as selected:
++                return function(request,selected,*args,**kwargs)
++        return wrapped
++    return decorate
++
++
++def build_anchor(result_fd, lifeline_fd, descriptors, command):
++    """Keep a direct live child anchoring the build's process group."""
++    for number in (signal.SIGINT, signal.SIGTERM):
++        signal.signal(number, lambda *_: None)
++    try:
++        child = subprocess.Popen(command, pass_fds=descriptors)
++        while child.poll() is None:
++            if select.select([lifeline_fd], [], [], .05)[0] and not os.read(lifeline_fd, 1):
++                os.killpg(os.getpgrp(), signal.SIGTERM)
++                deadline = time.monotonic() + 5
++                while child.poll() is None and time.monotonic() < deadline:
++                    time.sleep(.05)
++                os.killpg(os.getpgrp(), signal.SIGKILL)
++                raise RuntimeError('Build anchor self-cleanup failed')
++        result = str(child.returncode)
++    except OSError as error:
++        result = '!' + str(error.errno)
++    os.write(result_fd, (result + '\n').encode('ascii'))
++    os.close(result_fd)
++    while os.read(lifeline_fd, 1):
++        pass
++    os.killpg(os.getpgrp(), signal.SIGKILL)
++    raise RuntimeError('Build anchor self-cleanup failed')
++
++
++def signal_build_group(child, number):
++    """Signal only while the single waiter's direct anchor remains unreaped."""
++    if child.returncode is not None:
++        raise ValueError('Build anchor was already reaped')
++    observed = os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
++    if observed is None:
++        try:
++            if os.getpgid(child.pid) != child.pid:
++                raise ValueError('Build anchor group identity changed')
++        except ProcessLookupError:
++            if os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is None:
++                raise
++    try:
++        os.killpg(child.pid, number)
++        return True
++    except ProcessLookupError:
++        return False
++
++
++def supervise_build(command, descriptors=(), wall_cap=900, env=None):
++    """Observe build result and anchor cleanup before allowing publication.
++
++    This verifies the direct command/anchor only, not escaped descendants.
++    Unknown terminal ownership raises; cleanup/retirement remain held.
++    """
++    if type(wall_cap) not in (int, float) or not math.isfinite(wall_cap) or not 0 < wall_cap <= 86400:
++        raise ValueError('Invalid build wall-time bound')
++    if not all(hasattr(os, name) for name in ('waitid', 'P_PID', 'WEXITED', 'WNOHANG', 'WNOWAIT')):
++        raise ValueError('Build supervision requires non-reaping child observation')
++    child = None
++    result_read, result_write = os.pipe()
++    life_read, life_write = os.pipe()
++    os.set_blocking(result_read, False)
++    previous = {}
++    interrupted = []
++    errors = []
++    result_bytes = b''
++    code = None
++    launch_errno = None
++    observed = False
++    anchored = False
++    reaped = False
++
++    def read_result():
++        nonlocal result_bytes, code, launch_errno, observed
++        try:
++            chunk = os.read(result_read, 17)
++        except BlockingIOError:
++            return
++        if not chunk:
++            raise ValueError('Build result pipe closed prematurely')
++        result_bytes += chunk
++        if len(result_bytes) > 16:
++            raise ValueError('Build result protocol exceeded bound')
++        if b'\n' in result_bytes:
++            if re.fullmatch(rb'![0-9]{1,5}\n', result_bytes):
++                launch_errno = int(result_bytes[1:-1])
++            else:
++                if not re.fullmatch(rb'-?[0-9]{1,3}\n', result_bytes):
++                    raise ValueError('Malformed build result')
++                code = int(result_bytes)
++                if not -128 <= code <= 255:
++                    raise ValueError('Build result outside exit-code range')
++            observed = True
++
++    def forward(number, frame):
++        interrupted.append(number)
++        if child is not None:
++            try:
++                signal_build_group(child, number)
++            except (OSError, ValueError) as error:
++                errors.append(str(error))
++
++    try:
++        for number in (signal.SIGINT, signal.SIGTERM):
++            previous[number] = signal.signal(number, forward)
++        child = subprocess.Popen([sys.executable, '-B', str(Path(__file__).resolve()),
++            '--build-anchor', str(result_write), str(life_read), json.dumps(list(descriptors)),
++            json.dumps(list(command))], env=env, start_new_session=True,
++            pass_fds=(*descriptors, result_write, life_read))
++        os.close(result_write); result_write = None
++        os.close(life_read); life_read = None
++        deadline = time.monotonic() + wall_cap
++        while not observed:
++            if interrupted:
++                break
++            if time.monotonic() >= deadline:
++                raise ValueError('Build exceeded wall-time bound')
++            if os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None:
++                raise ValueError('Build anchor exited before result handoff')
++            if select.select([result_read], [], [], .05)[0]:
++                read_result()
++    finally:
++        prior_error = sys.exc_info()[1]
++        if child is not None:
++            if not observed:
++                try:
++                    signal_build_group(child, signal.SIGTERM)
++                except (OSError, ValueError) as error:
++                    errors.append(str(error))
++                deadline = time.monotonic() + 5
++                while not observed and time.monotonic() < deadline:
++                    try:
++                        if select.select([result_read], [], [], .05)[0]:
++                            read_result()
++                        if os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None:
++                            break
++                    except (OSError, ValueError) as error:
++                        errors.append(str(error)); break
++            try:
++                signal_build_group(child, signal.SIGKILL)
++                anchored = True
++            except (OSError, ValueError) as error:
++                errors.append(str(error))
++            os.close(life_write); life_write = None
++            try:
++                child.wait(timeout=5)
++                reaped = True
++            except (OSError, subprocess.TimeoutExpired) as error:
++                errors.append(str(error))
++        for fd in (result_read, result_write, life_read, life_write):
++            if fd is not None:
++                os.close(fd)
++        for number, handler in previous.items():
++            signal.signal(number, handler)
++        if child is not None and (errors or not anchored or not reaped or not observed):
++            raise ValueError('Build terminal ownership unverified: ' +
++                '; '.join(errors or [str(prior_error or 'command result unobserved')]))
++    if launch_errno is not None:
++        raise OSError(launch_errno, 'Build launch failed')
++    return 128 + interrupted[-1] if interrupted else code if code >= 0 else 128 - code
++
++def run(root, command):
++    repo=Path.cwd().resolve();root=Path(os.path.abspath(root))
++    descriptors=acquire(repo,root)
++    try:
++        env=dict(os.environ,PHYSICS_SIM_BUILD_OWNER_ROOT=str(root),
++                 PHYSICS_SIM_BUILD_GLOBAL_FD=str(descriptors[0]),PHYSICS_SIM_BUILD_ROOT_FD=str(descriptors[-1]),
++                 PHYSICS_SIM_BUILD_HIERARCHY_FDS=json.dumps(descriptors))
++        # Preserve GNU Make's already-open jobserver pipe through both hops.
++        inherited_fds=list(descriptors)
++        match=re.search(r'--jobserver-(?:auth|fds)=(\d+),(\d+)',env.get('MAKEFLAGS',''))
++        if match:
++            for number in match.groups():
++                fd=int(number)
++                try:os.fstat(fd)
++                except OSError:continue
++                inherited_fds.append(fd)
++        return supervise_build(command, inherited_fds, env=env)
++    finally:
++        for fd in descriptors:os.close(fd)
++
++
++def main():
++    parser=argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--root',required=True,type=Path)
++    parser.add_argument('--check-inherited',action='store_true')
++    parser.add_argument('command',nargs=argparse.REMAINDER)
++    args=parser.parse_args()
++    if args.check_inherited:
++        print('owned' if inherited(Path.cwd().resolve(),Path(os.path.abspath(args.root))) else 'unowned')
++        return
++    command=args.command[1:] if args.command[:1]==['--'] else args.command
++    if not command:parser.error('Make command is required')
++    try:raise SystemExit(run(args.root,command))
++    except (ValueError,OSError) as error:parser.exit(2,str(error)+'\n')
++
++
++if __name__=='__main__':
++    if len(sys.argv)==6 and sys.argv[1]=='--build-anchor':
++        build_anchor(int(sys.argv[2]),int(sys.argv[3]),json.loads(sys.argv[4]),json.loads(sys.argv[5]))
++    else:main()
+--- a/scripts/tool_probe.py
++++ b/scripts/tool_probe.py
+@@ -0,0 +1,154 @@
++"""Bounded trusted-local process capture for identity probes and native workers."""
++import os
++import math
++import selectors
++import signal
++import subprocess
++import time
++
++
++import json
++import re
++import select
++import sys
++from pathlib import Path
++
++
++def capture_anchor(result_fd, lifeline_fd, descriptors, command):
++    try:
++        child = subprocess.Popen(command, pass_fds=descriptors)
++        while child.poll() is None:
++            if select.select([lifeline_fd], [], [], .05)[0] and not os.read(lifeline_fd, 1):
++                os.killpg(os.getpgrp(), signal.SIGKILL)
++                raise RuntimeError('Anchor group self-cleanup did not terminate')
++        result = str(child.returncode)
++    except OSError as error:
++        result = '!' + str(error.errno)
++    os.write(result_fd, (result + '\n').encode('ascii'))
++    os.close(result_fd)
++    os.close(1); os.close(2)
++    while os.read(lifeline_fd, 1):
++        pass
++    os.killpg(os.getpgrp(), signal.SIGKILL)
++    raise RuntimeError('Anchor group self-cleanup did not terminate')
++
++
++def signal_capture_group(child, number):
++    if child.returncode is not None:
++        raise ValueError('Capture group anchor was already reaped')
++    observed = os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
++    if observed is None:
++        try:
++            if os.getpgid(child.pid) != child.pid:
++                raise ValueError('Capture anchor changed process group')
++        except ProcessLookupError:
++            if os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT) is None: raise
++    try:
++        os.killpg(child.pid, number)
++        return True
++    except ProcessLookupError:
++        return False
++
++
++def capture(command, env=None, timeout=120, stdout_limit=67108864, stderr_limit=65536, *, combined_limit=None, pass_fds=()):
++    """Bound output/time while a live unreaped child anchors cleanup identity."""
++    if (type(timeout) not in (int, float) or not math.isfinite(timeout) or not 0 < timeout <= 120
++            or type(stdout_limit) is not int or not 1 <= stdout_limit <= 268435456
++            or type(stderr_limit) is not int or not 1 <= stderr_limit <= 1048576
++            or (combined_limit is not None and (type(combined_limit) is not int or not 1 <= combined_limit <= 268435456))):
++        raise ValueError('Invalid capture wall-time or output bound')
++    if not all(hasattr(os, name) for name in ('waitid', 'P_PID', 'WEXITED', 'WNOHANG', 'WNOWAIT')):
++        raise ValueError('Capture requires non-reaping child observation')
++    limits={'stdout':stdout_limit,'stderr':stderr_limit}
++    child=None; interrupted=[]; handlers={}; row={}; teardown_errors=[]
++    anchored=False; direct_child_reaped=False; command_result_observed=False
++    result_read,result_write=os.pipe(); life_read,life_write=os.pipe()
++    def forward(number,frame):
++        interrupted.append(number)
++        if child is not None:
++            try:signal_capture_group(child,number)
++            except (OSError,ValueError) as error:teardown_errors.append(str(error))
++    selector=selectors.DefaultSelector()
++    chunks={'stdout':bytearray(),'stderr':bytearray()}; result_bytes=b''
++    started=time.monotonic(); code=None
++    try:
++        for number in (signal.SIGINT,signal.SIGTERM):handlers[number]=signal.signal(number,forward)
++        child=subprocess.Popen([sys.executable,'-B',str(Path(__file__).resolve()),'--capture-anchor',
++            str(result_write),str(life_read),json.dumps(list(pass_fds)),json.dumps(list(command))],
++            env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True,
++            pass_fds=(*pass_fds,result_write,life_read))
++        os.close(result_write);result_write=None
++        os.close(life_read);life_read=None
++        for name in chunks:
++            stream=getattr(child,name);os.set_blocking(stream.fileno(),False)
++            selector.register(stream,selectors.EVENT_READ,name)
++        os.set_blocking(result_read,False);selector.register(result_read,selectors.EVENT_READ,'result')
++        while selector.get_map():
++            if interrupted:raise ValueError('Capture interrupted by signal '+str(interrupted[-1]))
++            if time.monotonic()-started>=timeout:raise ValueError('Capture exceeded wall-time limit')
++            if os.waitid(os.P_PID,child.pid,os.WEXITED | os.WNOHANG | os.WNOWAIT) is not None:
++                raise ValueError('Capture anchor exited before result/cleanup handoff')
++            for key,_ in selector.select(min(.1,timeout)):
++                fd=key.fileobj if isinstance(key.fileobj,int) else key.fileobj.fileno()
++                data=os.read(fd,17 if key.data=='result' else 8192)
++                if key.data=='result':
++                    if not data:raise ValueError('Capture result pipe closed before result')
++                    result_bytes+=data
++                    if len(result_bytes)>16:raise ValueError('Capture result protocol limit')
++                    if b'\n' in result_bytes:
++                        if re.fullmatch(rb'![0-9]{1,5}\n',result_bytes):
++                            raise ValueError('Capture launch failed errno '+result_bytes[1:-1].decode('ascii'))
++                        if not re.fullmatch(rb'-?[0-9]{1,3}\n',result_bytes):raise ValueError('Malformed capture result')
++                        code=int(result_bytes)
++                        if not -128<=code<=255:raise ValueError('Capture result outside exit-code range')
++                        command_result_observed=True;selector.unregister(key.fileobj)
++                    continue
++                if not data:selector.unregister(key.fileobj);continue
++                remaining=limits[key.data]-len(chunks[key.data])
++                if combined_limit is not None:remaining=min(remaining,combined_limit-sum(map(len,chunks.values())))
++                chunks[key.data].extend(data[:remaining])
++                if len(data)>remaining:raise ValueError('Capture exceeded output limit')
++        if interrupted:raise ValueError('Capture interrupted by signal '+str(interrupted[-1]))
++        row={'status':'passed' if code==0 else 'failed','exit_code':code,
++             **{key:bytes(value) for key,value in chunks.items()}}
++        return row
++    except (OSError,ValueError,subprocess.TimeoutExpired) as error:
++        row={'status':'unverified','reason':str(error),**{key:bytes(value) for key,value in chunks.items()}}
++        return row
++    finally:
++        if child is not None:
++            try:
++                signal_capture_group(child,signal.SIGKILL);anchored=True
++            except (OSError,ValueError) as error:teardown_errors.append(str(error))
++            os.close(life_write);life_write=None
++            try:
++                os.waitid(os.P_PID,child.pid,os.WEXITED | os.WNOHANG | os.WNOWAIT)
++                child.wait(timeout=5);direct_child_reaped=True
++            except (OSError,subprocess.TimeoutExpired) as error:teardown_errors.append(str(error))
++            for name in chunks:getattr(child,name).close()
++        for fd in (result_read,result_write,life_read,life_write):
++            if fd is not None:os.close(fd)
++        row.update(direct_child_reaped=direct_child_reaped,group_cleanup_identity_anchored=anchored,
++                   command_result_observed=command_result_observed,
++                   terminal_processes_verified=direct_child_reaped and anchored and command_result_observed and not teardown_errors,
++                   terminal_verification_scope='Observed command result and reaped direct anchor; complete descendant termination unverified',
++                   all_external_descendants_verified_terminal=False)
++        if teardown_errors:row.update(status='unverified',reason='Owned process teardown unverified: '+'; '.join(teardown_errors))
++        selector.close()
++        for number,handler in handlers.items():signal.signal(number,handler)
++
++
++
++def probe(command, env=None, timeout=15, limit=65536):
++    """Preserve the small combined-output contract for tool identity probes."""
++    if (type(timeout) not in (int,float) or not math.isfinite(timeout) or not 0 < timeout <= 60
++            or type(limit) is not int or not 1 <= limit <= 1048576):
++        raise ValueError('Invalid probe wall-time or output bound')
++    row=capture(command,env,timeout,limit,limit,combined_limit=limit)
++    for key in ('stdout','stderr'):row[key]=row[key].decode('utf-8',errors='replace').strip()
++    return row
++
++
++if __name__ == '__main__':
++    if len(sys.argv)==6 and sys.argv[1]=='--capture-anchor':
++        capture_anchor(int(sys.argv[2]),int(sys.argv[3]),json.loads(sys.argv[4]),json.loads(sys.argv[5]))
+--- a/tests/integration/run_physics_sim_headless_cli.sh
++++ b/tests/integration/run_physics_sim_headless_cli.sh
+@@ -7,8 +7,9 @@
+ OUT_DIR="$PHYSICS_DIR/tmp/headless_cli_portable_retained_scene"
+ SUMMARY="$OUT_DIR/run_summary.json"
+ PROGRESS="$OUT_DIR/run_progress.json"
+-STEP_LOG="/private/tmp/physics_sim_headless_step_progress.out"
+-VERSION_JSON="$($PHYSICS_DIR/physics_sim_headless --version)"
++STEP_LOG="$PHYSICS_DIR/tmp/headless_cli_step_progress.out"
++EXISTING_LOG="$PHYSICS_DIR/tmp/headless_cli_existing.out"
++VERSION_JSON="$("${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" --version)"
+ 
+ printf '%s' "$VERSION_JSON" | python3 -c '
+ import json
+@@ -40,7 +41,7 @@
+ fi
+ 
+ rm -rf "$OUT_DIR"
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --runtime-scene "$RUNTIME_SCENE" \
+   --frames 2 \
+   --output-root "$OUT_DIR" \
+@@ -63,22 +64,22 @@
+ rg -q '"sim_steps_total_in_frame"[[:space:]]*:[[:space:]]*0' "$PROGRESS"
+ test -d "$OUT_DIR/volume_frames"
+ 
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --runtime-scene "$RUNTIME_SCENE" \
+   --frames 1 \
+   --output-root "$OUT_DIR" \
+-  --save-volume-frames >/tmp/physics_sim_headless_existing.out 2>&1 && {
+-    cat /tmp/physics_sim_headless_existing.out >&2
++  --save-volume-frames >"$EXISTING_LOG" 2>&1 && {
++    cat "$EXISTING_LOG" >&2
+     echo "expected existing output root run to fail without --overwrite" >&2
+     exit 1
+   }
+-rg -q 'output root already exists and is not empty' /tmp/physics_sim_headless_existing.out
+-rg -q 'stage=prepare_output' /tmp/physics_sim_headless_existing.out
+-rg -q "output_root=$OUT_DIR" /tmp/physics_sim_headless_existing.out
+-rg -q 'action=choose a new output root or pass --overwrite' /tmp/physics_sim_headless_existing.out
++rg -q 'output root already exists and is not empty' "$EXISTING_LOG"
++rg -q 'stage=prepare_output' "$EXISTING_LOG"
++rg -q "output_root=$OUT_DIR" "$EXISTING_LOG"
++rg -q 'action=choose a new output root or pass --overwrite' "$EXISTING_LOG"
+ 
+ rm -f "$STEP_LOG"
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --runtime-scene "$RUNTIME_SCENE" \
+   --frames 1 \
+   --sim-steps-per-frame 2 \
+--- a/tests/integration/run_physics_sim_headless_dragonwind_orientation_probe.sh
++++ b/tests/integration/run_physics_sim_headless_dragonwind_orientation_probe.sh
+@@ -20,7 +20,7 @@
+   --runtime-scene "$SCENE" \
+   --object-id "$OBJECT_ID" \
+   --output-root "$OUT_DIR" \
+-  --headless-bin "$PHYSICS_DIR/physics_sim_headless" \
++  --headless-bin "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --frames "$FRAMES" \
+   --sim-steps-per-frame "$STEPS_PER_FRAME" \
+   --grid "$GRID" \
+--- a/tests/integration/run_physics_sim_headless_scene_project_cache_output.sh
++++ b/tests/integration/run_physics_sim_headless_scene_project_cache_output.sh
+@@ -18,7 +18,7 @@
+ cp "$FIXTURE_DIR/scene_runtime.json" "$PROJECT_DIR/scene_runtime.json"
+ cp "$PROJECT_DIR/scene_authoring.json" "$AUTHORING_BEFORE"
+ 
+-PHYSICS_SIM_PROJECT_CACHE_RUN_ID="$RUN_ID" "$PHYSICS_DIR/physics_sim_headless" \
++PHYSICS_SIM_PROJECT_CACHE_RUN_ID="$RUN_ID" "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --scene-project "$PROJECT_DIR" \
+   --frames 1 \
+   --grid 8x8x8 \
+--- a/tests/integration/run_physics_sim_headless_water_mode.sh
++++ b/tests/integration/run_physics_sim_headless_water_mode.sh
+@@ -10,7 +10,7 @@
+ WATER_MANIFEST="$RUN_DIR/water_manifest_v1.json"
+ 
+ rm -rf "$OUT_DIR"
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --water-mode \
+   --frames 2 \
+   --sim-steps-per-frame 1 \
+--- a/tests/integration/run_physics_sim_headless_water_object_coupling.sh
++++ b/tests/integration/run_physics_sim_headless_water_object_coupling.sh
+@@ -10,7 +10,7 @@
+ SURFACE="$RUN_DIR/water_surface_000005.json"
+ 
+ rm -rf "$OUT_DIR"
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --water-mode \
+   --frames 6 \
+   --sim-steps-per-frame 2 \
+--- a/tests/integration/run_physics_sim_headless_water_object_quality_compare.sh
++++ b/tests/integration/run_physics_sim_headless_water_object_quality_compare.sh
+@@ -26,7 +26,7 @@
+   local steps="$4"
+   local profile_root="$OUT_DIR/$label"
+ 
+-  "$PHYSICS_DIR/physics_sim_headless" \
++  "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+     --water-mode \
+     --frames "$frames" \
+     --sim-steps-per-frame "$steps" \
+--- a/tests/integration/run_physics_sim_headless_wind_analysis.sh
++++ b/tests/integration/run_physics_sim_headless_wind_analysis.sh
+@@ -10,7 +10,7 @@
+ PROJECTION="$OUT_DIR/wind_projection_frames/frame_000003.bmp"
+ 
+ rm -rf "$OUT_DIR"
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --runtime-scene "$RUNTIME_SCENE" \
+   --frames 4 \
+   --sim-steps-per-frame 4 \
+--- a/tests/integration/run_physics_sim_headless_wind_long_tunnel_video.sh
++++ b/tests/integration/run_physics_sim_headless_wind_long_tunnel_video.sh
+@@ -53,7 +53,7 @@
+ rm -rf "$OUT_DIR"
+ mkdir -p "$OUT_DIR"
+ 
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --runtime-scene "$RUNTIME_SCENE" \
+   --frames "$FRAMES" \
+   --sim-steps-per-frame "$STEPS_PER_FRAME" \
+--- a/tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh
++++ b/tests/integration/run_physics_sim_headless_wind_long_tunnel_visual.sh
+@@ -20,7 +20,7 @@
+ rm -rf "$OUT_DIR"
+ mkdir -p "$OUT_DIR"
+ 
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --runtime-scene "$RUNTIME_SCENE" \
+   --frames 6 \
+   --sim-steps-per-frame 8 \
+@@ -125,7 +125,7 @@
+ PY
+ 
+ set +e
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --runtime-scene "$RUNTIME_SCENE" \
+   --frames 6 \
+   --sim-steps-per-frame 8 \
+--- a/tests/integration/run_physics_sim_headless_wind_mesh_probe.sh
++++ b/tests/integration/run_physics_sim_headless_wind_mesh_probe.sh
+@@ -23,7 +23,7 @@
+   scene="${entry#*:}"
+   case_dir="$OUT_DIR/$name"
+   mkdir -p "$case_dir"
+-  "$PHYSICS_DIR/physics_sim_headless" \
++  "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+     --runtime-scene "$scene" \
+     --frames "$FRAMES" \
+     --sim-steps-per-frame "$STEPS_PER_FRAME" \
+--- a/tests/integration/run_physics_sim_headless_wind_object_comparison.sh
++++ b/tests/integration/run_physics_sim_headless_wind_object_comparison.sh
+@@ -24,7 +24,7 @@
+   scene="${entry#*:}"
+   case_dir="$OUT_DIR/$name"
+   mkdir -p "$case_dir"
+-  "$PHYSICS_DIR/physics_sim_headless" \
++  "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+     --runtime-scene "$scene" \
+     --frames "$FRAMES" \
+     --sim-steps-per-frame "$STEPS_PER_FRAME" \
+--- a/tests/integration/run_physics_sim_headless_wind_orientation_probe.sh
++++ b/tests/integration/run_physics_sim_headless_wind_orientation_probe.sh
+@@ -14,7 +14,7 @@
+   --runtime-scene "$SCENE" \
+   --object-id "$OBJECT_ID" \
+   --output-root "$OUT_DIR" \
+-  --headless-bin "$PHYSICS_DIR/physics_sim_headless" \
++  --headless-bin "${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --frames "$FRAMES" \
+   --sim-steps-per-frame "$STEPS_PER_FRAME" \
+   --grid "$GRID" \
+--- a/tests/integration/run_physics_sim_job_runner_bundle_smoke.sh
++++ b/tests/integration/run_physics_sim_job_runner_bundle_smoke.sh
+@@ -8,7 +8,7 @@
+   RUNNER="$ROOT_DIR/build/tools/cli/physics_sim_job_runner"
+ fi
+ if [[ ! -x "$RUNNER" ]]; then
+-  RUNNER="$ROOT_DIR/physics_sim_job_runner"
++  RUNNER="$ROOT_DIR/build/profiles/local-owned/bin/physics_sim_job_runner"
+ fi
+ 
+ DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
+--- a/tests/integration/run_physics_sim_job_runner_policy.sh
++++ b/tests/integration/run_physics_sim_job_runner_policy.sh
+@@ -8,7 +8,7 @@
+   RUNNER="$ROOT_DIR/build/tools/cli/physics_sim_job_runner"
+ fi
+ if [[ ! -x "$RUNNER" ]]; then
+-  RUNNER="$ROOT_DIR/physics_sim_job_runner"
++  RUNNER="$ROOT_DIR/build/profiles/local-owned/bin/physics_sim_job_runner"
+ fi
+ 
+ DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
+--- a/tests/integration/run_physics_sim_job_runner_smoke.sh
++++ b/tests/integration/run_physics_sim_job_runner_smoke.sh
+@@ -8,7 +8,7 @@
+   RUNNER="$ROOT_DIR/build/tools/cli/physics_sim_job_runner"
+ fi
+ if [[ ! -x "$RUNNER" ]]; then
+-  RUNNER="$ROOT_DIR/physics_sim_job_runner"
++  RUNNER="$ROOT_DIR/build/profiles/local-owned/bin/physics_sim_job_runner"
+ fi
+ 
+ DEFAULT_RUNTIME_SCENE="$ROOT_DIR/tests/fixtures/runtime_scene_primitive_retained.json"
+--- a/tests/integration/run_physics_sim_visual_artifact.sh
++++ b/tests/integration/run_physics_sim_visual_artifact.sh
+@@ -15,7 +15,7 @@
+ rm -rf "$ARTIFACT_ROOT"
+ mkdir -p "$RUN_DIR"
+ 
+-"$PHYSICS_DIR/physics_sim_headless" \
++"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
+   --runtime-scene "$RUNTIME_SCENE" \
+   --frames 1 \
+   --sim-steps-per-frame 4 \
+--- a/tests/test_atomic_output.py
++++ b/tests/test_atomic_output.py
+@@ -0,0 +1,199 @@
++"""Failure, interruption and dependency publication through actual compiler commands."""
++import os
++from pathlib import Path
++import shutil
++import signal
++import subprocess
++import sys
++import tempfile
++import time
++import unittest
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT/"scripts"))
++from build_outputs import record
++
++
++class AtomicOutput(unittest.TestCase):
++    def setUp(self):
++        self.temporary = tempfile.TemporaryDirectory()
++        self.addCleanup(self.temporary.cleanup)
++        self.repo = Path(self.temporary.name)
++        (self.repo/'scripts').mkdir()
++        (self.repo/'build').mkdir()
++        for name in ('atomic_output.py', 'build_owner.py', 'build_outputs.py', 'clean_outputs.py', 'check_clean_root.py'):
++            shutil.copy2(ROOT/'scripts'/name, self.repo/'scripts'/name)
++
++    def command(self, *argv):
++        return [sys.executable, '-B', 'scripts/atomic_output.py', '--', *argv]
++
++    def invoke(self, *argv):
++        return subprocess.run(self.command(*argv), cwd=self.repo, capture_output=True, text=True, timeout=30)
++
++    def test_compile_link_dependencies_and_failed_rebuild_preserve_last_good(self):
++        (self.repo/'probe.c').write_text('int main(void){return 7;}\n')
++        result = self.invoke('clang', '-MMD', '-MP', '-c', 'probe.c', '-o', 'build/probe.o')
++        self.assertEqual(result.returncode, 0, result.stderr)
++        obj = self.repo/'build/probe.o'; dep = obj.with_suffix('.d')
++        self.assertTrue(dep.read_text().startswith('build/probe.o:'))
++        self.assertNotIn('.staging-', dep.read_text())
++        before = (obj.read_bytes(), dep.read_bytes(), obj.stat().st_mtime_ns)
++        (self.repo/'probe.c').write_text('this is invalid C\n')
++        result = self.invoke('clang', '-MMD', '-c', 'probe.c', '-o', 'build/probe.o')
++        self.assertNotEqual(result.returncode, 0)
++        self.assertEqual((obj.read_bytes(), dep.read_bytes(), obj.stat().st_mtime_ns), before)
++        result = self.invoke('clang', 'build/probe.o', '-o', 'build/probe')
++        self.assertEqual(result.returncode, 0, result.stderr)
++        result = subprocess.run([str(self.repo/'build/probe')])
++        self.assertEqual(result.returncode, 7)
++        self.assertEqual(list((self.repo/'build').glob('.*.staging-*')), [])
++
++    def test_make_failed_rebuild_preserves_last_good_with_delete_on_error(self):
++        (self.repo/'src').mkdir()
++        source=self.repo/'src/probe.c';source.write_text('int value(void){return 7;}\n')
++        lines=(ROOT/'make/rules-build.mk').read_text().splitlines()
++        start=lines.index('$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c')
++        rule='\n'.join(lines[start:start+3])+'\n'
++        (self.repo/'Makefile').write_text('BUILD_DIR=build\nSRC_DIR=src\nCC=clang\nall: build/probe.o\n.DELETE_ON_ERROR:\n'+rule)
++        env={k:v for k,v in os.environ.items() if k not in ('MAKEFLAGS','MFLAGS','MAKEOVERRIDES')}
++        first=subprocess.run(['make'],cwd=self.repo,env=env,capture_output=True,text=True)
++        self.assertEqual(first.returncode,0,first.stderr)
++        obj=self.repo/'build/probe.o'; before=obj.read_bytes()
++        source.write_text('invalid C;\n')
++        # Force the source newer on hosts whose Make compares whole-second mtimes.
++        newer=obj.stat().st_mtime+2;os.utime(source,(newer,newer))
++        failed=subprocess.run(['make'],cwd=self.repo,env=env,capture_output=True,text=True)
++        self.assertNotEqual(failed.returncode,0)
++        self.assertEqual(obj.read_bytes(),before)
++
++    def test_partial_output_failure_does_not_publish(self):
++        output = self.repo/'build/probe'; output.write_bytes(b'last good'); record(self.repo, output, 'compiler')
++        script = "import pathlib,sys; pathlib.Path(sys.argv[-1]).write_bytes(b'partial');sys.exit(1)"
++        result = self.invoke(sys.executable, '-c', script, '-o', 'build/probe')
++        self.assertEqual(result.returncode, 1)
++        self.assertEqual(output.read_bytes(), b'last good')
++        self.assertEqual(list((self.repo/'build').glob('.*.staging-*')), [])
++
++    def test_interrupt_preserves_previous_output_and_removes_stage(self):
++        output = self.repo/'build/probe'; output.write_bytes(b'last good'); record(self.repo, output, 'compiler')
++        script = "import pathlib,sys,time;pathlib.Path(sys.argv[-1]).write_bytes(b'partial');pathlib.Path('ready').touch();time.sleep(20)"
++        process = subprocess.Popen(self.command(sys.executable, '-c', script, '-o', 'build/probe'), cwd=self.repo)
++        try:
++            deadline = time.monotonic()+5
++            while not (self.repo/'ready').exists() and time.monotonic()<deadline:
++                time.sleep(.01)
++            self.assertTrue((self.repo/'ready').exists())
++            process.send_signal(signal.SIGTERM)
++            self.assertEqual(process.wait(timeout=5), 143)
++            self.assertEqual(output.read_bytes(), b'last good')
++            self.assertEqual(list((self.repo/'build').glob('.*.staging-*')), [])
++        finally:
++            if process.poll() is None:
++                process.kill(); process.wait()
++
++    def test_unowned_and_changed_predecessors_are_held_before_compiler(self):
++        output = self.repo/'build/probe'; output.write_bytes(b'unknown retained bytes')
++        compiler = "import pathlib,sys;pathlib.Path('invoked').touch();pathlib.Path(sys.argv[-1]).write_bytes(b'new')"
++        for changed in (False, True):
++            if changed:
++                record(self.repo, output, 'compiler');output.write_bytes(b'changed after receipt')
++            before=output.read_bytes()
++            result=self.invoke(sys.executable, '-c', compiler, '-o', 'build/probe')
++            self.assertEqual(result.returncode,2,result.stderr)
++            self.assertFalse((self.repo/'invoked').exists())
++            self.assertEqual(output.read_bytes(),before)
++
++    def test_predecessor_changed_by_compiler_is_held_at_publication(self):
++        output=self.repo/'build/probe';output.write_bytes(b'owned');record(self.repo,output,'compiler')
++        compiler="import pathlib,sys;pathlib.Path('build/probe').write_bytes(b'concurrent change');pathlib.Path(sys.argv[-1]).write_bytes(b'new candidate')"
++        result=self.invoke(sys.executable,'-c',compiler,'-o','build/probe')
++        self.assertEqual(result.returncode,2,result.stderr)
++        self.assertEqual(output.read_bytes(),b'concurrent change')
++
++    def test_unknown_dependency_is_held_without_replacing_owned_object(self):
++        output=self.repo/'build/probe.o';output.write_bytes(b'owned');record(self.repo,output,'compiler')
++        dependency=output.with_suffix('.d');dependency.write_bytes(b'unknown dependency')
++        result=self.invoke('clang','-MMD','-c','missing.c','-o','build/probe.o')
++        self.assertEqual(result.returncode,2,result.stderr)
++        self.assertEqual(output.read_bytes(),b'owned')
++        self.assertEqual(dependency.read_bytes(),b'unknown dependency')
++
++    def test_compiler_shutdown_does_not_poll_or_reap_anchor_before_signaling(self):
++        wrapper = """import sys
++sys.path.insert(0,'scripts')
++import atomic_output as a
++class Child(a.subprocess.Popen):
++    def poll(self):raise AssertionError('Direct anchor must remain unreaped')
++a.subprocess.Popen=Child
++raise SystemExit(a.supervise_compiler([sys.executable,'-c','pass']))
++"""
++        result = subprocess.run([sys.executable,'-B','-c',wrapper],cwd=self.repo,
++                                capture_output=True,text=True,timeout=10)
++        self.assertEqual(result.returncode,0,result.stderr)
++
++    def test_cleanup_refusal_holds_stage_and_preserves_predecessor(self):
++        output=self.repo/'build/probe';output.write_bytes(b'last good');record(self.repo,output,'compiler')
++        wrapper = """import sys
++from pathlib import Path
++sys.path.insert(0,'scripts')
++import atomic_output as a
++def refuse(*args):raise ValueError('Injected cleanup identity refusal')
++a.signal_compiler_group=refuse
++try:a.run([sys.executable,'-c',"import pathlib,sys;pathlib.Path(sys.argv[-1]).write_bytes(b'candidate')",'-o','build/probe'],Path.cwd())
++except ValueError as e:print(e);raise SystemExit(2)
++"""
++        result=subprocess.run([sys.executable,'-B','-c',wrapper],cwd=self.repo,
++                              capture_output=True,text=True,timeout=10)
++        self.assertEqual(result.returncode,2,result.stderr)
++        self.assertIn('terminal ownership unverified',result.stdout)
++        self.assertEqual(output.read_bytes(),b'last good')
++        stages=list((self.repo/'build').glob('.probe.staging-*'))
++        self.assertEqual(len(stages),1)
++        self.assertEqual((stages[0]/'probe').read_bytes(),b'candidate')
++
++    def test_term_ignoring_compiler_has_bounded_shutdown_and_held_stage(self):
++        output=self.repo/'build/probe';output.write_bytes(b'last good');record(self.repo,output,'compiler')
++        script="import signal,pathlib,sys,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);pathlib.Path(sys.argv[-1]).write_bytes(b'partial');pathlib.Path('ready').touch();time.sleep(30)"
++        process=subprocess.Popen(self.command(sys.executable,'-c',script,'-o','build/probe'),cwd=self.repo,
++                                 stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
++        try:
++            deadline=time.monotonic()+5
++            while not (self.repo/'ready').exists() and time.monotonic()<deadline:time.sleep(.01)
++            self.assertTrue((self.repo/'ready').exists())
++            process.send_signal(signal.SIGTERM)
++            out,err=process.communicate(timeout=8)
++            self.assertEqual(process.returncode,2,err)
++            self.assertIn('terminal ownership unverified',err)
++            self.assertEqual(output.read_bytes(),b'last good')
++            self.assertEqual(len(list((self.repo/'build').glob('.probe.staging-*'))),1)
++        finally:
++            if process.poll() is None:process.kill();process.communicate(timeout=5)
++
++    def test_parent_death_stops_group_and_retains_unpublished_stage(self):
++        output=self.repo/'build/probe';output.write_bytes(b'last good');record(self.repo,output,'compiler')
++        script="import pathlib,sys,time;pathlib.Path(sys.argv[-1]).write_bytes(b'partial');pathlib.Path('ready').touch();time.sleep(1.5);pathlib.Path('unexpected-after-parent-death').touch()"
++        process=subprocess.Popen(self.command(sys.executable,'-c',script,'-o','build/probe'),cwd=self.repo,
++                                 stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
++        try:
++            deadline=time.monotonic()+5
++            while not (self.repo/'ready').exists() and time.monotonic()<deadline:time.sleep(.01)
++            self.assertTrue((self.repo/'ready').exists())
++            process.kill();process.wait(timeout=5)
++            time.sleep(1.7)
++            self.assertFalse((self.repo/'unexpected-after-parent-death').exists())
++            self.assertEqual(output.read_bytes(),b'last good')
++            self.assertEqual(len(list((self.repo/'build').glob('.probe.staging-*'))),1)
++        finally:
++            if process.poll() is None:process.kill();process.wait(timeout=5)
++
++    def test_source_and_symlink_outputs_are_refused_before_command(self):
++        source=self.repo/'probe.c';source.write_bytes(b'preserved')
++        (self.repo/'build/alias').symlink_to(source)
++        for output in ('probe.c', 'build/alias', 'build/alias/file'):
++            result=self.invoke('clang', '-o', output, 'missing.c')
++            self.assertNotEqual(result.returncode, 0)
++            self.assertEqual(source.read_bytes(), b'preserved')
++
++
++if __name__ == '__main__':
++    unittest.main()
+--- a/tests/test_build_identity.py
++++ b/tests/test_build_identity.py
+@@ -0,0 +1,69 @@
++"""Compiler configuration drift changes the actual owning object rule's output."""
++from pathlib import Path
++import os
++import shutil
++import subprocess
++import tempfile
++import unittest
++
++ROOT = Path(__file__).resolve().parents[1]
++FIXTURE_ENV = {k:v for k,v in os.environ.items() if k not in ('MAKEFLAGS', 'MFLAGS', 'MAKEOVERRIDES')}
++
++
++class BuildIdentity(unittest.TestCase):
++    def test_changed_flags_rebuild_unchanged_configuration_does_not(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            repo = Path(temporary)
++            (repo/'src').mkdir(); (repo/'scripts').mkdir(); (repo/'make').mkdir()
++            (repo/'src/probe.c').write_text('int value(void){return VALUE;}\n')
++            for name in ('tool_probe.py','build_identity.py', 'build_outputs.py', 'clean_outputs.py', 'check_clean_root.py', 'atomic_output.py', 'build_owner.py'):
++                shutil.copy2(ROOT/'scripts'/name, repo/'scripts'/name)
++            shutil.copy2(ROOT/'make/build-identity.mk', repo/'make/build-identity.mk')
++            lines=(ROOT/'make/rules-build.mk').read_text().splitlines()
++            start=lines.index('$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c')
++            rule='\n'.join(lines[start:start+3])+'\n'
++            (repo/'Makefile').write_text('BUILD_DIR=build\nSRC_DIR=src\nCC=clang\nCLANG=clang\nCFLAGS ?= -DVALUE=1\nOBJS=build/probe.o\nall: $(OBJS)\n'+rule+'include make/build-identity.mk\n')
++            def make(*arguments):
++                result=subprocess.run(['make', *arguments],cwd=repo,env=FIXTURE_ENV,capture_output=True,text=True,timeout=60)
++                self.assertEqual(result.returncode,0,result.stdout+result.stderr)
++            make(); obj=repo/'build/probe.o';stamp=next((repo/'build/.configuration').glob('*-*.json'))
++            first=obj.read_bytes(); before=(obj.stat().st_mtime_ns,stamp.stat().st_mtime_ns)
++            make();self.assertEqual((obj.stat().st_mtime_ns,stamp.stat().st_mtime_ns),before)
++            make('CFLAGS=-DVALUE=2');self.assertNotEqual(obj.read_bytes(),first)
++            stamp=max((repo/'build/.configuration').glob('*-*.json'),key=lambda p:p.stat().st_mtime_ns)
++            changed=(obj.stat().st_mtime_ns,stamp.stat().st_mtime_ns)
++            make('CFLAGS=-DVALUE=2');self.assertEqual((obj.stat().st_mtime_ns,stamp.stat().st_mtime_ns),changed)
++            # Relevant Make configuration changes also invalidate the object.
++            with (repo/'Makefile').open('a') as stream:stream.write('\n# configuration edit\n')
++            make('CFLAGS=-DVALUE=2');self.assertEqual(len(list((repo/'build/.configuration').glob('*-*.json'))),3)
++            make('CFLAGS=-DVALUE=1');self.assertEqual(obj.read_bytes(),first)
++            # The publication implementation is itself a build input.
++            with (repo/'scripts/atomic_output.py').open('a') as stream:stream.write('\n# publication implementation edit\n')
++            make('CFLAGS=-DVALUE=1')
++            self.assertEqual(len(list((repo/'build/.configuration').glob('*-*.json'))),5)
++            for override in ('BUILD_DIR=src', 'TARGET=src/probe.c', 'TARGET=physics_sim', 'SHAPE_MASK_TOOL_BIN=data/tools/shape_mask_tool'):
++                source = (repo/'src/probe.c').read_bytes()
++                result = subprocess.run(['make', override], cwd=repo, env=FIXTURE_ENV,
++                                        capture_output=True, text=True, timeout=60)
++                self.assertNotEqual(result.returncode, 0, override)
++                self.assertEqual((repo/'src/probe.c').read_bytes(), source)
++            # An existing Make target must not bypass graph-selection admission.
++            active=(repo/'build/.configuration/active.json')
++            import json
++            row=json.loads(active.read_text())
++            selected=repo/'build/.configuration'/(row['digest']+'-'+str(row['generation'])+'.json')
++            selected.write_bytes(b'unknown changed configuration')
++            object_before=obj.read_bytes()
++            held=subprocess.run(['make','CFLAGS=-DVALUE=1'],cwd=repo,env=FIXTURE_ENV,
++                                capture_output=True,text=True,timeout=60)
++            self.assertNotEqual(held.returncode,0)
++            self.assertEqual(obj.read_bytes(),object_before)
++            self.assertEqual(selected.read_bytes(),b'unknown changed configuration')
++            active.unlink()
++            held=subprocess.run(['make','CFLAGS=-DVALUE=1'],cwd=repo,env=FIXTURE_ENV,
++                                capture_output=True,text=True,timeout=60)
++            self.assertNotEqual(held.returncode,0)
++            self.assertFalse(active.exists())
++
++
++if __name__ == '__main__':unittest.main()
+--- a/tests/test_build_output_isolation.py
++++ b/tests/test_build_output_isolation.py
+@@ -0,0 +1,48 @@
++"""Two real Make builds own independent file targets; aliases do not relink."""
++import os
++from pathlib import Path
++import shutil
++import subprocess
++import tempfile
++import unittest
++
++ROOT=Path(__file__).resolve().parents[1]
++ENV={k:v for k,v in os.environ.items() if k not in ('MAKEFLAGS','MFLAGS','MAKEOVERRIDES')}
++
++class Isolation(unittest.TestCase):
++    def test_concurrent_roots_and_incremental_selection(self):
++        with tempfile.TemporaryDirectory() as temporary:
++            repo=Path(temporary)
++            for name in ('scripts','make','src'): (repo/name).mkdir()
++            for name in ('tool_probe.py','atomic_output.py', 'build_owner.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
++                shutil.copy2(ROOT/'scripts'/name,repo/'scripts'/name)
++            for name in ('config.mk','sources-tools.mk','build-identity.mk'):
++                shutil.copy2(ROOT/'make'/name,repo/'make'/name)
++            for name in ('VERSION','WORKER_VERSION'): (repo/name).write_text('test\n')
++            (repo/'src/probe.c').write_text('int main(void){return VALUE;}\n')
++            (repo/'physics_sim_headless').write_bytes(b'legacy binary preserved')
++            lines=(ROOT/'make/rules-build.mk').read_text().splitlines();start=lines.index('$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c');compile_rule='\n'.join(lines[start:start+3])+'\n'
++            lines=(ROOT/'make/rules-tools.mk').read_text().splitlines();start=lines.index('$(PHYSICS_SIM_HEADLESS_TOOL_BIN): $(PHYSICS_SIM_HEADLESS_TOOL_OBJ) $(PHYSICS_SIM_HEADLESS_WORKER_OBJS)');link_rule='\n'.join(lines[start:start+2])+'\n'
++            (repo/'Makefile').write_text('include make/config.mk\ninclude make/sources-tools.mk\nCFLAGS=-DVALUE=$(VALUE)\nPHYSICS_SIM_HEADLESS_TOOL_OBJ=$(BUILD_DIR)/probe.o\nall: physics_sim_headless\n.PHONY: physics_sim_headless\nphysics_sim_headless: $(PHYSICS_SIM_HEADLESS_TOOL_BIN)\n'+compile_rule+link_rule+'include make/build-identity.mk\n')
++            processes=[subprocess.Popen(['make','BUILD_DIR=build/'+name,'VALUE='+value],cwd=repo,env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True) for name,value in [('a','7'),('b','9')]]
++            try:
++                results=[(process,process.communicate(timeout=30)) for process in processes]
++                for process,(out,err) in results:
++                    self.assertEqual(process.returncode,0,out+err)
++            finally:
++                for process in processes:
++                    if process.poll() is None:process.kill()
++                    process.communicate(timeout=30)
++            snapshots={}
++            for name,value in [('a',7),('b',9)]:
++                binary=repo/'build'/name/'bin/physics_sim_headless'
++                self.assertEqual(subprocess.run([str(binary)]).returncode,value)
++                snapshots[name]=(binary.read_bytes(),binary.stat().st_mtime_ns)
++            for name,value in [('a','7'),('b','9')]:
++                result=subprocess.run(['make','BUILD_DIR=build/'+name,'VALUE='+value],cwd=repo,env=ENV,capture_output=True,text=True,timeout=30)
++                self.assertEqual(result.returncode,0,result.stderr)
++                for other in ('a','b'):
++                    p=repo/'build'/other/'bin/physics_sim_headless';self.assertEqual((p.read_bytes(),p.stat().st_mtime_ns),snapshots[other])
++            self.assertEqual((repo/'physics_sim_headless').read_bytes(),b'legacy binary preserved')
++
++if __name__=='__main__':unittest.main()
+--- a/tests/test_build_owner.py
++++ b/tests/test_build_owner.py
+@@ -0,0 +1,255 @@
++"""Whole Make ownership excludes cleanup and conflicting configuration selection."""
++import fcntl
++import os
++from pathlib import Path
++import re
++import shutil
++import signal
++import subprocess
++import sys
++import tempfile
++import time
++import unittest
++
++ROOT=Path(__file__).resolve().parents[1]
++ENV={k:v for k,v in os.environ.items() if k not in ('MAKEFLAGS','MFLAGS','MAKEOVERRIDES') and not k.startswith('PHYSICS_SIM_BUILD_OWNER') and not k.endswith('_FD')}
++
++class Ownership(unittest.TestCase):
++    def setUp(self):
++        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
++        self.repo=Path(self.temp.name).resolve()
++        for folder in ('scripts','make','build/a','data/experiments'): (self.repo/folder).mkdir(parents=True)
++        for name in ('build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py'):
++            shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
++        (self.repo/'build/a/object.o').write_bytes(b'preserved')
++        subprocess.run([sys.executable,'-B','-c',"import sys;sys.path.insert(0,'scripts');from pathlib import Path;from build_outputs import record;record(Path.cwd(),Path('build/a/object.o').absolute(),'compiler')"],cwd=self.repo,check=True)
++
++    def owner(self, root, *command):
++        return [sys.executable,'-B','scripts/build_owner.py','--root',root,'--',*command]
++
++    def wait_ready(self,process):
++        deadline=time.monotonic()+5
++        while not (self.repo/'ready').exists() and process.poll() is None and time.monotonic()<deadline:time.sleep(.01)
++        self.assertTrue((self.repo/'ready').exists())
++
++    def clean_command(self):
++        return [sys.executable,'-B','scripts/clean_outputs.py','--build-root','build/a','--test-root','tmp/tests','--experiment-root','data/experiments','--tools-root','data/tools','--apply']
++
++    def test_live_build_blocks_same_root_and_cleanup_allows_independent_root(self):
++        code="from pathlib import Path;from build_owner import inherited;import time;assert inherited(Path.cwd(),Path.cwd()/'build/a');Path('ready').touch();time.sleep(30)"
++        process=subprocess.Popen(self.owner('build/a',sys.executable,'-c',"import sys;sys.path.insert(0,'scripts');"+code),cwd=self.repo,env=ENV)
++        try:
++            self.wait_ready(process)
++            same=subprocess.run(self.owner('build/a',sys.executable,'-c',"raise Exception('must not execute')"),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertEqual(same.returncode,2);self.assertIn('held',same.stderr)
++            other=subprocess.run(self.owner('build/b',sys.executable,'-c',"from pathlib import Path;Path('independent').touch()"),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertEqual(other.returncode,0,other.stderr)
++            clean=subprocess.run(self.clean_command(),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertNotEqual(clean.returncode,0)
++            self.assertEqual((self.repo/'build/a/object.o').read_bytes(),b'preserved')
++            process.send_signal(signal.SIGTERM);self.assertEqual(process.wait(timeout=5),143)
++            clean=subprocess.run(self.clean_command(),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertEqual(clean.returncode,0,clean.stderr);self.assertFalse((self.repo/'build/a').exists())
++        finally:
++            if process.poll() is None:process.terminate();process.wait(timeout=5)
++
++    def test_overlapping_roots_conflict_in_both_orders_and_siblings_remain_independent(self):
++        for active, blocked, independent in (
++            ('build/a', 'build/a/nested', 'build/b'),
++            ('build/a/nested', 'build/a', 'build/a/sibling'),
++            ('build/a/nested', 'build', 'build/b'),
++            ('build', 'build/a', None),
++        ):
++            with self.subTest(active=active, blocked=blocked):
++                (self.repo/'ready').unlink(missing_ok=True)
++                process=subprocess.Popen(self.owner(active,sys.executable,'-c',
++                    "from pathlib import Path;import time;Path('ready').touch();time.sleep(30)"),cwd=self.repo,env=ENV)
++                try:
++                    self.wait_ready(process)
++                    result=subprocess.run(self.owner(blocked,sys.executable,'-c',
++                        "from pathlib import Path;Path('unexpected').touch()"),cwd=self.repo,env=ENV,capture_output=True,text=True)
++                    self.assertEqual(result.returncode,2,result.stderr)
++                    self.assertFalse((self.repo/'unexpected').exists())
++                    if independent:
++                        result=subprocess.run(self.owner(independent,sys.executable,'-c','pass'),cwd=self.repo,env=ENV,capture_output=True,text=True)
++                        self.assertEqual(result.returncode,0,result.stderr)
++                finally:
++                    process.terminate();process.wait(timeout=5)
++                result=subprocess.run(self.owner(blocked,sys.executable,'-c','pass'),cwd=self.repo,env=ENV,capture_output=True,text=True)
++                self.assertEqual(result.returncode,0,result.stderr)
++
++    def test_escaped_compiler_retains_lock_after_supervisor_and_anchor_are_killed(self):
++        script="import os,pathlib,sys,time;os.setsid();pathlib.Path('pids').write_text(str(os.getpid())+' '+str(os.getppid()));pathlib.Path('ready').touch();deadline=time.monotonic()+10\nwhile not pathlib.Path('release').exists() and time.monotonic()<deadline:time.sleep(.01)\npathlib.Path(sys.argv[-1]).write_bytes(b'new output')"
++        command=[sys.executable,'-B','scripts/atomic_output.py','--',sys.executable,'-c',script,'-o','build/a/object.o']
++        process=subprocess.Popen(self.owner('build/a',*command),cwd=self.repo,env=ENV)
++        helper=None
++        try:
++            self.wait_ready(process)
++            compiler,helper=map(int,(self.repo/'pids').read_text().split())
++            process.kill();process.wait(timeout=5)
++            os.kill(helper,signal.SIGKILL)
++            clean=subprocess.run(self.clean_command(),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertNotEqual(clean.returncode,0)
++            # Inventory may reject the held stage before testing kernel locks.
++            # The independent overlapping-root attempt below must still prove
++            # that the escaped compiler retains the inherited owner descriptors.
++            self.assertTrue('held by active build' in clean.stderr or 'Unknown build directory; cleanup held' in clean.stderr,clean.stderr)
++            self.assertEqual((self.repo/'build/a/object.o').read_bytes(),b'preserved')
++            parent=subprocess.run(self.owner('build',sys.executable,'-c','pass'),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertEqual(parent.returncode,2,parent.stderr)
++            (self.repo/'release').touch()
++            deadline=time.monotonic()+5
++            while time.monotonic()<deadline:
++                parent=subprocess.run(self.owner('build',sys.executable,'-c','pass'),cwd=self.repo,env=ENV,capture_output=True,text=True)
++                if parent.returncode==0:break
++                time.sleep(.01)
++            self.assertEqual(parent.returncode,0,parent.stderr)
++            clean=subprocess.run(self.clean_command(),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertNotEqual(clean.returncode,0)
++            self.assertIn('Unknown disposable output; cleanup held',clean.stderr)
++            self.assertEqual((self.repo/'build/a/object.o').read_bytes(),b'preserved')
++        finally:
++            (self.repo/'release').touch()
++            if process.poll() is None:process.kill();process.wait()
++
++    def test_active_cleanup_blocks_build_before_any_output(self):
++        locks=self.repo/'tmp/locks';locks.mkdir(parents=True)
++        with (locks/'clean.lock').open('w') as lock:
++            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
++            result=subprocess.run(self.owner('build/a',sys.executable,'-c',"from pathlib import Path;Path('unexpected').touch()"),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertEqual(result.returncode,2);self.assertFalse((self.repo/'unexpected').exists())
++
++    def test_anchor_is_not_polled_before_group_cleanup(self):
++        script="""import sys
++sys.path.insert(0,'scripts')
++import build_owner as b
++class Child(b.subprocess.Popen):
++    def poll(self):raise AssertionError('Build anchor polled before cleanup')
++b.subprocess.Popen=Child
++raise SystemExit(b.run('build/a',[sys.executable,'-c','pass']))
++"""
++        result=subprocess.run([sys.executable,'-B','-c',script],cwd=self.repo,env=ENV,
++                              capture_output=True,text=True,timeout=10)
++        self.assertEqual(result.returncode,0,result.stderr)
++
++    def test_interruption_preserves_nested_cleanup_grace(self):
++        script="""import pathlib,signal,time,sys
++def stop(*args):
++    time.sleep(.15)
++    pathlib.Path('nested-cleanup-complete').touch()
++    sys.exit(0)
++signal.signal(signal.SIGTERM,stop)
++pathlib.Path('ready').touch()
++time.sleep(30)
++"""
++        process=subprocess.Popen(self.owner('build/a',sys.executable,'-c',script),cwd=self.repo,
++                                 env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
++        try:
++            self.wait_ready(process)
++            process.send_signal(signal.SIGTERM)
++            out,err=process.communicate(timeout=8)
++            self.assertEqual(process.returncode,143,out+err)
++            self.assertTrue((self.repo/'nested-cleanup-complete').exists())
++            clean=subprocess.run(self.clean_command(),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertEqual(clean.returncode,0,clean.stderr)
++        finally:
++            if process.poll() is None:process.kill();process.communicate(timeout=8)
++
++    def test_parent_death_stops_in_group_writer(self):
++        script="import pathlib,time;pathlib.Path('ready').touch();time.sleep(1.5);pathlib.Path('unexpected-parent-death').touch()"
++        process=subprocess.Popen(self.owner('build/a',sys.executable,'-c',script),cwd=self.repo,
++                                 env=ENV,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
++        try:
++            self.wait_ready(process)
++            process.kill();process.wait(timeout=5)
++            time.sleep(1.7)
++            self.assertFalse((self.repo/'unexpected-parent-death').exists())
++            clean=subprocess.run(self.clean_command(),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertEqual(clean.returncode,0,clean.stderr)
++        finally:
++            if process.poll() is None:process.kill();process.wait(timeout=5)
++
++    def test_completed_command_group_is_cleaned_before_owner_release(self):
++        script="import subprocess,sys;subprocess.Popen([sys.executable,'-c',\"import pathlib,time;time.sleep(1);pathlib.Path('unexpected-lingering-writer').touch()\"])"
++        result=subprocess.run(self.owner('build/a',sys.executable,'-c',script),cwd=self.repo,
++                              env=ENV,capture_output=True,text=True,timeout=8)
++        self.assertEqual(result.returncode,0,result.stderr)
++        time.sleep(1.2)
++        self.assertFalse((self.repo/'unexpected-lingering-writer').exists())
++        clean=subprocess.run(self.clean_command(),cwd=self.repo,env=ENV,capture_output=True,text=True)
++        self.assertEqual(clean.returncode,0,clean.stderr)
++
++    def test_reaped_anchor_never_authorizes_saved_group_signal(self):
++        script="""import sys
++from unittest.mock import patch
++sys.path.insert(0,'scripts')
++import build_owner as b
++class Reaped:
++    returncode=0
++    pid=12345
++with patch.object(b.os,'killpg',side_effect=AssertionError('saved group signaled')):
++    try:b.signal_build_group(Reaped(),15)
++    except ValueError:pass
++    else:raise AssertionError('Reaped group accepted')
++"""
++        result=subprocess.run([sys.executable,'-B','-c',script],cwd=self.repo,env=ENV,
++                              capture_output=True,text=True,timeout=8)
++        self.assertEqual(result.returncode,0,result.stderr)
++
++    def test_term_ignoring_build_is_bounded_and_unknown_output_stays_held(self):
++        script="import pathlib,signal,time;signal.signal(signal.SIGTERM,signal.SIG_IGN);pathlib.Path('build/a/unknown-partial').write_bytes(b'partial');pathlib.Path('ready').touch();time.sleep(30)"
++        process=subprocess.Popen(self.owner('build/a',sys.executable,'-c',script),cwd=self.repo,
++                                 env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
++        try:
++            self.wait_ready(process)
++            process.send_signal(signal.SIGTERM)
++            out,err=process.communicate(timeout=10)
++            self.assertEqual(process.returncode,2,out+err)
++            self.assertIn('terminal ownership unverified',err)
++            clean=subprocess.run(self.clean_command(),cwd=self.repo,env=ENV,capture_output=True,text=True)
++            self.assertNotEqual(clean.returncode,0)
++            self.assertIn('Unknown disposable output',clean.stderr)
++            self.assertEqual((self.repo/'build/a/unknown-partial').read_bytes(),b'partial')
++            self.assertEqual((self.repo/'build/a/object.o').read_bytes(),b'preserved')
++        finally:
++            if process.poll() is None:process.kill();process.communicate(timeout=8)
++
++    def test_invalid_supervision_bound_is_refused_before_launch(self):
++        script="""import sys
++from unittest.mock import patch
++sys.path.insert(0,'scripts')
++import build_owner as b
++with patch.object(b.subprocess,'Popen',side_effect=AssertionError('invalid bound launched')):
++    for value in (0,-1,True,float('nan'),float('inf'),86401,'10'):
++        try:b.supervise_build(['missing'],wall_cap=value)
++        except ValueError:pass
++        else:raise AssertionError('invalid bound accepted')
++"""
++        result=subprocess.run([sys.executable,'-B','-c',script],cwd=self.repo,env=ENV,
++                              capture_output=True,text=True,timeout=8)
++        self.assertEqual(result.returncode,0,result.stderr)
++
++    def test_actual_top_level_make_preserves_overrides_and_owns_complete_recipe(self):
++        text=(ROOT/'makefile').read_text();(self.repo/'makefile').write_text(text)
++        for name in re.findall(r'^include (make/[^\n]+)',text,re.M):
++            (self.repo/name).write_text('')
++        for name in ('config.mk','sources-tools.mk','rules-runtime.mk'):
++            shutil.copy2(ROOT/'make'/name,self.repo/'make'/name)
++        for name in ('VERSION','WORKER_VERSION'):(self.repo/name).write_text('test\n')
++        (self.repo/'probe.py').write_text("from pathlib import Path\nimport sys,time\nsys.path.insert(0,'scripts')\nfrom build_owner import inherited\nassert inherited(Path.cwd(),Path.cwd()/'build/a')\nPath('ready').touch()\ntime.sleep(.3)\nPath('flags').write_text(sys.argv[1])\n")
++        (self.repo/'make/rules-build.mk').write_text("all: first second\nfirst:\n\tpython3 -B probe.py '$(CFLAGS)'\nsecond: first\n\t@touch second\n")
++        process=subprocess.Popen(['make','-j2','BUILD_DIR=build/a','CFLAGS=-DVALUE=2 -g','first','second'],cwd=self.repo,env=ENV,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
++        self.wait_ready(process)
++        clean=subprocess.run(['make','BUILD_DIR=build/a','clean'],cwd=self.repo,env=ENV,capture_output=True,text=True)
++        self.assertNotEqual(clean.returncode,0)
++        out,err=process.communicate(timeout=10);self.assertEqual(process.returncode,0,out+err)
++        self.assertNotIn('jobserver unavailable',err)
++        self.assertEqual((self.repo/'flags').read_text(),'-DVALUE=2 -g')
++        self.assertTrue((self.repo/'second').exists())
++        mixed=subprocess.run(['make','BUILD_DIR=build/a','clean','all'],cwd=self.repo,env=ENV,capture_output=True,text=True)
++        self.assertNotEqual(mixed.returncode,0)
++        self.assertIn('separate operations',mixed.stderr)
++        result=subprocess.run(['make','-n','BUILD_DIR=build/a','first'],cwd=self.repo,env=ENV,capture_output=True,text=True)
++        self.assertEqual(result.returncode,0,result.stderr);self.assertNotIn('build_owner.py --root',result.stdout)
++
++if __name__=='__main__':unittest.main()

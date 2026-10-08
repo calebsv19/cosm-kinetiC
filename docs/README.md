@@ -14,6 +14,11 @@ Command context:
   verification lists below
 
 ## Scaffold State
+- `docs/focused_cleanup_closeout.md`: completed focused cleanup, independently verified archive coverage, source evidence and deferred limits.
+- `docs/cleanup_operations.md`: owned compilation profiles, guarded clean, retained storage, and legacy-output preservation.
+- `docs/launcher_configuration_recovery.md`: private packaged configuration, legacy adoption, retained attempts, and interruption holds.
+- `docs/packaging_lifecycle_operations.md`: preserved package outputs, retained bundling/proofs, and optional Linux installer recovery.
+- `docs/focused_cleanup_progress.md`: current adoption evidence and remaining focused cleanup work.
 - `docs/current_truth.md`: current runtime structure, truthful `3D` export state, and verification snapshot.
 - `docs/main_edit_worktree.md`: persistent functional-development lane,
   isolated `kinetiC Main Edit.app` identity, verification, integration, and

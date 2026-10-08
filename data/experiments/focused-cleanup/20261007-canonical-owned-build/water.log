@@ -1,0 +1,16 @@
+fatal: not a git repository (or any of the parent directories): .git
+python3 -B scripts/build_owner.py --root 'build' -- /Applications/Xcode.app/Contents/Developer/usr/bin/make -f 'makefile' 'test-physics-sim-headless-water-mode'
+fatal: not a git repository (or any of the parent directories): .git
+USING MAKEFILE AT: /private/tmp/physics-focused-build-20261007/repo/makefile
+tests/integration/run_physics_sim_headless_water_mode.sh
+[scene] Space mode 3D requested; using controlled 3D lane with scaffold backend and compatibility XY projection.
+[physics_sim_headless] progress: frame=0/2 step=0/0 stage=pending
+[physics_sim_headless] progress: frame=0/2 step=1/1 stage=simulating_frame
+[physics_sim_headless] progress: frame=1/2 step=1/1 stage=simulating_frame
+[physics_sim_headless] progress: frame=2/2 step=0/0 stage=finishing final
+[physics_sim_headless] PASS
+[physics_sim_headless] runtime: 
+[physics_sim_headless] output:  /private/tmp/physics-focused-build-20261007/repo/tmp/headless_water_mode
+[physics_sim_headless] summary: /private/tmp/physics-focused-build-20261007/repo/tmp/headless_water_mode/run_summary.json
+[physics_sim_headless] progress: /private/tmp/physics-focused-build-20261007/repo/tmp/headless_water_mode/run_progress.json
+physics_sim headless water mode smoke passed: /private/tmp/physics-focused-build-20261007/repo/tmp/headless_water_mode/run_summary.json

@@ -1,0 +1,73 @@
+{
+  "after_inventory": {
+    "binary": {
+      ".": {
+        "bytes": 33032,
+        "kind": "file",
+        "mode": 493,
+        "sha256": "6ace5b586ea702504102f643f6ce24ea793accc2a9552bc68e4359986acbfe6e"
+      }
+    },
+    "frameworks": {
+      ".": {
+        "kind": "directory",
+        "mode": 493
+      },
+      "libphysics_fixture.dylib": {
+        "bytes": 16512,
+        "kind": "file",
+        "mode": 493,
+        "sha256": "12ffeaf002de1dc5c0cf47ab227034d8af51efa78948130be2d9891e2cb79292"
+      }
+    }
+  },
+  "aggregate_output_storage_enforced": false,
+  "all_external_descendants_verified_terminal": false,
+  "artifact_class": "retained_evidence",
+  "automatic_removal": false,
+  "automatic_rollback_performed": false,
+  "before_inventory": {
+    "binary": {
+      ".": {
+        "bytes": 33032,
+        "kind": "file",
+        "mode": 493,
+        "sha256": "71cd8f0a943a76169ff3f95afa2e637c511aa37244345fde43341352543e23b3"
+      }
+    },
+    "frameworks": {
+      ".": {
+        "kind": "directory",
+        "mode": 493
+      }
+    }
+  },
+  "binary": "/private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt/fixture.app/Contents/MacOS/physics-sim-bin",
+  "combined_log_cap_bytes": 67108864,
+  "commands": [
+    {
+      "all_external_descendants_verified_terminal": false,
+      "command": [
+        "/bin/sh",
+        "/private/tmp/physics-packaging-adoption-20261007/native-source/data/experiments/package-bundler-attempts/bundle-4ff1d14dd3b549019459e5b586992d04/control/macos_bundle_engine.sh",
+        "/private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt/fixture.app/Contents/MacOS/physics-sim-bin",
+        "/private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt/fixture.app/Contents/Frameworks",
+        "/private/tmp/physics-packaging-adoption-20261007/native-source/data/experiments/package-bundler-attempts/bundle-4ff1d14dd3b549019459e5b586992d04/work"
+      ],
+      "direct_child_reaped": true,
+      "exit_code": 0,
+      "group_cleanup_identity_anchored": true,
+      "terminal_verification_scope": "Observed command outcome and reaped direct anchor; complete descendant termination unverified",
+      "wall_s": 0.13184516690671444
+    }
+  ],
+  "complete_dependency_capture": false,
+  "frameworks": "/private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt/fixture.app/Contents/Frameworks",
+  "release_authority_granted": false,
+  "reservation": "/private/tmp/physics-packaging-adoption-20261007/native-source/dist/native-attempt/.package-reservations/a61166238d4b188dc26aeb3b0e1e6d94693d7a85ee70256b6f5ca1d3f78a7046.json",
+  "schema": "physics_sim_macos_bundle_attempt_v1",
+  "search_roots": "/private/tmp/physics-packaging-adoption-20261007/native-source/dependencies",
+  "status": "passed",
+  "terminal_verification_scope": "Owned command/anchor and local operations only; complete descendants unverified",
+  "wall_cap_s": 60
+}

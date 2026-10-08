@@ -53,7 +53,7 @@ fi
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames "$FRAMES" \
   --sim-steps-per-frame "$STEPS_PER_FRAME" \

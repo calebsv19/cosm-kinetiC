@@ -10,7 +10,7 @@ TIMESERIES="$OUT_DIR/wind_analysis_timeseries.jsonl"
 PROJECTION="$OUT_DIR/wind_projection_frames/frame_000003.bmp"
 
 rm -rf "$OUT_DIR"
-"$PHYSICS_DIR/physics_sim_headless" \
+"${PHYSICS_SIM_HEADLESS_BIN:-$PHYSICS_DIR/build/profiles/local-owned/bin/physics_sim_headless}" \
   --runtime-scene "$RUNTIME_SCENE" \
   --frames 4 \
   --sim-steps-per-frame 4 \
