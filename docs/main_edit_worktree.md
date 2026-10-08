@@ -118,3 +118,20 @@ worktrees retain it. Main Edit packaging requires an icon input. Its self-test
 requires the bundled icon, the matching `CFBundleIconFile`, and byte equality
 with the selected `.icns` input. Missing icons must fail rather than silently
 produce a generic Desktop icon. Other local icon experiments remain ignored.
+
+## October 8 source checkpoint and continued development
+
+Canonical history has been merged into this retained lane. The managed shared
+snapshot is `1bf262dc8acac5354d95eb0c57bdc9ce0af39197` (Core Sim 0.8.1).
+The workspace subtree manifest now targets this Main Edit checkout explicitly
+and pins that immutable commit. Its `git diff --check` verification checks source
+whitespace only; application acceptance still requires the contained build and
+test gates. Future rollouts can run in Main Edit and do not require canonical
+`main` to be checked out. Review and update the pin deliberately for each rollout.
+
+After reviewed fast-forward adoption, retain this checkout and continue functional
+development here with one active writer. Canonical remains the accepted/release
+source lane. Merge later canonical release metadata into Main Edit before the
+next checkpoint. Source adoption does not authorize VERSION changes, publication,
+worker deployment, Desktop refresh or cleanup. Fresh source-only verification
+copies were used for this checkpoint, preserving all retained build evidence.

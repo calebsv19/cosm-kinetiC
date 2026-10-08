@@ -1,12 +1,25 @@
 # kinetiC Current Truth
 
-Last updated: 2026-10-06
+Last updated: 2026-10-08
+
+## Reconciled source checkpoint (2026-10-08)
+
+Main Edit contains canonical `2114163835ae` (application 0.4.0), the committed
+lifecycle repairs and atmosphere tools, and managed shared snapshot
+`1bf262dc8acac5354d95eb0c57bdc9ce0af39197` with Core Sim 0.8.1. The shared
+snapshot preserves the shape JSON text APIs needed by the persistence repairs.
+Fresh contained application/headless/session-worker builds pass. The framework
+is available in the subtree; real bidirectional Fire–Fluid API adoption remains
+separate. Canonical source, application/worker VERSION, installed packages and
+remote state are unchanged by this checkpoint. Review the checkpoint evidence
+before canonical fast-forward and Registry release preparation.
 
 ## Shared UI preparation and historical evidence gap (2026-10-06)
 
 The [shared UI rollout ledger](shared_ui_rollout.md) records preserved source
-checkpoints, canonical reconciliation and immutable shared import. UI adoption
-and clean consumer build remain unverified. A broad clean command mistakenly
+checkpoints, canonical reconciliation and immutable shared import. At the October 6 checkpoint, UI adoption
+and a clean consumer build were unverified. The October 8 source checkpoint now
+passes a fresh contained build; visual UI adoption remains a separate acceptance. A broad clean command mistakenly
 removed retained ignored CFD evidence before being stopped. Some historical
 field/receipt paths below are now unavailable; full recovery is unresolved.
 Source checkpoints survive, but source docs alone do not restore those proofs.
@@ -19,7 +32,7 @@ solver. GrowthSim runs matched 32³/16³/disabled-feedback sources through 5 s:
 conservative J/kg, exact continuation and causal thermal flow pass. The original
 refinement's cp100000 applicability rejection is preserved; qualified runs declare
 an explicitly synthetic cp800000 material with the same source bytes. This is
-uncommitted Main Edit local CLI evidence, separate from releases, CFD obstacle
+committed Main Edit local CLI evidence, separate from releases, CFD obstacle
 qualification, physical ground closure, large-temperature fire-air behavior,
 64³ scaling and full-lit synchronized movie acceptance.
 
