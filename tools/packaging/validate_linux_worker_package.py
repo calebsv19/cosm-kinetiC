@@ -2,6 +2,7 @@
 """Validate the local PhysicsSim Linux worker package without remote execution."""
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,12 @@ import tarfile
 
 
 EXPECTED_STAGE_FILES = (
+    "coupling_payload.json",
+    "bin/physics_sim_coupling",
+    "bin/physics_sim_session_worker",
+    "bin/physics_sim_passive_worker",
+    "bin/physics_sim_atmosphere_worker",
+    "bin/physics_sim_open_atmosphere_worker",
     "README.md",
     "bin/physics_sim_headless",
     "bin/physics_sim_job_runner",
@@ -221,10 +228,12 @@ def validate_package_manifest(
     }
     if set(package_manifest.get("capabilities") or []) != expected_capabilities:
         fail("package_manifest.json capabilities do not match the PhysicsSim package contract")
+    if package_manifest.get('offline_capabilities') != ['offline-fire-atmosphere-v1','native-session-cli-v1']:
+        fail('package_manifest.json offline capabilities mismatch')
     return [str(arg) for arg in argv]
 
 
-def validate_archive(archive: Path) -> None:
+def validate_archive(archive: Path, stage_dir: Path | None = None) -> None:
     if not archive.is_file():
         fail(f"missing archive: {archive}")
     try:
@@ -250,6 +259,21 @@ def validate_archive(archive: Path) -> None:
         forbidden = parts & FORBIDDEN_PACKAGE_PARTS
         if forbidden:
             fail(f"archive contains forbidden generated/private lane {sorted(forbidden)}")
+
+    if stage_dir is not None:
+        expected={str(p.relative_to(stage_dir)):hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in stage_dir.rglob('*') if p.is_file()}
+        actual={}
+        with tarfile.open(archive,'r:gz') as tar:
+            for member in tar.getmembers():
+                relative=Path(member.name)
+                if relative.is_absolute() or '..' in relative.parts or member.issym() or member.islnk():
+                    fail('archive contains an escaping or linked payload')
+                if not member.isfile():continue
+                name=str(Path(*relative.parts[1:]))
+                if name in actual:fail('archive contains a duplicate payload')
+                with tar.extractfile(member) as stream:actual[name]=hashlib.file_digest(stream,'sha256').hexdigest()
+        if actual != expected:fail('archive bytes differ from the complete verified stage')
 
 
 def run_manifest_self_test(stage_dir: Path, argv: list[str]) -> None:
@@ -327,7 +351,12 @@ def main() -> int:
         args.worker_slug,
         args.max_glibc_version,
     )
-    validate_archive(archive)
+    for name in ('session', 'passive', 'atmosphere', 'open_atmosphere'):
+        binary = stage_dir / 'bin' / ('physics_sim_'+name+'_worker')
+        validate_native_binary(binary, args.platform)
+        validate_glibc_ceiling(binary, args.max_glibc_version)
+    run_manifest_self_test(stage_dir, ['bin/physics_sim_coupling', 'capabilities'])
+    validate_archive(archive, stage_dir)
     run_manifest_self_test(stage_dir, self_test_argv)
 
     print(

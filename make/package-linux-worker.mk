@@ -68,14 +68,14 @@ package-linux-worker-clean:
 	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --directory "$(LINUX_WORKER_DIR)" --file "$(LINUX_WORKER_ARCHIVE)" --file "$(LINUX_WORKER_SHA256)" --file "$(LINUX_WORKER_ARTIFACT_MANIFEST)"
 	@echo "No existing Linux worker artifacts selected for removal"
 
-package-linux-worker: package-linux-worker-host-check physics_sim_headless physics-sim-job-runner
+package-linux-worker: package-linux-worker-host-check physics_sim_headless physics-sim-job-runner $(SESSION_WORKER_BIN) passive-atmosphere-worker evolving-atmosphere-worker open-atmosphere-worker
 	+@python3 -B scripts/package_transaction.py --root "$(RELEASE_DIR)" \
 		--directory "LINUX_WORKER_DIR=$(LINUX_WORKER_DIR)" \
 		--file "LINUX_WORKER_ARCHIVE=$(LINUX_WORKER_ARCHIVE)" --file "LINUX_WORKER_SHA256=$(LINUX_WORKER_SHA256)" --file "LINUX_WORKER_ARTIFACT_MANIFEST=$(LINUX_WORKER_ARTIFACT_MANIFEST)" \
 		--map "LINUX_WORKER_BIN_DIR=$(LINUX_WORKER_BIN_DIR)" --map "LINUX_WORKER_CONFIG_DIR=$(LINUX_WORKER_CONFIG_DIR)" --map "LINUX_WORKER_DOCS_DIR=$(LINUX_WORKER_DOCS_DIR)" \
 		--map "LINUX_WORKER_MANIFEST_JSON=$(LINUX_WORKER_MANIFEST_JSON)" --map "LINUX_WORKER_MANIFEST=$(LINUX_WORKER_MANIFEST)" \
 		--identity "worker=$(WORKER_VERSION)" --identity "program=$(RELEASE_VERSION)" --identity "platform=$(LINUX_WORKER_PLATFORM)" --identity "slug=$(LINUX_WORKER_SLUG)" --identity "glibc=$(LINUX_WORKER_MAX_GLIBC)" --identity "program-key=$(RELEASE_PROGRAM_KEY)" --identity "capability=$(LINUX_WORKER_PLATFORM_CAPABILITY)" \
-		--input "$(PHYSICS_SIM_HEADLESS_TOOL_BIN)" --input "$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)" --input "$(LINUX_WORKER_ARTIFACT_MANIFEST_WRITER)" --input makefile --input make --input scripts --input tools/packaging --input config --input docs --input README.md --input VERSION --input WORKER_VERSION \
+		--input "$(SESSION_WORKER_BIN)" --input "$(PASSIVE3D_WORKER)" --input "$(ATMOSPHERE3D_WORKER)" --input "$(OPEN_ATMOSPHERE3D_WORKER)" --input "$(PHYSICS_SIM_HEADLESS_TOOL_BIN)" --input "$(PHYSICS_SIM_JOB_RUNNER_TOOL_BIN)" --input "$(LINUX_WORKER_ARTIFACT_MANIFEST_WRITER)" --input makefile --input make --input scripts --input tools/packaging --input config --input tests/fixtures/surface_sources/prescribed-policy.json --input docs --input README.md --input VERSION --input WORKER_VERSION \
 		--tool "$(SHELL)" --tool tar --tool sha256sum --tool cp --tool chmod --tool python3 \
 		-- $(MAKE) -f makefile _package-linux-worker-assemble
 
@@ -106,7 +106,8 @@ _package-linux-worker-assemble:
 	@printf '  "entrypoint": "bin/run_worker.sh",\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "default_args": [],\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '  "max_glibc_version": "%s",\n' "$(LINUX_WORKER_MAX_GLIBC)" >> "$(LINUX_WORKER_MANIFEST_JSON)"
-	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm", "SDL2", "SDL2_ttf"]\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
+	@printf '  "offline_capabilities": ["offline-fire-atmosphere-v1", "native-session-cli-v1"],\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
+	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm", "SDL2", "SDL2_ttf", "json-c", "python3>=3.11"]\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '}\n' >> "$(LINUX_WORKER_MANIFEST_JSON)"
 	@printf '{\n' > "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "schema_version": "codework_worker_package_manifest_v1",\n' >> "$(LINUX_WORKER_MANIFEST)"
@@ -122,12 +123,14 @@ _package-linux-worker-assemble:
 	@printf '    "job_runner": "bin/physics_sim_job_runner"\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  },\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "capabilities": ["trio-headless-v1", "scene-project-portable-v1", "physics-cache-project-local-v1", "%s"],\n' "$(LINUX_WORKER_PLATFORM_CAPABILITY)" >> "$(LINUX_WORKER_MANIFEST)"
-	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm"],\n' >> "$(LINUX_WORKER_MANIFEST)"
+	@printf '  "offline_capabilities": ["offline-fire-atmosphere-v1", "native-session-cli-v1"],\n' >> "$(LINUX_WORKER_MANIFEST)"
+	@printf '  "runtime_dependencies": ["glibc", "libgcc_s", "libm", "json-c", "python3>=3.11"],\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  "self_test": {\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '    "type": "command",\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '    "argv": ["bin/physics_sim_job_runner", "submit", "--help"]\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '  }\n' >> "$(LINUX_WORKER_MANIFEST)"
 	@printf '}\n' >> "$(LINUX_WORKER_MANIFEST)"
+	@python3 -B tools/packaging/stage_worker_coupling.py --stage "$(LINUX_WORKER_DIR)" --session "$(SESSION_WORKER_BIN)" --passive "$(PASSIVE3D_WORKER)" --evolving "$(ATMOSPHERE3D_WORKER)" --open "$(OPEN_ATMOSPHERE3D_WORKER)"
 	@mkdir -p "$(RELEASE_DIR)"
 	@tar -czf "$(LINUX_WORKER_ARCHIVE)" -C "$(RELEASE_DIR)" "$(LINUX_WORKER_BASENAME)"
 	@cd "$(RELEASE_DIR)" && sha256sum "$(notdir $(LINUX_WORKER_ARCHIVE))" > "$(notdir $(LINUX_WORKER_SHA256))"
@@ -170,6 +173,7 @@ _package-linux-worker-proof:
 		--worker-slug "$(LINUX_WORKER_SLUG)" \
 		--max-glibc-version "$(LINUX_WORKER_MAX_GLIBC)" \
 		--verify
+	@"$(LINUX_WORKER_BIN_DIR)/physics_sim_coupling" capabilities > "$(PACKAGE_PROOF_DIR)/coupling-capabilities.json"
 	@echo "package-linux-worker-self-test passed."
 
 # A distinct Registry target binds x86_64 proof to x86_64 package bytes. The

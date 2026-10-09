@@ -545,3 +545,5 @@ Local session diagnostic preservation: [session_sample_retention.md](session_sam
 Trusted-local session storage admission: [session_path_admission.md](session_path_admission.md).
 
 Retained local worker authoring/validation: [session_worker_attempts.md](session_worker_attempts.md).
+
+- [Offline coupling package](offline_coupling_package.md)

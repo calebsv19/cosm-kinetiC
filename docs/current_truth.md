@@ -2236,3 +2236,8 @@ first repaired slice. See [output and cleanup contract](cfd_evidence_lifecycle.m
 and [validated repair status and remaining gaps](cfd_lifecycle_repair_status.md).
 Missing historical receipts do not block UI source work; fresh consumer and
 relevant compatibility/visual checks remain required.
+
+## Offline coupling package preparation (2026-10-08)
+
+The Linux worker recipe now includes native session/atmosphere workers and the offline adapter closure.
+Package-only Mac coupling, exact replay/recovery and native parent-death recovery are qualified development evidence. Native Linux package qualification and authenticated release acceptance remain open. See [offline_coupling_package.md](offline_coupling_package.md).

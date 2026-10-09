@@ -312,6 +312,11 @@ def run(repo, root, directories, files, mappings, inputs, values, command, tools
 
 
 def main():
+    # Recursive Make recipes execute even under -n; planning must have no effects.
+    flags=os.environ.get('MAKEFLAGS','').split()
+    if flags and not flags[0].startswith('-') and '=' not in flags[0] and 'n' in flags[0]:
+        print('Package dry-run: '+ ' '.join(sys.argv[1:]))
+        return
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root',type=Path)
     parser.add_argument('--recover-attempt',type=Path)

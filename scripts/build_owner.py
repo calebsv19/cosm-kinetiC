@@ -104,6 +104,13 @@ def worker_execution(repo, worker):
     """Hold a selected worker subtree across hashing, execution and acceptance."""
     repo=repo.resolve();worker=Path(os.path.abspath(worker))
     no_symlinks(worker,repo)
+    if (repo/'coupling_payload.json').is_file():
+        from package_runtime import execution
+        with execution(repo,worker) as descriptors:
+            token=_EXECUTION_FDS.set(descriptors)
+            try:yield worker
+            finally:_EXECUTION_FDS.reset(token)
+        return
     if not worker.is_relative_to(repo/'build'):
         raise ValueError('Worker execution requires checkout/build; external workers need their owning lifecycle')
     root=worker.parent

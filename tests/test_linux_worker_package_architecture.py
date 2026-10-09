@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import importlib.util
 import tempfile
+import tarfile
 import struct
 import unittest
 from unittest import mock
@@ -49,6 +50,17 @@ class LinuxWorkerPackageArchitectureTests(unittest.TestCase):
             binary.write_bytes(b"Mach-O arm64")
             with redirect_stderr(StringIO()), self.assertRaises(SystemExit):
                 MODULE.validate_native_binary(binary, "linux-x86_64")
+
+    def test_archive_must_match_the_complete_verified_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);stage=root/'package';stage.mkdir()
+            for name in MODULE.EXPECTED_STAGE_FILES:
+                path=stage/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(b'fixture')
+            archive=root/'package.tar.gz'
+            with tarfile.open(archive,'w:gz') as tar:tar.add(stage,arcname='package')
+            MODULE.validate_archive(archive,stage)
+            adapter=stage/'scripts/coupled_atmosphere.py';adapter.parent.mkdir();adapter.write_bytes(b'missing from archive')
+            with redirect_stderr(StringIO()), self.assertRaises(SystemExit):MODULE.validate_archive(archive,stage)
 
     def test_reads_maximum_glibc_symbol_requirement(self) -> None:
         completed = mock.Mock(

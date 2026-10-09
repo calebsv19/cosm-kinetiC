@@ -53,5 +53,16 @@
       "public_download_publication",
       "cleanup"
     ]
+  },
+  "offline_coupling": {
+    "entrypoint": "bin/physics_sim_coupling",
+    "inventory": "coupling_payload.json",
+    "runtime": "explicit external directory",
+    "coordinator_job_type_added": false,
+    "physical_calibration_qualified": false,
+    "capabilities": [
+      "offline-fire-atmosphere-v1",
+      "native-session-cli-v1"
+    ]
   }
 }

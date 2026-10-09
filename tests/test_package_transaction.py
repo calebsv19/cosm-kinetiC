@@ -33,6 +33,15 @@ class Transaction(unittest.TestCase):
     def receipt(self):
         return next((self.root/'.package-transactions').glob('*/receipt.json'))
 
+    def test_recursive_make_dry_run_has_no_transaction_or_proof_effects(self):
+        for name in ('package_transaction.py','package_proof.py'):
+            result=subprocess.run([sys.executable,'-B',str(ROOT/'scripts'/name)],cwd=self.repo,
+                env=dict(os.environ,MAKEFLAGS='n'),capture_output=True,text=True)
+            self.assertEqual(result.returncode,0,result.stderr)
+            self.assertIn('Package dry-run',result.stdout)
+        self.assertFalse((self.repo/'build').exists())
+        self.assertFalse((self.repo/'tmp').exists())
+
     def test_input_budget_exhaustion_precedes_output_root_creation(self):
         budget=transaction.InventoryBudget(max_bytes=1)
         with patch('package_transaction.InventoryBudget',return_value=budget):
@@ -332,13 +341,9 @@ t.recover(Path(sys.argv[2]),Path(sys.argv[3]),apply=True)
         self.assertFalse((self.root/'package').exists());self.assertIn('partial assembly',(self.receipt().parent/'assembly.stdout').read_text())
 
     def test_actual_worker_make_recipe_maps_stage_and_reuses_portable_sidecars(self):
-        scripts=self.repo/'scripts';scripts.mkdir()
-        for name in ('package_transaction.py','package_outputs.py','build_owner.py','check_clean_root.py','build_outputs.py','clean_outputs.py','desktop_replace.py','contract_proof.py','cfd_evidence.py'):
-            shutil.copy2(ROOT/'scripts'/name,scripts/name)
-        (scripts/'agent_session').mkdir()
-        shutil.copy2(ROOT/'scripts/agent_session/owned_command.py',scripts/'agent_session/owned_command.py')
-        writer=self.repo/'tools/packaging/write_linux_worker_artifact_manifest.py'
-        writer.parent.mkdir(parents=True);shutil.copy2(ROOT/'tools/packaging'/writer.name,writer)
+        shutil.copytree(ROOT/'scripts',self.repo/'scripts',ignore=shutil.ignore_patterns('__pycache__'))
+        shutil.copytree(ROOT/'tools/packaging',self.repo/'tools/packaging',ignore=shutil.ignore_patterns('__pycache__'))
+        shutil.copytree(ROOT/'tests/fixtures/surface_sources',self.repo/'tests/fixtures/surface_sources')
         for folder in ('make','config','docs'):(self.repo/folder).mkdir()
         for name in ('README.md','docs/README.md','docs/headless_cli.md','VERSION','WORKER_VERSION'):(self.repo/name).write_text('fixture\n')
         for name in ('headless','jobrunner'):(self.repo/name).write_bytes(b'fake executable')
@@ -347,7 +352,8 @@ t.recover(Path(sys.argv[2]),Path(sys.argv[3]),apply=True)
         prefix=source.split('.PHONY:',1)[0]
         recipes='package-linux-worker:'+source.split('package-linux-worker:',1)[1].split('package-linux-worker-self-test:',1)[0]
         values={'RELEASE_DIR':str(self.root),'RELEASE_VERSION':'0.4.0','WORKER_VERSION':'0.3.4','RELEASE_PROGRAM_KEY':'physics_sim','PHYSICS_SIM_HEADLESS_TOOL_BIN':str(self.repo/'headless'),'PHYSICS_SIM_JOB_RUNNER_TOOL_BIN':str(self.repo/'jobrunner')}
-        text='\n'.join(k+' := '+v for k,v in values.items())+'\n'+prefix+'\npackage-linux-worker-host-check physics_sim_headless physics-sim-job-runner:\n\t@true\n'+recipes
+        values.update({name:str(self.repo/'headless') for name in ('SESSION_WORKER_BIN','PASSIVE3D_WORKER','ATMOSPHERE3D_WORKER','OPEN_ATMOSPHERE3D_WORKER')})
+        text='\n'.join(k+' := '+v for k,v in values.items())+'\n'+prefix+'\npackage-linux-worker-host-check physics_sim_headless physics-sim-job-runner passive-atmosphere-worker evolving-atmosphere-worker open-atmosphere-worker:\n\t@true\n'+recipes
         (self.repo/'makefile').write_text(text)
         env={k:v for k,v in os.environ.items() if k not in ('MAKEFLAGS','MFLAGS','MAKEOVERRIDES') and not k.startswith('PHYSICS_SIM_BUILD_')}
         for count in range(2):
