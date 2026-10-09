@@ -10,7 +10,7 @@ import sys
 import uuid
 
 from build_owner import inherited_descriptors
-from clean_outputs import no_symlinks
+from package_paths import no_symlinks
 from desktop_replace import inventory, write_record, INVENTORY_LIMITS
 from package_outputs import plan
 from package_transaction import input_identity

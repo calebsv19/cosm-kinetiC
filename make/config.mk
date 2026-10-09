@@ -26,7 +26,7 @@ export PHYSICS_SIM_REFERENCE_TOOLS_ROOT := $(abspath $(REFERENCE_TOOLS_DIR))
 BIN_DIR := $(BUILD_DIR)/bin
 TARGET    := $(BIN_DIR)/physics_sim
 SESSION_WORKER_BIN ?= $(BIN_DIR)/physics_sim_session_worker
-DIST_DIR  := dist
+DIST_DIR  := $(if $(strip $(PHYSICS_SIM_DIST_ROOT)),$(PHYSICS_SIM_DIST_ROOT),dist)
 CODEWORK_WORKSPACE_ROOT := $(abspath $(shell git rev-parse --path-format=absolute --git-common-dir)/../..)
 FISICS_INCLUDE_DIR ?= $(CODEWORK_WORKSPACE_ROOT)/fisiCs/include
 CLANG_BUILD_DIR := $(BIN_DIR)

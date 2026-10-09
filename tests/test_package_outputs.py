@@ -65,7 +65,7 @@ class PackageOutputs(unittest.TestCase):
 
     def test_unique_comparison_directories_do_not_touch_candidate(self):
         (self.repo/'scripts').mkdir()
-        for name in ('package_outputs.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
+        for name in ('package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         self.root.mkdir(parents=True);candidate=self.root/'accepted.tar.gz';candidate.write_bytes(b'accepted')
         allocated=[]
         for _ in range(2):
@@ -76,7 +76,7 @@ class PackageOutputs(unittest.TestCase):
 
     def test_actual_linux_clean_recipes_preserve_package_and_archive(self):
         (self.repo/'scripts').mkdir();(self.repo/'make').mkdir()
-        for name in ('package_outputs.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
+        for name in ('package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         for name in ('package-linux-worker.mk','package-linux-desktop.mk'):shutil.copy2(ROOT/'make'/name,self.repo/'make'/name)
         (self.repo/'Makefile').write_text('RELEASE_DIR=build/release\nRELEASE_PROGRAM_KEY=physics_sim\nRELEASE_PRODUCT_NAME=kinetiC\nRELEASE_VERSION=test\nWORKER_VERSION=test\nRELEASE_CHANNEL=stable\ninclude make/package-linux-worker.mk\ninclude make/package-linux-desktop.mk\n')
         stage=self.repo/'build/release';stage.mkdir(parents=True)
@@ -87,7 +87,7 @@ class PackageOutputs(unittest.TestCase):
 
     def test_actual_release_clean_recipe_preserves_predecessor_and_bad_override(self):
         (self.repo/'scripts').mkdir();(self.repo/'make').mkdir()
-        for name in ('package_outputs.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
+        for name in ('package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         shutil.copy2(ROOT/'make/release.mk',self.repo/'make/release.mk')
         (self.repo/'Makefile').write_text('RELEASE_DIR=build/release\ninclude make/release.mk\n')
         stage=self.repo/'build/release';stage.mkdir(parents=True);p=stage/'accepted.zip';p.write_bytes(b'preserved')
@@ -97,3 +97,61 @@ class PackageOutputs(unittest.TestCase):
             self.assertEqual(p.read_bytes(),b'preserved')
 
 if __name__=='__main__':unittest.main()
+
+class BoundDataOutputs(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+        import package_paths
+        self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+        self.base=Path(self.temp.name).resolve()
+        self.repo=self.base/'source/physics_sim';self.repo.mkdir(parents=True)
+        self.data=self.base/'data';self.data.mkdir()
+        self.patch=patch.object(package_paths,'DATA_ROOT',self.data);self.patch.start();self.addCleanup(self.patch.stop)
+        self.selected='physics_sim/build/release-authenticated/raor_'+'a'*64
+        self.root=self.data/self.selected/'targets'/('rapt_'+package_paths.digest({'package_target':'release-local-artifact'}))
+        self.contract={'schema_version':'production-registry/release-authorization-precommit-preparation-contract/v1',
+            'program':'physics_sim','source_data_roots':{'source_workspace_root':str(self.repo.parent),'data_workspace_root':str(self.data)},
+            'owner_adapter_binding':{'repository_path':'physics_sim','package_targets':['release-local-artifact']},
+            'output_root_binding':{'selected_root':self.selected,'candidate_scope_id':'raor_'+'a'*64}}
+        store=self.data/package_paths.CONTRACTS;store.mkdir(parents=True)
+        self.record=store/(package_paths.digest(self.contract)+'.json');self.record.write_text(json.dumps(self.contract))
+
+    def test_exact_target_admission_and_reservation_preserve_cleanup_boundary(self):
+        from clean_outputs import no_symlinks
+        target=self.root/'kinetiC.app';validate=lambda:plan(self.repo,self.root,[target],[])
+        result=declare(validate(),validate)
+        self.assertEqual(result['status'],'fresh_outputs_admitted')
+        self.assertFalse(validate()['fresh'])
+        with self.assertRaises(ValueError):no_symlinks(target,self.repo)
+
+    def test_unbound_broader_wrong_target_and_escape_refused(self):
+        for root in [self.data/self.selected,self.root.parent,self.root.parent/('rapt_'+'b'*64),self.data/'other/build/attempt']:
+            with self.subTest(root=root),self.assertRaises(ValueError):plan(self.repo,root,[root/'app'],[])
+        with self.assertRaises(ValueError):plan(self.repo,self.root,[self.root.parent/'escaped'],[])
+        with self.assertRaises(ValueError):plan(self.repo,self.root/'../alias',[self.root/'app'],[])
+        self.assertFalse(self.root.exists())
+
+    def test_tampered_contract_wrong_source_and_symlink_refused(self):
+        self.record.write_text('{}')
+        with self.assertRaises(ValueError):plan(self.repo,self.root,[self.root/'app'],[])
+        self.record.write_text(json.dumps(self.contract))
+        with self.assertRaises(ValueError):plan(self.base/'another/physics_sim',self.root,[self.root/'app'],[])
+        self.root.parent.mkdir(parents=True);self.root.symlink_to(self.repo)
+        with self.assertRaises(ValueError):plan(self.repo,self.root,[self.root/'app'],[])
+
+    def test_symlinked_contract_and_store_refused(self):
+        external=self.base/'contract.json';external.write_text(self.record.read_text())
+        self.record.unlink();self.record.symlink_to(external)
+        with self.assertRaises(ValueError):plan(self.repo,self.root,[self.root/'app'],[])
+        self.record.unlink();store=self.record.parent;store.rmdir();store.symlink_to(self.base)
+        with self.assertRaises(ValueError):plan(self.repo,self.root,[self.root/'app'],[])
+
+    def test_release_assembly_selects_its_own_desktop_stage(self):
+        makefile=self.repo/'makefile'
+        makefile.write_text('DIST_DIR=dist/gate\nRELEASE_ROOT=build/fresh-release\ninclude '+str(ROOT/'make/package-paths.mk')+'\nrelease-local-artifact:\n\t@printf "%s\\n" "$(PACKAGE_APP_DIR)" "$(PHYSICS_SIM_DIST_ROOT)"\nordinary:\n\t@printf "%s\\n" "$(PACKAGE_APP_DIR)"\n')
+        release=subprocess.run(['make','release-local-artifact'],cwd=self.repo,env=ENV,capture_output=True,text=True)
+        self.assertEqual(release.returncode,0,release.stderr)
+        self.assertEqual(release.stdout.splitlines(),['build/fresh-release/kinetiC.app','build/fresh-release'])
+        ordinary=subprocess.run(['make','ordinary'],cwd=self.repo,env=ENV,capture_output=True,text=True)
+        self.assertEqual(ordinary.returncode,0,ordinary.stderr)
+        self.assertEqual(ordinary.stdout.strip(),'dist/gate/kinetiC.app')

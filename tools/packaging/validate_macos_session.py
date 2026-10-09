@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shutil
 import sys
 import tempfile
 
@@ -37,18 +38,20 @@ def main():
     print('Packaged session proof retained: '+str(root),file=sys.stderr)
     payload=''.join(json.dumps(row)+'\n' for row in requests)
     (root/'requests.jsonl').write_text(payload)
+    # Evidence may live in a source checkout; a packaged session's runtime may not.
+    runtime = Path(tempfile.mkdtemp(prefix='physics-packaged-session-runtime-')).resolve()
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1', PHYSICS_SIM_SESSION_WORKER=str(worker))
     try:
         result = subprocess.run(
-            [sys.executable, str(script), '--root', str(root/'session'), '--worker', str(worker), '--mcp'],
+            [sys.executable, str(script), '--root', str(runtime/'session'), '--worker', str(worker), '--mcp'],
             input=payload,text=True,capture_output=True,timeout=30,env=env)
     except subprocess.TimeoutExpired as error:
         for name,content in (('stdout.log',error.stdout),('stderr.log',error.stderr)):
             (root/name).write_text(content.decode(errors='replace') if isinstance(content,bytes) else content or '')
-        (root/'execution.json').write_text(json.dumps({'state':'timed_out','output_root':str(root)}))
+        (root/'execution.json').write_text(json.dumps({'state':'timed_out','output_root':str(root),'runtime_root':str(runtime)}))
         raise SystemExit('Packaged session proof timed out; retained '+str(root))
     (root/'stdout.log').write_text(result.stdout);(root/'stderr.log').write_text(result.stderr)
-    (root/'execution.json').write_text(json.dumps({'state':'command_completed','exit_code':result.returncode,'output_root':str(root)}))
+    (root/'execution.json').write_text(json.dumps({'state':'command_completed','exit_code':result.returncode,'output_root':str(root),'runtime_root':str(runtime)}))
     if result.returncode:
         raise SystemExit('Packaged session command failed; retained '+str(root))
     replies = [json.loads(line) for line in result.stdout.splitlines()]
@@ -59,6 +62,7 @@ def main():
         raise SystemExit('packaged session MCP tools are incomplete')
     if replies[2]['result'].get('isError'):
         raise SystemExit('packaged session capabilities failed')
+    shutil.rmtree(runtime)
     print(json.dumps({'status': 'passed', 'python': sys.executable,
                       'python_version': sys.version.split()[0],
                       'prerequisite': 'Python >=3.9 on user launch PATH',

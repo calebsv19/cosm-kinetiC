@@ -113,7 +113,9 @@ package-desktop-self-test: package-desktop-smoke
 _package-desktop-proof:
 	@test -n "$(PACKAGE_PROOF_DIR)" || (echo "Use the public package proof/refresh target"; exit 2)
 	@python3 tools/packaging/validate_macos_session.py --app "$(PACKAGE_APP_DIR)" --output-root "$(PACKAGE_PROOF_DIR)/session-proof"
-	@support="$(PACKAGE_PROOF_DIR)/support"; mkdir -p "$$support"; \
+	@support="$$(mktemp -d "$${TMPDIR:-/tmp}/physics-package-runtime.XXXXXX")"; \
+	support="$$(cd "$$support" && pwd -P)"; \
+	printf '%s\n' "$$support" > "$(PACKAGE_PROOF_DIR)/support-root.txt"; \
 	PHYSICS_SIM_APP_SUPPORT_DIR="$$support" PHYSICS_SIM_LOG_DIR="$$support/logs" \
 		"$(PACKAGE_MACOS_DIR)/physics-sim-launcher" --self-test; result=$$?; \
 	echo "package-desktop self-test evidence retained: $$support"; \

@@ -14,7 +14,8 @@ static bool num(struct json_object *v,double *out) {
 }
 static bool field(struct json_object *v,double *out,int n) {
     if(!v || !json_object_is_type(v,json_type_array) || json_object_array_length(v)!=(size_t)n)return false;
-    for(int q=0;q<n;q++)if(!num(json_object_array_get_idx(v,q),out+q))return false;return true;
+    for(int q=0;q<n;q++)if(!num(json_object_array_get_idx(v,q),out+q))return false;
+    return true;
 }
 static void value(struct json_object *o,const char *key,double v) {json_object_object_add(o,key,json_object_new_double(v));}
 static struct json_object *values(const double *v,int n,double scale,double offset) {
@@ -108,5 +109,7 @@ int main(int argc,char **argv) {
     puts(output);status=0;
 done:
     if(status)fprintf(stderr,"open atmosphere policy, divergence, CFL, flux budget or contrast rejection; memory peak=%zu limit=%zu rejected=%zu failure=%d request=%zu\n",memory.peak_bytes,memory.limit_bytes,memory.rejected_allocations,memory.last_failure,memory.last_requested_bytes);
-    if(result)json_object_put(result);if(r)json_object_put(r);cfd_open_atmosphere3d_destroy(&s);cfd_memory_free(input);cfd_memory_scope(prior);return status;
+    if(result)json_object_put(result);
+    if(r)json_object_put(r);
+    cfd_open_atmosphere3d_destroy(&s);cfd_memory_free(input);cfd_memory_scope(prior);return status;
 }

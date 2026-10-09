@@ -16,7 +16,7 @@ class Audit(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.repo=Path(self.temp.name).resolve();(self.repo/'scripts').mkdir();(self.repo/'make').mkdir()
-        for name in ('package_proof.py','package_transaction.py','package_outputs.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','desktop_replace.py','contract_proof.py','cfd_evidence.py','release_framework_audit.py'):
+        for name in ('package_proof.py','package_transaction.py','package_outputs.py','package_paths.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','desktop_replace.py','contract_proof.py','cfd_evidence.py','release_framework_audit.py'):
             shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         (self.repo/'scripts/agent_session').mkdir()
         shutil.copy2(ROOT/'scripts/agent_session/owned_command.py',self.repo/'scripts/agent_session/owned_command.py')

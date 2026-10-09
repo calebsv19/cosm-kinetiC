@@ -19,7 +19,8 @@ static bool field(struct json_object *v,double *out,int n) {
 static void value(struct json_object *o,const char *key,double v) {json_object_object_add(o,key,json_object_new_double(v));}
 static struct json_object *values(const double *v,int n,double scale,double offset) {
     struct json_object *a=json_object_new_array_ext(n);
-    for(int q=0;q<n;q++)json_object_array_add(a,json_object_new_double(offset+scale*v[q]));return a;
+    for(int q=0;q<n;q++)json_object_array_add(a,json_object_new_double(offset+scale*v[q]));
+    return a;
 }
 static bool restore(CfdAtmosphere3d *s,struct json_object *state) {
     int n=s->flow.grid.count;double steps,time,work,j,kg,prev,older,kinetic;
@@ -80,6 +81,7 @@ int main(int argc,char **argv) {
     puts(json_object_to_json_string_ext(result,JSON_C_TO_STRING_PLAIN));status=0;
 done:
     if(status)fputs("evolving atmosphere state, CFL, conservation or solve rejection\n",stderr);
-    if(result)json_object_put(result);if(r)json_object_put(r);
+    if(result)json_object_put(result);
+    if(r)json_object_put(r);
     cfd_atmosphere3d_destroy(&s);cfd_memory_free(input);cfd_memory_scope(prior);return status;
 }

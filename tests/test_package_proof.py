@@ -145,6 +145,10 @@ class Proof(unittest.TestCase):
         result=subprocess.run(command,capture_output=True,text=True,timeout=10)
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(json.loads(result.stdout)['status'],'passed')
+        execution=json.loads((output/'execution.json').read_text())
+        runtime=Path(execution['runtime_root'])
+        self.assertFalse(runtime.is_relative_to(self.repo.resolve()))
+        self.assertFalse(runtime.exists())
         requests=(output/'requests.jsonl').read_bytes();log=(output/'stdout.log').read_bytes()
         self.assertEqual(len(log.splitlines()),3)
         self.assertIn('session diagnostic',(output/'stderr.log').read_text())
@@ -165,7 +169,7 @@ class Proof(unittest.TestCase):
 
     def test_actual_macos_self_test_recipe_retains_support_on_two_runs(self):
         scripts=self.repo/'scripts';scripts.mkdir()
-        for name in ('package_proof.py','package_transaction.py','package_outputs.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','desktop_replace.py','contract_proof.py','cfd_evidence.py'):
+        for name in ('package_proof.py','package_transaction.py','package_outputs.py','package_paths.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','desktop_replace.py','contract_proof.py','cfd_evidence.py'):
             shutil.copy2(ROOT/'scripts'/name,scripts/name)
         (scripts/'agent_session').mkdir()
         shutil.copy2(ROOT/'scripts/agent_session/owned_command.py',scripts/'agent_session/owned_command.py')
@@ -182,7 +186,10 @@ class Proof(unittest.TestCase):
             self.assertNotIn('jobserver unavailable',result.stderr)
         receipts=list((self.repo/'dist/.package-proofs').glob('*/receipt.json'));self.assertEqual(len(receipts),2)
         for receipt in receipts:
-            self.assertEqual((receipt.parent/'work/support/result').read_text(),'kept')
+            support=Path((receipt.parent/'work/support-root.txt').read_text().strip())
+            self.addCleanup(shutil.rmtree,support)
+            self.assertFalse(support.is_relative_to(self.repo.resolve()))
+            self.assertEqual((support/'result').read_text(),'kept')
 
 
 if __name__=='__main__':unittest.main()

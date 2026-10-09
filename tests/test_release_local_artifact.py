@@ -34,6 +34,33 @@ class LocalArtifact(unittest.TestCase):
         row=json.loads(self.receipt().read_text());self.assertEqual(row['state'],'completed');self.assertTrue(row['terminal_processes_verified'])
         self.assertEqual(len(row['published']),3)
 
+    def test_transaction_stage_preserves_outer_package_source_with_real_path_recipe(self):
+        import shutil
+        shutil.copy2(fixture.ROOT/'make/package-paths.mk',self.repo/'make/package-paths.mk')
+        source_root=self.repo/'build/source-package'
+        source_root.mkdir(parents=True)
+        moved=source_root/'kinetiC.app'
+        shutil.move(self.app,moved)
+        self.app=moved
+        recipe=self.repo/'makefile'
+        text=recipe.read_text()
+        text=text.replace('package-desktop-self-test:\n',
+            'DIST_DIR=$(if $(PHYSICS_SIM_DIST_ROOT),$(PHYSICS_SIM_DIST_ROOT),dist)\n'
+            'RELEASE_ROOT='+str(source_root)+'\ninclude make/package-paths.mk\npackage-desktop-self-test:\n')
+        recipe.write_text(text)
+        self.archive_tool.write_text('#!'+sys.executable+'\nfrom pathlib import Path\nimport sys\n'
+            'source=Path(sys.argv[-2]);assert source.is_dir(),str(source)\n'
+            'assert (source/"Contents/MacOS/physics-sim-bin").read_bytes()==b"fixture only"\n'
+            'Path(sys.argv[-1]).write_bytes(b"fixture archive bytes")\n')
+        result=self.make('release-local-artifact')
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        archive=source_root/'artifact name.zip'
+        self.assertEqual(archive.read_bytes(),b'fixture archive bytes')
+        self.assertEqual((moved/'Contents/MacOS/physics-sim-bin').read_bytes(),b'fixture only')
+        receipts=list((source_root/'.package-transactions').glob('*/receipt.json'))
+        self.assertEqual(len(receipts),1)
+        self.assertEqual(json.loads(receipts[0].read_text())['state'],'completed')
+
     def test_failed_archive_creation_retains_partial_stage_and_publishes_nothing(self):
         self.archive_tool.write_text('#!'+sys.executable+'\nfrom pathlib import Path\nimport sys\nPath(sys.argv[-1]).write_bytes(b"partial archive");print("archive failure",flush=True);raise SystemExit(7)\n');self.archive_tool.chmod(0o755)
         result=self.make('release-local-artifact');self.assertNotEqual(result.returncode,0)

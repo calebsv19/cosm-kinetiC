@@ -13,7 +13,8 @@ from agent_session.owned_command import execute, IncompleteTeardown
 from agent_session.sample_retention import regular, retain
 from build_owner import inherited_descriptors
 from cfd_evidence import admitted_path, experiment_root
-from check_clean_root import read_json, reservation_output
+from check_clean_root import read_json
+from package_paths import no_symlinks, reservation_output
 from desktop_replace import inventory, InventoryBudget, write_record
 
 
@@ -26,7 +27,7 @@ def admission(repo, app_bin, frameworks):
             or frameworks != app / 'Contents/Frameworks'):
         raise ValueError('Bundler requires one app Contents/MacOS binary and sibling Frameworks')
     if not (app.is_relative_to(repo / 'build') or app.is_relative_to(repo / 'dist')):
-        raise ValueError('Bundler refuses outside local package namespaces')
+        no_symlinks(app, repo)
     reservation = None
     for root in app.parents:
         if root == repo:

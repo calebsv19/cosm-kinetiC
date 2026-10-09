@@ -114,11 +114,12 @@ def dependency_syntax(repo,path,text):
     absolute=lambda value:Path(os.path.abspath(repo/value))
     if not rules or absolute(rules[0][0])!=path.with_suffix('.o') or not rules[0][1]:
         raise ValueError('Generated dependency object identity mismatch')
-    dependencies=set(rules[0][1]);seen=set()
+    dependencies=set(rules[0][1])
     for target,values in rules[1:]:
-        if values or target not in dependencies or target in seen:
+        if values or target not in dependencies:
             raise ValueError('Unclassified generated dependency rule')
-        seen.add(target)
+        # GCC can repeat a dependency and its identical empty -MP rule.
+        # These rules add no input or recipe beyond the first object rule.
     return sorted({absolute(value) for value in dependencies})
 
 

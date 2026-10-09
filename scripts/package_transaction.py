@@ -13,7 +13,7 @@ import uuid
 
 from build_owner import inherited_descriptors
 from check_clean_root import read_json
-from clean_outputs import no_symlinks
+from package_paths import no_symlinks
 from desktop_replace import digest, inventory, rename_exclusive, write_record, InventoryBudget, INVENTORY_LIMITS
 from package_outputs import plan
 from contract_proof import execute, IncompleteTeardown, ExecutionFailure

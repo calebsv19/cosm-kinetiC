@@ -10,13 +10,16 @@ import re
 from pathlib import Path
 import uuid
 
-from clean_outputs import no_symlinks
+from package_paths import no_symlinks, bound_root
 
 
 def plan(repo, root, directories, files):
-    repo=repo.resolve();root=Path(os.path.abspath(root))
+    repo=repo.resolve()
+    if ".." in Path(root).parts or any(".." in Path(value).parts for value in [*directories, *files]):
+        raise ValueError("Package path contains traversal")
+    root=Path(os.path.abspath(root))
     no_symlinks(root,repo)
-    if not (root.is_relative_to(repo/'build') and root!=repo/'build' or root==repo/'dist' or root.is_relative_to(repo/'dist')):
+    if not (root.is_relative_to(repo/'build') and root!=repo/'build' or root==repo/'dist' or root.is_relative_to(repo/'dist') or not root.is_relative_to(repo) and root.is_relative_to(bound_root(root,repo))):
         raise ValueError('Package outputs require a strict build descendant or dist namespace')
     if root.is_relative_to(repo/'build') and any(part in ('bin','clang','fisics','cfd-reference-support') for part in root.relative_to(repo/'build').parts):
         raise ValueError('Package namespace overlaps compiler outputs')

@@ -13,7 +13,7 @@ import sys
 import uuid
 
 from check_clean_root import read_json
-from clean_outputs import no_symlinks
+from package_paths import no_symlinks
 from contract_proof import execute, IncompleteTeardown
 from desktop_replace import inventory, write_record
 from package_outputs import plan

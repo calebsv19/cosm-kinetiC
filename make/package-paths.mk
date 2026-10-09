@@ -1,6 +1,12 @@
 # =========================
 #  Package and release paths
 # =========================
+RELEASE_ROOT ?= build/release
+# Final local assembly owns a fresh root distinct from the desktop gate.
+ifneq ($(filter release-local-artifact,$(MAKECMDGOALS)),)
+DIST_DIR := $(RELEASE_ROOT)
+export PHYSICS_SIM_DIST_ROOT := $(DIST_DIR)
+endif
 PACKAGE_APP_NAME := kinetiC.app
 PACKAGE_DISPLAY_NAME ?= kinetiC
 PACKAGE_BUNDLE_ID ?= com.cosm.kinetic

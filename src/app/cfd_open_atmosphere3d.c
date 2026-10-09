@@ -41,7 +41,8 @@ void cfd_open_atmosphere3d_destroy(CfdOpenAtmosphere3d *s) { if(s){cfd_cartesian
 bool cfd_open_atmosphere3d_init(CfdOpenAtmosphere3d *s,const int n[3],const double length[3],
     double rho,double mu,double cp,double ref,double conductivity,double diffusivity,double dt,
     const double pressure[2],const double ambient[2],const double smoke[2],bool buoyancy,double gravity,double beta,double contrast) {
-    if(!s || !pressure || !ambient || !smoke)return false;memset(s,0,sizeof(*s));
+    if(!s || !pressure || !ambient || !smoke)return false;
+    memset(s,0,sizeof(*s));
     if(!cfd_cartesian3d_init(&s->grid,n,length) || s->grid.count>524288 ||
         !isfinite(rho) || rho<=0 || !isfinite(mu) || mu<=0 || !isfinite(cp) || cp<=0 ||
         !isfinite(ref) || ref<=0 || !isfinite(conductivity) || conductivity<0 || !isfinite(diffusivity) || diffusivity<0 ||
@@ -117,7 +118,8 @@ static bool momentum(CfdOpenAtmosphere3d *s,double *maxdiv,double *residual) {
     CfdCartesian3dLinear *solver=s->projection;
     if(!solver)solver=cfd_cartesian3d_linear_create_mixed(g,periodic,neumann,0,1,false);
     if(s->cache_projection && solver){s->projection=solver;s->projection_ground=s->ground;}
-    if(!solver)return false;memcpy(s->candidate_pressure,s->pressure,(size_t)n*sizeof(double));int iterations;
+    if(!solver)return false;
+    memcpy(s->candidate_pressure,s->pressure,(size_t)n*sizeof(double));int iterations;
     bool solved=cfd_cartesian3d_linear_solve(solver,s->rhs,s->candidate_pressure,&iterations,residual);if(!s->cache_projection)cfd_cartesian3d_linear_destroy(solver);
     if(!solved)return false;
     for(int a=0;a<2;a++)for(int q=0;q<n;q++) {

@@ -15,7 +15,7 @@ import sys
 from check_clean_root import read_json
 from contract_proof import execute
 from desktop_replace import check_bundle, inventory, replace as replace_desktop
-from clean_outputs import no_symlinks
+from package_paths import no_symlinks
 from package_outputs import plan, declare
 from package_transaction import run, parse_assignments
 from release_notary import completed, values, accepted_binding, receipt_digest
