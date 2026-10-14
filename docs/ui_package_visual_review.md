@@ -1,3 +1,19 @@
+## 2026-10-13 — UI source checkpoint adopted; Main Edit ready
+
+The completed active UI rollout and retained Fire–Fluid source are checkpointed
+at `336a741d94458e0aebfd7fa58bbb0a5a5dcd975f` and fast-forward adopted into canonical `main`. The persistent
+Main Edit checkout remains the development owner. This supersedes earlier
+uncommitted/adoption-pending status entries below.
+
+Fresh Clang build, ten focused UI/theme/package targets, all 16 fast and 62 stable
+targets, headless CLI and thirteen retained coupling native targets pass. The
+existing local package/visual qualification remains documented separately.
+Coupling source and frozen workers/evidence are preserved; this checkpoint does
+not close the open numerical accuracy work. Installed/user/platform acceptance
+and legacy structural retirement remain separate. Program/worker versions stay
+0.5.0/0.4.0; source adoption does not publish a release. PhysicsSim functional
+edits can continue in the retained Main Edit lane.
+
 # PhysicsSim local UI package and visual qualification
 
 Date: 2026-10-13. Retained Main Edit, source VERSION 0.5.0. This is local macOS
