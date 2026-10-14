@@ -130,7 +130,9 @@ independent backup destination, verify the full destination manifest, verify a
 second read after relocation, and record destination and manifest digest in the
 owner's retention ledger. A same-disk copy proves relocation, not disaster
 recovery. The approved prepared survivor/fresh-evidence snapshot has a verified independent
-cold copy; see [backup completion receipt](../data/experiments/lifecycle-validation/20261007-archive-completed/receipt.json).
+cold copy; its local completion receipt is retained in the Main Edit lane at
+`data/experiments/lifecycle-validation/20261007-archive-completed/receipt.json`.
+That ignored evidence path is not part of a source clone.
 Later hardening packets are outside that snapshot, and remote retrieval/restore
 rehearsal remains unperformed. Normal clean never deletes these retained roots. Archive deletion is
 an explicit owner operation, outside this cleanup contract.
