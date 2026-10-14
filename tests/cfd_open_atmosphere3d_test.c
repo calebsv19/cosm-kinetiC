@@ -64,6 +64,47 @@ int main(void) {
     memcpy(saved,s.velocity,accepted*sizeof(double));memcpy(saved+accepted,s.flux,8*s.plane*sizeof(double));
     steps=s.steps;time=s.time;j[0]=1e9;assert(!cfd_open_atmosphere3d_step(&s,j,kg));
     assert(s.steps==steps && s.time==time && !memcmp(saved,s.velocity,accepted*sizeof(double)) && !memcmp(saved+accepted,s.flux,8*s.plane*sizeof(double)));
+    cfd_open_atmosphere3d_destroy(&s);
+    /* Interior insulated no-slip box: exact blocked faces, conservative
+     * transport, pressure residual, rejected solid injection rollback. */
+    init(&s,8,.01,300,true,beta,datum);s.ground=true;s.conductivity=.026;s.diffusivity=.002;
+    int lo[3]={3,3,3},hi[3]={5,5,5};assert(cfd_open_atmosphere3d_box(&s,lo,hi));
+    /* Independent manufactured masked pressure equation: assemble all rows
+     * directly from integer geometry, not the production operator helpers. */
+    double *exact=calloc(n,sizeof(double));assert(exact);
+    for(int z=0;z<8;z++)for(int y=0;y<8;y++)for(int x=0;x<8;x++) {
+        int q=(z*8+y)*8+x;bool solid=x>=3 && x<5 && y>=3 && y<5 && z>=3 && z<5;
+        exact[q]=solid?0:sin(.7*x)*cos(.4*y)+.2*z;
+    }
+    for(int z=0;z<8;z++)for(int y=0;y<8;y++)for(int x=0;x<8;x++) {
+        int q=(z*8+y)*8+x;bool solid=x>=3 && x<5 && y>=3 && y<5 && z>=3 && z<5;
+        s.rhs[q]=0;if(solid)continue;
+        int xyz[3]={x,y,z};
+        for(int a=0;a<3;a++)for(int sign=-1;sign<=1;sign+=2) {
+            int other[3]={x,y,z};other[a]+=sign;
+            if(a==2 && other[a]<0)continue;
+            if(a==2 && other[a]==8){s.rhs[q]+=32*exact[q];continue;}
+            other[a]=(other[a]+8)%8;
+            bool body=other[0]>=3 && other[0]<5 && other[1]>=3 && other[1]<5 && other[2]>=3 && other[2]<5;
+            if(!body)s.rhs[q]+=16*(exact[q]-exact[(other[2]*8+other[1])*8+other[0]]);
+        }
+        (void)xyz;
+    }
+    double residual;assert(cfd_open_atmosphere3d_box_pressure(&s,&residual));
+    for(int q=0;q<n;q++)assert(fabs(s.candidate_pressure[q]-exact[q])<1e-9);
+    free(exact);
+    j[0]=0;int source=3*8+3;kg[source]=.0001;j[source]=1;
+    for(int tick=0;tick<80;tick++)assert(cfd_open_atmosphere3d_step(&s,j,kg));
+    for(int q=0;q<n;q++)if(cfd_open_atmosphere3d_solid(&s,q))assert(s.energy[q]==0 && s.smoke[q]==0 && s.pressure[q]==0);
+    for(int a=0;a<3;a++)for(int k=0;k<8+(a==2);k++)for(int y=0;y<8;y++)for(int x=0;x<8;x++)
+        if(cfd_open_atmosphere3d_blocked(&s,a,x,y,k))assert(s.velocity[a*n+(k*8+y)*8+x]==0);
+    assert(fabs(cfd_passive3d_total(s.energy,n)+ledger(&s,1)-80)<1e-9);
+    assert(fabs(cfd_passive3d_total(s.smoke,n)+ledger(&s,3)-.008)<1e-13);
+    assert(s.divergence<1e-8 && s.residual<1e-11);
+    memcpy(saved,s.velocity,accepted*sizeof(double));memcpy(saved+accepted,s.flux,8*s.plane*sizeof(double));
+    steps=s.steps;time=s.time;j[(3*8+3)*8+3]=1;
+    assert(!cfd_open_atmosphere3d_step(&s,j,kg));
+    assert(s.steps==steps && s.time==time && !memcmp(saved,s.velocity,accepted*sizeof(double)) && !memcmp(saved+accepted,s.flux,8*s.plane*sizeof(double)));
     cfd_open_atmosphere3d_destroy(&s);free(j);free(kg);free(saved);assert(memory.live_bytes==0);cfd_memory_scope(prior);
     puts("open reservoir uniform/pulse/backflow budgets, hydrostatic buoyancy, joint rollback and memory controls passed");return 0;
 }

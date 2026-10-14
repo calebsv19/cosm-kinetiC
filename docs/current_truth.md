@@ -1,6 +1,667 @@
+## 2026-10-13 — Local UI package and visual qualification complete
+
+The active rollout now has fresh Main Edit package identity/signature proof and
+hands-on menu/editor/precision, real-worker F8 and 2D/controlled-3D Wind review.
+HUD contrast and quick modifier shortcuts are corrected. Packaging now generates
+loader-discoverable .json manifests and keeps new timing output in runtime state;
+the self-test fixture remains contained under unchanged strict bundle validation.
+Final Clang/focused/16 fast, 38 launcher and 14 proof tests pass. Packaged Vulkan
+startup/resize/restart requests/enables validation with zero warnings/errors.
+User/installed and other-platform acceptance remain separate; structural retirement
+is separate. Uncommitted Main Edit, no Desktop/canonical/VERSION/release change.
+[Current package qualification](ui_package_visual_review.md).
+
+## 2026-10-13 — Active simulation/HUD and F8 UI integration qualified
+
+Retained Main Edit completes shared window observation/input and contained HUD
+text in the interactive simulation owner. Hidden/minimized windows suspend GPU
+presentation while numerical updates, progress and export retain their owners.
+CPU render-frame capture remains available during suspension. Pointer coordinates
+map once from current logical window dimensions into the original simulation
+canvas, including retained navigation. Existing text-size shortcuts now update
+shared HUD/timer font roles with GPU-safe retirement and persisted UI size.
+Scientific palettes, overlays and rectangular HUD geometry remain intentional.
+
+F8's actual SDL renderer adopts clipped shared controls for Setup, transport and
+inspection actions, exact semantic activation, keyboard focus/release and transient
+pan cancellation. Its native SDL font/cache painter uses shared measured UTF-8
+fit/presentation and the existing theme/readability policy; no Vulkan renderer cast
+is used. Client completion, same-ID pending retries, snapshots and reconciliation
+continue while hidden. Pending commands finish under their original identity before
+queued intent runs. Creation stays disabled while busy; transport retains its
+existing queue policy. Pan/wheel/probe and explicit return to Setup are preserved.
+
+Final Clang application/headless/session-worker builds and focused UI/observation
+contracts pass. All16 fast and62 stable targets pass after runtime font integration;
+the final caption-contrast-only correction has final focused/native proof. Nine
+real-worker session tests pass separately from the native F8 owned-client fixture.
+Nine simulation contexts (Box/Wind/Water/Atmospheric in2D/3D plus retained3D) and
+F8 each pass eight lifecycle stages:80 total. Actual parent Setup/F8/Setup reentry,
+matched actions, queue/retry/readback, viewport, hidden polling, font zoom, pause/
+resume and hidden2D/3D exports are qualified. Every Vulkan-bearing complete process
+has enabled validation with zero warnings/errors through cleanup. Seventy-one
+pixel-equal PNGs retain accepted proof; representative captures were inspected.
+
+The active UI owner rollout is complete at source/native qualification. Structural
+is explicitly legacy per product direction and is excluded from current priorities;
+its code and routes remain for a separately bounded retirement. Remaining acceptance
+is package/install identity, hands-on visual review, other platforms/monitors and
+existing glyph/platform IME coverage. The retained low-opacity HUD
+backdrop needs a focused readability review over bright Wind fields. This is uncommitted Main Edit3028140 /
+VERSION0.5.0. Coupling source, frozen worker and active workbench are preserved;
+no shared import/API/minimum/version, canonical, installed or release change occurs.
+
+## 2026-10-13 — Precision and structural shared UI qualified
+
+Main Edit completes the Precision Editor and structural preset/runtime window
+owners against the existing immutable shared pin. Shared window observation,
+foreign/stale event filtering, transient cancellation and fullscreen handling
+preserve local drafts, selection, canvas and application apply/save/solve policy.
+Hidden/minimized windows suspend GPU presentation. Structural dynamics continue
+in their existing numerical owner while presentation is suspended.
+
+The six painted structural editor actions use clipped shared control snapshots,
+exact action identity, matched pointer/key release and native focus/pressed feedback.
+Rectangular controls and scientific colors remain intentional. Read-only hints,
+HUD, button labels and canvas tooltips use the shared measured/contained text seam;
+Precision commit/cancel hints remain visible at compact sizes. Borrowed editor
+fonts retain their existing shared roles; runtime font retirement waits for GPU
+completion. The numerical structural-state header retains only a forward-declared
+UI pointer and stays independently testable.
+
+Final production Clang/headless builds, seven focused contracts, all 16 fast and
+62 stable targets pass. Actual public host loops pass 24 native lifecycle stages
+plus apply/cancel, action/save/cancel/solve/reopen and dynamic hide/resume/step
+replays. Validation is enabled with zero diagnostics through complete process
+cleanup. Twenty-four pixel-equal PNG captures are retained and representative
+compact/normal captures were inspected.
+
+Remaining rollout owners are the simulation window/HUD and F8 live inspection.
+The former uses `scene_controller.c` with the Vulkan `renderer_sdl.c` compatibility
+owner; simulation timing/export must remain independent of presentation suspension.
+F8 is a real SDL renderer in `session_workspace.c`: it needs its own painter and
+capture adapter, preserving live-session/control/attach and viewport ownership.
+The new Vulkan painting helper cannot be cast onto that renderer. Combined mode,
+platform and packaged-app/human acceptance remain final qualification boundaries.
+
+Source is uncommitted Main Edit3028140 / VERSION0.5.0. Coupling source, frozen
+probe, active workbench and imported shared bytes are preserved. Canonical and
+installed/package/release surfaces are unchanged.
+
+## 2026-10-13 — Preset editor shared UI qualified
+
+PhysicsSim Main Edit's borrowed-window preset editor now observes shared window
+state, filters foreign/stale input, cancels transient navigation/drag/composition
+on lifecycle changes and suspends rendering while hidden or minimized. Working
+presets and typed drafts persist. The borrowed renderer finishes submitted work
+before editor-owned font resources are retired, including text-size refresh.
+
+Painted toolbar/inspector actions use clipped shared control snapshots, stable
+editor-owned keys, matched pointer/key release and visible focus/pressed state.
+Accepted actions bind the exact painted owner before existing app handlers run;
+an undrawn Delete Selected rectangle can no longer intercept Air Flow Mode.
+Hidden legacy actions acquire no interaction surface. Existing canvas/list domain
+gestures and application save/apply/cancel policies remain owners.
+
+Name, width/height/depth and emitter numeric fields use shared UTF-8 editing,
+selection/clipboard/composition and measured caret/selection presentation.
+Metadata entry adopts its started SDL session without flushing queued committed
+text. Existing capacities and numeric character policy remain; parsing/clamping
+and persistence are still app-owned. Shared read-only button/title presentation
+and UTF-8-safe fitting retain the rectangular geometry, palette and font roles.
+
+Fresh final Clang and twelve focused contracts pass. The 62-target stable lane
+and all16 fast targets passed after repairing desktop-only source leakage into
+the headless link; subsequent editor-only input/resource corrections have final
+focused and native proof. Both editor modes pass eight native window stages each;
+ordinary preset edits/Save and retained Source/numeric/Apply Overlay/Save Scene/
+Menu replays pass with validation enabled and zero diagnostics through cleanup.
+Independent retained save readback preserves base objects, authoring bytes and
+the unrelated LineDrawing extension. Twenty-four lossless PNGs are retained;
+representative compact/fullscreen/edit/save captures were visually reviewed.
+
+This remains uncommitted Main Edit source at3028140 / VERSION0.5.0. Coupling source,
+frozen executable and active workbench are preserved; imported shared bytes and
+canonical/installed/release surfaces are unchanged. Remaining owners: Precision
+Editor, structural preset/runtime windows, simulation renderer/HUD, and the SDL
+live inspection host. Platform IME/glyph and final packaged-app acceptance remain
+separate. Next bounded slice: Precision Editor lifecycle and text qualification.
+
+## 2026-10-13 — Menu long paths and text containment qualified
+
+Main Edit menu paths now edit up to their existing saved-config capacities:
+255 UTF-8 bytes for input/output roots and 511 for Atmospheric warm-start paths.
+Menu-owned backing storage keeps numeric/rename/common editor buffers unchanged;
+existing path trim/default, Enter/Escape, click-away, save and refresh policies
+remain owners. Accepting an unchanged long path no longer truncates it at 63 bytes.
+Oversized inserts are refused atomically and lifecycle changes preserve full drafts.
+
+Common measured UTF-8 fitting replaces the three byte-truncation copies. Buttons,
+toggles, settings labels/values and status messages use shared read-only text
+presentation with enclosing clips, alignment and logical font metrics. Informational
+status is bounded between settings and Data I/O; emphasized status reuses the existing
+theme readability rule. Rectangular control shapes and domain layout remain.
+
+A directly blocking config-save issue in the retained json-c 0.18 archive was
+qualified: its strict guard rejects raw multibyte JSON strings but accepts equivalent
+Unicode escapes. Config strings now emit validated ASCII Unicode escapes, including
+surrogate pairs. Decoded values and schema limits are unchanged; malformed UTF-8
+saves preserve the prior config. Shared job parsing and persistence guards are untouched.
+
+Fresh Clang, eight focused contracts and all 16 fast targets pass. Actual-owner
+replay verifies long-path save/cancel, maximum capacities, Unicode round trips,
+malformed/oversize refusal and visible read-only presentation rows. Native window
+and compact text proofs pass with validation enabled and zero warnings/errors.
+The 198-byte native edit preserves runtime cfg while canceled paths and a numeric
+draft are exercised. Fifteen current pixel-equal PNGs are retained; the initial
+resize-only text capture was skipped. Final captures were visually reviewed.
+
+Coupling source and frozen executable identity are unchanged; the workbench stays
+running. Source remains uncommitted at 3028140 / VERSION 0.5.0, with no canonical,
+installed app, shared import or release change. Current fonts do not cover every
+CJK/emoji glyph, and synthetic SDL composition does not establish platform IME
+human acceptance. Next: a bounded ownership/parity assessment of the preset editor
+controls/text and its window host, followed by structural/runtime owners.
+
+## 2026-10-13 PhysicsSim menu shared text editing qualified
+
+Retained Main Edit routes menu root/warm-start paths, preset rename and existing
+numeric text owners through exact imported kit_ui 0.18.0 text editing and measured
+presentation. The menu adapter reuses caller-owned field buffers and existing
+finish handlers: numeric edits remain drafts, path acceptance retains its existing
+persistence/refresh policy, and rename retains its existing library/save policy.
+UTF-8 caret movement, selection, copy/cut/paste, hit/drag selection, preedit and
+horizontal caret reveal replace append-only menu editing. Existing 64-byte storage,
+field limits, validation, rectangular frames, palette and font roles remain.
+Oversized inserts are rejected atomically; truncated initial UTF-8 suffixes are
+trimmed to a valid boundary. Dormant inflow/viscosity fields are supported without
+introducing new controls. Editor/canvas text consumers are unchanged.
+
+Menu text ownership suppresses unrelated shortcuts while editing. Focus/visibility
+and geometry invalidation cancel composition/drag/native sessions while preserving
+typed drafts. Selection hits and native anchors inherit the enclosing list clip;
+scrolling invalidates stale rename geometry and invisible fields suspend native
+text sessions. The shared native candidate rectangle uses logical menu coordinates
+once; eligibility remains app/window owned. Seven focused contracts and all 16 fast
+targets pass after a fresh Clang build. Eight native lifecycle stages and ten native
+text stages pass with validation enabled and zero diagnostics. The compact text
+proof uses 1120x860 logical / 2240x1720 drawable pixels and preserves the complete
+runtime config byte-for-byte while editing/canceling paths and accepting a numeric
+draft. Sixteen pixel-equal PNGs and compact logs remain; native replay instrumentation
+exists only in retired disposable staging. Platform IME/human acceptance is not
+claimed by synthetic SDL composition replay.
+
+Coupling source and frozen executable hashes are unchanged. The earlier long probe
+was already absent at this slice's start; the workbench remains running. Source is
+uncommitted; canonical, installed apps, VERSION 0.5.0 and the shared import are
+unchanged. Next: long-path edit capacity and remaining menu label/status containment, then
+separately owned editor/structural/runtime hosts.
+
+## 2026-10-13 PhysicsSim menu/settings shared controls qualified
+
+Retained Main Edit now uses existing kit_ui 0.18.0 caller-owned surfaces and
+interaction/SDL event adapters for toolbar controls, settings step buttons,
+toggles and Apply/Save/Revert/Restore/Defaults, preset Add/Delete and the F8
+inspection entry. The default native menu proof registers50 controls. Accepted
+pointer/key releases call the existing app handlers; cross-control/outside,
+disabled, stale window, text/authoring takeover and scope/selection changes
+cannot activate the old owner. Legacy release-position fallback is blocked for
+registered controls. Stable action/field/slot keys and clipped list snapshots
+retain layouts and list selection/double-click rename policy.
+
+Existing rectangular frames, palette and text measurement remain. Shared
+pressed feedback and thin focus geometry render through the native Vulkan
+bridge. Tab/Shift-Tab and Enter/Space release follow shared ownership; repeats
+do not duplicate actions. Text input/numeric validation, scrolling, application
+shortcuts, settings/save policy and document/canvas behavior remain app-owned.
+
+Fresh Clang, six focused contracts and all16 fast targets pass. Production-object
+replay uses actual handlers to prove draft-only nudges, Apply without disk save,
+Save persistence, Revert/Restore/Defaults, Add/Delete, keyboard release/repeat,
+disabled and takeover refusal. Native input replay confirms one draft nudge with
+byte-unchanged runtime cfg, pressed/focus feedback and clean validation. The
+unchanged-source eight-stage shared window proof retains hidden/minimized
+suspension and recovery. Twelve pixel-equal PNGs/logs remain. Existing coupling
+source hashes and frozen running solver are unchanged. Source is uncommitted;
+canonical, installed apps, VERSION0.5.0 and shared source/import remain unchanged.
+Next: bounded shared text fields/presentation, then other UI/window owners.
+
+## 2026-10-12 PhysicsSim menu shared window lifecycle qualified
+
+Retained Main Edit reuses exact committed kit_ui 0.18.0 at managed pin
+1bf262dc8acac5354d95eb0c57bdc9ce0af39197 for menu window observation and
+opt-in actual-loop proof. A sibling host adapter cancels stale pointer releases,
+scrollbar drag, double-click timing and authoring chord state before input;
+active text/settings/authoring drafts persist. Geometry-changing event batches
+cannot route through old hit rectangles. Hidden/minimized menu presentation
+and recreation are suspended while bounded polling permits restore/quit; F11
+uses the shared desktop-fullscreen helper. Logical and drawable extents remain
+separate. Native eight-stage proof passes with no suspended frame increments,
+validation enabled and zero warnings/errors. Fresh Clang, five focused UI/host
+contracts and all 16 fast targets pass. Six lossless PNGs retained.
+
+This is uncommitted Main Edit menu-host adoption. Editor, structural and runtime
+loops require separate integration/proof; menu/settings control and text migration
+remain next. Existing coupling source, frozen running computation, canonical,
+installed apps, VERSION 0.5.0 and shared source/import are preserved. No shapes
+or settings/save semantics changed. Evidence: PhysicsSim `docs/shared_ui_rollout.md`
+and workspace `_private_workspace_artifacts/physics-sim-menu-window-20261012/`.
+
 # kinetiC Current Truth
 
-Last updated: 2026-10-08
+<!-- reconstructed-flow-current:start -->
+## 2026-10-11 — Reconstructed transfer and fine flow timing completed
+
+Conservative bounded MC transfer, with original sources and 5 ms flow / 1.25 ms
+scalar timing, gives **10.320860%** local heat difference, versus piecewise-
+constant **9.590649%**. The unchanged 10% gate fails; the other five screens
+pass. Parent heat is conserved, the coarse control is bit-identical, and the
+independent array readback agrees. On the same fine grid, the transfer changes
+local heat by 1.420622% and velocity by 1.232638%. The earlier narrow pass is
+representation-dependent, not a robust qualification.
+
+Original own-thermal 128³ flow at 5/2.5/1.25 ms, with scalar timing fixed at
+1.25 ms, passes both adjacent temporal comparisons and shrinking differences.
+Heat changes are **0.226292% / 0.112242%**; velocity changes are
+**0.495013% / 0.240956%**. Absolute difference ratios are 0.4960 / 0.4869.
+Against the fixed 64³/5 ms baseline, heat remains **13.153941%, 13.055688%,
+13.006251%**. The latter two comparisons use different flow timing across grids;
+they do not replace the original matched-timing spatial verdict. Time refinement
+is stable and does not repair the 10% heat gate. No specific solver defect is
+isolated. Burning surfaces and gas-to-surface response remain unqualified.
+
+Next boundary: resolve spatial heat/flow accuracy in the source-adjacent plume
+with a genuinely finer independent reference or a qualified spatial repair;
+retain original sources, stabilized timing and the unchanged 10% heat criterion.
+Evidence: `_private_workspace_artifacts/fire-fluid-reconstructed-flow-20261011/`
+(`CHECKPOINT.md`, `transfer-verdict.json`, `timing-verdict.json`,
+`independent-readback.json`). Canonical, versions and ordinary worker capability
+remain unchanged; the qualification helpers are uncommitted in Main Edit.
+<!-- reconstructed-flow-current:end -->
+
+## 2026-10-11 — Shared thermal forcing diagnostic completed
+
+The online 64³ driver and independently evolved 128³ flow comparison with original
+sources and fixed 5 ms flow / 1.25 ms scalar timing passes all six diagnostic screens: **9.590649%** local
+heat and **4.701925%** full velocity. The coarse control is bit-identical to the
+accepted baseline; accounting, memory and independent field readback pass.
+The fully coupled heat failure remains **13.153941%**. Coarse piecewise-constant
+forcing changes native fine velocity by 8.006732%; this narrows thermal-input
+sensitivity but retains a transfer-representation confound. The pass has only
+0.409351 percentage-point margin. Next: conservative reconstructed thermal
+forcing sensitivity, followed separately by fine-flow timing. Burning faces
+and gas-to-surface response remain unqualified. See `fire_fluid_local_transport.md`
+and `_private_workspace_artifacts/fire-fluid-prescribed-flow-20261011/CHECKPOINT.md`.
+
+## 2026-10-11 — Fixed-scalar 64³/128³ verdict completed
+
+The original-source, fixed-timing independent flow comparison still fails the
+unchanged10% local heat gate: **13.153941%** heat and **10.025080%** full MAC
+velocity. Wind probes differ2.288144%, but73.112% of heat disagreement lies in
+Z=0.125–0.25 m, where horizontal velocity differs20.693%. Corrected matched-flow
+heat transport passes at6.434321%; smooth manufactured forcing/projection passes
+with fourfold error reduction on refinement. Accounting, memory and fresh
+native/sanitizer/Python checks pass. These are local source-qualification results,
+not physical calibration or released128³ worker admission. Next: shared thermal
+forcing to isolate evolving flow response; surface heating remains unqualified.
+See `docs/fire_fluid_local_transport.md` and
+`_private_workspace_artifacts/fire-fluid-flow-spatial-20261010/CHECKPOINT.md`.
+
+## 2026-10-10 — Evolving 64³ flow timestep qualification passes
+
+The accepted no-box plume is independently evolved at 5, 2.5 and 1.25 ms flow
+steps, with heat and smoke held at 1.25 ms in every case (2,560 scalar cycles).
+The frozen source, 1 m³ domain, 3.2 s duration, 0.1 s source windows and physical
+heat ROI (XY 0.25–0.75 m, Z 0–0.375 m) are unchanged. This is local Main Edit
+qualification; ordinary app/worker admission, numerical operators and timing
+remain unchanged. A compile-only qualifier control refuses unsafe or nonintegral
+scalar timing rather than adapting it.
+
+| Relative final-state change | 5 → 2.5 ms flow | 2.5 → 1.25 ms flow |
+| --- | --- | --- |
+| Local heat L1 | 0.143431% | 0.071375% |
+| Full MAC velocity L2 | 0.343055% | 0.170098% |
+| Wind-probe vector norm | 0.586734% | 0.294917% |
+| Height temperature-rise profile L1 | 0.094157% | 0.046793% |
+| Full smoke L1 | 0.108380% | 0.053886% |
+| Peak temperature rise | 0.040631% | 0.020269% |
+
+Both temporal pairs pass the unchanged 10% local heat gate and 10% observable
+screens. Absolute local heat and velocity differences shrink by factors 0.4976
+and 0.4960. Independent NumPy native-array readback agrees. This supports retaining
+5 ms flow for this 64³ baseline. It is final-state sensitivity, not an exact
+solution, formal order claim, physical calibration or a 128³ temporal verdict.
+
+All cases retain 158.072 J, with maximum heat balance magnitude 3.59e-12 J,
+smoke balance 3.19e-17 kg, divergence 7.40e-13 and pressure residual 5.00e-12.
+Charged memory peaks at 173,919,744 bytes and closes to zero. Total native replay
+wall time is 49.585 minutes. Fresh build, native/ASan/UBSan timing/refusal tests,
+15 focused report tests, 74 native + 74 identical sanitizer accuracy rows and 59
+configured Python regressions pass. Full long replays are native, not sanitizer
+instrumented. Ordinary worker/probe bytes match the prior accepted binaries;
+full app/stable proof is reused for identical runtime bytes. Corrected fixture
+and build-lock invocation failures are recorded separately.
+
+The prior independent 64³→128³ coupled spatial heat difference remains 13.146%,
+above 10%. A separate retained-field readback finds 10.079% full face velocity
+and 9.976% heat-ROI cell-center velocity disagreement; the source-adjacent
+Z=0.125–0.25 m velocity band differs 12.192%. Those older runs used adaptive
+scalar counts 640/783, so this is localization context, not a new fixed-scalar
+spatial gate. No surface heating or burning faces are enabled.
+
+Next boundary: a paired 64³/128³ evolving-flow spatial comparison with the same
+fixed scalar timing, using normal-face area restriction and the source-adjacent
+velocity/heat bands to localize any remaining discrepancy before a repair.
+Fine-grid temporal sensitivity and gas-to-surface flux remain unqualified.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-flow-time-20261010/CHECKPOINT.md`
+and `flow-time-verdict.json`. Retain three terminal fields (31,752,192 bytes),
+frozen qualifier/source/analysis and compact logs for the next comparison; reuse
+the prior source input rather than copying it. The 23 lifecycle-marked contract
+capsules total 14,549,486 bytes and remain recovery/comparison evidence. Both
+task-owned disposable build roots were retired after consumer checks. The local
+review page and state remain HTTP 200 and unchanged. Canonical remains clean;
+no commit, adoption, VERSION, package, Registry or release action occurred.
+Atlas was considered: this is supporting evidence under the existing unadopted
+coupling lane, with no new plan, topology or adoption claim. No memory write was
+requested. Minor release recommended; approval required before version bump.
+
+## 2026-10-10 — Matched evolving flow heat gate passes
+
+A separate native qualifier streams one accepted evolving 64³ no-box plume flow
+into heat carriers at 64³/128³. It uses the existing minmod/Euler scalar operator,
+flux/divergence-preserving velocity prolongation, fixed 5 / 2.5 ms scalar steps,
+the same 3.2 s frozen-source replay and physical ROI, and the unchanged 10% gate.
+Local spatial heat is 6.340% / 6.228%; halving the heat step changes local heat
+0.329% at 64³ / 0.463% at 128³. At 2.5 ms, fixed-volume height profile differs
+2.605% and peak temperature rise 7.047%. The diagnostic gate passes. The smaller z=0.25–0.375 m band still differs
+18.84% (1.441 J over 7.648 J); this is a localization diagnostic, not a new gate,
+and individual surface-plane flux accuracy remains unqualified. The prior
+independently evolved coupled 64³→128³ result remains 13.146% and unqualified.
+
+The heat control matches the production operator bit-for-bit at every flow step;
+final 64³ heat/smoke/velocity bytes match the accepted reference exactly. All four
+carriers retain 158.072 J, heat residuals below 4e-13 J, transferred divergence
+below 7.45e-13 and maximum heat CFL 0.21754 < 0.4. Charged memory peaks at
+1,070,399,664 bytes under 2 GiB and closes to zero. Full replay took 12.11 minutes.
+A global-maximum qualification guard initially stopped an incomplete trial; it
+was replaced by the accepted local heat stability rate, with no adaptive cycles
+or product operator change. That incomplete trial and its binary are retained.
+
+Fresh compilation, targeted native/ASan/UBSan including 128³ transfer/heat capacity,
+19 report tests, 74 native + 74 identical sanitizer accuracy rows and 56 Python
+regressions pass. The complete replay is native, not sanitizer-instrumented.
+Ordinary worker/probe bytes and runtime sources are identical; full app/stable
+proof reuses the prior identical-runtime checkpoint. The initial Python setup
+and ordinary-profile capacity failures were corrected and recorded separately.
+
+Next: qualify evolving flow/velocity representation and flow timestep sensitivity
+before changing the heat scheme or enabling surface heating. The fine diagnostic
+flow represents the coarse history, with linear normal and piecewise constant
+tangential velocities; it is not an independently solved fine flow. The 17.051 J
+L1 remainder against that fine-flow reference combines flow evolution,
+representation and prior adaptive cycles, and cannot be treated as an additive
+percentage contribution. Two heat timesteps are a sensitivity check, not a formal
+order. Frozen prior 8³ Fire source, not live fine-grid feedback or calibration.
+Burning faces and reciprocal thermal exchange remain disabled.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-matched-heat-20261010/CHECKPOINT.md`
+and `matched-heat-verdict.json`. Final diagnostic fields, compact frozen source,
+analysis and failure proof, plus 23 retained contract capsules are the next flow
+comparison inputs. Task-owned disposable verification builds are retired after
+consumer checks. Canonical, HEADs, versions and saved review bindings remain
+unchanged. Minor release recommended; approval required before version bump.
+Atlas considered: supporting qualification within the existing unadopted coupling
+lane; no new top-level plan, topology or adoption claim. No memory-folder writes.
+
+## 2026-10-10 — Full-grid resolution verdict: heat gate still fails
+
+The accepted minmod/Euler scalar and conservative-momentum solver completed full
+32³/64³/128³ no-box prescribed-source runs. The unchanged local heat difference
+improves 16.206% → 13.146%, but the 10% gate still fails. On one fixed 32³ physical
+observation partition, disagreement falls 25.616 → 18.190 J (ratio 0.710); that
+partition still differs by 11.508%. The three-level indicator is only 0.494 and
+difference-pattern cosine 0.558, so clean asymptotic convergence is not established.
+Height-rise profile 4.548%, smoke 4.984%, wind 2.317% and peak-rise 7.416% all pass
+the declared 10% stabilization screen; peak increments nevertheless grow slightly.
+73.3% of the remaining local heat disagreement lies just above the source.
+
+Source-volume restriction agrees within 1.401e-16; 32³/64³ controls and ordinary
+worker/probe bytes are identical to the accepted checkpoint. Fresh builds, full
+128³ native replay, native/refusal/report checks, 128³ capacity ASan/UBSan and
+52 Python regressions pass. Four final report tests also pass after adding scalar
+cycle metadata. Full app/stable reuses prior proof for identical runtime bytes;
+the full 640-step fine replay is not sanitizer-instrumented. Accepted CFL control
+uses 783 scalar cycles at 128³ versus 640 at 64³; independent fine-grid time
+accuracy remains unqualified. Fine replay took about 68.24 local CPU minutes.
+
+Next: bounded matched-velocity heat transport with explicitly controlled scalar
+timesteps, separated from evolving buoyancy/projection, under the same physical
+ROI and 10% gate. Do not enable surface heating/burning or assume 256³ will solve
+this. No new solver defect is established. This is frozen prior 8³ Fire-source
+replay, not fine-grid live feedback, calibrated combustion or release admission.
+Evidence: `_private_workspace_artifacts/fire-fluid-resolution-20261010/CHECKPOINT.md`
+and `resolution-verdict.json`. Three exact idle disposable builds and the
+regenerated 1 GiB source were retired; final fields, frozen source/helpers,
+compact proof and 23 CFD capsules are retained for that isolation. Canonical,
+HEADs, versions and saved review bindings remain unchanged. Minor release
+recommended; approval required before version bump. No release or memory-folder
+effects. Atlas considered: supporting proof within the existing unadopted lane,
+no new top-level plan, topology or adoption claim.
+
+## 2026-10-10 source-edge candidate rejected
+
+[Local transport qualification](fire_fluid_local_transport.md) adds an exact
+aligned/off-grid vertical source-edge regression. A bounded higher-order scalar
+candidate improves independent 64-cell source-edge error to 1.95% / 1.77%, but
+fails the unchanged matched plume gate: 16.631% local heat versus the retained
+16.206%, with 69.8% of absolute discrepancy immediately above the source.
+Candidate runtime changes were removed; the accepted momentum repair remains.
+Fresh worker/probe and 32³ plume bytes reproduce the prior checkpoint exactly;
+74 native + 74 matching sanitizer checks, boundary/box contracts and 44 Python
+regressions pass. Full app/stable reuses the prior identical-runtime proof.
+Next: isolate matched-velocity heat transport from coupled buoyancy/projection
+before surface response. Surface heating and burning remain disabled. Canonical,
+versions and the reachable saved review remain unchanged; no release adoption.
+
+## 2026-10-10 conservative momentum repair
+
+[Local transport qualification](fire_fluid_local_transport.md) fixes a proven
+nonlinear momentum conservation defect in Main Edit. Closed periodic momentum
+drift falls from about 3e-6 to below 7e-16 kg m/s; an independent native traveling
+shear converges to 0.135% velocity error. Fresh compilation, native/sanitizer,
+44 Python regression, full app and stable gates pass.
+
+Matched 32³→64³ local heat improves modestly to 16.206% no box / 16.170% box,
+so the unchanged 10% gate still fails. Fixed-grid heat timestep differences halve
+from 0.2096% to 0.1042%. Budgets, solid exclusion and recovery pass; sampled
+surface-flux convergence remains unqualified (box difference 3.844 W/m²).
+Burning faces and reciprocal thermal exchange stay disabled. Next: isolate the
+remaining spatial source/vertical heat transport error. The saved review keeps
+its baseline worker; this repair is not packaged, released or visually adopted.
+
+## 2026-10-10 localized evolving transport and directional refinement
+
+[Localized transport qualification](fire_fluid_local_transport.md) passes heated
+translation (6.65% at 64 cells) and native evolving viscous shear (2.24%).
+The source, solver and retained controls are unchanged. Directional local heat
+differences shrink to 4.05% X/Y and 7.39% Z from 64³, but the combined
+32×32×64→64×64×128 result is still 15.38%, above the unchanged 10% gate.
+Rectangular inert-box checks pass; no burning or reciprocal thermal admission.
+Next: isolate coupled source/buoyancy/advection behavior before selecting a
+verified numerical repair.
+
+## 2026-10-10 local transport repair attempt
+
+[Local transport repair evidence](fire_fluid_local_transport.md) rejects a
+sharper scalar limiter as the repair: local 32³→64³ heat differences remain
+17.74%/17.72%, above 10%, despite better manufactured transport results. The
+active solver is restored unchanged, with bit-exact normal replay. A new
+localized analytic 3D buoyancy/projection test passes approximately second-order
+refinement, reaching 0.031% velocity and 0.014% pressure error at 64³. This
+narrows the investigation; nonlinear plume transport, surface flux, reciprocal
+thermal exchange and burning faces remain unqualified.
+
+## 2026-10-10 local heat and passive surface checkpoint
+
+[Local heat and passive surface qualification](fire_fluid_surface.md) passes
+manufactured passive response energy balance and exact recovery. The source
+height profile passes the 10% spatial gate, but local source-region heat remains
+16.7–16.8% different. Proposed face-flux diagnostics fail spatial convergence;
+the native box remains insulated with zero actual thermal exchange. Burning
+faces, reciprocal thermal exchange and measured material response remain disabled
+or unqualified. These are new observations of retained native fields, not a new
+live simulation or release.
+
+## 2026-10-10 source/transport accuracy checkpoint
+
+[Source and transport accuracy](fire_fluid_accuracy.md) passes independent SI
+heating, hydrostatic/accelerating buoyancy and analytic scalar checks. Separate
+32³ time refinement is below 0.2%; matched 32³→64³ no-box/box heat and smoke
+differences pass the original 10% gate on a common 8³ partition. Finer 32³
+heat differences remain about 16.8%, so local surface heat transfer and burning
+objects remain unqualified. This is prescribed-source low-temperature numerical
+evidence, not a live 64³ feedback, physical calibration or release claim.
+
+## 2026-10-10 isolated plume boundary checkpoint
+
+[Isolated plume qualification](fire_fluid_isolated.md) adds opt-in ambient
+lateral reservoirs and centered source controls. Known periodic translation and
+escaping packets pass; box exclusion, accounting, replay/recovery and domain-size
+checks pass. The scalar spatial gate fails: about 22% heat and 17% smoke between
+16³ and 32³. This checkpoint is development evidence, not an accuracy-qualified
+fire flow baseline. Next work is source-layer/buoyant transport verification.
+
+
+Last updated: 2026-10-10
+
+## Fire–Fluid inert box (2026-10-10)
+
+The coupled warm plume supports one aligned stationary, unlit, insulated box.
+Paired live wind-feedback runs pass exact blocked-flow, scalar budgets, replay,
+rollback and recovery. Matched 8³/16³/32³ fixed-source comparisons show decreasing
+scalar and wind-probe differences, with substantial residual spatial differences;
+no asymptotic order or physical calibration is claimed. Both controls start from
+rest and use 10% authored heat transfer to preserve unchanged native contrast
+admission. The workbench exposes matching paired presets and exact solid-mask
+scene exports. See [checkpoint and limits](fire_fluid_box.md).
+
+## Fire–Fluid visual correction (2026-10-10)
+
+Diagnostic emission cards are removed from the workbench's render projection.
+A warm-plume authored profile exposes a taller native domain and supported heat
+transfer for a smoke-depth demonstration; wind feedback remains enabled and
+thermal return remains disabled. Native side projection shows height separately
+from optical appearance. The renderer's existing cell-centred single-scattering
+profile is selected with explicit uncalibrated candidate optics. Last rendered
+previews persist across reopening. Local panel lifetime is detached from temporary
+chat command sessions. This supersedes the earlier visual-completion claim; the
+original baseline proved coupling/attachment, not a satisfactory smoke image.
+
+## Local Fire–Fluid authoring and playback (2026-10-10)
+
+Main Edit now includes a loopback authoring panel using native coupled checkpoints,
+wind-feedback controls, run/pause/single exchange, field inspection, exact saved-state
+recovery/playback and local RayTracing snapshot previews. A repeatable two-second
+enabled/disabled comparison and source-only workflow tests pass; thermal return
+remains disabled. This milestone does not adopt the separate experimental mixture
+kernel, establish physical combustion calibration or update installed packages.
+Methanol-specific expansion is paused. See [usage and qualification](fire_fluid_workbench.md).
+
+## Conservative evolving species and formation-energy assessment (2026-10-10)
+
+A separate periodic 3D native mixture kernel carries N2/O2/CO2/H2O/CH3OH partial
+densities and total energy including formation enthalpy. First-order HLLC and
+prescribed equal-D/Fourier transport pass conservation, enthalpy-flux, independent
+property, refinement, source, refusal and exact-recovery tests. Fine smooth
+species/energy errors are 0.1959%/0.3077%. Prescribed 10% chemical conversion heats
+500 K to 802.5706 K without an added energy source; this is not kinetics.
+A sharp moving composition contact still has 178.02 Pa pressure error. The
+new kernel does not replace the solid/open/gravity domain adapter. Calibrated
+transport, domain integration, sharp mixing, combustion/radiation/surface and
+physical plume/slab accuracy remain gates; thermal return stays disabled.
+See [contract, references, supported transport and limits](hotgas_species.md).
+
+## Native continuous caloric and fixed-mixture energy assessment (2026-10-09)
+
+Opt-in N2/O2/CO2/H2O caloric properties now drive native pressure, sound speed,
+reconstruction, fluxes, stage copies, reservoirs and conductive observations over
+200–1500 K. Independent NIST heat benchmarks targeting 1300 K produce 1300.0026 K
+for air and 1299.7763 K for prescribed products. Smooth fixed-mixture entropy
+transport refines at ratios 4.42/4.00; prior strict low-Mach pressure gates pass.
+The energy convention is sensible h(298.15 K)=0, with formation energy excluded.
+Composition remains fixed; species diffusion, calibrated transport coefficients,
+combustion, radiation, condensation and measured burner response are not qualified.
+Thermal return remains disabled. See [model, qualification and physical limits](hotgas_caloric.md).
+
+## Bounded low-Mach pressure and velocity assessment (2026-10-09)
+
+Opt-in pressure-corrected MUSCL with SSP-RK3 and compression-aware acoustic
+safeguards improves the stationary Mach 0.001 vortex from 71.26% to 5.57%
+velocity error and from 107.31% to 8.44% pressure-shape error at 0.02 seconds.
+The pressure-prepared 32-cell linear buoyancy reference reaches 1.14% pressure
+error. Physical acoustic CFL remains; the reservoir weak-pulse reflection is
+0.23%. The unguarded candidate is rejected for 86% reflection. Longer-time
+vortex dissipation, finite-contrast plume accuracy, native variable caloric EOS,
+species/transport and measured fire prediction remain separate gates. Thermal
+return remains disabled. See [method, evidence and limits](hotgas_pressure_accuracy.md).
+
+## Spatial reconstruction and linear buoyancy assessment (2026-10-09)
+
+Opt-in MUSCL/HLLC with SSP-RK2 gives near-second-order smooth periodic acoustic
+refinement and reduces 32-cell linear-reference velocity error from 52.43% to
+8.67%. Pressure disturbance error remains 24.15%, or 28.50% with balanced initial
+pressure, so low-Mach pressure accuracy and finite-contrast plume qualification
+remain open. Native two-stage refusal/source accounting, conservative boundaries
+and exact recovery pass. The larger sanitizer buoyancy case exceeded its bounded
+worker timeout; smaller sanitizer cases pass. Thermal return stays disabled.
+See [method, reference and limits](hotgas_spatial_accuracy.md).
+
+## Contact/pressure numerical repair and mixture reference (2026-10-09)
+
+Explicit HLLC mode now preserves stationary isobaric thermal contacts exactly.
+Matched acoustic refinement, wall/reservoir weak-pulse response, conservative
+budgets and exact recovery pass. Localized buoyancy is much less damped, but
+medium-to-fine mesh response still changes 14.97%; physical plume accuracy remains
+unqualified. The original slab reversal persists at a reduced magnitude. A bounded
+NIST mixture evaluator passes independent property checks; it is not connected to
+the constant-gamma native EOS and does not qualify transport or combustion.
+Thermal return remains disabled. See [results and limits](hotgas_lowmach.md).
+
+## Conservative gas domain and conductive observations (2026-10-09)
+
+A separate Main Edit domain module now implements solid slip walls, prescribed
+open reservoirs, balanced hydrostatic gravity, gas-plus-potential energy budgets
+and explicit conduction. Ten domain and two observation-semantics tests pass
+strict/ASan/UBSan; native refusal, periodic seven and held-return three regressions
+pass. Native surface/13 mm conductive samples are available, without radiation,
+gauge absorption or thermal-return admission. A failed longer slab is preserved;
+localized buoyancy stays upward but is strongly damped. Physical buoyancy/plume
+accuracy remains unqualified. See [scope, evidence and next gates](hotgas_domain.md).
+
+## Hot-gas numerical foundation (2026-10-09)
+
+Main Edit now has a separate conservative variable-density Euler module with
+ideal-gas temperature/pressure, acoustic CFL admission and transactional updates.
+Seven gas tests pass strict/ASan/UBSan; four independent manufactured surface-law
+checks pass strict and sanitized workers. Contact refinement approaches first
+order, 1290 K states are admitted, and a 10 ms prescribed-power transport probe
+conserves energy and restarts exactly. The module is periodic and calorically
+perfect; it is not yet a buoyant reacting burner/plume or physically calibrated
+heat-transfer model. Existing coupled baseline and thermal-return disablement
+remain. See [scope and reproducible checks](hotgas_foundation.md).
+
+## Main Edit native Fire–Fluid development (2026-10-09)
+
+Canonical and Main Edit started clean at released kinetiC 0.5.0 / worker 0.4.0
+(`302814026b58`); Change 0.4.0 started at `e726acdfa0a3`. Main Edit now contains
+uncommitted opt-in exact-time/exchange/joint-progress adapters over unchanged
+Core Sim 0.8.1, a transactional native reference scenario and read-only scene
+projection. See [the source-development contract](fire_fluid_framework.md).
+Native velocity observations are available; application to Fire, a timed wind
+response, calibration and bidirectional feedback remain separate. VERSION,
+canonical source, released packages and worker activation are unchanged by this
+functional development.
 
 ## Reconciled source checkpoint (2026-10-08)
 
@@ -2241,3 +2902,137 @@ relevant compatibility/visual checks remain required.
 
 The Linux worker recipe now includes native session/atmosphere workers and the offline adapter closure.
 Package-only Mac coupling, exact replay/recovery and native parent-death recovery are qualified development evidence. Native Linux package qualification and authenticated release acceptance remain open. See [offline_coupling_package.md](offline_coupling_package.md).
+
+
+## 2026-10-09: matched spatial comparison and floor return fields
+
+The opt-in Fire–Fluid joint host now selects the existing native no-slip-floor/
+open-top atmosphere model and verifies reservoir-inclusive persisted budgets.
+Accepted native return sampling uses floor ghosts, the separate top normal face,
+physical height and checkpoint/time/frame/units identity. A matched three-grid
+transport comparison with invariant source support decreases field differences
+on a common observation partition; fine-detail asymptotic order remains
+unqualified. See [framework contract](fire_fluid_framework.md). Timed Fire remains
+zero-wind; no held return channel or physical calibration is claimed.
+
+
+## 2026-10-09: opt-in accepted-prior held wind feedback
+
+The source-development Fire–Fluid framework now supports a versioned timed
+heat-advection wind response and a Core Sim POINT/HOLD return channel from prior
+accepted native Fluid state. Zero-wind parity, bounded transport, exact recovery,
+causal admission/refusal and enabled/disabled coupled sensitivity pass. See the
+[framework contract](fire_fluid_framework.md). Earlier zero-wind checkpoints remain
+historical; new source/worker bindings require fresh stores. The explicit dev
+scenario enables feedback; released packages and active runtime remain separate.
+Physical calibration and broader numerical accuracy are still unqualified.
+
+
+## 2026-10-09: sensitivity/stress evidence and physical calibration boundary
+
+Nine bounded native coupled cases pass height/window sensitivity, stronger wind,
+one/two-second horizons and a taller domain, including exact recovery/rollback
+and export validation. Authoring maps/observables expose a downwind accumulation
+in the closed Fire patch during the2s strong case. Physical calibration remains
+unqualified pending an appropriate patch thermal boundary and compatible measured
+reference. See [framework contract](fire_fluid_framework.md). The exported Fire
+plane still declares no surface-field shading; no live authoring UI or human
+visual acceptance is claimed. No release/activation or shared API changed.
+
+
+## 2026-10-09: open Fire transport boundary and pinned methanol reference
+
+The opt-in development host admits `physical_rates_heat_outflow_v1`, retaining
+closed-profile behavior. Strong2s matched tests reduce downwind proxy share from
+49.52% to8.29%, with explicit proxy outflow/rounding budgets and exact joint
+recovery. A pinned NIST/MaCFP methanol data reader supplies SI benchmark quantities
+and identifies current physical-model incompatibility. No material parameters
+were fitted; high-temperature gas behavior and liquid surface response remain
+unimplemented. See [framework contract](fire_fluid_framework.md). Review maps and
+boundary sidecars now distinguish profiles; live editor controls, physical
+calibration, source adoption and release/activation remain separate.
+
+## Native methanol liquid surface qualification
+
+Growth Main Edit now contains a separate native SI replenished liquid pool model.
+`scripts/fire_liquid_qualification.py` compares its prescribed-flux energetics with
+NIST/MaCFP methanol data, retaining property and measurement provenance. Native
+heating/boiling/feed-heating/cooling, budget binding and exact restart pass. A600s
+prescribed steady case gives1.24476g/s versus NIST report0.925052g/s, +34.56%.
+No loss coefficient is fitted; the missing-loss diagnostic is not an input.
+The imposed boiling property is within the measured thermal-drift envelope, not
+a validated independent surface-temperature prediction.
+
+This is surface numerical qualification only. It neither changes the existing
+wind-only return channel nor admits measured1290K gas in the constant-property
+Fluid model. Independent thermal boundary/loss data, reciprocal gas-to-liquid
+energy transfer and hot-gas qualification precede physical coupled calibration
+and authoring controls. Existing proxy baseline remains separate and reproducible.
+Evidence: `_private_workspace_artifacts/fire-fluid-material-20261009/`.
+
+## Experimental boundary and prescribed-source gas admission
+
+`coupling/methanol_boundary.py` curates the primary2019 apparatus: 0.301m pan,
+0.010m lip, 293.15±2K cooled bottom, and gauge0.013m above the liquid. It explicitly
+refuses treating this gauge measurement as exact liquid-surface forcing. The2019
+surface comparison uses that study's13.5g/m²/s mass flux and1.6kW gauge reading;
+2024 MaCFP mass/plume measurements remain a distinct case. NIST-hosted author-
+manuscript property tables differ from the published version, so no latent-heat
+value is silently imported. Public web inspection supports curated facts; local
+PDF download returnedHTTP403, and no PDF byte pin is claimed.
+
+Growth's new separate native boundary accounts for reflection, net surface
+radiation and fixed cooling-reservoir transfer, with integrated linear Cp and
+backward-Euler temperature solve. Five2000s prescribed synthetic boundary cases
+pass native energy budgets and exact recovery. Actual surface flux, optics,
+conductance, stratification and temperature-dependent material coefficients
+remain unresolved; experimental surface energy closure is not qualified.
+
+`coupling/prescribed_pool.py` builds an exact circular cell-overlap support and
+hash-pinned measured fuel packet:0.000932kg/s and19.9MJ/kg give18,546.8W potential
+complete-combustion power. Fuel is never carried in the smoke tracer. Its heat-only
+transport probes do not implement combustion or full fuel admission. The current
+native gas worker passes the0.1% power ordinary smoke and a full-power5ms step
+(peak323.053K), but refuses the two-step full-power case. Its admitted330K ceiling
+cannot cover the reference1290K peak. Native error text groups several refusal
+causes; no more specific terminal diagnosis is claimed. Fuel/species, radiation,
+variable-density hot-gas dynamics, burner geometry/open lateral entrainment and
+steady measured plume statistics are missing. Gas qualification is **not passed**.
+
+Run `scripts/fire_thermal_qualification.py` with explicit `--growth-root`,
+`--thermal-worker`, `--fluid-worker`, `--reference` and a fresh `--output`.
+It retains ordinary success, the first full-power step, failed full-power request,
+accepted surface states/receipts and sealed assessments. Reciprocal thermal
+exchange and authoring controls remain disabled pending physical qualification.
+Latest evidence: `_private_workspace_artifacts/fire-fluid-thermal-20261009/accepted-final/`.
+
+<!-- vertical-reference-current:start -->
+### Matched vertical pass and horizontal X refinement — 2026-10-12
+
+The full 128x128x256 run at 2.5 ms flow and 1.25 ms scalar timing completed
+all 32 windows (3.2 seconds) with native/strict/independent verification.
+Against 128 cubed, local heat differs by 4.705451% and velocity by 3.163460%:
+the unchanged 10% directional heat gate passes. The matched 64/128 comparison
+still fails at 13.100227%; 64 to the vertical reference differs by 16.646270%.
+Heat/smoke accounting, momentum/pressure checks and allocation closure pass.
+The reference is retained under
+`_private_workspace_artifacts/fire-fluid-matched-timing-20261012`.
+
+The next contained run refines X only to 256x128x256, retaining 128 Y and 256 Z,
+original physical source and region, 2.5 ms flow and 1.25 ms scalar timing.
+Native and sanitizer source checks recover the vertical source exactly after
+X restriction; strict reader restriction/admission checks and prior-profile
+preprocessing parity pass. The Mac has 16 GiB RAM, so this bounded first X
+comparison avoids the roughly 11 GiB tracked solver footprint of 256 cubed.
+Its separate profile caps tracked memory at 8 GiB and scalar work at 22 billion.
+A single full-from-zero run has a 24-hour cap and terminal-only strict and
+independent analysis; see
+`_private_workspace_artifacts/fire-fluid-horizontal-20261012-attempt2/RESULT.md`.
+Initial attempt refused the old Cartesian capacity before stepping; the separate
+horizontal Cartesian/open capacity profile is repaired and native/sanitizer
+large-grid admission tests pass. Failed attempt is preserved; corrected
+attempt2 is the sole full run. Horizontal verdict remains pending. Y refinement and full three-axis convergence
+remain unqualified. Heat gate stays 10%, momentum CFL stays 0.4.
+No surface heating, burning faces, measured calibration, canonical adoption,
+version/package/Registry/remote/Desktop refresh or review rebind is included.
+<!-- vertical-reference-current:end -->

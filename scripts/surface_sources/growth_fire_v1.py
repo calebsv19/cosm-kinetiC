@@ -103,7 +103,7 @@ def config_valid(c):
     keys(c, ("run_id", "branch_id", "surface_id", "width", "height", "seed", "cell_size_m", "dt_s", "origin_m", "calibration", *(("evolution",) if "evolution" in c else ())))
     if "evolution" in c:
         e=c['evolution'];keys(e,('model','rates','ignition_rectangle_m'))
-        require(e['model']=='physical_rates_v1','unsupported Fire evolution')
+        require(e['model'] in ('physical_rates_v1','physical_rates_heat_advection_v1','physical_rates_heat_outflow_v1'),'unsupported Fire evolution')
         keys(e['rates'],RULES)
         for k,v in e['rates'].items():number(v,0,1 if k in ('burn_rate','heat_diffusion','heat_cooling','burn_cooling','smoke_transport','smoke_cooling') else 100)
         require(all(e['rates'][k]==0 for k in ('heat_spread','moisture_cooling','fuel_reactivity','upward_bias','turbulence','smoke_transport','smoke_cooling')),'unused timed rates must be zero')
@@ -147,7 +147,7 @@ def state_decode(raw):
             if name in ("fuel_type", "burn", "moisture"):
                 number(x, 0, 1)
             if k >= 7:
-                require(x == 0, "v1 offline producer supports zero uniform wind only")
+                number(x,-10,10)
         fields[name] = row
     return {"width": w, "height": y, "seed": seed, "tick": tick, "cell_size_m": h[5], "dt_s": h[6], "origin_xy": list(h[7:9]), "rules": dict(zip(RULES, h[9:])), "fields": fields}
 
@@ -202,7 +202,16 @@ def frame_valid(f):
         close(q["smoke_generated_kg"], q["fuel_consumed_kg"]*cal["smoke_kg_per_fuel_kg"])
         close(q["smoke_transferred_kg"], q["smoke_generated_kg"]*cal["smoke_transfer_fraction"])
         close(q["smoke_generated_kg"], q["smoke_transferred_kg"]+q["smoke_untransferred_kg"])
-    keys(f["diagnostics"], ("legacy_heat_generated_units", "legacy_smoke_generated_units", "physical_status"))
+    open_profile=c.get('evolution',{}).get('model')=='physical_rates_heat_outflow_v1'
+    keys(f["diagnostics"], ("legacy_heat_generated_units", "legacy_smoke_generated_units", "physical_status", *(('thermal_transport',) if open_profile else ())))
+    if open_profile:
+        b=f['diagnostics']['thermal_transport'];keys(b,('schema','units','initial','final','outflow','response_net','transport_roundoff'))
+        require(b['schema']=='growth_sim_fire_proxy_budget/v1' and b['units']=='normalized_proxy_m2','proxy budget semantics')
+        for key in ('initial','final','outflow'):number(b[key],0)
+        for key in ('response_net','transport_roundoff'):number(b[key])
+        scale=max(b['initial'],b['final'],b['outflow'],abs(b['response_net']),1e-12)
+        require(abs(b['final']-b['initial']+b['outflow']-b['response_net']-b['transport_roundoff'])<=scale*1e-10,'proxy budget balance')
+        require(abs(b['transport_roundoff'])<=scale*2e-5,'proxy transport rounding bound')
     for k in ("legacy_heat_generated_units", "legacy_smoke_generated_units"): number(f["diagnostics"][k], 0)
     require(f["diagnostics"]["physical_status"] == "authored_calibration_not_combustion_qualification", "physical status")
     return f
@@ -211,7 +220,8 @@ def frame_valid(f):
 def bundle_valid(b):
     keys(b, ("schema", "operation", "checkpoint", "frame", "digest"))
     require(b["schema"] == BUNDLE and b["digest"] == digest(b), "bundle schema/digest")
-    op = b["operation"]; keys(op, ("kind", "request_id", "parent_digest", "ticks"))
+    op = b["operation"]; keys(op, ("kind", "request_id", "parent_digest", "ticks", *(("wind_digest",) if "wind_digest" in op else ())))
+    if "wind_digest" in op:hash_valid(op["wind_digest"])
     require(op["kind"] in ("init", "advance", "fork"), "operation kind"); identifier(op["request_id"])
     integer(op["ticks"], 0, 256)
     if op["parent_digest"] is not None: hash_valid(op["parent_digest"])
@@ -224,11 +234,17 @@ def bundle_valid(b):
     except (ValueError, TypeError) as e: raise ValueError("invalid native state encoding") from e
     require(sha(raw) == cp["native_state_sha256"], "native state digest")
     state = state_decode(raw)
+    wind_profile=c.get('evolution',{}).get('model') in ('physical_rates_heat_advection_v1','physical_rates_heat_outflow_v1')
+    if not wind_profile:
+        require(all(x==0 for k in ('wind_x','wind_y') for x in state['fields'][k]),'zero-wind profile checkpoint')
     require(all(state[k] == c[k] for k in ("width", "height", "seed", "cell_size_m", "dt_s")) and state["origin_xy"] == c["origin_m"][:2], "checkpoint/native space disagreement")
     if "evolution" in c:
         require(state['rules']=={k:struct.unpack('<f',struct.pack('<f',v))[0] for k,v in c['evolution']['rates'].items()},'timed rate/checkpoint binding')
+    if op['kind']=='advance':require(wind_profile==('wind_digest' in op),'wind profile/operation binding')
     if b["frame"] is not None:
         f = frame_valid(b["frame"])
+        if c.get('evolution',{}).get('model')=='physical_rates_heat_outflow_v1':
+            require(math.isclose(f['diagnostics']['thermal_transport']['final'],math.fsum(v*a for v,a in zip(state['fields']['heat'],areas(c))),rel_tol=1e-12,abs_tol=1e-12),'proxy budget final/native binding')
         require(op["kind"] == "advance" and op["parent_digest"] is not None and op["ticks"] > 0, "frame operation")
         require(f["config"] == c and f["producer"] == cp["producer"] and cp["next_sequence"] == f["event"]["sequence"]+1 and cp["last_event_digest"] == f["digest"] and state["tick"] == f["interval"]["end_tick"] and op["ticks"] == f["interval"]["end_tick"]-f["interval"]["start_tick"], "frame/checkpoint continuation disagreement")
     else:

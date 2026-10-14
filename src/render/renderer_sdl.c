@@ -1,4 +1,6 @@
 #include "render/renderer_sdl.h"
+#include "render/simulation_ui.h"
+#include "app/ui/physics_sim_ui_host.h"
 #include "render/timer_hud_adapter.h"
 
 #include <SDL2/SDL.h>
@@ -134,7 +136,7 @@ bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH) {
 
     VkRendererConfig cfg;
     vk_renderer_config_set_defaults(&cfg);
-    cfg.enable_validation = SDL_FALSE;
+    cfg.enable_validation = physics_sim_ui_proof_enabled() ? SDL_TRUE : SDL_FALSE;
     cfg.clear_color[0] = 0.0f;
     cfg.clear_color[1] = 0.0f;
     cfg.clear_color[2] = 0.0f;
@@ -197,10 +199,12 @@ bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH) {
         fprintf(stderr, "[renderer] Failed to init particle overlay.\n");
     }
 
+    simulation_ui_attach(g_window, g_renderer);
     return true;
 }
 
 void renderer_sdl_shutdown(void) {
+    simulation_ui_detach();
     if (g_renderer) {
         vk_renderer_wait_idle((VkRenderer *)g_renderer);
     }
@@ -382,6 +386,9 @@ bool renderer_sdl_render_scene(const SceneState *scene) {
     if (!g_window || !g_renderer) return false;
     SDL_GetWindowSize(g_window, &g_window_w, &g_window_h);
     if (g_window_w <= 0 || g_window_h <= 0) return false;
+    /* Export captures use CPU pixels even when native presentation is suspended. */
+    if (!renderer_sdl_ui_presentable()) return true;
+    simulation_ui_layout_ready();
     int drawable_w = g_window_w;
     int drawable_h = g_window_h;
     SDL_Vulkan_GetDrawableSize(g_window, &drawable_w, &drawable_h);
@@ -489,6 +496,7 @@ void renderer_sdl_present_with_hud(const RendererHudInfo *hud) {
     VkResult end = vk_renderer_end_frame((VkRenderer *)g_renderer, g_frame_cmd);
     g_frame_cmd = VK_NULL_HANDLE;
     g_frame_active = false;
+    if (end == VK_SUCCESS || end == VK_SUBOPTIMAL_KHR) simulation_ui_presented();
     if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {
         vk_renderer_recreate_swapchain((VkRenderer *)g_renderer, g_window);
         vk_renderer_set_logical_size((VkRenderer *)g_renderer,
@@ -679,4 +687,12 @@ bool renderer_sdl_kit_viz_particles_enabled(void) {
 
 bool renderer_sdl_particles_using_kit_viz(void) {
     return g_last_particles_render_source_kit_viz;
+}
+
+bool renderer_sdl_reload_text(const AppConfig *cfg) {
+    if (!g_renderer) return false;
+    vk_renderer_wait_idle((VkRenderer *)g_renderer);
+    timer_hud_bind_renderer(g_renderer);
+    bool hud=hud_overlay_reload_font(cfg),timer=timer_hud_reload_font(cfg);
+    return hud && timer;
 }

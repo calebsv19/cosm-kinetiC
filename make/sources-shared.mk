@@ -38,4 +38,13 @@ KIT_RENDER_SRCS := \
 KIT_PANE_SRCS := $(KIT_PANE_DIR)/src/kit_pane.c
 KIT_UI_SRCS := \
 	$(KIT_UI_DIR)/src/kit_ui.c \
-	$(KIT_UI_DIR)/src/kit_ui_button.c
+	$(KIT_UI_DIR)/src/kit_ui_button.c \
+	$(KIT_UI_DIR)/src/kit_ui_interaction.c \
+	$(KIT_UI_DIR)/src/kit_ui_interaction_sdl.c \
+	$(KIT_UI_DIR)/src/kit_ui_surface.c \
+	$(KIT_UI_DIR)/src/kit_ui_text_edit.c \
+	$(KIT_UI_DIR)/src/kit_ui_text_edit_sdl.c \
+	$(KIT_UI_DIR)/src/kit_ui_text_presentation.c \
+	$(KIT_UI_DIR)/src/kit_ui_native_text_sdl.c \
+	$(KIT_UI_DIR)/src/kit_ui_window_sdl.c \
+	$(KIT_UI_DIR)/src/kit_ui_window_probe_sdl.c

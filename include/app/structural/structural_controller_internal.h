@@ -6,6 +6,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
+struct PhysicsSimUiHost;
 #include <stddef.h>
 
 #include "physics/structural/structural_scene.h"
@@ -26,6 +27,7 @@ typedef enum StructuralIntegrator {
 } StructuralIntegrator;
 
 typedef struct StructuralController {
+    struct PhysicsSimUiHost *ui;
     StructuralScene  scene;
     StructuralSolveResult last_result;
     StructuralRuntimeView runtime;

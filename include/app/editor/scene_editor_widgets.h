@@ -4,6 +4,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdbool.h>
+#include "kit_ui.h"
 
 #include "app/editor/scene_editor_session.h"
 #include "app/scene_presets.h"
@@ -38,5 +39,12 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
                                      const NumericField *field,
                                      const FluidEmitter *selected_emitter,
                                      const PhysicsSimEmitterOverlay *selected_overlay_emitter);
+
+void scene_editor_draw_shared_button(SDL_Renderer *, const EditorButton *, TTF_Font *,
+    const KitUiButtonState *);
+struct SceneEditorState;
+void scene_editor_draw_owned_button(struct SceneEditorState *, const EditorButton *, TTF_Font *);
+void scene_editor_draw_owned_numeric_field(struct SceneEditorState *, TTF_Font *, const NumericField *,
+    const FluidEmitter *, const PhysicsSimEmitterOverlay *);
 
 #endif // SCENE_EDITOR_WIDGETS_H

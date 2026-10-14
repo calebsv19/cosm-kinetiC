@@ -234,6 +234,8 @@ void begin_field_edit(SceneEditorState *state, NumericField *field) {
     }
     field->editing = true;
     state->active_field = field;
+    scene_editor_shared_text_reset(state);
+    state->shared_ui.buffer = NULL;
 }
 
 void cancel_field_edit(SceneEditorState *state) {

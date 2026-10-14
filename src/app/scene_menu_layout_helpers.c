@@ -1,3 +1,4 @@
+#include "app/menu/menu_text_presentation.h"
 #include "app/scene_menu_layout_helpers.h"
 
 #include <SDL2/SDL.h>
@@ -55,35 +56,7 @@ void scene_menu_fit_text_to_width(SDL_Renderer *renderer,
                                   int max_width,
                                   char *out,
                                   size_t out_size) {
-    int w = 0;
-    size_t len = 0;
-    if (!out || out_size == 0) return;
-    out[0] = '\0';
-    if (!text) return;
-    snprintf(out, out_size, "%s", text);
-    if (!font || max_width <= 0) return;
-    if (TTF_SizeUTF8(font, out, &w, NULL) == 0) {
-        w = physics_sim_text_logical_pixels(renderer, w);
-        if (w <= max_width) return;
-    }
-
-    len = strlen(out);
-    while (len > 0) {
-        --len;
-        out[len] = '\0';
-        {
-            char candidate[256];
-            snprintf(candidate, sizeof(candidate), "%s...", out);
-            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0) {
-                w = physics_sim_text_logical_pixels(renderer, w);
-                if (w <= max_width) {
-                    snprintf(out, out_size, "%s", candidate);
-                    return;
-                }
-            }
-        }
-    }
-    snprintf(out, out_size, "...");
+    menu_text_fit(renderer, font, text, max_width, out, out_size);
 }
 
 void scene_menu_update_dynamic_layout(SceneMenuInteraction *ctx,

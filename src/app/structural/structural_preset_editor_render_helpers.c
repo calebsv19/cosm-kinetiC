@@ -6,10 +6,12 @@
 
 #include "app/structural/structural_render.h"
 #include "render/text_draw.h"
+#include "app/ui/physics_sim_ui_host.h"
+#include "app/menu/menu_render.h"
 
 static void render_text(SDL_Renderer *renderer, TTF_Font *font,
                         int x, int y, SDL_Color color, const char *text) {
-    (void)physics_sim_text_draw_utf8_at(renderer, font, text, x, y, color);
+    physics_sim_ui_text_line(renderer,font,x,y,color,text);
 }
 
 static bool render_hud_line_limited(SDL_Renderer *renderer,
@@ -606,8 +608,8 @@ void structural_preset_editor_render_scene(StructuralPresetEditor *editor) {
         SDL_RenderDrawRect(renderer, &rect);
     }
 
-    SDL_Color text = {230, 230, 240, 255};
-    SDL_Color dim = {190, 198, 209, 255};
+    SDL_Color text = menu_color_text();
+    SDL_Color dim = menu_color_text_dim();
     int hud_x = editor->panel_x + 16;
     int hud_y = editor->panel_y + 16;
     int hud_limit_y = editor->btn_gravity_minus.rect.y - 10;
@@ -798,10 +800,10 @@ void structural_preset_editor_render_scene(StructuralPresetEditor *editor) {
         }
     }
 
-    scene_editor_draw_button(renderer, &editor->btn_gravity, editor->font_small);
-    scene_editor_draw_button(renderer, &editor->btn_gravity_minus, editor->font_small);
-    scene_editor_draw_button(renderer, &editor->btn_gravity_plus, editor->font_small);
-    scene_editor_draw_button(renderer, &editor->btn_ground, editor->font_small);
-    scene_editor_draw_button(renderer, &editor->btn_save, editor->font_small);
-    scene_editor_draw_button(renderer, &editor->btn_cancel, editor->font_small);
+    physics_sim_ui_host_button(&editor->ui,2,&editor->btn_gravity,editor->font_small);
+    physics_sim_ui_host_button(&editor->ui,3,&editor->btn_gravity_minus,editor->font_small);
+    physics_sim_ui_host_button(&editor->ui,4,&editor->btn_gravity_plus,editor->font_small);
+    physics_sim_ui_host_button(&editor->ui,1,&editor->btn_ground,editor->font_small);
+    physics_sim_ui_host_button(&editor->ui,5,&editor->btn_save,editor->font_small);
+    physics_sim_ui_host_button(&editor->ui,6,&editor->btn_cancel,editor->font_small);
 }

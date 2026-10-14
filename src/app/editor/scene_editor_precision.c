@@ -1,5 +1,8 @@
 #include "app/editor/scene_editor_precision.h"
 #include "app/editor/scene_editor_precision_helpers.h"
+#include "app/editor/scene_editor_precision_ui.h"
+#include "app/ui/physics_sim_ui_host.h"
+#include "app/menu/menu_render.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -83,7 +86,7 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                                SDL_WINDOWPOS_CENTERED,
                                win_w,
                                win_h,
-                               SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN |
+                               SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN |
                                    SDL_WINDOW_ALLOW_HIGHDPI);
         if (!win) return false;
 
@@ -93,7 +96,7 @@ bool scene_editor_run_precision(const AppConfig *cfg,
 
         VkRendererConfig vk_cfg;
         vk_renderer_config_set_defaults(&vk_cfg);
-        vk_cfg.enable_validation = SDL_FALSE;
+        vk_cfg.enable_validation = physics_sim_ui_proof_enabled() ? SDL_TRUE : SDL_FALSE;
         vk_cfg.clear_color[0] = 0.0f;
         vk_cfg.clear_color[1] = 0.0f;
         vk_cfg.clear_color[2] = 0.0f;
@@ -170,7 +173,15 @@ bool scene_editor_run_precision(const AppConfig *cfg,
     float handle_ratio = 1.0f, handle_initial = 0.0f;
     bool handle_started = false, running = true, apply = true, dirty = false, device_lost = false;
 
+    PrecisionUiTransient transient={&pointer_down,&drag_started,&dragging_object,&dragging_import,
+        &dragging_import_handle,&dragging_handle,&dragging_emitter,&handle_started,&hit_count,&hit_base,
+        &hover_object,&hover_import,&hover_emitter,&hover_edge,&pointer_x,&pointer_y};
+    PhysicsSimUiHost ui;
+    physics_sim_ui_host_init(&ui,win,renderer,"physics-precision","CODEWORK_PRECISION_UI_PROOF",
+        &transient,scene_editor_precision_cancel_transient);
     while (running) {
+        if (physics_sim_ui_host_probe(&ui)) {running=false;apply=false;break;}
+        (void)physics_sim_ui_host_refresh(&ui);
         int local_obj_map[MAX_FLUID_EMITTERS];
         int local_imp_map[MAX_FLUID_EMITTERS];
         for (size_t ei = 0; ei < MAX_FLUID_EMITTERS; ++ei) {
@@ -183,6 +194,7 @@ bool scene_editor_run_precision(const AppConfig *cfg,
         }
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
+            if (physics_sim_ui_host_filter(&ui,&ev)) continue;
             switch (ev.type) {
             case SDL_QUIT:
                 running = false;
@@ -825,7 +837,10 @@ bool scene_editor_run_precision(const AppConfig *cfg,
             }
         }
 
+        (void)physics_sim_ui_host_refresh(&ui);
         SDL_GetWindowSize(win, &win_w, &win_h);
+        ui.geometry_dirty=false;
+        if (!ui.observed.presentable) {SDL_Delay(32);continue;}
         int drawable_w = win_w;
         int drawable_h = win_h;
         SDL_Vulkan_GetDrawableSize(win, &drawable_w, &drawable_h);
@@ -921,21 +936,10 @@ bool scene_editor_run_precision(const AppConfig *cfg,
                                                   hover_emitter,
                                                   hover_edge);
 
-        const char *hint = "Precision editor: drag objects/handles, +/- resize, arrows nudge, Enter apply, Esc cancel";
-        if (font_small) {
-            int logical_w = 0;
-            int logical_h = 0;
-            if (physics_sim_text_measure_utf8(renderer, font_small, hint, &logical_w, &logical_h)) {
-                SDL_Rect dst = {12, win_h - logical_h - 12, logical_w, logical_h};
-                (void)physics_sim_text_draw_utf8(renderer,
-                                                 font_small,
-                                                 hint,
-                                                 (SDL_Color){190, 198, 209, 255},
-                                                 &dst);
-            }
-        }
+        scene_editor_precision_draw_hint(renderer,font_small,win_w,win_h);
 
         VkResult end = vk_renderer_end_frame((VkRenderer *)renderer, cmd);
+        if (end==VK_SUCCESS || end==VK_SUBOPTIMAL_KHR) ++ui.presented_frames;
         if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {
             vk_renderer_recreate_swapchain((VkRenderer *)renderer, win);
             vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);

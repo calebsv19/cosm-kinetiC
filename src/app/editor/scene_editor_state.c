@@ -534,6 +534,8 @@ SDL_Rect editor_active_viewport_rect(const SceneEditorState *state) {
 
 void editor_begin_name_edit(SceneEditorState *state) {
     if (!state || !state->name_edit_ptr || state->name_edit_capacity == 0) return;
+    scene_editor_shared_text_reset(state);
+    state->shared_ui.buffer = NULL;
     text_input_begin(&state->name_input,
                      state->name_edit_ptr,
                      state->name_edit_capacity - 1);
@@ -579,6 +581,8 @@ void editor_begin_dimension_edit(SceneEditorState *state, SceneEditorDimensionFi
                     : state->working.domain_height;
     }
     snprintf(buffer, sizeof(buffer), "%.2f", value);
+    scene_editor_shared_text_reset(state);
+    state->shared_ui.buffer = NULL;
     text_input_begin(editor_dimension_input(state, field), buffer, 10);
     *editor_dimension_flag(state, field) = true;
 }

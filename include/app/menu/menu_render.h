@@ -27,11 +27,18 @@ void menu_draw_text(SDL_Renderer *renderer,
 
 void menu_draw_panel(SDL_Renderer *renderer, const SDL_Rect *rect);
 
+void menu_draw_control_button(SceneMenuInteraction *ctx, const SDL_Rect *rect,
+                             const char *label, TTF_Font *font, bool selected);
+void menu_draw_control_toggle(SceneMenuInteraction *ctx, TTF_Font *font,
+                             const SDL_Rect *rect, const char *label, bool selected);
+
 void menu_draw_button(SDL_Renderer *renderer,
                       const SDL_Rect *rect,
                       const char *label,
                       TTF_Font *font,
                       bool selected);
+
+void menu_draw_owned_text_input(SceneMenuInteraction *, TTF_Font *, const SDL_Rect *, TextInputField *);
 
 void menu_draw_text_input(SDL_Renderer *renderer,
                           TTF_Font *font,
@@ -51,7 +58,10 @@ SDL_Color menu_color_panel(void);
 SDL_Color menu_color_text(void);
 SDL_Color menu_color_text_dim(void);
 SDL_Color menu_color_accent(void);
+SDL_Color menu_color_status_text(bool emphasized);
 SDL_Color menu_color_button_bg(void);
 SDL_Color menu_color_button_bg_active(void);
+
+SDL_Color menu_readable_text_color(SDL_Color background,SDL_Color preferred);
 
 #endif

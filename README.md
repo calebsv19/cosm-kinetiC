@@ -1,3 +1,5 @@
+Local UI package and visual review: [qualification](docs/ui_package_visual_review.md).
+
 # kinetiC (`physics_sim`)
 
 `kinetiC` is the packaged desktop product for the `physics_sim` program. It is
@@ -324,3 +326,13 @@ existing `SHAPE_ASSET_DIR`) and regenerates from input rather than accepting an
 existing filename. Configured input roots remain discovery roots. See
 [editor import publication](docs/editor_import_publication.md) for path limits,
 validation and remaining picker/cache boundaries.
+
+Precision and structural shared UI qualification is complete in Main Edit;
+[the owner completion record](docs/precision_structural_shared_ui.md)
+describes preserved apply/save/solve policy, native evidence and the remaining
+simulation/HUD and F8 SDL-host integration boundaries.
+
+Active simulation/HUD and F8 shared UI qualification is complete in Main Edit.
+[Source/native acceptance and remaining boundaries](docs/simulation_inspection_shared_ui.md)
+cover preserved compute/export, live command identity, SDL versus Vulkan painting,
+legacy structural retirement and later packaged/human acceptance.

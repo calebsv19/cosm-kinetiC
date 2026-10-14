@@ -1,10 +1,64 @@
+Local UI package and visual review: [qualification](ui_package_visual_review.md).
+
 # kinetiC Docs Index
+
+## 2026-10-13 — Preset editor shared UI qualified
+
+PhysicsSim Main Edit's borrowed-window preset editor now observes shared window
+state, filters foreign/stale input, cancels transient navigation/drag/composition
+on lifecycle changes and suspends rendering while hidden or minimized. Working
+presets and typed drafts persist. The borrowed renderer finishes submitted work
+before editor-owned font resources are retired, including text-size refresh.
+
+Painted toolbar/inspector actions use clipped shared control snapshots, stable
+editor-owned keys, matched pointer/key release and visible focus/pressed state.
+Accepted actions bind the exact painted owner before existing app handlers run;
+an undrawn Delete Selected rectangle can no longer intercept Air Flow Mode.
+Hidden legacy actions acquire no interaction surface. Existing canvas/list domain
+gestures and application save/apply/cancel policies remain owners.
+
+Name, width/height/depth and emitter numeric fields use shared UTF-8 editing,
+selection/clipboard/composition and measured caret/selection presentation.
+Metadata entry adopts its started SDL session without flushing queued committed
+text. Existing capacities and numeric character policy remain; parsing/clamping
+and persistence are still app-owned. Shared read-only button/title presentation
+and UTF-8-safe fitting retain the rectangular geometry, palette and font roles.
+
+Fresh final Clang and twelve focused contracts pass. The 62-target stable lane
+and all16 fast targets passed after repairing desktop-only source leakage into
+the headless link; subsequent editor-only input/resource corrections have final
+focused and native proof. Both editor modes pass eight native window stages each;
+ordinary preset edits/Save and retained Source/numeric/Apply Overlay/Save Scene/
+Menu replays pass with validation enabled and zero diagnostics through cleanup.
+Independent retained save readback preserves base objects, authoring bytes and
+the unrelated LineDrawing extension. Twenty-four lossless PNGs are retained;
+representative compact/fullscreen/edit/save captures were visually reviewed.
+
+This remains uncommitted Main Edit source at3028140 / VERSION0.5.0. Coupling source,
+frozen executable and active workbench are preserved; imported shared bytes and
+canonical/installed/release surfaces are unchanged. Remaining owners: Precision
+Editor, structural preset/runtime windows, simulation renderer/HUD, and the SDL
+live inspection host. Platform IME/glyph and final packaged-app acceptance remain
+separate. Next bounded slice: Precision Editor lifecycle and text qualification.
+
 
 Start here for public repository documentation.
 
 Public identity:
 - packaged desktop product: `kinetiC`
 - repository/program key: `physics_sim`
+
+Native coupled source development:
+- [Inert-box plume, paired controls and matched refinement](fire_fluid_box.md)
+- [Isolated Fire–Fluid plume qualification](fire_fluid_isolated.md): verified lateral transport; failed spatial accuracy gate and bounded domain-size result.
+- [Fire–Fluid exact execution, joint recovery and reference scenario](fire_fluid_framework.md)
+- [Variable-density hot-gas foundation and independent surface checks](hotgas_foundation.md)
+- [Conservative solid/open gas boundaries, gravity and conductive plane observations](hotgas_domain.md)
+- [Contact resolution, pressure response and bounded mixture reference](hotgas_lowmach.md)
+- [Spatial reconstruction and independent buoyancy reference](hotgas_spatial_accuracy.md)
+- [Bounded low-Mach pressure and velocity qualification](hotgas_pressure_accuracy.md)
+- [Native continuous caloric properties and fixed-mixture energy transport](hotgas_caloric.md)
+- [Conservative evolving species and formation-energy transport](hotgas_species.md)
 
 Latest bounded CFD evidence:
 - [Usable stationary-box scenes, measured limits and finite CFD delivery](cfd_3d_box_checkpoint.md)
@@ -547,3 +601,9 @@ Trusted-local session storage admission: [session_path_admission.md](session_pat
 Retained local worker authoring/validation: [session_worker_attempts.md](session_worker_attempts.md).
 
 - [Offline coupling package](offline_coupling_package.md)
+
+- [Local Fire–Fluid authoring and coupled playback](fire_fluid_workbench.md): native scene controls, accepted-state inspection/recovery and bounded local RayTracing previews.
+
+- [Fire–Fluid source and transport accuracy](fire_fluid_accuracy.md): separate time/grid verification, passing coarse 64³ observation gate and unqualified local heat transfer.
+- [Fire–Fluid local heat and passive surface](fire_fluid_surface.md): fixed-volume observations, failed local heat/flux gate, and independently verified prescribed-input response numerics.
+- [Fire–Fluid local transport qualification](fire_fluid_local_transport.md): heated/evolving-shear transport, directional and combined anisotropic refinement, rejected limiter evidence and remaining local heat gate.

@@ -682,3 +682,9 @@ void structural_editor_render_box(const StructuralEditor *editor,
     SDL_SetRenderDrawColor(renderer, 200, 200, 255, 80);
     SDL_RenderDrawRect(renderer, &rect);
 }
+
+void structural_editor_cancel_transient(StructuralEditor *editor) {
+    if (!editor) return;
+    editor->dragging=editor->box_selecting=editor->load_dragging=editor->moment_dragging=false;
+    editor->edge_start_node_id=editor->drag_node_id=editor->load_node_id=editor->moment_node_id=-1;
+}

@@ -1,6 +1,8 @@
 #include "app/session_workspace_text.h"
 #include "app/menu/shared_theme_font_adapter.h"
 #include "font_paths.h"
+#include "app/menu/menu_text_presentation.h"
+#include <stdio.h>
 #include <math.h>
 #include <string.h>
 
@@ -54,7 +56,7 @@ bool session_text_refresh(SessionText *text, SDL_Renderer *renderer, SDL_Window 
     }
     return true;
 }
-void session_text_draw(SessionText *text, SDL_Renderer *renderer, int role, int x, int y,
+static void draw_native(SessionText *text, SDL_Renderer *renderer, int role, int x, int y,
                        SDL_Color color, const char *label) {
     if (!label || !*label || role < 0 || role > 2 || !text->fonts[role])
         return;
@@ -90,4 +92,43 @@ void session_text_draw(SessionText *text, SDL_Renderer *renderer, int role, int 
     // Logical placement, native-resolution glyph pixels. Avoid doubling an 18px bitmap.
     SDL_FRect dst = {(float)x, (float)y, entry->w / text->scale, entry->h / text->scale};
     SDL_RenderCopyF(renderer, entry->texture, NULL, &dst);
+}
+
+typedef struct SessionTextPaint { SessionText *font; SDL_Renderer *renderer; int role; SDL_Color color; } SessionTextPaint;
+static CoreResult measure(void *user,const char *run,float *width) {
+    SessionTextPaint *paint=user;int w=0;
+    if (TTF_SizeUTF8(paint->font->fonts[paint->role],run,&w,NULL)!=0)
+        return (CoreResult){CORE_ERR_INVALID_ARG,"session text measure"};
+    *width=w/paint->font->scale;return core_result_ok();
+}
+static CoreResult paint_text(void *user,KitRenderVec2 origin,const char *run) {
+    SessionTextPaint *p=user;
+    draw_native(p->font,p->renderer,p->role,(int)origin.x,(int)origin.y,p->color,run);
+    return core_result_ok();
+}
+static CoreResult no_rect(void *user,KitRenderRect rect,KitRenderColor color) {
+    (void)user;(void)rect;(void)color;return core_result_ok();
+}
+void session_text_draw_rect(SessionText *font,SDL_Renderer *renderer,int role,
+    const SDL_Rect *rect,SDL_Color color,const char *label,int align) {
+    if (!font || !renderer || !label || !rect || rect->w<=0 || rect->h<=0 || role<0 || role>2 || !font->fonts[role]) return;
+    char fitted[512];SessionTextPaint paint={font,renderer,role,color};
+    if (menu_text_fit_measured(label,rect->w,fitted,sizeof(fitted),measure,&paint).code!=CORE_OK) return;
+    int row=(int)ceilf(TTF_FontHeight(font->fonts[role])/font->scale);
+    KitUiTextPresentation view;
+    if (menu_text_label_build(&view,fitted,sizeof(fitted),rect,row,align,measure,&paint).code!=CORE_OK) return;
+    SDL_Rect old,clip=*rect;bool had_clip=SDL_RenderIsClipEnabled(renderer);SDL_RenderGetClipRect(renderer,&old);
+    if (had_clip) SDL_IntersectRect(&clip,&old,&clip);
+    SDL_RenderSetClipRect(renderer,&clip);
+    KitUiTextPainter painter={&paint,no_rect,paint_text};KitUiTextPresentationColors colors={0};
+    (void)kit_ui_text_presentation_paint(&view,&colors,&painter);
+    SDL_RenderSetClipRect(renderer,had_clip?&old:NULL);
+}
+void session_text_draw(SessionText *font,SDL_Renderer *renderer,int role,int x,int y,
+    SDL_Color color,const char *label) {
+    if (!font || role<0 || role>2 || !font->fonts[role]) return;
+    int w=0,h=0;SDL_RenderGetLogicalSize(renderer,&w,&h);
+    int row=(int)ceilf(TTF_FontHeight(font->fonts[role])/font->scale);
+    SDL_Rect rect={x,y,w-x-24,row};
+    if (y>=0 && y+row<=h-8) session_text_draw_rect(font,renderer,role,&rect,color,label,0);
 }

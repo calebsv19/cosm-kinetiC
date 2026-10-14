@@ -266,6 +266,19 @@ class LauncherLifecycle(unittest.TestCase):
                 self.assertEqual(before, self.tree(f['package']))
 
     @unittest.skipUnless(MAC_TOOLS, 'requires native macOS plist tools')
+    def test_macos_timing_output_stays_in_runtime_and_preserves_override(self):
+        f=self.fixtures['macos']
+        (f['bin']/'physics-sim-bin').write_text(
+            '#!/bin/sh\nprintf "%s\n" "$TIMERHUD_OUTPUT_ROOT" > "$LAUNCH_FIXTURE_RESULT"\n')
+        result=self.invoke('macos',changes={'TIMERHUD_OUTPUT_ROOT':''})
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(f['result'].read_text().strip(),str(f['runtime']/'data/runtime'))
+        override=str(f['base']/'timing')
+        result=self.invoke('macos',changes={'TIMERHUD_OUTPUT_ROOT':override})
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertEqual(f['result'].read_text().strip(),override)
+
+    @unittest.skipUnless(MAC_TOOLS, 'requires native macOS plist tools')
     def test_macos_icd_generation_preserves_fixed_and_previous_generations(self):
         f = self.fixtures['macos']
         vk = f['runtime'] / 'vk'
@@ -275,6 +288,8 @@ class LauncherLifecycle(unittest.TestCase):
         first = self.invoke('macos', '--self-test')
         self.assertEqual(first.returncode, 0, first.stderr)
         path1 = Path(self.config_values(first)['VK_ICD_FILENAMES'])
+        self.assertEqual(path1.suffix, '.json')
+        self.assertEqual(path1.parent.parent, vk)
         self.assertEqual(json.loads(path1.read_text())['ICD']['library_path'], str(f['package'] / 'Contents/Frameworks/libMoltenVK.dylib'))
         original = path1.read_bytes()
         second = self.invoke('macos', '--self-test')

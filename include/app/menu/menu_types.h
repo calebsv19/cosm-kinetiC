@@ -14,6 +14,9 @@
 #include "ui/text_input.h"
 #include "ui/scrollbar.h"
 #include "vk_renderer.h"
+#include "app/menu/menu_window_lifecycle.h"
+#include "app/menu/menu_shared_controls.h"
+#include "app/menu/menu_shared_text.h"
 
 #define MENU_WIDTH 1360
 #define MENU_HEIGHT 860
@@ -48,6 +51,10 @@ typedef struct SceneMenuInteraction {
     PhysicsSimEditorSceneLibrary scene_library;
     SceneEditorBootstrap editor_bootstrap;
     char retained_runtime_scene_path[512];
+    KitUiSurface shared_controls;
+    PhysicsSimMenuText shared_text;
+    bool shared_control_dispatch;
+    PhysicsSimMenuWindowLifecycle window_lifecycle;
     SDL_Window *window;
     SDL_Renderer *renderer;
     VkRenderer renderer_storage;

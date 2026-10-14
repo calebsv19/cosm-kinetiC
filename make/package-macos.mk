@@ -188,7 +188,10 @@ _package-main-edit-proof:
 		--version "$(RELEASE_VERSION)"
 	@set -e; \
 	fake_home="$(MAIN_EDIT_SELF_TEST_DIR)/home"; \
-	mkdir -p "$$fake_home"; \
+	mkdir -p "$$fake_home/Library/Application Support/$(MAIN_EDIT_RUNTIME_NAMESPACE)/runtime"; \
+	for lane in shared shaders vk_renderer; do \
+		cp -R "$(MAIN_EDIT_APP_DIR)/Contents/Resources/$$lane" "$$fake_home/Library/Application Support/$(MAIN_EDIT_RUNTIME_NAMESPACE)/runtime/$$lane"; \
+	done; \
 	HOME="$$fake_home" "$(MAIN_EDIT_APP_DIR)/Contents/MacOS/physics-sim-launcher" --self-test; \
 	config="$$(HOME="$$fake_home" "$(MAIN_EDIT_APP_DIR)/Contents/MacOS/physics-sim-launcher" --print-config)"; \
 	printf '%s\n' "$$config"; \

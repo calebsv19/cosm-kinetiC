@@ -65,6 +65,8 @@ typedef struct StructuralEditor {
     char  status_message[128];
 } StructuralEditor;
 
+void structural_editor_cancel_transient(StructuralEditor *);
+
 void structural_editor_init(StructuralEditor *editor, StructuralScene *scene);
 void structural_editor_set_status(StructuralEditor *editor, const char *msg);
 

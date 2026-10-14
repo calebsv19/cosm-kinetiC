@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <SDL2/SDL.h>
 
 #include "app/wind_tunnel_3d_inspector.h"
 #include "app/scene_state.h"
@@ -128,6 +129,15 @@ typedef struct RendererHudInfo {
     int         physics_substeps;
 } RendererHudInfo;
 
+/* Desktop observation/input only; renderer-free headless stubs preserve its policy. */
+void renderer_sdl_ui_bind(void *, void (*)(void *));
+bool renderer_sdl_ui_filter(void *, const SDL_Event *);
+int renderer_sdl_ui_poll(void);
+bool renderer_sdl_ui_presentable(void);
+bool renderer_sdl_ui_pointer_allowed(void);
+void renderer_sdl_ui_map_pointer(int *, int *);
+bool renderer_sdl_reload_text(const AppConfig *);
+void renderer_sdl_ui_apply_zoom(AppConfig *,const InputCommands *);
 bool renderer_sdl_init(int windowW, int windowH, int gridW, int gridH);
 void renderer_sdl_shutdown(void);
 

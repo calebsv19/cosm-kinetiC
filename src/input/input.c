@@ -31,7 +31,7 @@ static void input_handle_event(const SDL_Event *event,
         }
         break;
     case SDL_KEYDOWN: {
-        SDL_Keymod mod = SDL_GetModState();
+        SDL_Keymod mod = (SDL_Keymod)event->key.keysym.mod;
         bool ctrl_or_cmd = (mod & (KMOD_CTRL | KMOD_GUI)) != 0;
         if (ctrl_or_cmd && event->key.repeat == 0) {
             switch (event->key.keysym.sym) {

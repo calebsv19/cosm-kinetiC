@@ -543,12 +543,39 @@ bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts) {
     return true;
 }
 
-static void config_write_string(FILE *stream, const char *text) {
+/* The retained json-c 0.18 archive accepts Unicode escapes under its strict
+ * UTF-8 guard but refuses raw multibyte strings. Emit equivalent ASCII JSON;
+ * do not relax parsing, alter decoded path bytes or add UI dependencies here. */
+static bool config_write_string(FILE *stream, const char *text) {
     json_object *string = json_object_new_string(text);
-    if (!string) return;
-    const char *encoded = json_object_to_json_string_ext(string, JSON_C_TO_STRING_PLAIN);
-    if (encoded) fputs(encoded, stream);
+    if (!string) return false;
+    const unsigned char *encoded = (const unsigned char *)json_object_to_json_string_ext(string, JSON_C_TO_STRING_PLAIN);
+    bool valid = encoded != NULL;
+    size_t size = valid ? strlen((const char *)encoded) : 0;
+    for (size_t i = 0; valid && i < size;) {
+        unsigned char first = encoded[i++];
+        if (first < 0x80) { fputc(first, stream); continue; }
+        unsigned codepoint = 0, remaining = 0, minimum = 0;
+        if (first >= 0xc2 && first <= 0xdf) { codepoint=first & 31; remaining=1; minimum=0x80; }
+        else if (first >= 0xe0 && first <= 0xef) { codepoint=first & 15; remaining=2; minimum=0x800; }
+        else if (first >= 0xf0 && first <= 0xf4) { codepoint=first & 7; remaining=3; minimum=0x10000; }
+        else { valid=false; break; }
+        if (remaining > size-i) { valid=false; break; }
+        for (unsigned j = 0; j < remaining; ++j) {
+            unsigned char next = encoded[i++];
+            if ((next & 0xc0) != 0x80) { valid=false; break; }
+            codepoint=(codepoint << 6) | (next & 63);
+        }
+        if (!valid || codepoint < minimum || codepoint > 0x10ffff ||
+            (codepoint >= 0xd800 && codepoint <= 0xdfff)) { valid=false; break; }
+        if (codepoint <= 0xffff) fprintf(stream, "\\u%04x", codepoint);
+        else {
+            codepoint -= 0x10000;
+            fprintf(stream, "\\u%04x\\u%04x", 0xd800+(codepoint >> 10), 0xdc00+(codepoint & 1023));
+        }
+    }
     json_object_put(string);
+    return valid && !ferror(stream);
 }
 static bool config_candidate_valid(PhysicsSimPersistence *save, FILE *stream) {
     struct stat st;
@@ -640,13 +667,13 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "  },\n");
     fprintf(f, "  \"paths\": {\n");
     fprintf(f, "    \"input_root\": ");
-    config_write_string(f, cfg->input_root);
+    if (!config_write_string(f, cfg->input_root)) { physics_sim_persistence_abort(&save, f); return false; }
     fprintf(f, ",\n");
     fprintf(f, "    \"atmospheric_warm_start_path\": ");
-    config_write_string(f, cfg->atmospheric_warm_start_path);
+    if (!config_write_string(f, cfg->atmospheric_warm_start_path)) { physics_sim_persistence_abort(&save, f); return false; }
     fprintf(f, ",\n");
     fprintf(f, "    \"retained_runtime_scene_path\": ");
-    config_write_string(f, cfg->retained_runtime_scene_path);
+    if (!config_write_string(f, cfg->retained_runtime_scene_path)) { physics_sim_persistence_abort(&save, f); return false; }
     fprintf(f, "\n");
     fprintf(f, "  },\n");
     fprintf(f, "  \"collider\": {\n");
@@ -671,7 +698,7 @@ bool config_loader_save(const AppConfig *cfg, const char *path) {
     fprintf(f, "    \"quality_index\": %d,\n", cfg->headless_quality_index);
     fprintf(f, "    \"skip_present\": %s,\n", cfg->headless_skip_present ? "true" : "false");
     fprintf(f, "    \"output_dir\": ");
-    config_write_string(f, cfg->headless_output_dir);
+    if (!config_write_string(f, cfg->headless_output_dir)) { physics_sim_persistence_abort(&save, f); return false; }
     fprintf(f, "\n");
     fprintf(f, "  }\n");
     fprintf(f, "}\n");

@@ -12,6 +12,7 @@ bool hud_overlay_init(SDL_Renderer *renderer);
 
 // Releases HUD overlay resources (fonts, etc.).
 void hud_overlay_shutdown(void);
+bool hud_overlay_reload_font(const AppConfig *);
 
 // Draws the HUD panel for the given info. Safe to call even if init failed;
 // it will just no-op if it has no font/renderer.

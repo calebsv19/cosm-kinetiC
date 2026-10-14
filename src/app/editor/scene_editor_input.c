@@ -158,7 +158,7 @@ void editor_pointer_down(void *user, const InputPointerState *ptr) {
         }
     }
 
-    if (scene_editor_input_handle_button_actions(state, x, y)) {
+    if (state->shared_ui.dispatch && scene_editor_input_handle_button_actions(state, x, y)) {
         return;
     }
 

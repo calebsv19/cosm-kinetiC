@@ -24,7 +24,7 @@ static struct json_object *values(const double *v,int n,double scale,double offs
 static bool restore(CfdOpenAtmosphere3d *s,struct json_object *state) {
     int n=s->grid.count;double steps,work;
     if(!field(get(state,"face_velocity_m_s"),s->velocity,s->velocity_count) || !field(get(state,"pressure_pa"),s->pressure,n) ||
-        !field(get(state,"energy_j"),s->energy,n) || !field(get(state,"smoke_kg"),s->smoke,n) || !field(get(state,"boundary_fluxes"),s->flux,8*s->plane) ||
+        !field(get(state,"energy_j"),s->energy,n) || !field(get(state,"smoke_kg"),s->smoke,n) || !field(get(state,"boundary_fluxes"),s->flux,4*s->boundary_faces) ||
         !num(get(state,"steps"),&steps) || floor(steps)!=steps || steps<0 || steps>10000 ||
         !num(get(state,"scalar_work_cells"),&work) || floor(work)!=work || work<0 || work>s->max_scalar_work_cells ||
         !num(get(state,"time_s"),&s->time) || !num(get(state,"input_energy_j"),&s->input_j) || s->input_j<0 ||
@@ -74,6 +74,21 @@ int main(int argc,char **argv) {
     if(!vertical)goto done;
     if(!strcmp(vertical,"solid_bottom_open_top"))s.ground=true;
     else if(strcmp(vertical,"open_bottom_and_top"))goto done;
+    const char *horizontal=json_object_get_string(get(b,"horizontal"));
+    if(!horizontal)goto done;
+    if(!strcmp(horizontal,"ambient_open_xy")){if(!cfd_open_atmosphere3d_lateral(&s))goto done;}
+    else if(strcmp(horizontal,"periodic_xy"))goto done;
+    struct json_object *box=get(r,"solid_box");
+    if(box) {
+        double bounds[2][3];int lo[3],hi[3];
+        if(!field(get(box,"lower_m"),bounds[0],3) || !field(get(box,"upper_m"),bounds[1],3))goto done;
+        for(int a=0;a<3;a++) {
+            double l=bounds[0][a]/s.grid.h[a],h=bounds[1][a]/s.grid.h[a];
+            if(!isfinite(l) || !isfinite(h) || fabs(l-round(l))>1e-10 || fabs(h-round(h))>1e-10 || l<1 || h>=grid[a])goto done;
+            lo[a]=(int)round(l);hi[a]=(int)round(h);
+        }
+        if(!cfd_open_atmosphere3d_box(&s,lo,hi))goto done;
+    }
     int n=s.grid.count;input=cfd_memory_calloc((size_t)2*n,sizeof(double));if(!input)goto done;
     struct json_object *state=get(r,"state");
     if(state && !json_object_is_type(state,json_type_null)){if(!restore(&s,state))goto done;}
@@ -98,7 +113,12 @@ int main(int argc,char **argv) {
     json_object_object_add(result,"face_velocity_m_s",values(s.velocity,s.velocity_count,1,0));json_object_object_add(result,"pressure_pa",values(s.pressure,n,1,0));
     json_object_object_add(result,"energy_j",values(s.energy,n,1,0));json_object_object_add(result,"smoke_kg",values(s.smoke,n,1,0));
     json_object_object_add(result,"temperature_k",values(s.energy,n,1/(rho*cp*s.grid.volume),ref));json_object_object_add(result,"smoke_concentration_kg_m3",values(s.smoke,n,1/s.grid.volume,0));
-    json_object_object_add(result,"boundary_fluxes",values(s.flux,8*s.plane,1,0));
+    json_object_object_add(result,"boundary_fluxes",values(s.flux,4*s.boundary_faces,1,0));
+    if(s.solid_box) {
+        struct json_object *mask=json_object_new_array_ext(n);
+        for(int q=0;q<n;q++)json_object_array_add(mask,json_object_new_int(cfd_open_atmosphere3d_solid(&s,q)));
+        json_object_object_add(result,"solid_mask",mask);
+    }
     struct json_object *state_out=json_object_new_object();
     for(int i=0;i<5;i++){const char *name=(const char*[]) {"face_velocity_m_s","pressure_pa","energy_j","smoke_kg","boundary_fluxes"}[i];json_object_object_add(state_out,name,json_object_get(get(result,name)));}
     value(state_out,"steps",s.steps);value(state_out,"time_s",s.time);value(state_out,"scalar_work_cells",(double)s.scalar_work_cells);
@@ -108,6 +128,7 @@ int main(int argc,char **argv) {
     if(strlen(output)>output_bytes){fputs("native output byte bound\n",stderr);goto done;}
     puts(output);status=0;
 done:
+    if(status && s.step_rejection)fprintf(stderr,"native step rejected at %.17g s: %s\n",s.time,s.step_rejection);
     if(status)fprintf(stderr,"open atmosphere policy, divergence, CFL, flux budget or contrast rejection; memory peak=%zu limit=%zu rejected=%zu failure=%d request=%zu\n",memory.peak_bytes,memory.limit_bytes,memory.rejected_allocations,memory.last_failure,memory.last_requested_bytes);
     if(result)json_object_put(result);
     if(r)json_object_put(r);

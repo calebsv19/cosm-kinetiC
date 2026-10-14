@@ -1,3 +1,4 @@
+#include "app/ui/physics_sim_ui_host.h"
 #include "app/editor/scene_editor_canvas.h"
 #include "app/editor/scene_editor_canvas_retained.h"
 #include "app/editor/scene_editor_internal.h"
@@ -702,53 +703,10 @@ void scene_editor_canvas_draw_tooltip(SDL_Renderer *renderer,
                                       int y,
                                       const char *lines[],
                                       int line_count) {
-    if (!renderer || !font || !lines || line_count <= 0) return;
     refresh_canvas_theme();
-    SDL_Color bg = COLOR_CANVAS;
-    SDL_Color border = COLOR_SELECTED;
-    bg.a = 230;
-    border.a = 100;
-    SDL_Color text = COLOR_TEXT;
-
-    int padding = 6;
-    int max_w = 0;
-    int total_h = 0;
-    int widths[8] = {0};
-    int heights[8] = {0};
-    if (line_count > 8) line_count = 8;
-
-    for (int i = 0; i < line_count; ++i) {
-        if (!lines[i]) continue;
-        if (!physics_sim_text_measure_utf8(renderer, font, lines[i], &widths[i], &heights[i])) {
-            continue;
-        }
-        if (widths[i] > max_w) max_w = widths[i];
-        total_h += heights[i];
-    }
-    if (max_w == 0 || total_h == 0) return;
-    int spacing = 2;
-    total_h += spacing * (line_count - 1);
-
-    SDL_Rect rect = {
-        .x = x + 16,
-        .y = y + 16,
-        .w = max_w + padding * 2,
-        .h = total_h + padding * 2
-    };
-
-    SDL_SetRenderDrawColor(renderer, bg.r, bg.g, bg.b, bg.a);
-    SDL_RenderFillRect(renderer, &rect);
-    SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, border.a);
-    SDL_RenderDrawRect(renderer, &rect);
-
-    int y_cursor = rect.y + padding;
-    for (int i = 0; i < line_count; ++i) {
-        SDL_Rect dst = {rect.x + padding, y_cursor, widths[i], heights[i]};
-        if (widths[i] > 0 && heights[i] > 0) {
-            (void)physics_sim_text_draw_utf8(renderer, font, lines[i], text, &dst);
-        }
-        y_cursor += heights[i] + spacing;
-    }
+    SDL_Color bg=COLOR_CANVAS,border=COLOR_SELECTED;
+    bg.a=230;border.a=100;
+    physics_sim_ui_tooltip(renderer,font,x,y,lines,line_count,bg,border,COLOR_TEXT);
 }
 
 void scene_editor_canvas_draw_name(SDL_Renderer *renderer,

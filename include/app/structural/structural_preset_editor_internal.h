@@ -2,6 +2,7 @@
 #define STRUCTURAL_PRESET_EDITOR_INTERNAL_H
 
 #include <stdbool.h>
+#include "app/ui/physics_sim_ui_host.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
@@ -13,6 +14,7 @@
 #include "physics/structural/structural_solver.h"
 
 typedef struct StructuralPresetEditor {
+    PhysicsSimUiHost ui;
     SDL_Window   *window;
     SDL_Renderer *renderer;
     TTF_Font     *font_main;

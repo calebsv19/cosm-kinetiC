@@ -6,6 +6,26 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_passive_worker.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_atmosphere_worker.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_open_atmosphere_worker.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_open_accuracy.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_coupling_clock.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_hotgas_worker.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_hotgas_domain_worker.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_mixture_worker.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_flow_time_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_buoyancy_projection_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_matched_heat_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_matched_original_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_momentum_replay.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_reconstructed_flow_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_prescribed_flow_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_flow_source.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_half_flow.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_horizontal_source.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_matched_heat.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_momentum_capture.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_prescribed_flow.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_thermal_transfer.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_vertical_source.c' \
 	! -path '$(SRC_DIR)/render/renderer_sdl_headless_stub.c' \
 	! -path '$(SRC_DIR)/render/kit_render_backend_vk_headless_stub.c' \
 	! -path '$(SRC_DIR)/render/retained_runtime_scene_overlay_headless_stub.c' \
@@ -14,6 +34,7 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 VK_RENDERER_SRCS := $(shell find $(VK_RENDERER_DIR)/src -name '*.c')
 VK_RUNTIME_SRCS := $(shell find $(VK_RUNTIME_DIR)/src -name '*.c')
 VK_RENDERER_SDL_COMPAT_SRCS := \
+	$(SRC_DIR)/app/ui/physics_sim_ui_host_render.c \
 	$(SRC_DIR)/app/editor/editor_scroll.c \
 	$(SRC_DIR)/app/editor/scene_editor_canvas.c \
 	$(SRC_DIR)/app/editor/scene_editor_canvas_retained.c \
@@ -24,7 +45,11 @@ VK_RENDERER_SDL_COMPAT_SRCS := \
 	$(SRC_DIR)/app/editor/scene_editor_precision.c \
 	$(SRC_DIR)/app/editor/scene_editor_precision_helpers.c \
 	$(SRC_DIR)/app/editor/scene_editor_widgets.c \
+	$(SRC_DIR)/app/editor/scene_editor_shared_text.c \
+	$(SRC_DIR)/app/editor/scene_editor_shared_controls.c \
 	$(SRC_DIR)/app/menu/menu_render.c \
+	$(SRC_DIR)/app/menu/menu_shared_text.c \
+	$(SRC_DIR)/app/menu/menu_text_presentation.c \
 	$(SRC_DIR)/app/menu/menu_settings_render.c \
 	$(SRC_DIR)/app/menu/workspace_authoring/physics_sim_workspace_authoring_overlay.c \
 	$(SRC_DIR)/app/scene_menu.c \

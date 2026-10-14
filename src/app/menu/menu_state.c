@@ -1,3 +1,4 @@
+#include "app/menu/menu_text_presentation.h"
 #include "app/menu/menu_state.h"
 #include "app/menu/menu_state_internal.h"
 
@@ -112,7 +113,7 @@ void menu_run_headless_batch(SceneMenuInteraction *ctx) {
 
 void menu_set_status(SceneMenuInteraction *ctx, const char *text, bool wait_ack) {
     if (!ctx || !text) return;
-    snprintf(ctx->status_text, sizeof(ctx->status_text), "%s", text);
+    menu_text_copy_utf8(ctx->status_text, sizeof(ctx->status_text), text);
     ctx->status_visible = true;
     ctx->status_wait_ack = wait_ack;
 }

@@ -3,6 +3,9 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef PHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC
+#include "app/cfd_open_momentum_diagnostics.h"
+#endif
 bool cfd_cartesian3d_init(CfdCartesian3d *g, const int n[3], const double length[3]) {
     if (!g || !n || !length)
         return false;
@@ -16,7 +19,24 @@ bool cfd_cartesian3d_init(CfdCartesian3d *g, const int n[3], const double length
         v.h[a] = length[a] / n[a];
         count *= (size_t)n[a];
     }
+#if defined(PHYSICS_SIM_OPEN_VERTICAL_REFERENCE) && !defined(PHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER)
+#error Vertical reference capacity requires the contained full-grid qualifier
+#endif
+#if defined(PHYSICS_SIM_OPEN_HORIZONTAL_REFERENCE) && !defined(PHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER)
+#error Horizontal capacity requires contained full-grid qualification
+#endif
+#ifdef PHYSICS_SIM_OPEN_HORIZONTAL_REFERENCE
+    if (count > 8388608)
+#elif defined(PHYSICS_SIM_OPEN_VERTICAL_REFERENCE)
+    /* Independently evolved 128x128x256 directional reference only. */
+    if (count > 4194304)
+#elif defined(PHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER)
+    /* Contained 128-cubed open-plume qualifier only; ordinary grid admission
+     * remains unchanged. Counts/indices remain well within signed int range. */
+    if (count > 2097152)
+#else
     if (count > 1048576)
+#endif
         return false;
     v.count = (int)count;
     v.volume = v.h[0] * v.h[1] * v.h[2];
@@ -179,11 +199,19 @@ bool cfd_cartesian3d_linear_solve(CfdCartesian3dLinear *s, const double *b, doub
     int it = 0;
     for (; it <= 2000; it++) {
         double rel = sqrt(dot(r, r, n)) / scale;
+#ifdef PHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC
+        cfd_open_momentum_diagnostics.cg_iteration=it;
+        cfd_open_momentum_diagnostics.cg_recursive_residual=rel;
+        cfd_open_momentum_diagnostics.linear_failure="iteration_limit";
+#endif
         if (rel <= 5e-12 || it == 2000) {
             cfd_cartesian3d_linear_apply(s, x, truth);
             for (int q = 0; q < n; q++)
                 truth[q] = b[q] - truth[q];
             rel = sqrt(dot(truth, truth, n)) / scale;
+#ifdef PHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC
+            cfd_open_momentum_diagnostics.cg_true_residual=rel;
+#endif
             if (iterations)
                 *iterations = it;
             if (relative_residual)
@@ -197,6 +225,10 @@ bool cfd_cartesian3d_linear_solve(CfdCartesian3dLinear *s, const double *b, doub
         }
         cfd_sparse_mg_apply(s->mg, r, z);
         double next = dot(r, z, n);
+#ifdef PHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC
+        cfd_open_momentum_diagnostics.linear_failure="preconditioned_dot_nonpositive_or_nonfinite";
+        cfd_open_momentum_diagnostics.cg_preconditioned_dot=next;
+#endif
         if (!isfinite(next) || next <= 0)
             return false;
         double beta = rho > 0 ? next / rho : 0;
@@ -205,6 +237,10 @@ bool cfd_cartesian3d_linear_solve(CfdCartesian3dLinear *s, const double *b, doub
         rho = next;
         cfd_cartesian3d_linear_apply(s, p, ap);
         double denom = dot(p, ap, n);
+#ifdef PHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC
+        cfd_open_momentum_diagnostics.linear_failure="operator_dot_nonpositive_or_nonfinite";
+        cfd_open_momentum_diagnostics.cg_operator_dot=denom;
+#endif
         if (!isfinite(denom) || denom <= 0)
             return false;
         double alpha = rho / denom;

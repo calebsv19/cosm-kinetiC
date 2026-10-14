@@ -15,6 +15,13 @@
 #include <stdio.h>
 
 #include "vk_renderer.h"
+#include "kit_ui_window_probe_sdl.h"
+#include <stdlib.h>
+
+static int editor_window_capture(void *user, const char *path) {
+    SceneEditorState *state = user;
+    return vk_renderer_request_capture((VkRenderer *)state->renderer, path) == VK_SUCCESS;
+}
 
 static TTF_Font *editor_open_body_font(const AppConfig *cfg, SDL_Renderer *renderer) {
     TTF_Font *font = NULL;
@@ -38,6 +45,10 @@ static TTF_Font *editor_open_small_font(const AppConfig *cfg, SDL_Renderer *rend
 
 static void editor_close_owned_fonts(SceneEditorState *state) {
     if (!state) return;
+    /* Closing fonts retires cached text textures on the borrowed renderer.
+     * Finish its submitted frame before releasing those GPU resources. */
+    if (state->renderer && (state->owns_font_main || state->owns_font_small))
+        vk_renderer_wait_idle((VkRenderer *)state->renderer);
     if (state->owns_font_main && state->font_main) {
         physics_sim_font_bridge_close(&state->font_main);
         state->font_main = NULL;
@@ -668,6 +679,7 @@ bool scene_editor_run(SDL_Window *window,
     scene_editor_refresh_import_files(&state);
 
     InputContext editor_ctx = {
+        .on_sdl_event_filter = scene_editor_shared_filter,
         .on_pointer_down = editor_pointer_down,
         .on_pointer_up = editor_pointer_up,
         .on_pointer_move = editor_pointer_move,
@@ -679,8 +691,25 @@ bool scene_editor_run(SDL_Window *window,
     };
     input_context_manager_push(state.context_mgr, &editor_ctx);
 
+    (void)scene_editor_shared_refresh(&state);
+    KitUiWindowProbe window_probe;
+    kit_ui_window_probe_init_sdl(&window_probe, "physics-editor");
+    window_probe.directory = getenv("CODEWORK_EDITOR_UI_PROOF");
+    if (window_probe.directory && !*window_probe.directory) window_probe.directory = NULL;
+    uint64_t presented_frames = 0;
     Uint32 prev_ticks = SDL_GetTicks();
     while (state.running) {
+        int proof = kit_ui_window_probe_tick_sdl(&window_probe, window,
+            presented_frames, editor_window_capture, &state);
+        if (proof) {
+            const VkRuntimeCapabilityReport *report = vk_runtime_get_capability_report(
+                &((VkRenderer *)renderer)->context.device->runtime);
+            fprintf(stdout, "EDITOR_WINDOW_RUNTIME proof=%d validation=%u warnings=%u errors=%u\n",
+                proof, (unsigned)report->validation_enabled,
+                (unsigned)report->validation_warning_count, (unsigned)report->validation_error_count);
+            state.running = false;
+            break;
+        }
         SimModeRoute editor_route = sim_mode_resolve_route(state.cfg.sim_mode, state.cfg.space_mode);
         bool retained_scene_active = physics_sim_editor_session_has_retained_scene(&state.session);
         bool overlay_object_active = physics_sim_editor_session_selected_object_overlay(&state.session) != NULL;
@@ -705,8 +734,10 @@ bool scene_editor_run(SDL_Window *window,
         text_input_update(&state.height_input, dt);
         text_input_update(&state.depth_input, dt);
 
+        (void)scene_editor_shared_refresh(&state);
         InputCommands cmds;
-        if (!input_poll_events(&cmds, NULL, state.context_mgr)) {
+        if (!input_poll_events_with_wait(&cmds, NULL, state.context_mgr,
+                state.shared_ui.window.observed.presentable ? 0 : 120, NULL, NULL, NULL)) {
             state.running = false;
             break;
         }
@@ -714,6 +745,8 @@ bool scene_editor_run(SDL_Window *window,
             state.running = false;
             break;
         }
+        (void)scene_editor_shared_refresh(&state);
+        scene_editor_shared_text_sync(&state);
         (void)editor_apply_text_zoom_shortcut(&state, &cmds);
 
         state.btn_add_source.enabled = retained_scene_active
@@ -842,6 +875,9 @@ bool scene_editor_run(SDL_Window *window,
                                                   (float)state.pointer_y);
         }
 
+        state.shared_ui.window.geometry_dirty = false;
+        if (!state.shared_ui.window.observed.presentable) continue;
+
         int drawable_w = win_w;
         int drawable_h = win_h;
         SDL_Vulkan_GetDrawableSize(window, &drawable_w, &drawable_h);
@@ -871,8 +907,11 @@ bool scene_editor_run(SDL_Window *window,
         }
 
         vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
+        scene_editor_shared_controls_begin(&state);
         scene_editor_panel_draw(&state);
+        scene_editor_shared_controls_end(&state);
         VkResult end = vk_renderer_end_frame((VkRenderer *)renderer, cmd);
+        if (end == VK_SUCCESS || end == VK_SUBOPTIMAL_KHR) ++presented_frames;
         if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {
             vk_renderer_recreate_swapchain((VkRenderer *)renderer, window);
             vk_renderer_set_logical_size((VkRenderer *)renderer, (float)win_w, (float)win_h);
@@ -881,6 +920,7 @@ bool scene_editor_run(SDL_Window *window,
         }
     }
 
+    scene_editor_shared_text_reset(&state);
     input_context_manager_pop(state.context_mgr);
 
     // Flush pending mouse events so menu clicks don't immediately re-trigger after closing.

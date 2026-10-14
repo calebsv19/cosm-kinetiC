@@ -19,5 +19,6 @@ typedef struct SessionText {
 bool session_text_refresh(SessionText *text, SDL_Renderer *renderer, SDL_Window *window);
 void session_text_draw(SessionText *text, SDL_Renderer *renderer, int role, int x, int y,
                        SDL_Color color, const char *label);
+void session_text_draw_rect(SessionText *,SDL_Renderer *,int,const SDL_Rect *,SDL_Color,const char *,int);
 void session_text_destroy(SessionText *text);
 #endif

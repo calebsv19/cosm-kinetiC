@@ -222,41 +222,40 @@ static void editor_load(StructuralPresetEditor *editor) {
     }
 }
 
-static bool button_hit(const SDL_Rect *rect, int x, int y) {
-    if (!rect) return false;
-    return x >= rect->x && x <= rect->x + rect->w &&
-           y >= rect->y && y <= rect->y + rect->h;
+static void structural_action(void *user,uint64_t key) {
+    StructuralPresetEditor *editor=user;
+    switch(key) {
+    case 1:attach_selected_to_ground(editor);break;
+    case 2:
+        editor->scene.gravity_enabled=!editor->scene.gravity_enabled;
+        structural_editor_set_status(&editor->editor,editor->scene.gravity_enabled ? "Gravity enabled." : "Gravity disabled.");
+        break;
+    case 3:editor->scene.gravity_strength=fmaxf(0,editor->scene.gravity_strength-1);break;
+    case 4:editor->scene.gravity_strength=fminf(100,editor->scene.gravity_strength+1);break;
+    case 5:editor_save(editor);break;
+    case 6:editor->running=false;break;
+    default:break;
+    }
 }
-
+static void structural_cancel(void *user) {
+    StructuralPresetEditor *editor=user;
+    structural_editor_cancel_transient(&editor->editor);
+}
+static uint32_t structural_scope(void *user) {
+    StructuralPresetEditor *editor=user;
+    uint32_t h=2166136261u;
+    const int values[]={editor->scene.node_count,editor->scene.edge_count,
+        editor->scene.gravity_enabled,editor->editor.tool};
+    for (size_t i=0;i<sizeof(values)/sizeof(values[0]);i++) h=(h^(uint32_t)values[i])*16777619u;
+    for (size_t i=0;i<editor->scene.node_count;i++) h=(h^(uint32_t)editor->scene.nodes[i].selected)*16777619u;
+    return h ? h : 1;
+}
+static bool structural_filter(void *user,const SDL_Event *event) {
+    return physics_sim_ui_host_filter(&((StructuralPresetEditor *)user)->ui,event);
+}
 static void on_pointer_down(void *user, const InputPointerState *state) {
-    StructuralPresetEditor *editor = (StructuralPresetEditor *)user;
+    StructuralPresetEditor *editor=user;
     if (!editor || !state) return;
-    if (button_hit(&editor->btn_ground.rect, state->x, state->y)) {
-        attach_selected_to_ground(editor);
-        return;
-    }
-    if (button_hit(&editor->btn_gravity.rect, state->x, state->y)) {
-        editor->scene.gravity_enabled = !editor->scene.gravity_enabled;
-        structural_editor_set_status(&editor->editor,
-                                     editor->scene.gravity_enabled ? "Gravity enabled." : "Gravity disabled.");
-        return;
-    }
-    if (button_hit(&editor->btn_gravity_minus.rect, state->x, state->y)) {
-        editor->scene.gravity_strength = fmaxf(0.0f, editor->scene.gravity_strength - 1.0f);
-        return;
-    }
-    if (button_hit(&editor->btn_gravity_plus.rect, state->x, state->y)) {
-        editor->scene.gravity_strength = fminf(100.0f, editor->scene.gravity_strength + 1.0f);
-        return;
-    }
-    if (button_hit(&editor->btn_save.rect, state->x, state->y)) {
-        editor_save(editor);
-        return;
-    }
-    if (button_hit(&editor->btn_cancel.rect, state->x, state->y)) {
-        editor->running = false;
-        return;
-    }
     if (!structural_preset_editor_point_in_preview(editor, state->x, state->y)) return;
 
     if (state->button == SDL_BUTTON_LEFT && state->down &&
@@ -481,7 +480,7 @@ retry:
                 SDL_WINDOWPOS_CENTERED,
                 base_w,
                 base_h,
-                SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
+                SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
             if (!local_window) return false;
 
             struct_log_window_sizes(local_window, "after create");
@@ -491,7 +490,7 @@ retry:
 
             VkRendererConfig vk_cfg;
             vk_renderer_config_set_defaults(&vk_cfg);
-            vk_cfg.enable_validation = SDL_FALSE;
+            vk_cfg.enable_validation = physics_sim_ui_proof_enabled() ? SDL_TRUE : SDL_FALSE;
             vk_cfg.clear_color[0] = 0.0f;
             vk_cfg.clear_color[1] = 0.0f;
             vk_cfg.clear_color[2] = 0.0f;
@@ -633,6 +632,7 @@ retry:
     ctx_mgr = &local_mgr;
 
     InputContext edit_ctx = {
+        .on_sdl_event_filter = structural_filter,
         .on_pointer_down = on_pointer_down,
         .on_pointer_up = on_pointer_up,
         .on_pointer_move = on_pointer_move,
@@ -641,10 +641,15 @@ retry:
     };
     input_context_manager_push(ctx_mgr, &edit_ctx);
 
+    physics_sim_ui_host_init(&editor.ui,editor.window,editor.renderer,"physics-structural-editor",
+        "CODEWORK_STRUCTURAL_EDITOR_UI_PROOF",&editor,structural_cancel);
+    editor.ui.action=structural_action;editor.ui.scope=structural_scope;
     int frame_attempts = 0;
     while (editor.running) {
+        if (physics_sim_ui_host_probe(&editor.ui)) {editor.running=false;break;}
+        (void)physics_sim_ui_host_refresh(&editor.ui);
         InputCommands cmds;
-        if (!input_poll_events(&cmds, NULL, ctx_mgr)) {
+        if (!input_poll_events_with_wait(&cmds,NULL,ctx_mgr,editor.ui.observed.presentable ? 0 : 120,NULL,NULL,NULL)) {
             editor.running = false;
             break;
         }
@@ -658,10 +663,13 @@ retry:
             handle_solve(&editor);
         }
 
+        (void)physics_sim_ui_host_refresh(&editor.ui);
         update_layout(&editor);
         int win_w = 0;
         int win_h = 0;
         SDL_GetWindowSize(editor.window, &win_w, &win_h);
+        editor.ui.geometry_dirty=false;
+        if (!editor.ui.observed.presentable) continue;
         if (win_w > 0 && win_h > 0) {
             int drawable_w = win_w;
             int drawable_h = win_h;
@@ -709,8 +717,11 @@ retry:
                 break;
             } else if (frame == VK_SUCCESS) {
                 vk_renderer_set_logical_size((VkRenderer *)editor.renderer, (float)win_w, (float)win_h);
+                physics_sim_ui_host_collect(&editor.ui);
                 structural_preset_editor_render_scene(&editor);
+                physics_sim_ui_host_commit(&editor.ui);
                 VkResult end = vk_renderer_end_frame((VkRenderer *)editor.renderer, cmd);
+                if (end==VK_SUCCESS || end==VK_SUBOPTIMAL_KHR) ++editor.ui.presented_frames;
                 if (frame_attempts < 8) {
                     fprintf(stderr, "[struct-editor] end_frame result=%d\n", end);
                 }

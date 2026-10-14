@@ -1,3 +1,4 @@
+#include "app/menu/menu_text_presentation.h"
 #include "app/menu/menu_settings_render.h"
 
 #include <SDL2/SDL_ttf.h>
@@ -29,66 +30,15 @@ static int font_height(SDL_Renderer *renderer, TTF_Font *font, int fallback) {
     return physics_sim_text_logical_pixels(renderer, h);
 }
 
-static int text_width(SDL_Renderer *renderer, TTF_Font *font, const char *text) {
-    int w = 0;
-    if (!font || !text || text[0] == '\0') return 0;
-    if (TTF_SizeUTF8(font, text, &w, NULL) != 0) return 0;
-    return physics_sim_text_logical_pixels(renderer, w);
-}
-
-static void fit_text_to_width(SDL_Renderer *renderer,
-                              TTF_Font *font,
-                              const char *text,
-                              int max_width,
-                              char *out,
-                              size_t out_size) {
-    int w = 0;
-    size_t len = 0;
-    if (!out || out_size == 0u) return;
-    out[0] = '\0';
-    if (!text) return;
-    snprintf(out, out_size, "%s", text);
-    if (!font || max_width <= 0) return;
-    if (TTF_SizeUTF8(font, out, &w, NULL) == 0) {
-        w = physics_sim_text_logical_pixels(renderer, w);
-        if (w <= max_width) return;
-    }
-
-    len = strlen(out);
-    while (len > 0u) {
-        char candidate[256];
-        --len;
-        out[len] = '\0';
-        snprintf(candidate, sizeof(candidate), "%s...", out);
-        if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0) {
-            w = physics_sim_text_logical_pixels(renderer, w);
-            if (w <= max_width) {
-                snprintf(out, out_size, "%s", candidate);
-                return;
-            }
-        }
-    }
-    snprintf(out, out_size, "...");
-}
-
-static void draw_field_cell(SDL_Renderer *renderer,
+static void draw_field_cell(SceneMenuInteraction *ctx,
                             TTF_Font *font,
                             TTF_Font *font_small,
                             const MenuSettingsFieldLayout *layout,
                             const char *label,
                             const char *value,
                             bool interactive) {
-    char label_fit[96];
-    char value_fit[128];
+    SDL_Renderer *renderer = ctx->renderer;
     TTF_Font *text_font = font_small ? font_small : font;
-    int body_h = font_height(renderer, text_font, 16);
-    int body_y = 0;
-    int label_x = 0;
-    int label_w = 0;
-    int value_right = 0;
-    int value_x = 0;
-    int value_w = 0;
-    int value_text_w = 0;
     if (!renderer || !font || !layout || !label || !value) return;
 
     SDL_SetRenderDrawColor(renderer,
@@ -103,39 +53,16 @@ static void draw_field_cell(SDL_Renderer *renderer,
                            menu_color_accent().b,
                            120);
     SDL_RenderDrawRect(renderer, &layout->cell_rect);
-    body_y = layout->cell_rect.y + (layout->cell_rect.h - body_h) / 2;
-    label_x = layout->cell_rect.x + 8;
-    value_right = interactive ? (layout->dec_rect.x - 8)
-                              : (layout->cell_rect.x + layout->cell_rect.w - 8);
-    label_w = layout->cell_rect.w / 2 - 16;
-    if (interactive) label_w -= 8;
-    if (label_w < 56) label_w = 56;
-    fit_text_to_width(renderer, text_font, label, label_w, label_fit, sizeof(label_fit));
-    menu_draw_text(renderer,
-                   text_font,
-                   label_fit[0] ? label_fit : label,
-                   label_x,
-                   body_y,
-                   menu_color_text_dim());
-
-    value_x = layout->cell_rect.x + layout->cell_rect.w / 2;
-    value_w = value_right - value_x;
-    if (value_w < 48) value_w = 48;
-    fit_text_to_width(renderer, text_font, value, value_w, value_fit, sizeof(value_fit));
-    value_text_w = text_width(renderer, text_font, value_fit[0] ? value_fit : value);
-    value_x = value_right - value_text_w;
-    if (value_x < layout->cell_rect.x + layout->cell_rect.w / 2) {
-        value_x = layout->cell_rect.x + layout->cell_rect.w / 2;
-    }
-    menu_draw_text(renderer,
-                   text_font,
-                   value_fit[0] ? value_fit : value,
-                   value_x,
-                   body_y,
-                   menu_color_text());
+    int label_w = layout->cell_rect.w/2 - 16 - (interactive ? 8 : 0);
+    int value_left = layout->cell_rect.x + layout->cell_rect.w/2;
+    int value_right = interactive ? layout->dec_rect.x-8 : layout->cell_rect.x+layout->cell_rect.w-8;
+    SDL_Rect label_rect = {layout->cell_rect.x+8, layout->cell_rect.y+4, label_w, layout->cell_rect.h-8};
+    SDL_Rect value_rect = {value_left, layout->cell_rect.y+4, value_right-value_left, layout->cell_rect.h-8};
+    menu_draw_contained_text(renderer, text_font, label, &label_rect, menu_color_text_dim(), 0);
+    menu_draw_contained_text(renderer, text_font, value, &value_rect, menu_color_text(), 2);
     if (interactive) {
-        menu_draw_button(renderer, &layout->dec_rect, "-", text_font, false);
-        menu_draw_button(renderer, &layout->inc_rect, "+", text_font, false);
+        menu_draw_control_button(ctx, &layout->dec_rect, "-", text_font, false);
+        menu_draw_control_button(ctx, &layout->inc_rect, "+", text_font, false);
     }
 }
 
@@ -374,7 +301,7 @@ void menu_settings_draw_simulation_panel(SceneMenuInteraction *ctx) {
         const MenuSettingsFieldDef *def = menu_settings_schema_field(layouts[i].field);
         if (!def) continue;
         render_field_value_label(ctx, layouts[i].field, value, sizeof(value));
-        draw_field_cell(ctx->renderer,
+        draw_field_cell(ctx,
                         ctx->font,
                         ctx->font_small,
                         &layouts[i],
@@ -385,48 +312,48 @@ void menu_settings_draw_simulation_panel(SceneMenuInteraction *ctx) {
 
     if (ctx->atmospheric_initial_state_toggle_rect.w > 0 &&
         ctx->atmospheric_initial_state_toggle_rect.h > 0) {
-        menu_draw_toggle(ctx->renderer,
+        menu_draw_control_toggle(ctx,
                          ctx->font_small ? ctx->font_small : ctx->font,
                          &ctx->atmospheric_initial_state_toggle_rect,
                          "Atmo Init",
                          ctx->settings_shell.draft.atmospheric_initial_state_enabled);
     }
-    menu_draw_toggle(ctx->renderer,
+    menu_draw_control_toggle(ctx,
                      ctx->font_small ? ctx->font_small : ctx->font,
                      &ctx->volume_toggle_rect,
                      "Volume Frames",
                      ctx->settings_shell.draft.save_volume_frames);
-    menu_draw_toggle(ctx->renderer,
+    menu_draw_control_toggle(ctx,
                      ctx->font_small ? ctx->font_small : ctx->font,
                      &ctx->render_toggle_rect,
                      "Render Frames",
                      ctx->settings_shell.draft.save_render_frames);
-    menu_draw_toggle(ctx->renderer,
+    menu_draw_control_toggle(ctx,
                      ctx->font_small ? ctx->font_small : ctx->font,
                      &ctx->blur_toggle_rect,
                      "Render Blur",
                      ctx->settings_shell.draft.enable_render_blur);
-    menu_draw_button(ctx->renderer,
+    menu_draw_control_button(ctx,
                      &ctx->settings_apply_button.rect,
                      ctx->settings_apply_button.label,
                      ctx->font_small ? ctx->font_small : ctx->font,
                      dirty);
-    menu_draw_button(ctx->renderer,
+    menu_draw_control_button(ctx,
                      &ctx->settings_save_button.rect,
                      ctx->settings_save_button.label,
                      ctx->font_small ? ctx->font_small : ctx->font,
                      dirty || saved_differs);
-    menu_draw_button(ctx->renderer,
+    menu_draw_control_button(ctx,
                      &ctx->settings_reset_button.rect,
                      ctx->settings_reset_button.label,
                      ctx->font_small ? ctx->font_small : ctx->font,
                      false);
-    menu_draw_button(ctx->renderer,
+    menu_draw_control_button(ctx,
                      &ctx->settings_restore_saved_button.rect,
                      ctx->settings_restore_saved_button.label,
                      ctx->font_small ? ctx->font_small : ctx->font,
                      saved_differs);
-    menu_draw_button(ctx->renderer,
+    menu_draw_control_button(ctx,
                      &ctx->settings_defaults_button.rect,
                      ctx->settings_defaults_button.label,
                      ctx->font_small ? ctx->font_small : ctx->font,
@@ -434,17 +361,15 @@ void menu_settings_draw_simulation_panel(SceneMenuInteraction *ctx) {
 
     if (dirty) {
         status_text = "Pending draft differs from current runtime";
-        status_color = menu_color_accent();
+        status_color = menu_color_status_text(true);
     } else if (saved_differs) {
         status_text = "Current runtime differs from saved settings";
         status_color = menu_color_text();
     } else {
         status_text = "Current runtime matches saved settings";
     }
-    menu_draw_text(ctx->renderer,
-                   ctx->font_small ? ctx->font_small : ctx->font,
-                   status_text,
-                   config_panel.x + 12,
-                   menu_settings_layout_status_y(ctx),
-                   status_color);
+    SDL_Rect status_rect = {config_panel.x+12, menu_settings_layout_status_y(ctx),
+        config_panel.w-24, font_height(ctx->renderer, ctx->font_small ? ctx->font_small : ctx->font, 16)};
+    menu_draw_contained_text(ctx->renderer, ctx->font_small ? ctx->font_small : ctx->font,
+                             status_text, &status_rect, status_color, 0);
 }

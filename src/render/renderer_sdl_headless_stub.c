@@ -196,3 +196,14 @@ bool renderer_sdl_toggle_kit_viz_particles(void) {
     g_use_kit_viz_particles = !g_use_kit_viz_particles;
     return g_use_kit_viz_particles;
 }
+
+void renderer_sdl_ui_bind(void *owner, void (*cancel)(void *)) { (void)owner; (void)cancel; }
+bool renderer_sdl_ui_filter(void *owner,const SDL_Event *event) { (void)owner;(void)event;return false; }
+int renderer_sdl_ui_poll(void) { return 0; }
+bool renderer_sdl_ui_presentable(void) { return true; }
+bool renderer_sdl_ui_pointer_allowed(void) { return true; }
+
+void renderer_sdl_ui_map_pointer(int *x,int *y) { (void)x;(void)y; }
+
+bool renderer_sdl_reload_text(const AppConfig *cfg) { (void)cfg;return false; }
+void renderer_sdl_ui_apply_zoom(AppConfig *cfg,const InputCommands *commands) { (void)cfg;(void)commands; }

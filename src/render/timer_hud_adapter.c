@@ -7,6 +7,7 @@
 #include "timer_hud/timer_hud_backend.h"
 #include "render/font_bridge.h"
 #include "render/text_draw.h"
+#include "app/menu/menu_text_presentation.h"
 #include "render/text_upload_policy.h"
 #include "render/renderer_sdl.h"
 #include "vk_renderer.h"
@@ -158,11 +159,13 @@ static void timer_hud_draw_text(const char* text, int x, int y, int align_flags,
     if (align_flags & TIMER_HUD_ALIGN_MIDDLE)  dst.y -= logical_h / 2;
     if (align_flags & TIMER_HUD_ALIGN_BOTTOM)  dst.y -= logical_h;
 
-    (void)physics_sim_text_draw_utf8(g_timer_hud_renderer,
-                                     g_timer_hud_font,
-                                     text,
-                                     (SDL_Color){color.r, color.g, color.b, color.a},
-                                     &dst);
+    VkRenderer *vk=(VkRenderer *)g_timer_hud_renderer;
+    int width=(int)vk->draw_state.logical_size[0],height=(int)vk->draw_state.logical_size[1];
+    if (dst.x<0) dst.x=0;
+    if (dst.y<0 || dst.y+dst.h>height) return;
+    dst.w=width-dst.x;
+    if (dst.w>0) menu_draw_contained_text(g_timer_hud_renderer,g_timer_hud_font,text,&dst,
+        (SDL_Color){color.r,color.g,color.b,color.a},0);
 }
 
 static const TimerHUDBackend g_timer_hud_backend = {
@@ -267,4 +270,11 @@ void timer_hud_bind_renderer(SDL_Renderer* renderer) {
 void timer_hud_unbind_renderer(void) {
     physics_sim_font_bridge_close(&g_timer_hud_font);
     g_timer_hud_renderer = NULL;
+}
+
+bool timer_hud_reload_font(const AppConfig *cfg) {
+    if (!g_timer_hud_renderer) return false;
+    TTF_Font *next=NULL;
+    if (physics_sim_font_bridge_open(g_timer_hud_renderer,cfg,PHYSICS_SIM_FONT_SLOT_TIMER_HUD,&next,NULL).code!=CORE_OK) return false;
+    physics_sim_font_bridge_close(&g_timer_hud_font);g_timer_hud_font=next;return true;
 }

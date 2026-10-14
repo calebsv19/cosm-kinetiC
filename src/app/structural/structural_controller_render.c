@@ -6,10 +6,12 @@
 
 #include "app/structural/structural_render.h"
 #include "render/text_draw.h"
+#include "app/ui/physics_sim_ui_host.h"
+#include "app/menu/menu_render.h"
 
 static void render_text(SDL_Renderer *renderer, TTF_Font *font,
                         int x, int y, SDL_Color color, const char *text) {
-    (void)physics_sim_text_draw_utf8_at(renderer, font, text, x, y, color);
+    physics_sim_ui_text_line(renderer,font,x,y,color,text);
 }
 
 static bool render_hud_line_limited(SDL_Renderer *renderer,
@@ -514,7 +516,7 @@ void structural_controller_render_scene(SDL_Renderer *renderer, StructuralContro
         }
 
         {
-            SDL_Color hud_color = {220, 220, 220, 255};
+            SDL_Color hud_color = menu_color_text();
             int hud_x = 16;
             int hud_y = 16;
             if (ctrl->font_hud) {

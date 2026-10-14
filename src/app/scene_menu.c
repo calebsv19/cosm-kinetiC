@@ -1,3 +1,4 @@
+#include "app/menu/menu_text_presentation.h"
 #include "app/scene_menu.h"
 
 #include <SDL2/SDL.h>
@@ -27,6 +28,9 @@
 #include "render/text_upload_policy.h"
 #include "render/vk_shared_device.h"
 #include "vk_renderer.h"
+#include "kit_ui_window_probe_sdl.h"
+#include "app/ui/physics_sim_ui_host.h"
+#include "kit_ui_interaction_sdl.h"
 
 enum {
     MENU_IDLE_RENDER_HEARTBEAT_MS = 250u
@@ -160,6 +164,8 @@ static bool menu_workspace_authoring_event_filter(void *user,
     uint32_t before_apply_count = 0u;
     int consumed = 0;
     if (!ctx) return false;
+    if (menu_window_lifecycle_filter(ctx, event)) return true;
+    if (menu_shared_text_event(ctx, event)) return true;
     before_apply_count = ctx->workspace_authoring.apply_count;
     consumed = physics_sim_workspace_authoring_host_handle_sdl_event(
         &ctx->workspace_authoring,
@@ -170,7 +176,14 @@ static bool menu_workspace_authoring_event_filter(void *user,
     if (ctx->workspace_authoring.apply_count != before_apply_count) {
         menu_workspace_authoring_persist_accepted(ctx);
     }
-    return consumed ? true : false;
+    if (consumed) { menu_shared_controls_cancel(ctx); return true; }
+    return menu_shared_controls_event(ctx,event);
+}
+
+static int menu_window_probe_capture(void *user, const char *path) {
+    SceneMenuInteraction *ctx = user;
+    return ctx && ctx->renderer &&
+           vk_renderer_request_capture((VkRenderer *)ctx->renderer, path) == VK_SUCCESS;
 }
 
 static void scene_menu_record_loop_diag(uint64_t frame_begin_counter,
@@ -216,7 +229,7 @@ restart_menu:
 
     VkRendererConfig vk_cfg;
     vk_renderer_config_set_defaults(&vk_cfg);
-    vk_cfg.enable_validation = SDL_FALSE;
+    vk_cfg.enable_validation = physics_sim_ui_proof_enabled() ? SDL_TRUE : SDL_FALSE;
     vk_cfg.clear_color[0] = 0.0f;
     vk_cfg.clear_color[1] = 0.0f;
     vk_cfg.clear_color[2] = 0.0f;
@@ -431,7 +444,25 @@ restart_menu:
     Uint64 last_present_ticks = SDL_GetTicks64();
     bool device_lost = false;
     bool first_frame_capture_requested = false;
+    KitUiWindowProbe window_probe;
+    kit_ui_window_probe_init_sdl(&window_probe, "physics-menu");
+    uint64_t presented_frames = 0;
     while (run) {
+        int proof = kit_ui_window_probe_tick_sdl(&window_probe, ctx.window,
+                         presented_frames, menu_window_probe_capture, &ctx);
+        if (proof) {
+            const VkRuntimeCapabilityReport *report = vk_runtime_get_capability_report(
+                &ctx.renderer_storage.context.device->runtime);
+            fprintf(stdout, "MENU_WINDOW_RUNTIME proof=%d validation=%u warnings=%u errors=%u\n",
+                    proof, (unsigned)report->validation_enabled,
+                    (unsigned)report->validation_warning_count,
+                    (unsigned)report->validation_error_count);
+            run = false;
+            break;
+        }
+        uint32_t window_changes = menu_window_lifecycle_refresh(&ctx);
+        menu_shared_text_sync(&ctx);
+        if (window_changes) frame_dirty = true;
         uint64_t frame_begin_counter = SDL_GetPerformanceCounter();
         SceneLoopWaitPolicyInput wait_policy = {
             .headless_mode = false,
@@ -444,6 +475,7 @@ restart_menu:
         uint32_t wait_call_count = 0u;
         uint32_t event_count = 0u;
         int wait_timeout_ms = scene_loop_compute_wait_timeout_ms(&wait_policy);
+        if (!ctx.window_lifecycle.observed.presentable) wait_timeout_ms = 120;
 
         Uint32 now_ticks = SDL_GetTicks();
         double dt = (double)(now_ticks - prev_ticks) / 1000.0;
@@ -489,6 +521,14 @@ restart_menu:
                                     &wait_blocked_ms,
                                     &wait_call_count,
                                     &event_count);
+        window_changes = menu_window_lifecycle_refresh(&ctx);
+        menu_shared_text_sync(&ctx);
+        if (window_changes || ctx.window_lifecycle.geometry_dirty) {
+            frame_dirty = true;
+            ctx.window_lifecycle.geometry_dirty = false;
+        }
+        win_w = ctx.window_lifecycle.observed.logical_width;
+        win_h = ctx.window_lifecycle.observed.logical_height;
         if (event_count > 0u) {
             frame_dirty = true;
         }
@@ -500,6 +540,14 @@ restart_menu:
                                         wait_call_count);
             break;
         }
+        if (!ctx.window_lifecycle.observed.presentable) {
+            resize_pending = false;
+            scene_menu_record_loop_diag(frame_begin_counter, perf_freq,
+                                        wait_blocked_ms, wait_call_count);
+            continue;
+        }
+        vk_renderer_set_logical_size((VkRenderer *)ctx.renderer,
+                                     (float)win_w, (float)win_h);
         if (menu_apply_text_zoom_shortcut(&ctx, &cmds)) {
             frame_dirty = true;
         }
@@ -537,9 +585,8 @@ restart_menu:
             }
         }
 
-        int drawable_w = win_w;
-        int drawable_h = win_h;
-        SDL_Vulkan_GetDrawableSize(ctx.window, &drawable_w, &drawable_h);
+        int drawable_w = ctx.window_lifecycle.observed.drawable_width;
+        int drawable_h = ctx.window_lifecycle.observed.drawable_height;
         if (drawable_w <= 0 || drawable_h <= 0) {
             resize_pending = true;
             scene_menu_record_loop_diag(frame_begin_counter,
@@ -560,6 +607,9 @@ restart_menu:
                                         wait_call_count);
             continue;
         }
+        menu_shared_text_sync(&ctx);
+        menu_shared_controls_sync(&ctx);
+        ctx.shared_text.view_ready = false;
         VkCommandBuffer cmd = VK_NULL_HANDLE;
         VkFramebuffer fb = VK_NULL_HANDLE;
         VkExtent2D extent = {0};
@@ -629,7 +679,7 @@ restart_menu:
             if (!toggle_font) toggle_font = ctx.font;
             char mode_text[48];
             snprintf(mode_text, sizeof(mode_text), "Mode: %s", menu_mode_label(ctx.active_mode));
-            menu_draw_toggle(ctx.renderer,
+            menu_draw_control_toggle(&ctx,
                              toggle_font,
                              &ctx.mode_toggle_button.rect,
                              mode_text,
@@ -641,7 +691,7 @@ restart_menu:
                          sizeof(space_text),
                          "Space: %s",
                          menu_space_mode_label(ctx.cfg ? ctx.cfg->space_mode : SPACE_MODE_2D));
-                menu_draw_toggle(ctx.renderer,
+                menu_draw_control_toggle(&ctx,
                                  toggle_font,
                                  &ctx.space_toggle_button.rect,
                                  space_text,
@@ -688,7 +738,7 @@ restart_menu:
             SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 180);
             SDL_RenderDrawRect(ctx.renderer, &ctx.headless_frames_rect);
             if (ctx.editing_headless_frames) {
-                menu_draw_text_input(ctx.renderer, ctx.font, &ctx.headless_frames_rect, &ctx.headless_frames_input);
+                menu_draw_owned_text_input(&ctx, ctx.font, &ctx.headless_frames_rect, &ctx.headless_frames_input);
             } else {
                 char frames_label[64];
                 char frames_fit[64];
@@ -766,12 +816,12 @@ restart_menu:
                 SDL_RenderFillRect(ctx.renderer, &ctx.input_root_rect);
                 SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 160);
                 SDL_RenderDrawRect(ctx.renderer, &ctx.input_root_rect);
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.input_root_edit_button.rect,
                                  ctx.input_root_edit_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
                                  false);
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.input_root_folder_button.rect,
                                  ctx.input_root_folder_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
@@ -782,7 +832,7 @@ restart_menu:
                     path_rect.w = ctx.input_root_edit_button.rect.x - ctx.input_root_rect.x - button_gap;
                     if (path_rect.w < 64) path_rect.w = 64;
                     if (ctx.editing_input_root) {
-                        menu_draw_text_input(ctx.renderer,
+                        menu_draw_owned_text_input(&ctx,
                                              ctx.font_small ? ctx.font_small : ctx.font,
                                              &path_rect,
                                              &ctx.input_root_input);
@@ -814,12 +864,12 @@ restart_menu:
                 SDL_RenderFillRect(ctx.renderer, &ctx.warm_start_rect);
                 SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 160);
                 SDL_RenderDrawRect(ctx.renderer, &ctx.warm_start_rect);
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.warm_start_edit_button.rect,
                                  ctx.warm_start_edit_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
                                  false);
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.warm_start_file_button.rect,
                                  ctx.warm_start_file_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
@@ -830,7 +880,7 @@ restart_menu:
                     path_rect.w = ctx.warm_start_edit_button.rect.x - ctx.warm_start_rect.x - button_gap;
                     if (path_rect.w < 64) path_rect.w = 64;
                     if (ctx.editing_warm_start) {
-                        menu_draw_text_input(ctx.renderer,
+                        menu_draw_owned_text_input(&ctx,
                                              ctx.font_small ? ctx.font_small : ctx.font,
                                              &path_rect,
                                              &ctx.warm_start_input);
@@ -863,17 +913,17 @@ restart_menu:
                 SDL_RenderFillRect(ctx.renderer, &ctx.output_root_rect);
                 SDL_SetRenderDrawColor(ctx.renderer, accent_color.r, accent_color.g, accent_color.b, 160);
                 SDL_RenderDrawRect(ctx.renderer, &ctx.output_root_rect);
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.output_root_edit_button.rect,
                                  ctx.output_root_edit_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
                                  false);
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.output_root_folder_button.rect,
                                  ctx.output_root_folder_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
                                  false);
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.output_root_show_button.rect,
                                  ctx.output_root_show_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
@@ -884,7 +934,7 @@ restart_menu:
                     path_rect.w = ctx.output_root_edit_button.rect.x - ctx.output_root_rect.x - button_gap;
                     if (path_rect.w < 64) path_rect.w = 64;
                     if (ctx.editing_output_root) {
-                        menu_draw_text_input(ctx.renderer,
+                        menu_draw_owned_text_input(&ctx,
                                              ctx.font_small ? ctx.font_small : ctx.font,
                                              &path_rect,
                                              &ctx.output_root_input);
@@ -911,64 +961,43 @@ restart_menu:
                 }
             }
 
-            menu_draw_button(ctx.renderer,
+            menu_draw_control_button(&ctx,
                              &ctx.headless_toggle_button.rect,
                              ctx.headless_toggle_button.label,
                              ctx.font,
                              cfg->headless_enabled);
             if (menu_has_scene_project_cache_status(&ctx)) {
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.cache_command_button.rect,
                                  ctx.cache_command_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
                                  false);
-                menu_draw_button(ctx.renderer,
+                menu_draw_control_button(&ctx,
                                  &ctx.cache_show_button.rect,
                                  ctx.cache_show_button.label,
                                  ctx.font_small ? ctx.font_small : ctx.font,
                                  false);
             }
         }
-        menu_draw_button(ctx.renderer, &ctx.start_button.rect, ctx.start_button.label, ctx.font, false);
+        menu_draw_control_button(&ctx, &ctx.start_button.rect, ctx.start_button.label, ctx.font, false);
         if (menu_showing_retained_catalog(&ctx)) {
-            menu_draw_button(ctx.renderer, &ctx.duplicate_button.rect, ctx.duplicate_button.label, ctx.font, false);
+            menu_draw_control_button(&ctx, &ctx.duplicate_button.rect, ctx.duplicate_button.label, ctx.font, false);
         }
-        menu_draw_button(ctx.renderer, &ctx.edit_button.rect, ctx.edit_button.label, ctx.font, false);
-        menu_draw_button(ctx.renderer, &ctx.quit_button.rect, ctx.quit_button.label, ctx.font, false);
+        menu_draw_control_button(&ctx, &ctx.edit_button.rect, ctx.edit_button.label, ctx.font, false);
+        menu_draw_control_button(&ctx, &ctx.quit_button.rect, ctx.quit_button.label, ctx.font, false);
 
-        if (ctx.status_visible && ctx.font && ctx.status_text[0]) {
-            int text_w = 0;
-            int text_h = 0;
-            int status_x = ctx.headless_frames_rect.x;
-            int max_text_w = win_w - status_x - 20;
-            if (max_text_w < 10) max_text_w = 10;
-            char status_buf[128];
-            scene_menu_fit_text_to_width(ctx.renderer,
-                                         ctx.font,
-                                         ctx.status_text,
-                                         max_text_w,
-                                         status_buf,
-                                         sizeof(status_buf));
-            TTF_SizeUTF8(ctx.font, status_buf, &text_w, &text_h);
-            text_w = physics_sim_text_logical_pixels(ctx.renderer, text_w);
-            text_h = physics_sim_text_logical_pixels(ctx.renderer, text_h);
-            int max_x = win_w - text_w - 20;
-            if (status_x > max_x) status_x = max_x;
-            if (status_x < 20) status_x = 20;
-            int status_y = ctx.data_io_panel_rect.y - text_h - 8;
-            if (status_y < ctx.config_panel_rect.y + ctx.config_panel_rect.h + 4) {
-                status_y = ctx.config_panel_rect.y + ctx.config_panel_rect.h + 4;
-            }
-            if (status_y < 20) status_y = 20;
-            menu_draw_text(ctx.renderer,
-                      ctx.font,
-                      status_buf,
-                      status_x,
-                      status_y,
-                      ctx.status_wait_ack ? menu_color_accent() : menu_color_text_dim());
-        }
+        menu_draw_status_text(&ctx, win_w, win_h);
         physics_sim_workspace_authoring_overlay_draw(&ctx, win_w, win_h);
 
+        SDL_Color focus_color=menu_color_accent();
+        KitRenderRect focus_marker;
+        if (kit_ui_interaction_focus_marker(&ctx.shared_controls.interaction,
+                ctx.shared_controls.controls,ctx.shared_controls.count,&focus_marker)) {
+            SDL_Rect marker={(int)focus_marker.x,(int)focus_marker.y,(int)focus_marker.width,(int)focus_marker.height};
+            SDL_SetRenderDrawColor(ctx.renderer,focus_color.r,focus_color.g,focus_color.b,focus_color.a);
+            SDL_RenderFillRect(ctx.renderer,&marker);
+        }
+        if (!ctx.shared_text.view_ready) menu_shared_text_cancel_transient(&ctx);
         VkResult end = vk_renderer_end_frame((VkRenderer *)ctx.renderer, cmd);
         if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {
             vk_renderer_recreate_swapchain((VkRenderer *)ctx.renderer, ctx.window);
@@ -982,6 +1011,7 @@ restart_menu:
             resize_pending = false;
             frame_dirty = false;
             last_present_ticks = SDL_GetTicks64();
+            ++presented_frames;
         }
 #if defined(__APPLE__)
         if (end == VK_SUCCESS) {
@@ -1018,6 +1048,7 @@ restart_menu:
     }
     menu_workspace_authoring_cancel_active_preview(&ctx);
 
+    menu_shared_text_cancel_transient(&ctx);
     menu_destroy_window(&ctx);
     if (device_lost && ctx.use_shared_device) {
         vk_shared_device_shutdown();

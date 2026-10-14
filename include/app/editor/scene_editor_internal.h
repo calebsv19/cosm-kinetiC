@@ -20,6 +20,7 @@
 #include "input/input_context.h"
 #include "geo/shape_library.h"
 #include "ui/text_input.h"
+#include "app/editor/scene_editor_shared_ui.h"
 
 #define DOUBLE_CLICK_MS 350
 #define OBJECT_DELETE_MARGIN 0.15f
@@ -58,6 +59,7 @@ typedef struct SceneEditorSelectedMeshDiagnosticCache {
 } SceneEditorSelectedMeshDiagnosticCache;
 
 typedef struct SceneEditorState {
+    SceneEditorSharedUi shared_ui;
     SDL_Window   *window;
     SDL_Renderer *renderer;
     TTF_Font     *font_main;

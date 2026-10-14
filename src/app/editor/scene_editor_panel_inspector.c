@@ -73,6 +73,11 @@ static void draw_dimension_field(SceneEditorState *state,
               rect->x + 2,
               label_y,
               COLOR_TEXT_DIM);
+    if (editing && input) {
+        scene_editor_shared_text_draw(state, font, rect, (char *)input->buffer,
+            bg, COLOR_FIELD_BORDER, COLOR_TEXT);
+        return;
+    }
     char value_buf[32];
     const char *value_text = value_buf;
     if (editing && input) {
@@ -180,21 +185,21 @@ static void draw_source_emitter_fields(SceneEditorState *state,
                                          SCENE_EDITOR_INSPECTOR_SOURCE_EMITTER),
                                      state->btn_add_source.rect.x,
                                      state->btn_add_source.rect.y - label_h - 6);
-        scene_editor_draw_button(state->renderer, &state->btn_add_source, state->font_small);
-        scene_editor_draw_button(state->renderer, &state->btn_add_jet, state->font_small);
-        scene_editor_draw_button(state->renderer, &state->btn_add_sink, state->font_small);
+        scene_editor_draw_owned_button(state, &state->btn_add_source, state->font_small);
+        scene_editor_draw_owned_button(state, &state->btn_add_jet, state->font_small);
+        scene_editor_draw_owned_button(state, &state->btn_add_sink, state->font_small);
     }
     if (!physics_sim_editor_session_has_retained_scene(&state->session)) {
-        scene_editor_draw_numeric_field(state->renderer, state->font_small,
+        scene_editor_draw_owned_numeric_field(state, state->font_small,
                                         &state->radius_field, selected_em, NULL);
     } else {
-        scene_editor_draw_numeric_field(state->renderer, state->font_small,
+        scene_editor_draw_owned_numeric_field(state, state->font_small,
                                         &state->radius_field, NULL, selected_retained_em);
     }
-    scene_editor_draw_numeric_field(state->renderer, state->font_small,
+    scene_editor_draw_owned_numeric_field(state, state->font_small,
                                     &state->strength_field, selected_em, selected_retained_em);
     if (physics_sim_editor_session_has_retained_scene(&state->session)) {
-        scene_editor_draw_numeric_field(state->renderer, state->font_small,
+        scene_editor_draw_owned_numeric_field(state, state->font_small,
                                         &state->thermal_buoyancy_field, NULL, selected_retained_em);
     }
 }
@@ -210,28 +215,28 @@ static void draw_object_physics_controls(SceneEditorState *state) {
                                          SCENE_EDITOR_INSPECTOR_OBJECT_PHYSICS),
                                      state->btn_mesh_role_solid.rect.x,
                                      state->btn_mesh_role_solid.rect.y - label_h - 6);
-        scene_editor_draw_button(state->renderer, &state->btn_mesh_role_solid, state->font_small);
-        scene_editor_draw_button(state->renderer, &state->btn_mesh_role_visual, state->font_small);
-        scene_editor_draw_button(state->renderer, &state->btn_mesh_role_surface, state->font_small);
-        scene_editor_draw_button(state->renderer, &state->btn_mesh_role_heat, state->font_small);
-        scene_editor_draw_button(state->renderer, &state->btn_mesh_role_flow, state->font_small);
+        scene_editor_draw_owned_button(state, &state->btn_mesh_role_solid, state->font_small);
+        scene_editor_draw_owned_button(state, &state->btn_mesh_role_visual, state->font_small);
+        scene_editor_draw_owned_button(state, &state->btn_mesh_role_surface, state->font_small);
+        scene_editor_draw_owned_button(state, &state->btn_mesh_role_heat, state->font_small);
+        scene_editor_draw_owned_button(state, &state->btn_mesh_role_flow, state->font_small);
     }
     draw_inspector_section_label(state,
                                  "Motion / Overlay",
                                  state->btn_overlay_dynamic.rect.x,
                                  state->btn_overlay_dynamic.rect.y - label_h - 6);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_dynamic, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_static, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_mode_3d, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_surface_3d, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_obstacle_3d, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_vel_x_neg, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_vel_x_pos, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_vel_y_neg, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_vel_y_pos, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_vel_z_neg, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_vel_z_pos, state->font_small);
-    scene_editor_draw_button(state->renderer, &state->btn_overlay_vel_reset, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_dynamic, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_static, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_mode_3d, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_surface_3d, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_obstacle_3d, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_vel_x_neg, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_vel_x_pos, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_vel_y_neg, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_vel_y_pos, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_vel_z_neg, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_vel_z_pos, state->font_small);
+    scene_editor_draw_owned_button(state, &state->btn_overlay_vel_reset, state->font_small);
 }
 
 void scene_editor_panel_draw_right_inspector(SceneEditorState *state) {

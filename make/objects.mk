@@ -41,6 +41,7 @@ PHYSICS_SIM_APP_OBJS_NO_MAIN := $(filter-out $(BUILD_DIR)/main.o,$(OBJS))
 PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/app/session_workspace.c \
 	$(SRC_DIR)/app/session_workspace_text.c \
+	$(SRC_DIR)/app/session_workspace_ui.c \
 	$(SRC_DIR)/main.c \
 	$(SRC_DIR)/app/physics_sim_vulkan_rollout.c \
 	$(SRC_DIR)/app/scene_menu.c \
@@ -74,6 +75,8 @@ PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/app/structural/structural_preset_editor_render_helpers.c \
 	$(SRC_DIR)/app/structural/structural_render.c \
 	$(SRC_DIR)/app/ui/physics_sim_ui_button.c \
+	$(SRC_DIR)/app/ui/physics_sim_ui_host.c \
+	$(SRC_DIR)/app/ui/physics_sim_ui_host_render.c \
 	$(SRC_DIR)/app/editor/editor_scroll.c \
 	$(SRC_DIR)/app/editor/scene_editor.c \
 	$(SRC_DIR)/app/editor/scene_editor_canvas.c \
@@ -95,6 +98,7 @@ PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/app/editor/scene_editor_panel_lists.c \
 	$(SRC_DIR)/app/editor/scene_editor_panel_summary.c \
 	$(SRC_DIR)/app/editor/scene_editor_precision.c \
+	$(SRC_DIR)/app/editor/scene_editor_precision_ui.c \
 	$(SRC_DIR)/app/editor/scene_editor_precision_helpers.c \
 	$(SRC_DIR)/app/editor/scene_editor_retained_document.c \
 	$(SRC_DIR)/app/editor/scene_editor_scene_library.c \
@@ -104,6 +108,14 @@ PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/app/editor/scene_editor_session_labels.c \
 	$(SRC_DIR)/app/editor/scene_editor_state.c \
 	$(SRC_DIR)/app/editor/scene_editor_widgets.c \
+	$(SRC_DIR)/app/editor/scene_editor_shared_controls.c \
+	$(SRC_DIR)/app/editor/scene_editor_shared_text.c \
+	$(SRC_DIR)/app/editor/scene_editor_shared_window.c \
+	$(SRC_DIR)/app/menu/menu_shared_controls.c \
+	$(SRC_DIR)/app/menu/menu_shared_text.c \
+	$(SRC_DIR)/app/menu/menu_window_lifecycle.c \
+	$(SRC_DIR)/app/menu/menu_text_fit.c \
+	$(SRC_DIR)/app/menu/menu_text_presentation.c \
 	$(SRC_DIR)/render/debug_draw_objects.c \
 	$(SRC_DIR)/render/font_bridge.c \
 	$(SRC_DIR)/render/hud_overlay.c \
@@ -115,6 +127,7 @@ PHYSICS_SIM_HEADLESS_WORKER_EXCLUDED_SRCS := \
 	$(SRC_DIR)/render/text_upload_policy.c \
 	$(SRC_DIR)/render/particle_overlay.c \
 	$(SRC_DIR)/render/renderer_sdl.c \
+	$(SRC_DIR)/render/simulation_ui.c \
 	$(SRC_DIR)/render/timer_hud_adapter.c \
 	$(SRC_DIR)/render/velocity_overlay.c \
 	$(SRC_DIR)/render/vk_shared_device.c \

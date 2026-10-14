@@ -1,5 +1,6 @@
 #include "app/scene_controller.h"
 #include "app/scene_controller_internal.h"
+#include "app/scene_controller_ui.h"
 
 #include <SDL2/SDL.h>
 #include <math.h>
@@ -122,16 +123,17 @@ static void scene_controller_runtime_pointer_down(void *user,
     SceneState *scene = (SceneState *)user;
     if (!scene || !state || !scene_controller_retained_runtime_view_active(scene)) return;
 
+    int x=state->x,y=state->y;renderer_sdl_ui_map_pointer(&x,&y);
     if (state->button == SDL_BUTTON_MIDDLE) {
         (void)scene_editor_viewport_begin_navigation(&scene->runtime_view.viewport,
                                                      SCENE_EDITOR_VIEWPORT_NAV_PAN,
-                                                     state->x,
-                                                     state->y);
+                                                     x,
+                                                     y);
     } else if (state->button == SDL_BUTTON_LEFT && scene->runtime_view.viewport.alt_modifier_down) {
         (void)scene_editor_viewport_begin_navigation(&scene->runtime_view.viewport,
                                                      SCENE_EDITOR_VIEWPORT_NAV_ORBIT,
-                                                     state->x,
-                                                     state->y);
+                                                     x,
+                                                     y);
     }
 }
 
@@ -150,9 +152,10 @@ static void scene_controller_runtime_pointer_move(void *user,
     SceneState *scene = (SceneState *)user;
     if (!scene || !state || !scene_controller_retained_runtime_view_active(scene)) return;
     if (!scene->runtime_view.viewport.navigation_active) return;
+    int x=state->x,y=state->y;renderer_sdl_ui_map_pointer(&x,&y);
     (void)scene_editor_viewport_update_navigation(&scene->runtime_view.viewport,
-                                                  state->x,
-                                                  state->y,
+                                                  x,
+                                                  y,
                                                   scene->config ? scene->config->window_w : 1,
                                                   scene->config ? scene->config->window_h : 1);
 }
@@ -264,6 +267,8 @@ static void scene_controller_input_intake_phase(InputContextManager *ctx_mgr,
                                                   &out_raw->wait_blocked_ms,
                                                   &out_raw->wait_call_count,
                                                   NULL);
+    if (!renderer_sdl_ui_pointer_allowed()) out_raw->commands.mouse_down=false;
+    renderer_sdl_ui_map_pointer(&out_raw->commands.mouse_x,&out_raw->commands.mouse_y);
     out_raw->quit_requested = out_raw->commands.quit;
     out_raw->running_after_poll = ignore_input ? true : out_raw->polled;
     out_raw->valid = true;
@@ -870,8 +875,12 @@ int scene_controller_run(const AppConfig *initial_cfg,
 
     InputContextManager ctx_mgr;
     input_context_manager_init(&ctx_mgr);
-    if (scene_controller_retained_runtime_view_active(&scene)) {
+    SceneControllerUiOwner ui_owner={&scene,&sampler};
+    renderer_sdl_ui_bind(&ui_owner,scene_controller_ui_cancel);
+    if (renderer_required) (void)renderer_sdl_reload_text(&cfg);
+    {
         InputContext runtime_view_ctx = {
+            .on_sdl_event_filter = renderer_sdl_ui_filter,
             .on_pointer_down = scene_controller_runtime_pointer_down,
             .on_pointer_up = scene_controller_runtime_pointer_up,
             .on_pointer_move = scene_controller_runtime_pointer_move,
@@ -920,6 +929,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
             aborted = true;
             break;
         }
+        if (renderer_required && renderer_sdl_ui_poll()) break;
         uint64_t loop_wall_begin = SDL_GetPerformanceCounter();
         ts_frame_start();
         ts_start_timer("frame");
@@ -940,6 +950,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                          ignore_input,
                                          headless_mode,
                                          wait_timeout_ms);
+        if (renderer_required) renderer_sdl_ui_apply_zoom(&cfg,&input_frame.raw.commands);
         running = input_frame.running;
         if (input_frame.aborted) {
             aborted = true;
@@ -1003,6 +1014,8 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                                 headless_mode && headless && headless->skip_present,
                                                 headless_mode && headless &&
                                                     headless->save_wind_projection_frames);
+        if (derive_frame.should_present && !renderer_sdl_ui_presentable())
+            derive_frame.should_present=false;
         uint64_t derive_end = SDL_GetPerformanceCounter();
 
         scene_controller_render_submit_phase(&scene,

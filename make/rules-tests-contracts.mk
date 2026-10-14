@@ -502,6 +502,10 @@ MENU_SETTINGS_SHELL_CONTRACT_TEST_SRCS := \
 	$(SRC_DIR)/app/sim_runtime_3d_solver_step.c
 
 SCENE_MENU_LAYOUT_CONTRACT_TEST_SRCS := \
+	$(KIT_UI_DIR)/src/kit_ui_text_presentation.c \
+	$(SRC_DIR)/app/menu/menu_text_fit.c \
+	$(KIT_UI_DIR)/src/kit_ui_text_edit.c \
+	$(CORE_BASE_DIR)/src/core_base.c \
 	tests/scene_menu_layout_contract_test.c \
 	$(SRC_DIR)/app/scene_menu_layout_helpers.c \
 	$(SRC_DIR)/app/menu/menu_settings_layout.c \
@@ -1318,3 +1322,45 @@ test-cfd-refined-agent-session: physics-sim-session-worker-optimized
 .PHONY: test-cfd-cartesian3d-agent-session
 test-cfd-cartesian3d-agent-session: physics-sim-session-worker-optimized
 	PHYSICS_SIM_SESSION_WORKER="$(CURDIR)/build/cfd-optimized/physics_sim_session_worker" python3 tests/test_agent_cartesian3d.py
+
+# Menu host lifecycle replay: no numerical/worker execution.
+.PHONY: test-menu-window-lifecycle-contract
+MENU_OWNER_REPLAY_OBJS = $(filter-out $(BUILD_DIR)/main.o,$(OBJS))
+test-menu-window-lifecycle-contract: $(CLANG_TARGET)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/menu_window_lifecycle_contract_test tests/menu_window_lifecycle_contract_test.c $(MENU_OWNER_REPLAY_OBJS) $(LIBS)
+	$(BUILD_DIR)/menu_window_lifecycle_contract_test
+
+.PHONY: test-menu-shared-controls-contract
+test-menu-shared-controls-contract: $(CLANG_TARGET)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/menu_shared_controls_contract_test tests/menu_shared_controls_contract_test.c $(MENU_OWNER_REPLAY_OBJS) $(LIBS)
+	$(BUILD_DIR)/menu_shared_controls_contract_test
+
+.PHONY: test-menu-shared-text-contract
+test-menu-shared-text-contract: $(CLANG_TARGET)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/menu_shared_text_contract_test tests/menu_shared_text_contract_test.c $(MENU_OWNER_REPLAY_OBJS) $(LIBS)
+	$(BUILD_DIR)/menu_shared_text_contract_test
+
+.PHONY: test-menu-path-containment-contract
+test-menu-path-containment-contract: $(CLANG_TARGET)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/menu_path_containment_contract_test tests/menu_path_containment_contract_test.c $(MENU_OWNER_REPLAY_OBJS) $(LIBS)
+	$(BUILD_DIR)/menu_path_containment_contract_test
+
+.PHONY: test-scene-editor-shared-ui-contract
+test-scene-editor-shared-ui-contract: $(CLANG_TARGET)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/scene_editor_shared_ui_contract_test tests/scene_editor_shared_ui_contract_test.c $(MENU_OWNER_REPLAY_OBJS) $(LIBS)
+	$(BUILD_DIR)/scene_editor_shared_ui_contract_test
+
+.PHONY: test-physics-sim-ui-host-contract
+test-physics-sim-ui-host-contract: clang-build
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/physics_sim_ui_host_contract_test tests/physics_sim_ui_host_contract_test.c $(MENU_OWNER_REPLAY_OBJS) $(LIBS)
+	$(BUILD_DIR)/physics_sim_ui_host_contract_test
+
+.PHONY: test-session-shared-ui-contract
+test-session-shared-ui-contract: clang-build
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/session_shared_ui_contract_test tests/session_shared_ui_contract_test.c $(filter-out $(BUILD_DIR)/app/session_workspace.o,$(MENU_OWNER_REPLAY_OBJS)) $(LIBS)
+	$(BUILD_DIR)/session_shared_ui_contract_test
+
+.PHONY: test-runtime-text-shortcut-contract
+test-runtime-text-shortcut-contract:
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/runtime_text_shortcut_contract_test tests/runtime_text_shortcut_contract_test.c src/input/input.c src/input/input_context.c src/command/command_bus.c $(LIBS)
+	$(BUILD_DIR)/runtime_text_shortcut_contract_test

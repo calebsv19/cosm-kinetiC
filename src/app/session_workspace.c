@@ -2,6 +2,7 @@
 #include "app/session_workspace.h"
 #include "app/menu/shared_theme_font_adapter.h"
 #include "app/session_workspace_text.h"
+#include "app/session_workspace_ui.h"
 #include "core_viewport2d.h"
 #include "font_paths.h"
 #include <SDL2/SDL.h>
@@ -414,6 +415,46 @@ static void *reap_client(void *value) {
     return NULL;
 }
 
+typedef struct WorkspaceUiOwner {
+    Workspace *workspace;
+    bool *dragging,*fitted,*running,*return_to_setup;
+} WorkspaceUiOwner;
+static void cancel_gesture(void *user) { WorkspaceUiOwner *owner=user;*owner->dragging=false; }
+static uint32_t workspace_scope(void *user) {
+    Workspace *w=((WorkspaceUiOwner *)user)->workspace;uint32_t h=2166136261u;
+    for (const char *p=w->run_id;*p;p++) h=(h^(unsigned char)*p)*16777619u;
+    for (const char *p=w->revision;*p;p++) h=(h^(unsigned char)*p)*16777619u;
+    h=(h^(uint32_t)w->field)*16777619u;h=(h^(uint32_t)w->plane)*16777619u;
+    return h?h:1;
+}
+static void workspace_action(void *user,uint64_t key) {
+    WorkspaceUiOwner *owner=user;Workspace *w=owner->workspace;
+    if (key==1) {*owner->return_to_setup=true;*owner->running=false;return;}
+    if (key>=100 && key<107) {
+        switch(key-100) {
+        case 0:w->field=(w->field+1)%9;w->locked_range=false;break;
+        case 1:w->plane=(w->plane+1)%3;w->probe=-1;*owner->fitted=false;break;
+        case 2:w->slice=fmax(0,w->slice-.1);break;
+        case 3:w->slice=fmin(1,w->slice+.1);break;
+        case 4:w->vectors=!w->vectors;break;
+        case 5:
+            if (!w->locked_range) {range(w,current_preview(w),&w->range_low,&w->range_high);w->locked_range=true;}
+            else w->locked_range=false;
+            break;
+        case 6:*owner->fitted=false;w->slice=.5;w->probe=-1;break;
+        }
+    } else if (key>=200 && key<206) {
+        switch(key-200) {
+        case 0:new_scene(w);break;
+        case 1:control(w,"continue");break;
+        case 2:control(w,"pause");break;
+        case 3:control(w,"step");break;
+        case 4:control(w,"cancel");break;
+        case 5:*owner->fitted=false;break;
+        }
+    }
+}
+
 int physics_sim_session_workspace_run(const char *root) {
     Workspace w = {.slice = .5, .probe = -1};
     const char *configured = root ? root : getenv("PHYSICS_SIM_SESSION_ROOT");
@@ -465,7 +506,13 @@ int physics_sim_session_workspace_run(const char *root) {
     const char *capture = getenv("PHYSICS_SIM_SESSION_CAPTURE");
     bool s2_test = getenv("PHYSICS_SIM_SESSION_S2_TEST") != NULL, s2_requested = false,
          probe_requested = false;
+    size_t s2_action=0;
+    WorkspaceUiOwner ui_owner={&w,&dragging,&fitted,&running,&return_to_setup};
+    SessionUi ui;session_ui_init(&ui,window,renderer,&ui_owner,cancel_gesture);
+    ui.host.action=workspace_action;ui.host.scope=workspace_scope;
     while (running) {
+        if (session_ui_probe(&ui)) break;
+        (void)physics_sim_ui_host_refresh(&ui.host);
         Uint32 now = SDL_GetTicks();
         if (frames > 5 && now - previous > max_gap)
             max_gap = now - previous;
@@ -473,10 +520,14 @@ int physics_sim_session_workspace_run(const char *root) {
         int width, height;
         SDL_GetWindowSize(window, &width, &height);
         SDL_RenderSetLogicalSize(renderer, width, height);
-        session_text_refresh(font, renderer, window);
+        if (ui.host.observed.presentable) session_text_refresh(font, renderer, window);
         SDL_Rect view = {24, 300, width - 360, height - 370};
         SDL_Event e;
-        while (SDL_PollEvent(&e)) {
+        ui.host.geometry_dirty=false;
+        bool pending=!ui.host.observed.presentable && SDL_WaitEventTimeout(&e,50)==1;
+        while (pending || SDL_PollEvent(&e)) {
+            pending=false;
+            if (physics_sim_ui_host_filter(&ui.host,&e)) continue;
             if (e.type == SDL_KEYDOWN && (e.key.keysym.mod & (KMOD_CTRL | KMOD_GUI))) {
                 if (e.key.keysym.sym == SDLK_EQUALS || e.key.keysym.sym == SDLK_PLUS)
                     font->zoom = fminf(1.5f, font->zoom + .1f);
@@ -493,6 +544,7 @@ int physics_sim_session_workspace_run(const char *root) {
                 return_to_setup = true;
                 running = false;
             }
+            if (e.type == SDL_MOUSEWHEEL && !e.wheel.y) continue;
             if (e.type == SDL_MOUSEWHEEL) {
                 int x, y;
                 SDL_GetMouseState(&x, &y);
@@ -516,54 +568,6 @@ int physics_sim_session_workspace_run(const char *root) {
                 w.probe = cx >= 0 && cy >= 0 && cx < cols && cy < rows ? cy * cols + cx : -1;
             }
             if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
-                if(hit((SDL_Rect){width-250,16,226,36},e.button.x,e.button.y)){
-                    return_to_setup=true;running=false;
-                }
-                for (int i = 0; i < 7; i++)
-                    if (hit(inspection_button(i), e.button.x, e.button.y)) {
-                        if (i == 0) {
-                            w.field = (w.field + 1) % 9;
-                            w.locked_range = false;
-                        }
-                        if (i == 1) {
-                            w.plane = (w.plane + 1) % 3;
-                            w.probe = -1;
-                            fitted = false;
-                        }
-                        if (i == 2)
-                            w.slice = fmax(0, w.slice - .1);
-                        if (i == 3)
-                            w.slice = fmin(1, w.slice + .1);
-                        if (i == 4)
-                            w.vectors = !w.vectors;
-                        if (i == 5) {
-                            if (!w.locked_range) {
-                                range(&w, current_preview(&w), &w.range_low, &w.range_high);
-                                w.locked_range = true;
-                            } else
-                                w.locked_range = false;
-                        }
-                        if (i == 6) {
-                            fitted = false;
-                            w.slice = .5;
-                            w.probe = -1;
-                        }
-                    }
-                for (int i = 0; i < 6; i++)
-                    if (hit(button_rect(i), e.button.x, e.button.y)) {
-                        if (i == 0)
-                            new_scene(&w);
-                        if (i == 1)
-                            control(&w, "continue");
-                        if (i == 2)
-                            control(&w, "pause");
-                        if (i == 3)
-                            control(&w, "step");
-                        if (i == 4)
-                            control(&w, "cancel");
-                        if (i == 5)
-                            fitted = false;
-                    }
                 dragging = hit(view, e.button.x, e.button.y);
                 inputs++;
             }
@@ -582,15 +586,15 @@ int physics_sim_session_workspace_run(const char *root) {
             fitted = false;
             w.refit = false;
         }
-        if (w.queued_action[0] && !w.child) {
-            char action[32];
-            snprintf(action, sizeof(action), "%s", w.queued_action);
-            w.queued_action[0] = 0;
-            control(&w, action);
-        }
+        /* Finish an uncertain command under the same ID before dispatching queued intent. */
         if (w.retry_control && !w.child) {
             char action[32];
             snprintf(action, sizeof(action), "%s", w.last_action);
+            control(&w, action);
+        } else if (w.queued_action[0] && !w.child) {
+            char action[32];
+            snprintf(action, sizeof(action), "%s", w.queued_action);
+            w.queued_action[0] = 0;
             control(&w, action);
         }
         Uint32 after_client = SDL_GetTicks();
@@ -644,18 +648,21 @@ int physics_sim_session_workspace_run(const char *root) {
         if (after_snapshot - phase > max_snapshot)
             max_snapshot = after_snapshot - phase;
         phase = after_snapshot;
+        (void)physics_sim_ui_host_refresh(&ui.host);
+        if (!ui.host.observed.presentable) {SDL_Delay(8);continue;}
+        physics_sim_ui_host_collect(&ui.host);
         fill(renderer, (SDL_Rect){0, 0, width, height}, theme.background_fill);
-        session_text_draw(font, renderer, 1, 24, 16, theme.text_primary,
-                          "kinetiC  /  Live fluid inspection");
+        SDL_Rect title={24,16,width-290,32};
+        session_text_draw_rect(font,renderer,1,&title,theme.text_primary,"kinetiC  /  Live fluid inspection",0);
         label(renderer, font, 24, 48, theme.text_muted,
               "Independent Wind sessions  |  Presets, 2D/3D and all modes are in Setup");
-        fill(renderer,(SDL_Rect){width-250,16,226,36},theme.button_fill);
-        label(renderer,font,width-240,24,theme.text_primary,"Setup & modes [Esc]");
+        session_ui_button(&ui,font,1,(SDL_Rect){width-250,16,226,36},"Setup & modes [Esc]",true);
         const char *buttons[] = {"Wind example", "Continue", "Pause", "Step", "Cancel", "Fit view"};
         for (int i = 0; i < 6; i++) {
             SDL_Rect b = button_rect(i);
-            fill(renderer, b, w.child ? theme.panel_fill : theme.button_fill);
-            label(renderer, font, b.x + 10, b.y + 7, theme.text_primary, buttons[i]);
+            /* Run controls retain the existing busy-client queue; creation cannot overlap. */
+            bool enabled=i==0?!w.child:(i==5 || w.run_id[0]);
+            session_ui_button(&ui,font,200+i,b,buttons[i],enabled);
         }
         label(renderer, font, 24, 126, theme.text_primary, w.message);
         char line[256];
@@ -680,9 +687,7 @@ int physics_sim_session_workspace_run(const char *root) {
                                          "Center"};
         for (int i = 0; i < 7; i++) {
             SDL_Rect b = inspection_button(i);
-            fill(renderer, b, theme.button_fill);
-            session_text_draw(font, renderer, 2, b.x + 7, b.y + 8, theme.text_primary,
-                              inspect_buttons[i]);
+            session_ui_button(&ui,font,100+i,b,inspect_buttons[i],true);
         }
         snprintf(
             line, sizeof(line), "Requested %s %.0f%% | Showing %s cell %d | Sample tick %lld | %s",
@@ -784,16 +789,16 @@ int physics_sim_session_workspace_run(const char *root) {
             max_draw = after_draw - phase;
         if (test && s2_test && w.test_stage == 5 && !s2_requested) {
             int actions[] = {1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 5};
-            for (size_t a = 0; a < sizeof(actions) / sizeof(actions[0]); a++) {
-                SDL_Rect b = inspection_button(actions[a]);
+            if (s2_action<sizeof(actions)/sizeof(actions[0])) {
+                SDL_Rect b = inspection_button(actions[s2_action++]);
                 SDL_Event click = {0};
                 click.type = SDL_MOUSEBUTTONDOWN;
+                click.button.windowID=SDL_GetWindowID(window);
                 click.button.button = SDL_BUTTON_LEFT;
                 click.button.x = b.x + 10;
                 click.button.y = b.y + 10;
-                SDL_PushEvent(&click);
-            }
-            s2_requested = true;
+                SDL_PushEvent(&click);click.type=SDL_MOUSEBUTTONUP;SDL_PushEvent(&click);
+            } else s2_requested = true;
         }
         bool s2_ready = s2_requested && w.inspection &&
                         !strcmp(text(current_preview(&w), "plane"), "XZ") &&
@@ -851,7 +856,10 @@ int physics_sim_session_workspace_run(const char *root) {
             running = false;
         }
         Uint32 present_begin = SDL_GetTicks();
+        physics_sim_ui_host_commit(&ui.host);
+        session_ui_capture(&ui);
         SDL_RenderPresent(renderer);
+        ++ui.host.presented_frames;
         Uint32 present_ms = SDL_GetTicks() - present_begin;
         if (present_ms > max_present)
             max_present = present_ms;

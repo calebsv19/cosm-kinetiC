@@ -1070,7 +1070,7 @@ test-evolving-atmosphere: $(ATMOSPHERE3D_WORKER) test-evolving-atmosphere-native
 test-coupled-atmosphere: $(ATMOSPHERE3D_WORKER)
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_coupled_atmosphere.py -v
 
-OPEN_ATMOSPHERE3D_SRCS := src/app/cfd_open_atmosphere3d.c $(PASSIVE3D_SRCS)
+OPEN_ATMOSPHERE3D_SRCS := src/app/cfd_open_atmosphere3d.c src/app/cfd_open_atmosphere3d_box.c src/app/cfd_open_atmosphere3d_box_preconditioner.c src/app/cfd_open_atmosphere3d_lateral.c $(PASSIVE3D_SRCS)
 .PHONY: test-open-atmosphere-native test-open-atmosphere-sanitize
 test-open-atmosphere-native:
 	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_open_atmosphere3d_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/contract-test
@@ -1168,3 +1168,169 @@ test-native-job-pair-recovery:
 .PHONY: test-native-job-pair-forward
 test-native-job-pair-forward:
 	PYTHONPATH=tests python3 -B -m unittest test_job_pair_forward
+
+# Source-development control-plane adapter; not an activated worker job type.
+COUPLING_CLOCK_SRCS := $(addprefix $(CORE_SIM_DIR)/src/,core_sim_time.c core_sim_schedule.c core_sim_exchange.c core_sim_progress.c)
+COUPLING_CLOCK_BIN := $(BUILD_DIR)/coupling/physics_sim_coupling_clock
+$(COUPLING_CLOCK_BIN): src/tools/physics_sim_coupling_clock.c $(COUPLING_CLOCK_SRCS) $(wildcard $(CORE_SIM_DIR)/include/*.h)
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -I$(CORE_SIM_DIR)/include $(JSON_CFLAGS) src/tools/physics_sim_coupling_clock.c $(COUPLING_CLOCK_SRCS) $(JSON_LIBS) -o $@
+.PHONY: coupling-framework-worker
+coupling-framework-worker: $(COUPLING_CLOCK_BIN)
+
+.PHONY: test-fire-fluid-framework
+test-fire-fluid-framework: coupling-framework-worker evolving-atmosphere-worker
+	@test -n "$(FIRE_FLUID_GROWTH_ROOT)" -a -n "$(FIRE_FLUID_FIRE_WORKER)" || { echo 'Set FIRE_FLUID_GROWTH_ROOT and FIRE_FLUID_FIRE_WORKER to the selected source lane and fresh worker'; exit 2; }
+	FIRE_FLUID_GROWTH_ROOT="$(FIRE_FLUID_GROWTH_ROOT)" FIRE_FLUID_FIRE_WORKER="$(FIRE_FLUID_FIRE_WORKER)" FIRE_FLUID_FLUID_WORKER="$(abspath $(ATMOSPHERE3D_WORKER))" FIRE_FLUID_CLOCK_WORKER="$(abspath $(COUPLING_CLOCK_BIN))" python3 -B tests/test_coupling_framework.py
+	python3 -B tests/test_coupling_velocity.py
+
+.PHONY: test-open-lateral-native test-open-lateral-sanitize
+test-open-lateral-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_open_lateral_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/lateral-test
+	$(BUILD_DIR)/open-atmosphere/lateral-test
+test-open-lateral-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude tests/cfd_open_lateral_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/lateral-sanitize
+	$(BUILD_DIR)/open-atmosphere/lateral-sanitize
+
+# Compact prescribed-source accuracy probe; no retained JSON request duplication.
+MATCHED_HEAT_SRCS := src/tools/physics_sim_matched_heat.c $(filter-out src/app/cfd_open_atmosphere3d.c,$(OPEN_ATMOSPHERE3D_SRCS))
+.PHONY: open-matched-heat-probe test-matched-heat-native test-matched-heat-sanitize
+open-matched-heat-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -DPHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER=1 -Iinclude src/tools/physics_sim_matched_heat_probe.c $(MATCHED_HEAT_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/matched-heat-probe
+test-matched-heat-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -DPHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER=1 -Iinclude tests/cfd_matched_heat_test.c $(MATCHED_HEAT_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/matched-heat-test
+	$(BUILD_DIR)/open-atmosphere/matched-heat-test
+	$(BUILD_DIR)/open-atmosphere/matched-heat-test --fine-capacity
+test-matched-heat-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -DPHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER=1 -Iinclude tests/cfd_matched_heat_test.c $(MATCHED_HEAT_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/matched-heat-sanitize
+	$(BUILD_DIR)/open-atmosphere/matched-heat-sanitize
+	$(BUILD_DIR)/open-atmosphere/matched-heat-sanitize --fine-capacity
+.PHONY: open-accuracy-probe
+open-accuracy-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude src/tools/physics_sim_open_accuracy.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/accuracy-probe
+.PHONY: open-full-grid-probe
+open-full-grid-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -DPHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER=1 -Iinclude src/tools/physics_sim_open_accuracy.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/full-grid-probe
+.PHONY: open-full-grid-probe-sanitize
+open-full-grid-probe-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -DPHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER=1 -Iinclude src/tools/physics_sim_open_accuracy.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/full-grid-probe-sanitize
+.PHONY: test-open-accuracy-native test-open-accuracy-sanitize
+test-open-accuracy-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_open_accuracy_test.c tests/cfd_open_heated_transport.c tests/cfd_open_shear_transport.c tests/cfd_open_momentum_transport.c tests/cfd_open_source_edge_transport.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/accuracy-test
+	$(BUILD_DIR)/open-atmosphere/accuracy-test
+test-open-accuracy-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude tests/cfd_open_accuracy_test.c tests/cfd_open_heated_transport.c tests/cfd_open_shear_transport.c tests/cfd_open_momentum_transport.c tests/cfd_open_source_edge_transport.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/accuracy-sanitize
+	$(BUILD_DIR)/open-atmosphere/accuracy-sanitize
+
+# Qualification-only fixed scalar timing; ordinary worker recipes are unchanged.
+FLOW_TIME_FLAGS := -DPHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER=1 -DPHYSICS_SIM_OPEN_EXPLICIT_SCALAR_DT=.00125
+VERTICAL_FLOW_FLAGS := $(FLOW_TIME_FLAGS) -DPHYSICS_SIM_OPEN_VERTICAL_REFERENCE=1 -DPHYSICS_SIM_VERTICAL_FLOW_QUALIFIER=1 -DPHYSICS_SIM_FLOW_SPATIAL_QUALIFIER=1
+MOMENTUM_DIAGNOSTIC_FLAGS := $(VERTICAL_FLOW_FLAGS) -DPHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC=1
+MOMENTUM_CAPTURE_SRCS := src/tools/physics_sim_momentum_capture.c $(OPEN_ATMOSPHERE3D_SRCS)
+MOMENTUM_TEST_OUTPUT ?= $(BUILD_DIR)/momentum-fixture
+.PHONY: open-momentum-diagnostic-probe open-momentum-replay test-momentum-capture-native test-momentum-capture-sanitize
+open-momentum-diagnostic-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(MOMENTUM_DIAGNOSTIC_FLAGS) -Iinclude src/tools/physics_sim_flow_time_probe.c src/tools/physics_sim_flow_source.c src/tools/physics_sim_vertical_source.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/momentum-diagnostic-probe
+open-momentum-replay:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(MOMENTUM_DIAGNOSTIC_FLAGS) -Iinclude src/tools/physics_sim_momentum_replay.c src/tools/physics_sim_half_flow.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/momentum-replay
+.PHONY: open-matched-vertical-probe test-half-flow-native test-half-flow-sanitize
+open-matched-vertical-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(MOMENTUM_DIAGNOSTIC_FLAGS) -DPHYSICS_SIM_VERTICAL_MATCHED_TIME_QUALIFIER=1 -Iinclude src/tools/physics_sim_flow_time_probe.c src/tools/physics_sim_flow_source.c src/tools/physics_sim_vertical_source.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/matched-vertical-probe
+test-half-flow-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(MOMENTUM_DIAGNOSTIC_FLAGS) -Iinclude tests/cfd_half_flow_test.c src/tools/physics_sim_half_flow.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/half-flow-test
+	$(BUILD_DIR)/open-atmosphere/half-flow-test
+test-half-flow-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(MOMENTUM_DIAGNOSTIC_FLAGS) -Iinclude tests/cfd_half_flow_test.c src/tools/physics_sim_half_flow.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/half-flow-sanitize
+	$(BUILD_DIR)/open-atmosphere/half-flow-sanitize
+test-momentum-capture-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(MOMENTUM_DIAGNOSTIC_FLAGS) -Iinclude tests/cfd_momentum_capture_test.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/momentum-capture-test
+	$(BUILD_DIR)/open-atmosphere/momentum-capture-test $(MOMENTUM_TEST_OUTPUT)-native
+test-momentum-capture-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(MOMENTUM_DIAGNOSTIC_FLAGS) -Iinclude tests/cfd_momentum_capture_test.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/momentum-capture-sanitize
+	$(BUILD_DIR)/open-atmosphere/momentum-capture-sanitize $(MOMENTUM_TEST_OUTPUT)-sanitize
+.PHONY: open-vertical-flow-probe test-vertical-source-native test-vertical-source-sanitize
+open-vertical-flow-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(VERTICAL_FLOW_FLAGS) -Iinclude src/tools/physics_sim_flow_time_probe.c src/tools/physics_sim_flow_source.c src/tools/physics_sim_vertical_source.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/vertical-flow-probe
+test-vertical-source-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(VERTICAL_FLOW_FLAGS) -Iinclude tests/cfd_vertical_source_test.c src/tools/physics_sim_flow_source.c src/tools/physics_sim_vertical_source.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/vertical-source-test
+	$(BUILD_DIR)/open-atmosphere/vertical-source-test
+test-vertical-source-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(VERTICAL_FLOW_FLAGS) -Iinclude tests/cfd_vertical_source_test.c src/tools/physics_sim_flow_source.c src/tools/physics_sim_vertical_source.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/vertical-source-sanitize
+	$(BUILD_DIR)/open-atmosphere/vertical-source-sanitize
+.PHONY: open-flow-time-probe test-flow-time-native test-flow-time-sanitize
+open-flow-time-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -Iinclude src/tools/physics_sim_flow_time_probe.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/flow-time-probe
+test-flow-time-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -Iinclude tests/cfd_flow_time_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/flow-time-test
+	$(BUILD_DIR)/open-atmosphere/flow-time-test
+test-flow-time-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(FLOW_TIME_FLAGS) -Iinclude tests/cfd_flow_time_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/flow-time-sanitize
+	$(BUILD_DIR)/open-atmosphere/flow-time-sanitize
+
+# Paired independently evolved grids, streaming the same extensive 64-cubed source.
+.PHONY: open-flow-spatial-probe test-flow-source-native test-flow-source-sanitize
+open-flow-spatial-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -DPHYSICS_SIM_FLOW_SPATIAL_QUALIFIER=1 -Iinclude src/tools/physics_sim_flow_time_probe.c src/tools/physics_sim_flow_source.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/flow-spatial-probe
+test-flow-source-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off tests/cfd_flow_source_test.c src/tools/physics_sim_flow_source.c -lm -o $(BUILD_DIR)/open-atmosphere/flow-source-test
+	$(BUILD_DIR)/open-atmosphere/flow-source-test
+test-flow-source-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer tests/cfd_flow_source_test.c src/tools/physics_sim_flow_source.c -lm -o $(BUILD_DIR)/open-atmosphere/flow-source-sanitize
+	$(BUILD_DIR)/open-atmosphere/flow-source-sanitize
+
+# Independent reference for the accepted buoyancy/mixed-boundary projection.
+.PHONY: buoyancy-projection-probe test-buoyancy-projection-sanitize
+buoyancy-projection-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -DPHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER=1 -Iinclude src/tools/physics_sim_buoyancy_projection_probe.c $(filter-out src/app/cfd_open_atmosphere3d.c,$(OPEN_ATMOSPHERE3D_SRCS)) -lm -o $(BUILD_DIR)/open-atmosphere/buoyancy-projection-probe
+test-buoyancy-projection-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -DPHYSICS_SIM_OPEN_FULL_GRID_QUALIFIER=1 -Iinclude src/tools/physics_sim_buoyancy_projection_probe.c $(filter-out src/app/cfd_open_atmosphere3d.c,$(OPEN_ATMOSPHERE3D_SRCS)) -lm -o $(BUILD_DIR)/open-atmosphere/buoyancy-projection-sanitize
+	$(BUILD_DIR)/open-atmosphere/buoyancy-projection-sanitize 8
+	$(BUILD_DIR)/open-atmosphere/buoyancy-projection-sanitize 16
+
+# Corrected attribution: original source mapping and current fixed scalar timing.
+.PHONY: open-matched-original-probe test-matched-original-native test-matched-original-sanitize
+open-matched-original-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -Iinclude src/tools/physics_sim_matched_original_probe.c src/tools/physics_sim_flow_source.c $(MATCHED_HEAT_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/matched-original-probe
+test-matched-original-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -Iinclude tests/cfd_matched_heat_test.c $(MATCHED_HEAT_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/matched-original-test
+	$(BUILD_DIR)/open-atmosphere/matched-original-test
+test-matched-original-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(FLOW_TIME_FLAGS) -Iinclude tests/cfd_matched_heat_test.c $(MATCHED_HEAT_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/matched-original-sanitize
+	$(BUILD_DIR)/open-atmosphere/matched-original-sanitize
+
+# Online independently evolving flow with old-time coarse thermal forcing.
+PRESCRIBED_FLOW_SRCS := src/tools/physics_sim_prescribed_flow.c $(filter-out src/app/cfd_open_atmosphere3d.c,$(OPEN_ATMOSPHERE3D_SRCS))
+.PHONY: open-prescribed-flow-probe test-prescribed-flow-native test-prescribed-flow-sanitize
+open-prescribed-flow-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -Iinclude src/tools/physics_sim_prescribed_flow_probe.c src/tools/physics_sim_flow_source.c $(PRESCRIBED_FLOW_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/prescribed-flow-probe
+test-prescribed-flow-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -Iinclude tests/cfd_prescribed_flow_test.c $(PRESCRIBED_FLOW_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/prescribed-flow-test
+	$(BUILD_DIR)/open-atmosphere/prescribed-flow-test
+test-prescribed-flow-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(FLOW_TIME_FLAGS) -Iinclude tests/cfd_prescribed_flow_test.c $(PRESCRIBED_FLOW_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/prescribed-flow-sanitize
+	$(BUILD_DIR)/open-atmosphere/prescribed-flow-sanitize
+
+# Qualification-only reconstructed thermal transfer and independent fine timing.
+THERMAL_TRANSFER_SRCS := src/tools/physics_sim_thermal_transfer.c $(PRESCRIBED_FLOW_SRCS)
+.PHONY: open-reconstructed-flow-probe test-thermal-transfer-native test-thermal-transfer-sanitize open-fine-flow-time-probe
+open-reconstructed-flow-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -Iinclude src/tools/physics_sim_reconstructed_flow_probe.c src/tools/physics_sim_flow_source.c $(THERMAL_TRANSFER_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/reconstructed-flow-probe
+test-thermal-transfer-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -Iinclude tests/cfd_thermal_transfer_test.c $(THERMAL_TRANSFER_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/thermal-transfer-test
+	$(BUILD_DIR)/open-atmosphere/thermal-transfer-test
+test-thermal-transfer-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(FLOW_TIME_FLAGS) -Iinclude tests/cfd_thermal_transfer_test.c $(THERMAL_TRANSFER_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/thermal-transfer-sanitize
+	$(BUILD_DIR)/open-atmosphere/thermal-transfer-sanitize
+open-fine-flow-time-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(FLOW_TIME_FLAGS) -DPHYSICS_SIM_FLOW_SPATIAL_QUALIFIER=1 -DPHYSICS_SIM_FINE_FLOW_TIME_QUALIFIER=1 -Iinclude src/tools/physics_sim_flow_time_probe.c src/tools/physics_sim_flow_source.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/fine-flow-time-probe
+
+# Horizontal-only refinement relative to the completed 128x128x256 reference.
+HORIZONTAL_FLAGS := $(MOMENTUM_DIAGNOSTIC_FLAGS) -DPHYSICS_SIM_OPEN_HORIZONTAL_REFERENCE=1 -DPHYSICS_SIM_HORIZONTAL_MATCHED_TIME_QUALIFIER=1
+.PHONY: open-matched-horizontal-probe test-horizontal-source-native test-horizontal-source-sanitize
+open-matched-horizontal-probe:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(HORIZONTAL_FLAGS) -Iinclude src/tools/physics_sim_flow_time_probe.c src/tools/physics_sim_flow_source.c src/tools/physics_sim_vertical_source.c src/tools/physics_sim_horizontal_source.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/matched-horizontal-probe
+test-horizontal-source-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off $(HORIZONTAL_FLAGS) -Iinclude tests/cfd_horizontal_source_test.c src/tools/physics_sim_horizontal_source.c src/tools/physics_sim_vertical_source.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/horizontal-source-test
+	$(BUILD_DIR)/open-atmosphere/horizontal-source-test
+test-horizontal-source-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(HORIZONTAL_FLAGS) -Iinclude tests/cfd_horizontal_source_test.c src/tools/physics_sim_horizontal_source.c src/tools/physics_sim_vertical_source.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/horizontal-source-sanitize
+	$(BUILD_DIR)/open-atmosphere/horizontal-source-sanitize

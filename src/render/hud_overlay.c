@@ -6,6 +6,9 @@
 
 #include "render/font_bridge.h"
 #include "render/text_draw.h"
+#include "app/menu/menu_text_presentation.h"
+#include "app/menu/menu_render.h"
+#include "vk_renderer.h"
 #include "app/atmospheric/atmospheric_warm_start.h"
 
 static SDL_Renderer *g_hud_renderer = NULL;
@@ -45,6 +48,12 @@ bool hud_overlay_init(SDL_Renderer *renderer) {
         return false;
     }
     return true;
+}
+
+bool hud_overlay_reload_font(const AppConfig *cfg) {
+    TTF_Font *next=NULL;
+    if (physics_sim_font_bridge_open(g_hud_renderer,cfg,PHYSICS_SIM_FONT_SLOT_HUD_OVERLAY,&next,NULL).code!=CORE_OK) return false;
+    physics_sim_font_bridge_close(&g_hud_font);g_hud_font=next;return true;
 }
 
 void hud_overlay_shutdown(void) {
@@ -743,10 +752,8 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         }
     }
 
-    int widths[MAX_HUD_LINES];
     int heights[MAX_HUD_LINES];
     for (int i = 0; i < MAX_HUD_LINES; ++i) {
-        widths[i] = 0;
         heights[i] = 0;
     }
     int count = 0;
@@ -758,7 +765,6 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         measure_hud_text_line(lines[i], &w, &h);
         if (w <= 0 || h <= 0) continue;
         draw_lines[count] = lines[i];
-        widths[count] = w;
         heights[count] = h;
         if (w > max_w) max_w = w;
         total_h += h;
@@ -780,19 +786,23 @@ void hud_overlay_draw(const RendererHudInfo *hud) {
         .h = total_h + padding * 2
     };
 
-    SDL_SetRenderDrawColor(g_hud_renderer, 20, 24, 28, 12);
+    VkRenderer *vk=(VkRenderer *)g_hud_renderer;
+    int window_w=(int)vk->draw_state.logical_size[0],window_h=(int)vk->draw_state.logical_size[1];
+    if (panel.w>window_w-24) panel.w=window_w-24;
+    if (panel.h>window_h-24) panel.h=window_h-24;
+    if (panel.w<=padding*2 || panel.h<=padding*2) return;
+    SDL_Color fill=menu_color_panel(),ink=menu_color_text();
+    /* Keep field colors visible while giving readouts a stable themed backdrop. */
+    SDL_SetRenderDrawColor(g_hud_renderer, fill.r, fill.g, fill.b, 224);
     SDL_RenderFillRect(g_hud_renderer, &panel);
     SDL_SetRenderDrawColor(g_hud_renderer, 255, 255, 255, 60);
     SDL_RenderDrawRect(g_hud_renderer, &panel);
 
     int y = panel.y + padding;
     for (int i = 0; i < count; ++i) {
-        SDL_Rect dst = {panel.x + padding, y, widths[i], heights[i]};
-        (void)physics_sim_text_draw_utf8(g_hud_renderer,
-                                         g_hud_font,
-                                         draw_lines[i],
-                                         (SDL_Color){240, 240, 240, 255},
-                                         &dst);
+        SDL_Rect dst = {panel.x + padding, y, panel.w-padding*2, heights[i]};
+        if (dst.y+dst.h>panel.y+panel.h-padding) break;
+        menu_draw_contained_text(g_hud_renderer,g_hud_font,draw_lines[i],&dst,ink,0);
         y += heights[i] + spacing;
     }
 }

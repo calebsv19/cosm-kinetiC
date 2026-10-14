@@ -49,6 +49,9 @@ bool scene_editor_input_handle_button_actions(SceneEditorState *state, int x, in
     };
     for (size_t i = 0; i < sizeof(buttons) / sizeof(buttons[0]); ++i) {
         EditorButton *btn = buttons[i];
+        /* An accepted shared action owns its semantic control, even when an
+         * undrawn legacy action happens to share the same rectangle. */
+        if (state->shared_ui.dispatch && btn != state->shared_ui.dispatch_owner) continue;
         if (!btn->enabled) continue;
         if (!scene_editor_input_point_in_rect(&btn->rect, x, y)) continue;
 

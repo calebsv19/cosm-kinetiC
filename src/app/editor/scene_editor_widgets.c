@@ -1,6 +1,8 @@
 #include "app/editor/scene_editor_widgets.h"
 #include "app/menu/menu_render.h"
 #include "app/ui/physics_sim_ui_button.h"
+#include "app/editor/scene_editor_internal.h"
+#include "app/menu/menu_text_presentation.h"
 
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
@@ -37,35 +39,7 @@ static void fit_text_to_width(SDL_Renderer *renderer,
                               int max_width,
                               char *out,
                               size_t out_size) {
-    int w = 0;
-    size_t len = 0;
-    if (!out || out_size == 0) return;
-    out[0] = '\0';
-    if (!text) return;
-    snprintf(out, out_size, "%s", text);
-    if (!font || max_width <= 0) return;
-    if (TTF_SizeUTF8(font, out, &w, NULL) == 0) {
-        w = physics_sim_text_logical_pixels(renderer, w);
-        if (w <= max_width) return;
-    }
-
-    len = strlen(out);
-    while (len > 0) {
-        --len;
-        out[len] = '\0';
-        {
-            char candidate[256];
-            snprintf(candidate, sizeof(candidate), "%s...", out);
-            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0) {
-                w = physics_sim_text_logical_pixels(renderer, w);
-                if (w <= max_width) {
-                    snprintf(out, out_size, "%s", candidate);
-                    return;
-                }
-            }
-        }
-    }
-    snprintf(out, out_size, "...");
+    menu_text_fit(renderer, font, text, max_width, out, out_size);
 }
 
 static PhysicsSimUIButtonPalette scene_editor_button_palette(void) {
@@ -81,18 +55,13 @@ static PhysicsSimUIButtonPalette scene_editor_button_palette(void) {
     return palette;
 }
 
-void scene_editor_draw_button(SDL_Renderer *renderer,
+static void draw_button(const KitUiButtonState *shared, SDL_Renderer *renderer,
                               const EditorButton *button,
                               TTF_Font *font) {
     PhysicsSimUIButtonParams params;
     PhysicsSimUIButtonResolvedStyle style;
     bool hovered = false;
-    char label_fit[256];
-    const char *draw_label = NULL;
-    int text_w = 0;
-    int text_h = 0;
-    int text_x = 0;
-    int text_y = 0;
+    bool focused = false;
     if (!renderer || !button || !font) return;
     refresh_widget_theme();
     hovered = button->enabled && rect_is_hovered(&button->rect);
@@ -107,32 +76,39 @@ void scene_editor_draw_button(SDL_Renderer *renderer,
     params.use_explicit_hover = true;
     params.selected = false;
     params.pressed = false;
+    if (shared) {
+        params.hovered = shared->hovered;
+        params.pressed = shared->pressed;
+        focused = shared->focused;
+    }
     params.min_left_pad = 8;
     params.min_top_pad = 4;
     if (!physics_sim_ui_button_resolve_style(&params, &style)) {
         return;
     }
 
+    if (focused) style.outline = menu_color_accent();
     SDL_SetRenderDrawColor(renderer, style.fill.r, style.fill.g, style.fill.b, 255);
     SDL_RenderFillRect(renderer, &button->rect);
     SDL_SetRenderDrawColor(renderer, style.outline.r, style.outline.g, style.outline.b, style.outline.a);
     SDL_RenderDrawRect(renderer, &button->rect);
 
-    draw_label = button->label;
-    fit_text_to_width(renderer, font, button->label, button->rect.w - 12, label_fit, sizeof(label_fit));
-    if (label_fit[0]) {
-        draw_label = label_fit;
-    }
-    if (TTF_SizeUTF8(font, draw_label, &text_w, &text_h) == 0) {
-        text_w = physics_sim_text_logical_pixels(renderer, text_w);
-        text_h = physics_sim_text_logical_pixels(renderer, text_h);
-    }
-    text_x = button->rect.x + 8;
-    if (text_w > 0 && text_w <= button->rect.w - 12) {
-        text_x = button->rect.x + (button->rect.w - text_w) / 2;
-    }
-    text_y = button->rect.y + (button->rect.h - text_h) / 2;
-    menu_draw_text(renderer, font, draw_label, text_x, text_y, style.text);
+    SDL_Rect label_rect = {button->rect.x+8, button->rect.y+4,
+        button->rect.w-16, button->rect.h-8};
+    menu_draw_contained_text(renderer, font, button->label, &label_rect, style.text, 1);
+}
+
+void scene_editor_draw_button(SDL_Renderer *renderer, const EditorButton *button, TTF_Font *font) {
+    draw_button(NULL, renderer, button, font);
+}
+void scene_editor_draw_owned_button(SceneEditorState *state, const EditorButton *button, TTF_Font *font) {
+    KitUiButtonState shared = scene_editor_shared_button(state, button, &button->rect, button->enabled);
+    draw_button(&shared, state->renderer, button, font);
+}
+
+void scene_editor_draw_shared_button(SDL_Renderer *renderer, const EditorButton *button,
+    TTF_Font *font, const KitUiButtonState *shared) {
+    draw_button(shared, renderer, button, font);
 }
 
 void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
@@ -191,4 +167,13 @@ void scene_editor_draw_numeric_field(SDL_Renderer *renderer,
             (void)physics_sim_text_draw_utf8(renderer, font, value_text, COLOR_TEXT, &dst);
         }
     }
+}
+
+void scene_editor_draw_owned_numeric_field(SceneEditorState *state, TTF_Font *font,
+    const NumericField *field, const FluidEmitter *emitter, const PhysicsSimEmitterOverlay *overlay) {
+    NumericField display = *field;
+    display.editing = false;
+    scene_editor_draw_numeric_field(state->renderer, font, &display, emitter, overlay);
+    if (field->editing) scene_editor_shared_text_draw(state, font, &field->rect,
+        (char *)field->buffer, menu_color_panel(), menu_color_accent(), menu_color_text());
 }

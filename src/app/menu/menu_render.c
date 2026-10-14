@@ -1,3 +1,4 @@
+#include "app/menu/menu_text_presentation.h"
 #include "app/menu/menu_render.h"
 
 #include <stdio.h>
@@ -165,35 +166,7 @@ static void menu_fit_text_to_width(SDL_Renderer *renderer,
                                    int max_width,
                                    char *out,
                                    size_t out_size) {
-    int w = 0;
-    size_t len = 0;
-    if (!out || out_size == 0) return;
-    out[0] = '\0';
-    if (!text) return;
-    snprintf(out, out_size, "%s", text);
-    if (!font || max_width <= 0) return;
-    if (TTF_SizeUTF8(font, out, &w, NULL) == 0) {
-        w = physics_sim_text_logical_pixels(renderer, w);
-        if (w <= max_width) return;
-    }
-
-    len = strlen(out);
-    while (len > 0) {
-        --len;
-        out[len] = '\0';
-        {
-            char candidate[256];
-            snprintf(candidate, sizeof(candidate), "%s...", out);
-            if (TTF_SizeUTF8(font, candidate, &w, NULL) == 0) {
-                w = physics_sim_text_logical_pixels(renderer, w);
-                if (w <= max_width) {
-                    snprintf(out, out_size, "%s", candidate);
-                    return;
-                }
-            }
-        }
-    }
-    snprintf(out, out_size, "...");
+    menu_text_fit(renderer, font, text, max_width, out, out_size);
 }
 
 void menu_update_scrollbar(SceneMenuInteraction *ctx) {
@@ -210,18 +183,13 @@ void menu_update_scrollbar(SceneMenuInteraction *ctx) {
                           (float)ctx->list_rect.h);
 }
 
-void menu_draw_button(SDL_Renderer *renderer,
+static void menu_draw_button_impl(SDL_Renderer *renderer,
                       const SDL_Rect *rect,
                       const char *label,
                       TTF_Font *font,
-                      bool selected) {
+                      bool selected, const SceneMenuInteraction *owner) {
     PhysicsSimUIButtonParams params;
     PhysicsSimUIButtonResolvedStyle style;
-    int text_w = 0;
-    int text_h = 0;
-    int inset_x = 12;
-    char label_fit[256];
-    const char *draw_label = label;
     bool hovered = false;
     if (!renderer || !rect || !label || !font) return;
     hovered = menu_rect_is_hovered(rect);
@@ -235,7 +203,9 @@ void menu_draw_button(SDL_Renderer *renderer,
     params.hovered = hovered;
     params.use_explicit_hover = true;
     params.selected = selected;
-    params.pressed = false;
+    KitUiButtonState shared = menu_shared_controls_state(owner,rect,selected);
+    if (owner) { params.hovered=shared.hovered; params.enabled=!shared.disabled; }
+    params.pressed = shared.pressed;
     params.min_left_pad = 8;
     params.min_top_pad = 4;
     if (!physics_sim_ui_button_resolve_style(&params, &style)) {
@@ -246,28 +216,37 @@ void menu_draw_button(SDL_Renderer *renderer,
     SDL_SetRenderDrawColor(renderer, style.outline.r, style.outline.g, style.outline.b, style.outline.a);
     SDL_RenderDrawRect(renderer, rect);
     if (font && label) {
-        int max_label_w = rect->w - 16;
-        if (max_label_w < 8) max_label_w = 8;
-        menu_fit_text_to_width(renderer, font, label, max_label_w, label_fit, sizeof(label_fit));
-        draw_label = label_fit[0] ? label_fit : label;
-        if (TTF_SizeUTF8(font, draw_label, &text_w, &text_h) != 0) {
-            text_w = 0;
-            text_h = menu_font_height(renderer, font, rect->h / 2);
-        } else {
-            text_w = physics_sim_text_logical_pixels(renderer, text_w);
-            text_h = physics_sim_text_logical_pixels(renderer, text_h);
-        }
-        if (text_w > 0 && text_w <= rect->w - 16) {
-            inset_x = (rect->w - text_w) / 2;
-            if (inset_x < 8) inset_x = 8;
-        }
-        menu_draw_text(renderer,
-                       font,
-                       draw_label,
-                       rect->x + inset_x,
-                       rect->y + (rect->h - text_h) / 2,
-                       style.text);
+        SDL_Rect label_rect = {rect->x+8, rect->y+4, rect->w-16, rect->h-8};
+        menu_draw_contained_text(renderer, font, label, &label_rect, style.text, 1);
     }
+}
+
+void menu_draw_button(SDL_Renderer *renderer, const SDL_Rect *rect,
+                      const char *label, TTF_Font *font, bool selected) {
+    menu_draw_button_impl(renderer,rect,label,font,selected,NULL);
+}
+void menu_draw_control_button(SceneMenuInteraction *ctx, const SDL_Rect *rect,
+                             const char *label, TTF_Font *font, bool selected) {
+    if (ctx) menu_draw_button_impl(ctx->renderer,rect,label,font,selected,ctx);
+}
+void menu_draw_control_toggle(SceneMenuInteraction *ctx, TTF_Font *font,
+                             const SDL_Rect *rect, const char *label, bool selected) {
+    if (!ctx) return;
+    menu_draw_toggle(ctx->renderer,font,rect,label,selected);
+    KitUiButtonState state=menu_shared_controls_state(ctx,rect,selected);
+    if (state.pressed) {
+        SDL_Color color=menu_color_accent();
+        SDL_SetRenderDrawColor(ctx->renderer,color.r,color.g,color.b,color.a);
+        SDL_RenderDrawRect(ctx->renderer,rect);
+    }
+}
+
+void menu_draw_owned_text_input(SceneMenuInteraction *ctx, TTF_Font *font,
+                                const SDL_Rect *rect, TextInputField *field) {
+    SDL_Color fill = ensure_fill_contrast(COLOR_BUTTON_BG, COLOR_TEXT, COLOR_PANEL);
+    SDL_Color border = ensure_fill_contrast(COLOR_ACCENT, COLOR_TEXT, COLOR_PANEL);
+    menu_draw_shared_text_input(ctx, font, rect, field, fill, border,
+                                choose_readable_text(fill, COLOR_TEXT));
 }
 
 void menu_draw_text_input(SDL_Renderer *renderer,
@@ -314,14 +293,7 @@ void menu_draw_toggle(SDL_Renderer *renderer,
                       const SDL_Rect *rect,
                       const char *label,
                       bool enabled) {
-    int text_w = 0;
-    int text_h = 12;
-    int text_x = 0;
-    char label_fit[256];
-    const char *draw_label = label;
     if (!renderer || !rect || !label || !font) return;
-    text_h = menu_font_height(renderer, font, rect->h / 2);
-    text_x = rect->x + 10;
     SDL_Color fill = enabled ? COLOR_ACCENT : COLOR_PANEL;
     SDL_Color text_color;
     if (enabled) {
@@ -335,25 +307,8 @@ void menu_draw_toggle(SDL_Renderer *renderer,
     SDL_RenderFillRect(renderer, rect);
     SDL_SetRenderDrawColor(renderer, border.r, border.g, border.b, border.a);
     SDL_RenderDrawRect(renderer, rect);
-    {
-        int max_label_w = rect->w - 20;
-        if (max_label_w < 8) max_label_w = 8;
-        menu_fit_text_to_width(renderer, font, label, max_label_w, label_fit, sizeof(label_fit));
-        draw_label = label_fit[0] ? label_fit : label;
-    }
-    if (TTF_SizeUTF8(font, draw_label, &text_w, &text_h) == 0) {
-        text_w = physics_sim_text_logical_pixels(renderer, text_w);
-        text_h = physics_sim_text_logical_pixels(renderer, text_h);
-    }
-    if (text_w > 0 && text_w <= rect->w - 20) {
-        text_x = rect->x + (rect->w - text_w) / 2;
-    }
-    menu_draw_text(renderer,
-                   font,
-                   draw_label,
-                   text_x,
-                   rect->y + (rect->h - text_h) / 2,
-                   text_color);
+    SDL_Rect label_rect = {rect->x+10, rect->y+4, rect->w-20, rect->h-8};
+    menu_draw_contained_text(renderer, font, label, &label_rect, text_color, 1);
 }
 
 void menu_draw_preset_list(SceneMenuInteraction *ctx) {
@@ -421,7 +376,7 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
             if (label_rect.h < 16) label_rect.h = 16;
 
             if (ctx->rename_input.active && slot_index >= 0 && ctx->renaming_slot == slot_index) {
-                menu_draw_text_input(renderer, ctx->font, &label_rect, &ctx->rename_input);
+                menu_draw_owned_text_input(ctx, ctx->font, &label_rect, &ctx->rename_input);
             } else {
                 const char *label = "Untitled Preset";
                 const char *subtitle = NULL;
@@ -508,7 +463,8 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
 
             if (!retained_catalog) {
                 SDL_Rect delete_rect = menu_preset_delete_button_rect(&row_rect);
-                SDL_Color del_color = hovered ? (SDL_Color){200, 110, 110, 255}
+                KitUiButtonState delete_state=menu_shared_controls_state(ctx,&delete_rect,false);
+                SDL_Color del_color = (hovered || delete_state.pressed) ? (SDL_Color){200, 110, 110, 255}
                                               : COLOR_TEXT_DIM;
                 SDL_SetRenderDrawColor(renderer, del_color.r, del_color.g, del_color.b, del_color.a);
                 SDL_RenderDrawRect(renderer, &delete_rect);
@@ -530,7 +486,13 @@ void menu_draw_preset_list(SceneMenuInteraction *ctx) {
                 }
             }
         } else {
-            SDL_Color text_color = hovered ? COLOR_TEXT : COLOR_TEXT_DIM;
+            KitUiButtonState add_state=menu_shared_controls_state(ctx,&row_rect,false);
+            SDL_Color text_color = (hovered || add_state.pressed) ? COLOR_TEXT : COLOR_TEXT_DIM;
+            if (add_state.pressed) {
+                SDL_Color color=menu_color_accent();
+                SDL_SetRenderDrawColor(renderer,color.r,color.g,color.b,color.a);
+                SDL_RenderDrawRect(renderer,&row_rect);
+            }
             char label[64];
             char add_buf[64];
             snprintf(label, sizeof(label), "+ Add %s preset", menu_mode_label(ctx->active_mode));
@@ -580,10 +542,18 @@ SDL_Color menu_color_accent(void) {
     return COLOR_ACCENT;
 }
 
+SDL_Color menu_color_status_text(bool emphasized) {
+    return choose_readable_text(COLOR_BG, emphasized ? COLOR_ACCENT : COLOR_TEXT_DIM);
+}
+
 SDL_Color menu_color_button_bg(void) {
     return COLOR_BUTTON_BG;
 }
 
 SDL_Color menu_color_button_bg_active(void) {
     return COLOR_BUTTON_BG_ACTIVE;
+}
+
+SDL_Color menu_readable_text_color(SDL_Color background,SDL_Color preferred) {
+    return choose_readable_text(background,preferred);
 }

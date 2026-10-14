@@ -23,7 +23,7 @@ void menu_begin_headless_frames_edit(SceneMenuInteraction *ctx) {
     int frames = draft ? draft->headless_frame_count : 0;
     if (frames < 0) frames = 0;
     snprintf(buffer, sizeof(buffer), "%d", frames);
-    text_input_begin(&ctx->headless_frames_input, buffer, sizeof(buffer) - 1);
+    menu_shared_text_begin(ctx, &ctx->headless_frames_input, buffer, sizeof(buffer) - 1);
     ctx->editing_headless_frames = true;
 }
 
@@ -52,7 +52,7 @@ void menu_begin_viscosity_edit(SceneMenuInteraction *ctx) {
     float v = draft ? draft->velocity_damping : 0.0f;
     if (v < 0.0f) v = 0.0f;
     snprintf(buffer, sizeof(buffer), "%.8f", v);
-    text_input_begin(&ctx->viscosity_input, buffer, sizeof(buffer) - 1);
+    menu_shared_text_begin(ctx, &ctx->viscosity_input, buffer, sizeof(buffer) - 1);
     ctx->editing_viscosity = true;
 }
 
@@ -79,7 +79,7 @@ void menu_begin_inflow_edit(SceneMenuInteraction *ctx) {
     const MenuSettingsDraft *draft = menu_settings_shell_draft(&ctx->settings_shell);
     float v = draft ? draft->tunnel_inflow_speed : 0.0f;
     snprintf(buffer, sizeof(buffer), "%.6f", v);
-    text_input_begin(&ctx->inflow_input, buffer, sizeof(buffer) - 1);
+    menu_shared_text_begin(ctx, &ctx->inflow_input, buffer, sizeof(buffer) - 1);
     ctx->editing_inflow = true;
 }
 
@@ -102,7 +102,7 @@ void menu_finish_inflow_edit(SceneMenuInteraction *ctx, bool apply) {
 
 void menu_begin_input_root_edit(SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return;
-    text_input_begin(&ctx->input_root_input,
+    menu_shared_text_begin(ctx, &ctx->input_root_input,
                      ctx->cfg->input_root,
                      sizeof(ctx->cfg->input_root) - 1);
     ctx->editing_input_root = true;
@@ -111,7 +111,7 @@ void menu_begin_input_root_edit(SceneMenuInteraction *ctx) {
 void menu_finish_input_root_edit(SceneMenuInteraction *ctx, bool apply) {
     if (!ctx || !ctx->editing_input_root) return;
     if (apply && ctx->cfg) {
-        const char *value = text_input_value(&ctx->input_root_input);
+        const char *value = menu_shared_text_value(ctx, &ctx->input_root_input);
         if (value) {
             size_t start = strspn(value, " \t\r\n");
             const char *trimmed = value + start;
@@ -134,7 +134,7 @@ void menu_finish_input_root_edit(SceneMenuInteraction *ctx, bool apply) {
 
 void menu_begin_output_root_edit(SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg) return;
-    text_input_begin(&ctx->output_root_input,
+    menu_shared_text_begin(ctx, &ctx->output_root_input,
                      ctx->cfg->headless_output_dir,
                      sizeof(ctx->cfg->headless_output_dir) - 1);
     ctx->editing_output_root = true;
@@ -143,7 +143,7 @@ void menu_begin_output_root_edit(SceneMenuInteraction *ctx) {
 void menu_finish_output_root_edit(SceneMenuInteraction *ctx, bool apply) {
     if (!ctx || !ctx->editing_output_root) return;
     if (apply && ctx->cfg) {
-        const char *value = text_input_value(&ctx->output_root_input);
+        const char *value = menu_shared_text_value(ctx, &ctx->output_root_input);
         if (value) {
             size_t start = strspn(value, " \t\r\n");
             const char *trimmed = value + start;
@@ -166,7 +166,7 @@ void menu_finish_output_root_edit(SceneMenuInteraction *ctx, bool apply) {
 
 void menu_begin_warm_start_edit(SceneMenuInteraction *ctx) {
     if (!ctx || !ctx->cfg || !menu_warm_start_controls_visible(ctx)) return;
-    text_input_begin(&ctx->warm_start_input,
+    menu_shared_text_begin(ctx, &ctx->warm_start_input,
                      ctx->cfg->atmospheric_warm_start_path,
                      sizeof(ctx->cfg->atmospheric_warm_start_path) - 1);
     ctx->editing_warm_start = true;
@@ -175,7 +175,7 @@ void menu_begin_warm_start_edit(SceneMenuInteraction *ctx) {
 void menu_finish_warm_start_edit(SceneMenuInteraction *ctx, bool apply) {
     if (!ctx || !ctx->editing_warm_start) return;
     if (apply && ctx->cfg) {
-        const char *value = text_input_value(&ctx->warm_start_input);
+        const char *value = menu_shared_text_value(ctx, &ctx->warm_start_input);
         if (value) {
             size_t start = strspn(value, " \t\r\n");
             const char *trimmed = value + start;

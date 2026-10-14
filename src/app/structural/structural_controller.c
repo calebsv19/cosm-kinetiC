@@ -1,3 +1,4 @@
+#include "app/ui/physics_sim_ui_host.h"
 #include "app/structural/structural_controller.h"
 #include "app/structural/structural_controller_internal.h"
 
@@ -41,6 +42,7 @@ static bool structural_reload_fonts(StructuralController *ctrl,
         if (hud) physics_sim_font_bridge_close(&hud);
         return false;
     }
+    vk_renderer_wait_idle((VkRenderer *)renderer);
     if (ctrl->font_small) physics_sim_font_bridge_close(&ctrl->font_small);
     if (ctrl->font_hud) physics_sim_font_bridge_close(&ctrl->font_hud);
     ctrl->font_small = small;
@@ -81,6 +83,9 @@ static bool structural_apply_text_zoom_shortcut(const InputCommands *cmds,
     return true;
 }
 
+static bool runtime_filter(void *user,const SDL_Event *event) {
+    return physics_sim_ui_host_filter(((StructuralController *)user)->ui,event);
+}
 static void on_pointer_down(void *user, const InputPointerState *state) {
     (void)user;
     (void)state;
@@ -298,7 +303,7 @@ int structural_controller_run(AppConfig *cfg,
         "Physics Sim - Structural Mode",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         cfg->window_w, cfg->window_h,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
+        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!window) {
         fprintf(stderr, "[struct] Failed to create window: %s\n", SDL_GetError());
         if (ttf_initialized) {
@@ -314,7 +319,7 @@ int structural_controller_run(AppConfig *cfg,
     SDL_Renderer *renderer = (SDL_Renderer *)&renderer_storage;
     VkRendererConfig vk_cfg;
     vk_renderer_config_set_defaults(&vk_cfg);
-    vk_cfg.enable_validation = SDL_FALSE;
+    vk_cfg.enable_validation = physics_sim_ui_proof_enabled() ? SDL_TRUE : SDL_FALSE;
     vk_cfg.clear_color[0] = 0.0f;
     vk_cfg.clear_color[1] = 0.0f;
     vk_cfg.clear_color[2] = 0.0f;
@@ -428,6 +433,7 @@ int structural_controller_run(AppConfig *cfg,
     InputContextManager ctx_mgr;
     input_context_manager_init(&ctx_mgr);
     InputContext ctx = {
+        .on_sdl_event_filter = runtime_filter,
         .on_pointer_down = on_pointer_down,
         .on_pointer_up = on_pointer_up,
         .on_pointer_move = on_pointer_move,
@@ -436,10 +442,17 @@ int structural_controller_run(AppConfig *cfg,
     };
     input_context_manager_push(&ctx_mgr, &ctx);
 
+    PhysicsSimUiHost ui;
+    ctrl.ui=&ui;
+    physics_sim_ui_host_init(&ui,window,renderer,"physics-structural-runtime",
+        "CODEWORK_STRUCTURAL_RUNTIME_UI_PROOF",&ctrl,NULL);
     Uint32 last_ticks = SDL_GetTicks();
     while (ctrl.running) {
+        if (physics_sim_ui_host_probe(&ui)) {ctrl.running=false;break;}
+        (void)physics_sim_ui_host_refresh(&ui);
         InputCommands cmds;
-        bool running = input_poll_events(&cmds, NULL, &ctx_mgr);
+        bool running = input_poll_events_with_wait(&cmds,NULL,&ctx_mgr,
+            ui.observed.presentable || (ctrl.dynamic_mode && ctrl.dynamic_playing) ? 0 : 120,NULL,NULL,NULL);
         if (!running || cmds.quit) {
             ctrl.running = false;
         }
@@ -469,8 +482,11 @@ int structural_controller_run(AppConfig *cfg,
             ctrl.dynamic_step = false;
         }
 
+        (void)physics_sim_ui_host_refresh(&ui);
         SDL_GetMouseState(&ctrl.pointer_x, &ctrl.pointer_y);
         SDL_GetWindowSize(window, &ctrl.window_w, &ctrl.window_h);
+        ui.geometry_dirty=false;
+        if (!ui.observed.presentable) {SDL_Delay(8);continue;}
         if (ctrl.window_w > 0 && ctrl.window_h > 0) {
             int drawable_w = ctrl.window_w;
             int drawable_h = ctrl.window_h;
@@ -515,6 +531,7 @@ int structural_controller_run(AppConfig *cfg,
                                              (float)ctrl.window_h);
                 structural_controller_render_scene(renderer, &ctrl);
                 VkResult end = vk_renderer_end_frame((VkRenderer *)renderer, cmd);
+                if (end==VK_SUCCESS || end==VK_SUBOPTIMAL_KHR) ++ui.presented_frames;
                 if (end == VK_ERROR_OUT_OF_DATE_KHR || end == VK_SUBOPTIMAL_KHR) {
                     vk_renderer_recreate_swapchain((VkRenderer *)renderer, window);
                     vk_renderer_set_logical_size((VkRenderer *)renderer,
@@ -541,6 +558,7 @@ int structural_controller_run(AppConfig *cfg,
         SDL_Delay(8);
     }
 
+    vk_renderer_wait_idle((VkRenderer *)renderer);
     structural_controller_runtime_view_clear(&ctrl.runtime);
     if (ctrl.font_small) physics_sim_font_bridge_close(&ctrl.font_small);
     if (ctrl.font_hud) physics_sim_font_bridge_close(&ctrl.font_hud);

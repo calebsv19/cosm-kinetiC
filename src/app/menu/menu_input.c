@@ -111,6 +111,8 @@ void menu_pointer_up(void *user, const InputPointerState *state) {
         return;
     }
 
+    if (!ctx->shared_control_dispatch &&
+        menu_shared_controls_contains(ctx,state->x,state->y)) return;
     int x = state->x;
     int y = state->y;
     Uint32 now = SDL_GetTicks();
@@ -541,6 +543,7 @@ void menu_pointer_down(void *user, const InputPointerState *state) {
     SceneMenuInteraction *ctx = (SceneMenuInteraction *)user;
     if (!ctx || !state) return;
     if (state->button != SDL_BUTTON_LEFT) return;
+    if (menu_shared_controls_contains(ctx,state->x,state->y)) return;
     int width = 0;
     SDL_GetWindowSize(ctx->window, &width, NULL);
     if (state->x >= width - 240 && state->y < 38) {
@@ -682,7 +685,7 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         } else if (key == SDLK_ESCAPE) {
             menu_finish_input_root_edit(ctx, false);
         } else {
-            text_input_handle_key(&ctx->input_root_input, key);
+            menu_shared_text_key(ctx, key, mod);
         }
         return;
     }
@@ -694,7 +697,7 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         } else if (key == SDLK_ESCAPE) {
             menu_finish_output_root_edit(ctx, false);
         } else {
-            text_input_handle_key(&ctx->output_root_input, key);
+            menu_shared_text_key(ctx, key, mod);
         }
         return;
     }
@@ -707,7 +710,7 @@ void menu_key_down(void *user, SDL_Keycode key, SDL_Keymod mod) {
         } else if (key == SDLK_ESCAPE) {
             menu_finish_warm_start_edit(ctx, false);
         } else {
-            text_input_handle_key(&ctx->warm_start_input, key);
+            menu_shared_text_key(ctx, key, mod);
         }
         return;
     }
@@ -779,15 +782,15 @@ void menu_text_input(void *user, const char *text) {
         return;
     }
     if (ctx->editing_input_root) {
-        text_input_handle_text(&ctx->input_root_input, text);
+        menu_shared_text_insert(ctx, text);
         return;
     }
     if (ctx->editing_output_root) {
-        text_input_handle_text(&ctx->output_root_input, text);
+        menu_shared_text_insert(ctx, text);
         return;
     }
     if (ctx->editing_warm_start) {
-        text_input_handle_text(&ctx->warm_start_input, text);
+        menu_shared_text_insert(ctx, text);
         return;
     }
 }

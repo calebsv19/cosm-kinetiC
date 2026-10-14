@@ -395,7 +395,7 @@ void menu_begin_rename(SceneMenuInteraction *ctx, int slot_index) {
     CustomPresetSlot *slot = preset_library_get_slot(ctx->library, slot_index);
     const char *initial = slot ? slot->name : "";
     ctx->renaming_slot = slot_index;
-    text_input_begin(&ctx->rename_input,
+    menu_shared_text_begin(ctx, &ctx->rename_input,
                      initial,
                      CUSTOM_PRESET_NAME_MAX - 1);
 }
