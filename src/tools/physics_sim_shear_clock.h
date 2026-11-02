@@ -1,0 +1,20 @@
+/* Fixed physical event ratios shared by the diagnostic driver and scalars.
+ * The legacy profile retains its original clock; optional256 profile is not
+ * an application-default or joint Fire/Fluid/Thermal runtime adoption. */
+#ifndef PHYSICS_SIM_SHEAR_CLOCK_H
+#define PHYSICS_SIM_SHEAR_CLOCK_H
+#ifdef PHYSICS_SIM_SHEAR_NORMAL256
+enum { PHYSICS_SIM_SHEAR_TPS=6400, PHYSICS_SIM_SHEAR_NORMAL_LIMIT=256,
+       PHYSICS_SIM_SHEAR_FINE_TPS=51200, PHYSICS_SIM_SHEAR_COARSE_TPS=12800 };
+#else
+enum { PHYSICS_SIM_SHEAR_TPS=1600, PHYSICS_SIM_SHEAR_NORMAL_LIMIT=128 };
+#endif
+enum { PHYSICS_SIM_SHEAR_SOURCE_OFF=2*PHYSICS_SIM_SHEAR_TPS/5,
+       PHYSICS_SIM_SHEAR_RESTRICT=391*PHYSICS_SIM_SHEAR_TPS/800,
+       PHYSICS_SIM_SHEAR_OBSERVE=PHYSICS_SIM_SHEAR_TPS/40,
+       PHYSICS_SIM_SHEAR_SMOKE=PHYSICS_SIM_SHEAR_TPS/20,
+       PHYSICS_SIM_SHEAR_EARLY=PHYSICS_SIM_SHEAR_TPS/10,
+       PHYSICS_SIM_SHEAR_SHORT=PHYSICS_SIM_SHEAR_TPS/2,
+       PHYSICS_SIM_SHEAR_LONG=16*PHYSICS_SIM_SHEAR_TPS/5 };
+_Static_assert(PHYSICS_SIM_SHEAR_TPS%800==0,"physical event clock must align");
+#endif

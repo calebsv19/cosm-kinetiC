@@ -1,9 +1,14 @@
 """Same-clock native snapshots and bounded existing-RayTracing render inputs."""
 import json
+import base64
 from pathlib import Path
 from types import SimpleNamespace
 from .authoring import export
-from .workbench import read_frames
+from contextlib import closing
+
+def read_frames(host):
+    if hasattr(host,"selected_frames"):return host.selected_frames()
+    with closing(host.db()) as db:return host.bound(db)[0]
 from surface_sources.growth_fire_v1 import require, sealed
 
 
@@ -38,29 +43,38 @@ def export_playback(host, output, revisions=None):
     from fire_render_diagnostic import surface_patches, plane, material
     from combined_scene import save, sha
     rows = []
-    for cp in frames[1:]:
-        if revisions is not None and cp['revision'] not in revisions: continue
+    seed = host.fire.state_decode(base64.b64decode(frames[0]['source']['checkpoint']['native_state_b64']))['fields']['fuel'] if host.config['source']['width']*host.config['source']['height']>64 else None
+    selected=(frames[r] for r in sorted(revisions)) if revisions is not None else frames[1:]
+    for cp in selected:
         directory = output / ('revision-%03d' % cp['revision'])
         receipt = export(SimpleNamespace(config=host.config, inspect=lambda cp=cp: cp), directory)
-        render_inputs(host.config,directory)
+        render_inputs(host.config,directory,source_bundle=cp['source'],seed_fuel=seed)
         rows.append({'revision': cp['revision'], 'time_s': cp['fluid']['fields']['time_s'],
                      'checkpoint_digest': cp['digest'], 'joint_projection_digest': receipt['digest'],
                      'request': str(directory.relative_to(output) / 'playback_render_request.json'),
                      'scene_sha256': sha(directory / 'playback_scene_runtime.json'),
                      'request_sha256': sha(directory / 'playback_render_request.json'),
                      'vf3d_sha256': sha(directory / 'frame_000000.vf3d')})
+        if seed is not None:rows[-1].update(texture_sha256=sha(directory/'appearance/burn-field.png'),appearance_sha256=sha(directory/'appearance-projection.json'))
     value = sealed({'schema': 'fire_fluid_playback_export/v1', 'frames': rows,
                     'head_checkpoint_digest': frames[-1]['digest'], 'feedback_enabled': 'return_channel' in host.config,
-                    'surface_mapping': 'clipped dual-cell fuel/burn/ash palette; no airborne proxy geometry',
+                    'surface_mapping': 'native fine-grid texture; no airborne proxy geometry' if seed is not None else 'clipped dual-cell fuel/burn/ash palette; no airborne proxy geometry',
                     'volume_mapping': 'accepted native smoke concentration; cell-centred optical candidate, no density amplification',
                     'limits': ['Fire heat is an ignition proxy, not temperature.', 'No flame geometry, airborne particles or simulated radiation.',
                                'No thermal return or physical calibration.', 'No latest-good scene promotion.']})
     save(output / 'playback.json', value)
+    if 'rig_geometry' in host.config['fluid']:
+        from .rig_presentation import apply_export,SCHEMA,PRESET
+        value=apply_export(output,dict(schema=SCHEMA,preset=PRESET,parent_playback_digest=value['digest']))
     return {'output': str(output), 'manifest': value}
 
 
-def render_inputs(config,directory):
+def render_inputs(config,directory,*,source_bundle=None,seed_fuel=None):
     """Render native accepted fields, whether coupled or prescribed-source qualification."""
+    if config['source']['width']*config['source']['height']>64:
+        require(source_bundle is not None and seed_fuel is not None,'fine preview requires accepted source and initial fuel')
+        from .playback_textured import render_inputs as fine_inputs
+        return fine_inputs(config,directory,source_bundle,seed_fuel)
     from fire_render_diagnostic import surface_patches,plane,material
     from combined_scene import save
     surface = json.loads((directory / 'surface_fields.json').read_text())
@@ -78,7 +92,11 @@ def render_inputs(config,directory):
                          'radius': .01, 'intensity': 3, 'falloff_distance': 10, 'color': {'r': 1, 'g': .7, 'b': .4}, 'enabled': True, 'moving': True}],
              'extensions': {'ray_tracing': {'authoring': {'object_materials': [material('receiver_floor', 0x707884), *materials]}}}}
     save(directory / 'playback_scene_runtime.json', scene)
-    request = {'schema_version': 'ray_tracing_agent_render_request_v1', 'run_id': 'accepted_native_snapshot',
+    save(directory / 'playback_render_request.json', make_render_request(center))
+
+
+def make_render_request(center):
+    return {'schema_version': 'ray_tracing_agent_render_request_v1', 'run_id': 'accepted_native_snapshot',
                'scene': {'runtime_scene_path': 'playback_scene_runtime.json'},
                'volume': {'enabled': True, 'source_kind': 'manifest', 'source_path': 'manifest.json', 'visible': True, 'affects_lighting': True, 'sampling_layout': 'cell_centered'},
                'render': {'start_frame': 0, 'frame_count': 1, 'width': 640, 'height': 480, 'temporal_frames': 1,
@@ -93,4 +111,3 @@ def render_inputs(config,directory):
                                   'scattering_albedo': .65, 'anisotropy': .35,
                                   'sky_illumination': True, 'sky_error_budget': .00001}},
                'resources': {'max_workers': 1}, 'output': {'root': 'preview', 'overwrite': False}}
-    save(directory / 'playback_render_request.json', request)

@@ -1052,7 +1052,7 @@ test-coupled-passive: $(PASSIVE3D_WORKER)
 ATMOSPHERE3D_SRCS := src/app/cfd_atmosphere3d.c src/app/cfd_periodic3d.c $(PASSIVE3D_SRCS)
 ATMOSPHERE3D_WORKER := $(BUILD_DIR)/evolving-atmosphere/physics_sim_atmosphere_worker
 export PHYSICS_SIM_ATMOSPHERE_WORKER := $(abspath $(ATMOSPHERE3D_WORKER))
-ATMOSPHERE3D_HEADERS := include/app/cfd_atmosphere3d.h include/app/cfd_periodic3d.h include/app/cfd_passive3d.h include/app/cfd_cartesian3d.h include/app/cfd_memory.h include/app/cfd_sparse_mg.h
+ATMOSPHERE3D_HEADERS := src/app/cfd_open_atmosphere3d_rig.inc include/app/cfd_atmosphere3d.h include/app/cfd_periodic3d.h include/app/cfd_passive3d.h include/app/cfd_cartesian3d.h include/app/cfd_memory.h include/app/cfd_sparse_mg.h
 $(ATMOSPHERE3D_WORKER): src/tools/physics_sim_atmosphere_worker.c $(ATMOSPHERE3D_SRCS) $(ATMOSPHERE3D_HEADERS)
 	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $(JSON_CFLAGS) src/tools/physics_sim_atmosphere_worker.c $(ATMOSPHERE3D_SRCS) $(JSON_LIBS) -lm -o $@
 .PHONY: evolving-atmosphere-worker
@@ -1070,7 +1070,7 @@ test-evolving-atmosphere: $(ATMOSPHERE3D_WORKER) test-evolving-atmosphere-native
 test-coupled-atmosphere: $(ATMOSPHERE3D_WORKER)
 	PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s tests -p test_coupled_atmosphere.py -v
 
-OPEN_ATMOSPHERE3D_SRCS := src/app/cfd_open_atmosphere3d.c src/app/cfd_open_atmosphere3d_box.c src/app/cfd_open_atmosphere3d_box_preconditioner.c src/app/cfd_open_atmosphere3d_lateral.c $(PASSIVE3D_SRCS)
+OPEN_ATMOSPHERE3D_SRCS := src/app/cfd_open_atmosphere3d.c src/app/cfd_open_atmosphere3d_box.c src/app/cfd_open_atmosphere3d_box_preconditioner.c src/app/cfd_open_atmosphere3d_lateral.c src/app/cfd_open_atmosphere3d_wind.c src/app/cfd_open_atmosphere3d_vent.c src/app/cfd_open_atmosphere3d_vent_pressure.c src/app/cfd_open_atmosphere3d_vent_balance.c src/app/cfd_open_atmosphere3d_weather.c $(PASSIVE3D_SRCS)
 .PHONY: test-open-atmosphere-native test-open-atmosphere-sanitize
 test-open-atmosphere-native:
 	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_open_atmosphere3d_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/contract-test
@@ -1080,8 +1080,10 @@ test-open-atmosphere-sanitize:
 	$(BUILD_DIR)/open-atmosphere/contract-sanitize
 OPEN_ATMOSPHERE3D_WORKER := $(BUILD_DIR)/open-atmosphere/physics_sim_open_atmosphere_worker
 export PHYSICS_SIM_OPEN_ATMOSPHERE_WORKER := $(abspath $(OPEN_ATMOSPHERE3D_WORKER))
-$(OPEN_ATMOSPHERE3D_WORKER): src/tools/physics_sim_open_atmosphere_worker.c src/tools/physics_sim_plume_qualification.h $(OPEN_ATMOSPHERE3D_SRCS) include/app/cfd_open_atmosphere3d.h $(ATMOSPHERE3D_HEADERS)
-	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $(JSON_CFLAGS) src/tools/physics_sim_open_atmosphere_worker.c $(OPEN_ATMOSPHERE3D_SRCS) $(JSON_LIBS) -lm -o $@
+OPEN_ATMOSPHERE_FORCING_IO_SRCS := src/tools/physics_sim_open_wind_io.c src/tools/physics_sim_open_weather_io.c
+INERT_OBJECT_IO_SRCS := src/tools/physics_sim_inert_io.c src/tools/physics_sim_inert_coupling.c src/tools/physics_sim_heated_face.c
+$(OPEN_ATMOSPHERE3D_WORKER): src/tools/physics_sim_field_packet_io.h src/tools/physics_sim_scalar_gust128_io.h src/tools/physics_sim_scalar_wake128_io.h src/tools/physics_sim_scalar_wake128_work_io.h src/tools/physics_sim_scalar_profile_io.h src/tools/physics_sim_inert_io.h src/tools/physics_sim_inert_coupling.h src/tools/physics_sim_heated_face.h $(OPEN_ATMOSPHERE_FORCING_IO_SRCS) $(INERT_OBJECT_IO_SRCS) src/tools/physics_sim_open_wind_io.h include/app/cfd_open_atmosphere3d_wind.h include/app/cfd_open_atmosphere3d_weather.h src/tools/physics_sim_open_weather_io.h src/tools/physics_sim_open_atmosphere_worker.c src/tools/physics_sim_plume_qualification.h $(OPEN_ATMOSPHERE3D_SRCS) include/app/cfd_open_atmosphere3d.h $(ATMOSPHERE3D_HEADERS)
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $(JSON_CFLAGS) src/tools/physics_sim_open_atmosphere_worker.c $(OPEN_ATMOSPHERE_FORCING_IO_SRCS) $(INERT_OBJECT_IO_SRCS) $(OPEN_ATMOSPHERE3D_SRCS) $(JSON_LIBS) -lm -o $@
 .PHONY: open-atmosphere-worker
 open-atmosphere-worker: $(OPEN_ATMOSPHERE3D_WORKER)
 .PHONY: test-open-atmosphere
@@ -1334,3 +1336,18 @@ test-horizontal-source-native:
 test-horizontal-source-sanitize:
 	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer $(HORIZONTAL_FLAGS) -Iinclude tests/cfd_horizontal_source_test.c src/tools/physics_sim_horizontal_source.c src/tools/physics_sim_vertical_source.c $(MOMENTUM_CAPTURE_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/horizontal-source-sanitize
 	$(BUILD_DIR)/open-atmosphere/horizontal-source-sanitize
+
+.PHONY: test-driven-wind-native test-driven-wind-sanitize
+test-driven-wind-native:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_driven_wind_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/driven-wind-test
+	$(BUILD_DIR)/open-atmosphere/driven-wind-test
+test-driven-wind-sanitize:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude tests/cfd_driven_wind_test.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/open-atmosphere/driven-wind-sanitize
+	$(BUILD_DIR)/open-atmosphere/driven-wind-sanitize
+
+.PHONY: test-driven-wind
+test-driven-wind: open-atmosphere-worker coupling-framework-worker test-driven-wind-native
+	@test -n "$(FIRE_FLUID_GROWTH_ROOT)" -a -n "$(FIRE_FLUID_FIRE_WORKER)" || { echo 'Set FIRE_FLUID_GROWTH_ROOT and FIRE_FLUID_FIRE_WORKER to selected source and pinned worker'; exit 2; }
+	FIRE_FLUID_GROWTH_ROOT="$(FIRE_FLUID_GROWTH_ROOT)" FIRE_FLUID_FIRE_WORKER="$(FIRE_FLUID_FIRE_WORKER)" FIRE_FLUID_OPEN_WORKER="$(abspath $(OPEN_ATMOSPHERE3D_WORKER))" FIRE_FLUID_CLOCK_WORKER="$(abspath $(COUPLING_CLOCK_BIN))" python3 -B tests/test_driven_wind.py
+
+include make/rules-quiescent.mk

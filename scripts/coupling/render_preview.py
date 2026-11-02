@@ -22,9 +22,11 @@ def render(export_root, renderer, revisions):
     for revision in revisions:
         row = rows[revision]; request = admitted_path(root / row['request']); directory = request.parent
         require(request.is_relative_to(root), 'preview input containment')
-        inputs = {path: sha(path) for path in directory.iterdir() if path.is_file()}
+        inputs = {path: sha(path) for path in directory.rglob('*') if path.is_file()}
         require(sha(request) == row['request_sha256'] and sha(directory / 'playback_scene_runtime.json') == row['scene_sha256']
                 and sha(directory / 'frame_000000.vf3d') == row['vf3d_sha256'], 'preview input identity')
+        if 'texture_sha256' in row:
+            require(sha(directory/'appearance/burn-field.png')==row['texture_sha256'] and sha(directory/'appearance-projection.json')==row['appearance_sha256'],'fine surface texture/clock identity')
         for mode in ('preflight', 'render'):
             require(sha(worker) == original, 'renderer bytes changed')
             summary = directory / (mode + '-summary.json')

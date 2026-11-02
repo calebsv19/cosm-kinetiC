@@ -19,12 +19,14 @@ bool cfd_open_atmosphere3d_box(CfdOpenAtmosphere3d *s, const int lo[3], const in
 
 bool cfd_open_atmosphere3d_solid(const CfdOpenAtmosphere3d *s, int q) {
     if (!s->solid_box || q < 0 || q >= s->grid.count) return false;
+    if(s->rig_mask)return s->rig_mask[q]!=0;
     int p[3] = {q % s->grid.n[0], (q / s->grid.n[0]) % s->grid.n[1], q / s->plane};
     for (int a = 0; a < 3; a++) if (p[a] < s->solid_lo[a] || p[a] >= s->solid_hi[a]) return false;
     return true;
 }
 
 bool cfd_open_atmosphere3d_blocked(const CfdOpenAtmosphere3d *s, int a, int i, int j, int k) {
+    if(s->rig_mask)return cfd_open_atmosphere3d_rig_blocked(s,a,i,j,k);
     if (!s->solid_box || k < 0 || k >= s->grid.n[2]) return false;
     int nx = s->grid.n[0], ny = s->grid.n[1];
     i = (i % nx + nx) % nx; j = (j % ny + ny) % ny;
@@ -40,15 +42,19 @@ static double row(const CfdOpenAtmosphere3d *s, const double *x, int q, double *
         double w = 1 / (s->grid.h[a] * s->grid.h[a]);
         int other;
         int stride=(int[]){1,s->grid.n[0],s->plane}[a],coord=(q/stride)%s->grid.n[a];
-        if(s->lateral_open && a<2 && ((side<0 && coord==0) || (side>0 && coord==s->grid.n[a]-1))) {value+=2*w*x[q];*diagonal+=2*w;continue;}
+        if(s->lateral_open && a<2 && ((side<0 && coord==0) || (side>0 && coord==s->grid.n[a]-1))) {if(!cfd_open_wind_neumann(s,a,side)){value+=2*w*x[q];*diagonal+=2*w;}continue;}
         if (a == 2 && ((side < 0 && q < s->plane) || (side > 0 && q >= s->grid.count - s->plane))) {
-            if (side > 0 || !s->ground) { value += 2 * w * x[q]; *diagonal += 2 * w; }
+            if ((side > 0 || !s->ground) && !cfd_open_wind_neumann(s,a,side)) { value += 2 * w * x[q]; *diagonal += 2 * w; }
             continue;
         }
         other = a == 2 ? q + side * s->plane : cfd_cartesian3d_neighbor(&s->grid, q, a, side);
         if (!cfd_open_atmosphere3d_solid(s, other)) { value += w * (x[q] - x[other]); *diagonal += w; }
     }
     return value;
+}
+
+void cfd_open_atmosphere3d_box_apply(const CfdOpenAtmosphere3d *s,const double *x,double *out) {
+    for(int q=0;q<s->grid.count;q++){double diagonal;out[q]=row(s,x,q,&diagonal);}
 }
 
 static double dot(const double *a, const double *b, int n) {

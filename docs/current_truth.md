@@ -1,3 +1,1459 @@
+## 2026-11-01 — Native10Hzcomparison delivered
+
+Fresh32³12s calm/gust saves every0.1sstate:121full checkpoints and120unique native
+frames percase. All10pipeline stages pass in2h12min4.7s;29selected review files
+hash-verified and12s10fpsvideo locally fully decoded. No interpolation. Full
+physical/Fire traces exactly match the earlier sparse run. Same dark studio and
+authored8×display extinction; no changed smoke mass. Both native staging roots
+empty;319.48MBdense journals/images/compact evidence remain PC-backed. User
+creative acceptance pending; no next run, canonical/install/fleet/release change.
+See [source profile](fire_fluid_live12_rig.md).
+
+## 2026-11-01 — PC live12 comparison complete
+
+Both32³variants reached12s/120accepted windows. All eight numerical, analysis,
+common-view rendering and video stages passed in66min5.6s;62selected files fetched
+and hash-verified, video fully decoded. Downstream/delivered smoke at12s is0%calm
+versus29.49%gust, with per-case normalization because delivered source differs
+−0.09684%. Accepted science remains PC-resident; both native staging roots empty.
+Smoke contrast and1Hzsampling limit visual review. This discrete warm proxy does
+not qualify general room flow or combustion. No new simulation, canonical adoption,
+installed/fleet change or release. See [profile](fire_fluid_live12_rig.md).
+
+## 2026-11-01 — PC live12 partition/window qualification
+
+The opt-in source candidate passed fresh native compilation and all 21 qualification
+phases, including sparse publication/reopen, process death, native geometry
+controls, default parity and rendering. Separate rig ASan/UBSan/LSan controls pass.
+The shared diagnostic camera was visually reviewed with unchanged journal bytes.
+The 32³ 12-second calm/gust pair is submitted to an independent PC supervisor;
+completion and final visual/diagnostic acceptance remain pending. The detached
+Mac128 producer's 33 pinned inputs remain unchanged. See
+[profile and limits](fire_fluid_live12_rig.md). No canonical/install/release change.
+
+## 2026-11-01 — Staging separated; accepted result reused
+
+The identical118→120 native recovery succeeded in32.61s, so the previous120s
+native timeout did not reproduce. The validated result then encountered a separate
+checkpoint pending-capacity refusal: the store recursively counted preserved
+native request/output staging in its2GiB root. Accepted head118 remained intact.
+No numerical failure was demonstrated and no cap was raised to bypass the refusal.
+
+All three exact inactive capsules were renamed outside the checkpoint store into
+case-owned native-staging; every byte/hash/mode verifies unchanged. Both failed
+reproducers remain retained. The stored accepted.fpk result was revalidated and committed as step120/.60s
+with zero extra native invocations (count63); the same producer continues.
+Future native staging uses that same separate root and retires successful staging
+after accepted publication/consumer checks. Both staging roots remain counted by
+the2GiB staging guard; all retained evidence remains in the4GiB output count.
+Checkpoint2GiB now measures actual journal/payload/compact receipt storage.
+
+Current execution-store-r1 retains the user-authorized six-hour extension:
+overall30h/deadline2026-11-02T23:56:57Z, exactworker capture300s,323total calls
+including both failed attempts (63alreadyused;260future after publishing120).
+Memory/storage/wire/free-space limits, native worker/scientific binding and all
+physical laws remain fixed. No automatic native retry. Five focused policy tests,
+source/task pins and relocation custody checks pass. Full3.2s comparisons pending.
+Current report: `_private_workspace_artifacts/fire-fluid-wake128-work-20261101/execution-store-r1/REPORT.md`.
+Read active-execution.json before interpreting process, progress and terminal files.
+
+## 2026-11-01 — Captured native timeout; bounded time recovery
+
+The durable owner recorded a normal failure at15:05PST: nativecall62 on118→120
+exceeded its120s capture limit with no output/result. Last accepted step118/.59s
+retains valid accounting/Courant0.64/0.8 and pressure residual6.22e-13. No overall
+deadline or memory/storage guard tripped. Timeout trigger is known; a solver
+stall/divergence is not established. Fresh processes/lsof show no surviving
+producer/attempt consumer. The exact failed capsule and all prior calls remain
+preserved. Prior worker times20–36s and rising host load suggest scheduling
+pressure as a possibility, not a demonstrated cause.
+
+User-authorized extra time is applied in execution-time-r1: one bounded recovery
+from unchanged step118, at most323total native calls including both failures,
+300s selected-worker packet timeout and30h overall from original start. New hard
+deadline2026-11-02T23:56:57Z (15:56:57PST). No automatic retry if recovery fails.
+Task-only capture copy changes solely its allowed wall ceiling; default120 and
+common source helpers remain unchanged. Actual execution policy/code separately
+pinned. Worker, scientific binding, physics,4GiB coordinator,2GiB native/store/
+staging,4GiB output,256MiBwire and24GiBfree-space reserve remain fixed.
+Five focused policy checks pass without native calls, as does campaign startup.
+Existing launchd ownership/disconnect proof reused; new producer reopened the
+head under ordinary validation. Full3.2s numerical/independent comparisons remain
+pending. Conditional working estimate15–17h including approximately1h analysis;
+latest slow packet shows substantial timing uncertainty. No release change.
+Current receipts: `_private_workspace_artifacts/fire-fluid-wake128-work-20261101/execution-time-r1/REPORT.md`;
+read active-execution.json before selecting process/failure evidence.
+
+## 2026-11-01 — Disconnect-qualified durable recovery of128 wake
+
+Four final task-owned launchd fixtures pass: launcher exit, launcher SIGKILL,
+supervisor SIGKILL with a signal9 failure report, and guardian SIGKILL followed
+by reattachment to the same single producer. Earlier false process-identity
+fixture is preserved; final watcher uses stable macOS start identity. A transient
+case-owned launchd job now owns the guardian (parentPID1), independent of the
+launcher. It never automatically starts a replacement numerical producer after
+an interrupted/ambiguous launch. This does not promise reboot/power-loss recovery.
+
+The exact saved revision15/step30/0.15s was reopened and the real run committed
+revision16/step32/0.16s after launcher exit. Resumed native input/request bytes
+match the interrupted request exactly. Recovery uses unchanged science
+binding and pinned v2 worker. Prior17 calls include the interrupted request;
+recovery permits305 further successful calls,322 total, with no blanket retries.
+Original prefix-based deadline2026-11-02T17:56:57Z, physics and resource limits
+remain fixed. The old unfinished native capsule remains the failure reproducer.
+Numerical completion triggers serial independent analysis; full3.2s comparison
+and visual review remain pending. This execution repair adds no solver changes.
+
+Read active-execution.json, execution-durable/guardian-heartbeat.json and actual
+process identity before judging liveness. On failure, execution-durable contains
+FAILURE_REPORT.md/failure-report.json with last accepted progress, resource
+sample, exit/signal where observable, native calls, terminal/exception receipts
+and log tails. Unknown termination causes remain unknown. Evidence and operational
+handoff: `_private_workspace_artifacts/fire-fluid-wake128-work-20261101/execution-durable/README.md`.
+
+## 2026-11-01 — Outer execution termination located
+
+Execution history records the v2 supervisor command failing at10:47:27PST,
+exit_code=-1 after39m22s. There is no traceback, numerical refusal or supervisor
+terminal receipt. The terminating actor/signal remains unestablished; nearby
+OS memory warnings do not prove a kill. The supervisor was inside a tool-managed
+command and lacked an independent durable owner to record its own death.
+Accepted step30 payload SHA256 and all binding input hashes verify unchanged.
+The original case is preserved; no retry or source/binding mutation performed.
+The new chat **PC Fire–Fluid simulation-to-render proof** is created and active,
+with instructions to preserve this case. Exact evidence and recovery boundary:
+`_private_workspace_artifacts/fire-fluid-wake128-work-20261101/interruption-review-20261101/REPORT.md`.
+
+## 2026-11-01 — Local128 execution interrupted; status files were stale
+
+Fresh OS process inspection found no recorded supervisor25057/numerical25060
+or matching continuation process. Progress/resource/log files stopped advancing
+about48minutes before this review, with no producer/supervisor terminal receipt.
+The SQLite accepted head isstep30/0.15s (revision15); native call17 has a retained
+running-status capsule for the next packet. Treat execution as interrupted with
+unresolved cause, not completed or confirmed numerical rejection. No restart,
+cleanup or source/binding rewrite was performed. The v2 work-capacity/diagnostic
+implementation remains qualified, but full3.2s comparisons are incomplete.
+
+Current observation: `_private_workspace_artifacts/fire-fluid-wake128-work-20261101/liveness-review-20261101.json`.
+This chat retains run recovery/review. Proposed separate PC enablement should
+preserve its checkpoints, attempt and pinned source while qualifying a durable,
+client-independent numerical-to-render worker workflow.
+
+## 2026-11-01 — Work-qualified128 wake running in a fresh case
+
+The separate `scalar-wake128/v2` capacity profile admits10,737,418,240 cumulative
+scalar cell-stage updates:640steps*128³cells*2SSPRK2stages*4cycles. The native
+per-step cap is four scalar cycles. This covers lifetime work for every accepted
+step through3.2s without resetting counters or changing the original source,
+dt0.005, gust.4–1.2s, geometry/material/object laws or scalar/momentum operators.
+Ordinary and legacy profile limits remain fixed. This does not guarantee that
+momentum CFL, pressure, divergence or other physical guards will accept later steps.
+
+78Python checks, fresh optimized/sanitizer controls, native capacity refusals,
+exact default16³ parity and explicit read-only active-gust restore/replay controls
+pass. Active-gust qualification reaches0.88s: Courant0.69662/0.8, scalar cycles2/4,
+pressure residual7.33e-13 and divergence1.90e-11/s. The final worker also reproduces
+the exact qualified0.86→0.87s physical data. No historical checkpoint is rebound.
+
+A fresh cold0/2/4step bounded-store prefix passes normal physical/source/account
+checks, exact retained-v1 cold-data parity and independent head reopen. Its
+initial numerical+audit estimate is15.70h under the24h guard. One serial
+producer is now advancing this same fresh case to640steps, at most321total native
+captures including the three prefix calls. It records cumulative work, cycle/CFL
+margins, pressure, thermal/kinetic/smoke/source clocks at every publication.
+Failure reporting preserves precise stage and attempted projection diagnostics
+through object rollback. Per-process4GiB, native2GiB, staging2GiB, output4GiB,
+store2GiB and SSD24GiB reserve remain enforced. No automatic native retries. A pre-native missing-import startup failure was
+inspected and preserved; corrected imports pass an actual startup execution
+check, and execution-r2 continues the unchanged qualified store with the same
+321call budget. Read active-execution.json before selecting status files.
+
+Independent64/64half/80comparisons and four scientific figures run only after
+numerical success; final visual review remains pending. This is fixed-input
+sensitivity, not live Fire feedback, calibrated heating or full convergence.
+Original stopped v1 evidence remains unchanged. Runtime truth/qualified controls:
+`_private_workspace_artifacts/fire-fluid-wake128-work-20261101/`. No shared,
+commit/VERSION/package/release/installed/Desktop changes. No new AI wake monitor.
+
+## 2026-11-01 — Full128 wake stopped: cumulative scalar work exhausted
+
+The full fixed-input128³ run stopped after accepted step172 (0.86s), before the
+planned640steps/3.2s. Exact failed-request replay identifies cumulative scalar
+work exhaustion: used998,244,352, next step8,388,608, limit1,000,000,000,
+remaining1,755,648. The inherited80³ work ceiling was not scaled when admitting
+128³ and640steps. Even one scalar cycle per MC/SSPRK2 step requires
+2,684,354,560updates for that horizon. This was an admission/accounting defect;
+CFL/pressure failure was an unconfirmed earlier hypothesis, not the observed cause.
+
+A task-only work-allowance control (1,020,000,000) passes the identical two-step
+request through0.87s with unchanged physical inputs/timestep/operators. Independent
+heat/smoke/source-clock/kinetic/divergence checks pass. It is diagnostic output,
+not an accepted continuation or completed wake. Ordinary resource caps remain fixed.
+Native reporting now preserves the work rejection through object rollback and
+prints used/requested/limit/remaining. New bounded long128 campaigns fail before
+source mapping/native launch when even minimum horizon work cannot fit. Passing
+that lower bound does not guarantee adaptive CFL work fits.
+
+Fresh optimized/sanitizer reduced refusal/rollback/continuation controls pass;
+ordinary16³ MC/object field output is exactly unchanged;74 Python checks pass.
+The first diagnostic preparation omitted an existing compile flag and one test
+runner lacked NumPy; both exact setup causes are preserved and reconciled with
+the correct existing compile flags/runtime. No solver equations, acceptance
+thresholds, defaults, installed artifacts or historical bindings changed.
+
+No full128 producer remains active and final wake figures/comparisons are absent.
+Next: qualify a separately bound long128 cumulative-work allocation and an active-
+gust guard-margin control before any fresh full trajectory; retain original
+step172 checkpoint/request/worker and source pins. Evidence:
+`_private_workspace_artifacts/fire-fluid-wake128-rejection-20261101/FINAL_REPORT.md`.
+
+## 2026-10-31 — Full fixed-input128wake launch (historical; stopped2026-11-01)
+
+The passed17.062h/20h timing prefix was copied under its shared lease into a
+fresh owned full-run root, then independently reopened and physically validated
+with its exact binding unchanged. The serial producer is now advancing from
+step4to640(3.2s), at most318new two-step native calls. Original pulse, gust,
+physical checks and resource ceilings stay fixed; no functional source changed.
+Selected full states80/160/240/320/480/640and compact per-window accounting are
+retained. Independent64/64half/80audit/comparisons and four scientific figures
+run automatically only after numerical success. Final visual review remains
+pending. Status and PIDs are in workspace
+`_private_workspace_artifacts/fire-fluid-full-wake128-20261031/`; inspect before
+any continuation. The17hforecast can change with later gust cost;24h/4GiB/SSD
+reserve guards remain active. No full-wake result is claimed yet.
+
+## 2026-10-31 — Unchanged128timing confirmation passes17.062h gate
+
+With app/test/control/worker hashes unchanged, three lighter-load start samples
+preceded one fresh three-call128prefix. Packets157.252/204.153s and independent
+reopen64.421s pass; the unchanged pair-average projection is17.062h versus20h.
+Native data/result/state, complete checkpoint and compressed head match the
+previous qualified integer case exactly. Prior69checks/offline proof were reused
+after hash verification; no functional source or physical validation changed.
+
+This clears the timing prerequisite for the full fixed-input3.2s128wake and
+64/64half/80scientific comparison. The actual prefix still ends0.02s before gust
+onset; no full wake or128half result is claimed. Later gust-pressure costs can
+change, so the long run still needs bounded resource/runtime supervision. All
+current processes exited and successful copied staging retired; latest-good
+scientific fixture retained. Evidence: workspace
+`_private_workspace_artifacts/fire-fluid-timing-confirm128-20261031/FINAL_REPORT.md`.
+
+## 2026-10-31 — Exact integer-array digest qualified; cost gate21.197h
+
+Homogeneous integer arrays within±2^53 now reuse the existing bounded4096-value
+binary64 tag encoder. Larger integers, booleans and mixed arrays keep their
+original validation/fallback paths. Exact canonical bytes and all four complete
+retained128checkpoint/result/state/data hashes match. Eleven focused methods and
+69combined regression/geometry checks pass; all physical checks stay enabled.
+
+In a consecutive paired check, the exact2.1M-cell mask fell2.872→0.689s wall and
+2.573→0.565s CPU. Four full-check digests fell24.043→19.801s CPU; full ordinary
+validation fell41.421→37.491s CPU (46.703→43.204s wall). No solver, format,
+dependency, heat, clock, geometry or default changes.
+
+A fresh three-call128prefix at0/2/4steps matches retained native data/result/state
+and independently reopens under current pins. Packets252.772/201.655s project
+**21.197h**, above the unchanged20h gate. Coordinator CPU184.147/162.220s and
+load averages are recorded;1min load varied about35.39→8.28between publications.
+The second packet meets the required213.75s average rate alone; the declared
+pair average still refuses admission. Earlier28.369h and current21.197h runs do
+not isolate the code's effect under differing load.
+
+Full3.2s128wake and128half remain unrun. This exact prefix ends0.02s before gust
+onset. All task processes exited and successful copied staging retired; about
+110MiB scientific/control evidence remains. Next confirm the unchanged qualified
+code's small timing gate under steadier compute conditions before the full wake;
+if it still fails, select further coordinator work from measured CPU. No solver
+repair is justified. Evidence: workspace
+`_private_workspace_artifacts/fire-fluid-intdigest128-20261031/FINAL_REPORT.md`.
+
+## 2026-10-31 — Lossless128 digest acceleration qualified; long wake cost still refused
+
+The existing scientific binary64 digest now emits homogeneous float arrays in
+bounded4096-value blocks using bulk tag insertion. Canonical bytes and all
+complete checkpoint/native-result/state/data hashes remain exact. Eight focused
+byte/refusal methods and66combined digest/codec/storage/policy/geometry checks
+pass. A paired retained-step4 ordinary full check measured digest54.04→30.44s
+and full validation74.77→53.72s. Every physical check remains enabled.
+
+A fresh128normal prefix at0/2/4steps matches retained native data exactly;
+independent current-source reopen passes. Three native invocations completed.
+Two packets took314.25/301.54s, projecting28.369h against the unchanged20h gate;
+the full3.2s wake remains refused and unrun. Concurrent independent render/sim
+load was observed; cross-run times do not isolate its cause or guarantee an
+unloaded ETA. Native portions were38.48/45.28s, so coordinator/validation/custody
+cost remains the next performance boundary. This prefix ends0.02s before gust
+onset; it adds no wake convergence or128half-step result.
+
+Original pulse/physics/defaults and all resource limits remain fixed. All owned
+processes exited; successful copied native staging retired. About110MiB of exact
+new-generation checkpoint/binding/control/evidence remains for the next reader;
+no disposable build was created. Next qualify remaining byte-equivalent digest
+savings (including the2.1M integer solid mask), then repeat a bounded timing gate
+with machine load recorded. No solver repair is justified. Source-only evidence:
+workspace `_private_workspace_artifacts/fire-fluid-digest128-20261031/FINAL_REPORT.md`.
+
+## 2026-10-31 — Bounded128wake admission and cost qualification complete
+
+The separately opt-in `scalar-wake128/v1` path is implemented with a640step/3.2s
+ceiling and two native steps per packet. It preserves the original pulse,
+0.4–1.2s gust, dt0.005, solver/materials/low box and h2/C10/.125m object support.
+The short `scalar-gust128/v1` remains100steps; default workers still refuse128.
+Fresh optimized/sanitizer ordinary/short/long workers compile. Default16 and
+MC16sanitizer parity, exact retained cold128data, four native refusals,
+52source/storage/policy tests and six manufactured diagnostics pass. Three
+comparison-consumer checks also verify linear MAC face restriction, extensive
+sums and fixed physical wind times under the64half clock.
+
+A fresh bounded128prefix published exact states at0/2/4steps, ending0.02s.
+Its cold2state and step4native data match the retained reference exactly, and
+independent current-generation reopen passes. The runtime gate then **refused the
+full wake run**: two normal packets took218.62s and291.57s; projected execution
+plus audit was23.675h, above the20h admission bound. Initialization took228.64s,
+and construction/reopen took76.36s. The producer/supervisor and tied idle-sleep
+assertion exited; the accepted prefix and precise cost-refusal evidence remain.
+This is a cost stop, not a numerical, physical, restart or accounting failure.
+The new path has not reached gust onset/release or produced a3.2s wake result.
+
+A separate offline full check of the exact accepted step4checkpoint passed in
+54.25s. Four existing canonical/scientific digest calls consumed37.27s (68.7%);
+full array validation consumed7.41s, kinetic calculations6.15s, and solid state
+checks2.92s. Component rows are inclusive and nested where stated. Hashing and
+Python verification are therefore a measured next target. Keep all physical
+checks and current digest identities: qualify byte-equivalent acceleration of
+the existing lossless digest path before another expensive wake attempt. No
+solver-law repair is justified by this timing result.
+
+Total native invocations:12, within the340ceiling; offline profiling/consumer
+controls add none. Numerical allocation peak remains1556304288bytes. Sampled
+coordinator peak was1.9065GiB, below4GiB; the offline reader peaked2.0203GiB.
+New output/staging peaked about1.076GiB, below4GiB, with staging below2GiB.
+No memory/wire/free-space bound was raised. Successful duplicated cold output
+(60,542,515bytes) retired after ownership/consumer checks. Exact genesis/head,
+compact0/2/4history, binding, control generation, worker fixtures, metrics and
+failure logs remain as the next validator-efficiency reference. Original128,
+64/64half/80and other tasks' outputs were not cleaned.
+
+The read-only comparison consumer is prepared and its baseline hashes and
+restriction arithmetic pass, but it did not run a new wake comparison without a
+completed numerical trajectory. Existing64/64half/80results remain the wake
+references. Public/private and Atlas source/data describe this cost refusal;
+whole-Atlas generation remains outside this slice because of the previously
+observed unrelated release-snapshot source-digest blocker. No snapshot repair,
+remote, commit, VERSION, release, install, shared-library or Desktop action.
+Minor release recommended; approval required before version bump.
+
+## 2026-10-31 — Bounded replay retention and packet lifetime qualified
+
+An explicit `BoundedReplayRun` now reuses the ordinary one-way replay's native
+acceptance, full checkpoint validation, energy checks and immutable input pins.
+Its app-private `CheckpointStore` commits exact compressed payloads before a
+FULL-synchronous SQLite index, and keeps genesis, selected science states and the
+latest restart head. Every publication retains compact chained hashes and scalar/
+kinetic accounting. Pruned windows retain custody/accounting records, not full
+fields for a new independent physical audit. This is opt-in source functionality.
+
+Policy permits at most six nonzero selected states including the endpoint,
+256 MiB per state, 1 MiB genesis, a 16 MiB index and a 2 GiB store. Selection
+landings and horizon are checked before native invocation. Shared reader leases,
+exclusive publication, expected-head checks, active-consumer inspection and
+same-root reconciliation cover interrupted publication and retirement. A fault
+after index commit means inspect/reconcile the accepted head; do not rerun the
+native request. This is a local trusted-workspace custody chain, not authentication.
+
+A 640-step synthetic metadata test passed with bounded full-state retention;
+it did not execute640 CFD steps. Read-only storage replay of the26previously
+qualified128³checkpoints retained all26compact records and exact full states at
+steps0/4/80/84/100 in **281,694,702bytes (268.65MiB)**, versus about1.6GiB for the
+original journal. All selected bytes and the reopened head/native data digest
+match. The original journal's whole-file SHA256 stayed unchanged. The full source
+journal remains authoritative; duplicated imported payloads are disposable after
+verification, while their compact index and comparison receipts are retained.
+
+The demonstrated recursive field-packet visitor cycle is now broken directly at
+successful encode/decode teardown, with identical packet bytes, IEEE754 values and
+JSON types. Four fresh old/new/new/old128snapshot trials with cyclic GC disabled
+showed mean RSS after field release falling from **1.5623GiB to0.4491GiB**; old
+visitors remained alive, new visitors did not. This includes allocator caches.
+CPU was about12seconds for both codec versions. Timing is diagnostic, with
+concurrent local verification, and establishes no solver or end-to-end speedup.
+Process peaks varied and stayed under4GiB. The repair creates new source bindings;
+prior journals reopen using their preserved pinned generation, never rebound bytes.
+
+The matched16³short gust-on/off control used eight native invocations including
+initialization, with ordinary/bounded data digests identical at every publication,
+identical delivered heat and budgets, and exact independent restart. Both arms use
+MC/SSPRK2 and a deliberately short diagnostic gust at steps2–4; this does not alter
+the fixed128reference's0.4–1.2s gust. Python syntax checks and47applicable source/
+storage regressions pass, including real process exit before/after commit,
+tamper/capacity/path/reader/writer refusals. An extra donor-extraction suite could
+not initialize because its historical donor is archived; its failure is preserved.
+No C rebuild was needed: worker and numerical engine bytes were unchanged.
+
+The current128native admission still ends at100steps (0.5s). This work does not
+admit or start a3.2s run, change the solver/default caps, or establish wake recovery,
+heating accuracy, convergence or live Fire feedback. Bounded storage is qualified;
+full Python validation remains intentionally enabled and runtime is still a
+planning limit. Next: define a separately bounded longer-horizon128profile using
+this store, measure the ordinary two-step path's stage costs, then test the original
+gust release and wake against the fixed64/64half/80references. Retain the2GiB native
+and4GiB coordinator guards; do not infer a reliable full-run ETA from codec timing.
+
+## 2026-10-31 — Normal128 short gust qualification complete
+
+The closed `scalar-gust128/v1` path completed 100 native steps at dt 0.005 s,
+ending at 0.5 s, with 26 durable checkpoints and exact current-source journal reopen.
+The gust turns on at 0.4 s. A separate1+1native-step restart across gust onset
+matches the ordinary2step packet's final native state exactly. The campaign used
+60 native invocations, within the explicitly approved 64 ceiling.
+
+The profile remains opt-in:128³unit domain, MC/SSPRK2 scalar transport, upwind
+momentum, original low box, source/materials/buoyancy, quiescent exterior policy,
+gust schedule and h2/C10/.125m object support are fixed. Numerical allocation
+is explicitly2 GiB; native wire bounds remain 256 MiB and journal capacity 2 GiB.
+Four native steps are a maximum, not a payload-fit guarantee: this run uses two
+native steps per capture and revalidates each original four-step source window.
+Ordinary builds and defaults retain their prior admission.
+
+Mean horizontal velocity changes from effectively zero at 0.4 s to
+**0.16803829m/s** at0.5s. External wind work is
+**0.019026521J**. Delivered source heat is
+0.37922376577626J, exactly the partial retained pulse for this
+horizon. Maximum thermal and kinetic accounting residuals are
+5.05495e-20J and 3.46945e-18J.
+All audited scalar states are nonnegative, exact native clocks and pressure gates
+pass, and selected native field hashes match the independently checked journal.
+The replay consumes embedded frames from the original1.2062387959304033J Fire
+pulse; there is no new live Fire feedback in this control.
+
+The Python coordinator initially crossed its4 GiB peak guard. Paired checkpoint
+probes found recursive packet visitor cycles retaining about 1 GiB after release.
+The campaign-owned coordinator now explicitly collects unreachable temporaries
+at ordinary packet encode/decode boundaries. Packet bytes, numeric values,
+solver/code/worker pins and historical binding stay unchanged. Peak coordinator
+RSS over the successful trajectory and restart is **3.76947GiB**;
+native numerical peak remains1556304288bytes. This is a qualified campaign
+lifetime policy, not a generic default-codec memory fix or installed-app change.
+
+Build/compile: fresh strict and ASan/UBSan ordinary/selected workers passed.
+Targeted: default16 parity, candidate16 sanitizer parity, retained80 and cold128
+identity; gust restart, full native chain and separate direct-journal source,
+energy/clock/field audit pass. Regression:39source Python checks plus8packet
+lifetime/fidelity/refusal checks pass.128runtime evidence is optimized; sanitizer
+runtime covers16³. Desktop/package/remote/release suites were outside this lane.
+
+Native heat/smoke remain localized near the source. Compensated object rise is
+1.37569e-23K, effectively zero for useful heating assessment.
+This proves short normal-path gust/restart/accounting functionality; wake release,
+recovery, object-heating accuracy, spatial convergence and hot-fire calibration
+remain unqualified. Selected native images are diagnostic field views, not
+photorealistic plume renders.
+
+Next boundary: qualify a longer-run128execution/storage plan before a 3.2 s wake
+reference. Current full-checkpoint cadence and Python validation overhead do not
+fit a simple horizon extension within this campaign's journal/output limits.
+Preserve exact physical inputs and the retained64/64half/80references; qualify
+bounded checkpoint retention and coordinator efficiency, then measure gust
+release/wake recovery before any128timestep-half expansion. No longer run was
+started by this closeout. Minor release recommended for the opt-in source feature;
+approval is required before any VERSION or release action.
+
+## 2026-10-31 — Bounded native128 capacity smoke complete
+
+A test-only full-grid qualifier completed two128³native steps to0.01s and an
+exact1+1split restart. Matched original source deposition, low box, dt0.005,
+MC/SSPRK2, upwind momentum, gust clock and h2/C10/.125m object support are fixed.
+No solver, worker/adapter admission, ordinary memory cap or default was changed.
+This is capacity/restart evidence before the gust begins at0.4s, not a wake,
+object-heating accuracy or full128trajectory qualification.
+
+The ordinary native API refuses128³before numerical allocation. At the existing
+512MiB budget, the qualifier refuses lateral-boundary setup after
+489.00MiB is live at the allocation boundary; the requested
+80.00MiB work buffer would require
+569.00MiB including overlapping initial/replacement storage. The
+isolated1536MiB diagnostic ceiling admits the actual step/pressure cache/object
+rollback path, peaking at **1484.21MiB** charged numerical allocation.
+Restart process high-water RSS is **1.964GiB** including JSON-C and codec
+costs. Only 51.79MiB remains under that diagnostic numerical ceiling;
+this is not a comfortable general128run budget or ordinary bridge admission.
+
+Seven native processes pass their declared positive/refusal checks: ordinary128,
+qualifier128at512MiB,16strict/sanitizer byte equality,80retained state equality,
+128two-step and restart. All destroy with zero charged live bytes. Independent
+native state, physical budgets, clock, mask/non-negativity, kinetic and pressure
+checks pass.128max divergence is 2.12055e-17/s and projection
+relative residual 5.97392e-13; source heat/smoke
+budget defects are zero on this tiny control.35 relevant Python regressions pass.
+
+Source preparation initially hit the full128receiver cap before native execution.
+The preserved correct refusal was resolved for this diagnostic by mapping onto an
+admitted128×128×32lower subvolume at the same spacing and zero-extending above it.
+All .125m injection support fits within that .25m subvolume; original physical
+source amounts and mapping law remain unchanged. No receiver cap was widened.
+
+Actual-state offline packet checks fit256MiB: cold request
+96.38MiB, one-step restart request
+115.38MiB, reconstructed scientific
+checkpoint body 211.75MiB.
+The last reconstructs derived arrays/configuration offline; it is not an accepted
+ordinary bridge checkpoint or full wrapper memory qualification.
+
+Next boundary: a closed opt-in128profile through the normal packet worker/replay
+path with short native packets, explicit numerical/process budgets and the same
+acceptance gates, followed by a short gust-onset control. A full matched128spatial
+reference comes after that boundary passes. Existing80/64references remain frozen.
+Evidence: `fire-fluid-native-capacity-20261031` results/audits/metrics/report.
+
+## 2026-10-31 — Opt-in native field packet I/O qualified
+
+The explicit `field_packet/v1` request/result/attempt route and
+`lossless_field_packet_zlib_1g/v1` journal mode preserve exact float64/int64
+values through the existing native solver, acceptance, conservation and restart
+owners. Default JSON and legacy journal encodings remain available unchanged.
+No numerical solver, physical law, source pulse, geometry, grid cap or default
+adoption change.
+
+Fresh optimized/ASan/UBSan workers pass11 solver invocations: ordinary16³ old/new
+parity, candidate JSON/packet identity, sanitizer and split restart, paired80³
+two-step controls, and a real small durable replay initialization/advance/reopen/
+chain audit.35 protocol/journal/profile/weather regression tests and8 existing
+attempt lifecycle tests pass. Native protocol fixtures pass exact float bits,
+int64 types and14 framing/CRC/descriptor refusal cases in both build modes.
+
+On the single80³pair, total recorded native staging is
+360.00MiB JSON versus 172.70MiB packet
+(52.03% reduction). Full check elapsed time was
+49.28s versus 32.26s; this includes capture,
+acceptance, checkpoint and retirement and is order-confounded, not a general
+solver benchmark. Accepted result digests agree exactly.
+
+The new compressed journal avoids full scientific JSON expansion, but the same
+fixture is 13.53MiB versus
+11.66MiB for the legacy byte-shuffled journal
+(16.08% larger). Keep that explicit tradeoff. A synthetic128-shaped array
+roundtrip covers6,340,608 face values and2,097,152 cells, with no native128 solver
+invocation. It is a codec shape test only; repeated data is not a realistic128
+size or memory qualification.
+
+Next boundary: native allocation/capacity preflight for a tiny128³restart smoke,
+including request packet length, logical array expansion and memory measurement.
+The C bridge still reconstructs JSON-C numeric nodes and Python still reconstructs
+lists. Global solver limits remain unchanged. Do not start a full128trajectory
+or claim convergence from this I/O proof. See `fire_fluid_field_packet.md` and
+retained `fire-fluid-field-packet-20261031` evidence.
+
+## 2026-10-31 — Scalar wake80 spatial reference complete
+
+One matched80³ dt0.005 trajectory completed, reusing the retained64³ dt0.005
+and64³ dt0.0025 references. The explicit `scalar-wake80/v1` capacity profile
+changes admission only: MC/SSPRK2 scalar transport, upwind momentum, source,
+gust schedule, low obstacle and object-heating law remain fixed. No solver
+algorithm or default change.128³ exceeds current grid/JSON capacities and was
+not started.
+
+Native object-history L2 sensitivity64/80 is **1.72303%**;
+native gas-support history sensitivity is
+**2.38858%**.
+At3.2s, object rise is 1.03129709mK at64³ versus
+1.05231332mK at80³. Retained64 timestep-half history sensitivity
+remains 0.0768939%.
+
+The nonnested64/80 fields were BOTH restricted exactly to common16³: coincident
+normal faces with tangential area averages, extensive heat/smoke child sums.
+Final velocity/heat/smoke differences on that comparison grid are
+**3.28955% /
+6.25687% /
+6.80427%**.
+These discard fine detail and cannot be ranked directly against earlier32/64
+norms. Native object/support/region histories need no regridding.
+
+Fresh optimized/ASan/UBSan builds,9 native control invocations across4 scenarios,
+20 initial Python checks,5 diagnostic geometry tests and7 profile refusal probes pass. Default/candidate16 native data
+match the previous worker;80 strict/sanitizer and split restart are exact.
+All51 checkpoints and12 native snapshots including the retained references pass
+independent digest, clock, profile, non-negativity and heat/kinetic audits.
+Maximum thermal/kinetic residuals are 4.81074e-16J /
+1.2358e-16J. Full80 uses optimized execution, not full sanitizer.
+
+This is bounded spatial sensitivity, not convergence or physical wall calibration.
+Source feedback is frozen and the nonlocal support law is unchanged. Candidate
+remains opt-in. Next resolve the bounded native-field IO/storage path needed for
+an affordable128³ reference before further default or physical-accuracy claims.
+Minor release recommended; approval required before any version bump. No release,
+installed, shared-library, remote or Desktop effects.
+
+## 2026-10-30 — Scalar candidate timestep and grid controls complete
+
+The opt-in `mc_ssprk2/v1` candidate now has matched 64³ dt0.005/0.0025 and
+32³/64³ dt0.005 gust comparisons. The existing 64³ case was reused unchanged;
+only two new serial trajectories were computed. Source heat, physical clocks,
+gust timing, box geometry, object law and worker identity stayed fixed.
+
+Object-history relative L2 sensitivity is **0.0768939%**
+for halving the timestep and **8.44477%** for
+32³/64³ grid refinement. At3.2s, velocity/heat/smoke field differences are
+**0.40706% /
+0.336401% /
+0.365885%** for time and
+**11.2871% /
+32.3654% /
+34.2939%** for grid.
+Norms use the refined case; raw and per-input-heat histories are both retained.
+
+All51 accepted checkpoints and12 selected native fields across the two new runs
+and retained reference passed independent digest, clock, profile, non-negativity
+and energy audits. Maximum thermal/kinetic accounting residuals were
+3.68958e-16J / 1.2358e-16J.
+No solver or application code changed. The exact previously qualified worker was
+reused; broad source regression was not repeated for recipe-only diagnostics.
+
+These are separate measured sensitivities, not an additive error decomposition,
+convergence proof or calibrated wall-heating validation. The candidate remains
+opt-in; object support is still the authored nonlocal law and source feedback is
+frozen. Next use a better-resolved candidate grid reference to assess spatial
+sensitivity before considering default adoption. No release or installed effects.
+
+## Previous accepted state
+
+## 2026-10-30 — Opt-in scalar candidate and matched gust A/B complete
+
+The explicit `scalar_transport: "mc_ssprk2/v1"` profile selects native MC
+reconstruction and SSPRK2 scalar integration independently of momentum. Default
+requests preserve their previous scalar operator and native state shape. The
+profile is bound in configuration, native fields and restart state; old workers
+that ignore it are refused. No default, installed-app, or release activation.
+
+At 64 cells, independent compact-pulse error is **64.45% for default upwind**,
+**46.69% for the previous minmod benchmark**, and **34.33% for the candidate**.
+That is a 46.7% reduction against actual upwind default, or 26.5% against minmod.
+The candidate's 32/128-cell errors are 55.47/12.75%; halving the 64-cell timestep
+leaves error at 34.33%. Smooth combined-transport error is 0.0964% at 64 cells.
+Heat balance, nonnegativity and exact optimized/sanitizer profiles pass. The
+localized spatial error remains substantial.
+
+The matched 64³ gust A/B is complete. Source, upwind momentum, dt = 0.005 s,
+3.2 s horizon, box, h = 2 W/(m² K), C = 10 J/K and 0.125 m support are identical.
+Both consume the same 80 native Fire frames and 1.2062387959304033 J; there is
+no live source feedback. The candidate's 17 checkpoints and four selected native
+snapshots were independently audited against the retained baseline and exact
+worker/configuration/source bindings.
+
+Final object warming is **0.93955322 mK default** versus
+**1.03129709 mK candidate** (+9.765%).
+Final support gas exposure is 44.768245 versus
+45.297150 mK (+1.181%).
+These are measured behavior changes, not proof of more accurate 3D wake or object
+heating without a better-resolved candidate reference. Finite-support object
+exchange remains an authored law, not a calibrated wall-gradient/radiation model.
+
+Fresh optimized and ASan/UBSan native builds pass 20 scalar scenarios per lane.
+Twenty-two reference invocations plus five pure and five native profile tests,
+14 existing accuracy/geometry tests, and 89 system tests pass. One retained Fire
+control is identity-verified: **114 aggregate Python checks**, distinguishing
+fresh from retained evidence. Default native data, candidate sanitizer data and
+split restart state match exactly. Scalar CFL stays at its existing stricter
+0.4 bound; momentum algorithm/CFL and all energy/positivity gates are unchanged.
+Two launcher setup defects were isolated before physical stepping, preserved,
+and repaired; the exact zero-step initialized head was resumed without native
+reinitialization. No physical trajectory was replayed.
+
+Next: qualify candidate timestep/grid sensitivity on matched inputs before any
+default adoption or physical accuracy claim. Source/native budgets, object law,
+and safety limits stay fixed. No shared-library, remote, commit, VERSION,
+release, installation or Desktop effect occurred. Minor release recommended;
+approval required before version bump.
+
+## Previous completed accuracy study
+
+## 2026-10-30 — Independent accuracy and fixed-input gust comparison complete
+
+Completed 25 native smooth-scalar/object references and six compact-pulse controls.
+The 64-cell smooth combined-transport perturbation error is **0.205%**. Heating
+and cooling under the authored finite-gas/object law agree with an independent
+ODE solution to about **1.4e-10 K**. These checks validate the implementation of
+that support law; they do not qualify a material wall-gradient or radiation model.
+
+The compact pulse on an initially zero background remains much harder: field
+errors at 32/64/128/256 cells are **62.51/46.69/25.44/9.40%**; halving the timestep
+at 64 cells gives **46.85%**. The native profiles show substantial spreading and
+peak loss. Passing the smooth reference does not imply localized scalar accuracy.
+
+All three fixed-input gust histories completed and independently reopened:
+32³ and 64³ at dt = 0.005 s, plus 64³ at dt = 0.0025 s. The full audit covers
+**51 checkpoints and 12 native snapshots**, including input and worker hashes,
+clocks, field identity, thermal/smoke budgets, signed mechanical work, and an
+exact work plateau after gust release at 1.2 s. All cases use the same 80 native
+Fire frames and **1.2062387959304033 J** delivered heat; source cutoff is 1.6 s,
+and the horizon is 3.2 s. All 160 source-energy/smoke restriction checks are exact.
+There is no live source feedback or source rescaling in this attribution study.
+
+The raw object-heating curve difference is **10.141010% between grids**, versus
+**0.235604% for the 64³ timestep-half comparison**. Per-input normalized values
+are the same because delivered heat is identical. At 3.2 s, velocity/heat/smoke
+field differences are **11.287/25.545/26.669% between grids**, versus
+**0.407/0.353/0.359% with the timestep halved**. These are separate sensitivities,
+not an additive error decomposition or a convergence proof.
+
+The source spans only four/eight Fluid cells across the two grids. Its weighted
+horizontal standard deviation is about 21 mm, or 1.3–1.4 fine cells. Together
+with the compact reference, this points toward localized spatial transport and
+flow resolution as the next accuracy focus. It does not uniquely attribute the
+full 3D difference to the scalar operator.
+
+Verification passed optimized and ASan/UBSan reference builds, three exact
+binary64 optimized/sanitizer pairs, 14 fresh targeted checks, and 89 fresh system
+checks. One retained fixed-wind Fire control was also identity-verified: **104
+aggregate Python checks**, with the retained control distinguished from reruns.
+A reproduced CLI output-custody defect was repaired after the native producer
+exited; existing outputs are refused and failure writes require current ownership.
+No physical native solver, source calibration, or safety gate changed.
+
+Next is a bounded, opt-in scalar reconstruction/time-integration comparison
+against the compact reference, then one selected fixed-input gust A/B if the
+reference improves. Keep source heat, object properties, and safety gates fixed.
+No shared-library, remote, commit, VERSION, release, installation, or Desktop
+effect occurred. Minor release recommended; approval required before version bump.
+
+## 2026-10-30 — Four-stage Fire–Fluid transport, timing and open-weather implementation accepted
+
+All four authorized source-development stages are accepted in the registered
+Main Edit checkout. Fixed-source replay and common-MAC controls pass four
+32³/64³ histories, 68 checkpoints, 12 native snapshots and 65 aggregate checks.
+All four receive 1.2062387959304033 J. Object-curve sensitivity is 27.537% for
+evolving flow and 19.287% under the common prescribed MAC reference. Frozen
+flow disables momentum/pressure evolution and is a diagnostic control.
+
+Controlled timing passes seven 32³ histories, 159 checkpoints, 28 native
+snapshots and 73 aggregate checks. Host 0.1/0.2/0.4 s replay native DATA match
+exactly at nine common times. Native 0.02 versus grouped 0.2 s deposition gives
+0.041245% curve difference. Live versus retained-feedback 0.1 s deposition gives
+3.782918%, with 4.192896% less actual delivered heat; no source rescaling.
+
+Open-domain X driving passes eight live coupled cases: none/continuous/gust/
+fade/reversal at 16³, plus continuous/gust/reversal at 32³. The full audit covers
+264 checkpoints, 48 native snapshots and 256 live feedback windows. Final
+qualification passes 94 aggregate checks: 89 fresh system, four fresh geometry
+checks and one retained fixed-wind Fire control with identities rechecked.
+Optimized and ASan/UBSan native force, all-five-open-face air volume, restoration,
+rollback, packet/restart and unchanged legacy DATA gates pass. Maximum thermal
+and kinetic ledger defects are 1.660e-15 J and 4.648e-16 J respectively.
+
+Strength zero releases moving fluid; negative target reverses it. Signed force
+work and actual open-face air volumes are separate versioned state, with no
+prescribed inlet. Ambient-pressure X/Y/top, no-slip ground/box and quiescent
+exterior momentum backflow remain. Current weather is an idealized distributed
+body force, not atmospheric inflow/turbulence. Ordinary default mode is preserved.
+
+Raw 16³/32³ object-curve differences are 13.4605% continuous, 20.2295% gust and
+3.02818% reversal; per-final-input normalized values are 13.4907%, 20.2524% and
+3.02985%. Within each pair, source-dose differences are below 0.04%. These are
+sensitivity measurements, not convergence or a unique solver-defect finding.
+The cold, short runs and authored h=2 W/(m² K), C=10 J/K, 0.125 m object support
+remain uncalibrated for real hot-fire/material behavior. Feedback changes actual
+emission across weather profiles; thermal differences are not pure transport.
+
+Next bounded boundary: analytic scalar transport and object-exchange accuracy,
+then a selected finer-grid fixed-input gust/wake reference and timestep control.
+No further campaign is started by this closeout. No shared-library, remote,
+commit, VERSION, release, installation or Desktop effect. Minor release
+recommended; approval required before version bump.
+
+## 2026-10-30 — Overnight Fire–Fluid campaign complete
+
+All 12 admitted native cases completed: eight small controls and four finer
+comparisons. Full audit passes for 236 joint checkpoints and 48 selected native
+velocity/heat/smoke snapshots; every history independently reopens. Maximum
+thermal ledger defect is 1.324e-15 J. The original four recovery histories are
+also fully audited and closed. Final qualification passes 53 aggregate checks:
+52 fresh coupling tests plus one separately completed fixed-wind Fire test,
+with source/adapter/worker identities rechecked. Gas/object 80-step versus two
+40-step packets and constant-wind Fire packet splits produce exact native state.
+Python syntax/source-pin checks pass. No fresh native/app/package build was
+needed: no physical native/operator/app source changed; exact qualified workers
+were reused. Broad desktop/package verification is outside this diagnostic slice.
+
+At matched 0.2 s exchange, 32³/64³ object-curve sensitivity is 28.74258% raw and
+28.56273% per-input normalized. Actual delivered heat is 1.206238796 versus
+1.204551389 J; normalized native Fire footprint differs only 0.12718%. At 1.6 s,
+the same object-support gas mean is 5.25035 versus 3.98085 mK above ambient.
+The finer grid retains a more concentrated low thermal layer; transport and
+object exposure remain sensitive. Two grids do not establish convergence.
+
+Changing 32³ exchange from 0.4 to 0.2 s gives 9.83348% raw curve difference
+but 0.946344% input-normalized, with 9.73% less delivered heat. Held feedback
+wind and frame-uniform deposition timing both change; this is distinct from
+the retained 0.04419% gas-timestep-half result. Normalization is descriptive.
+The matched 32³ wind pair is byte-identical through 2.4 s. At 6.4 s the fixed-world
+wake mean X velocity is +0.0814183 versus -0.2492841 m/s; positive/reversing wind
+retains 86.889% versus 0.789% of delivered gas heat. The negative-X object face
+and wake ROI remain fixed. Channel wind-off changes an inlet constraint;
+its pressure/projection work is separate from thermal energy and should not be
+presented as a free atmospheric gust or generic physical dissipation.
+
+No isolated solver defect was demonstrated, so no physical operator, gain or
+acceptance threshold was changed. This pass improves reusable diagnostic
+recipes, packet controls, full-history audits and readable native comparisons.
+Next boundary: replay a fixed retained physical source pulse on 32³/64³ with
+conservative world-space deposition, then isolate transport using matched
+velocity before changing operators. Follow with controlled exchange startup
+and explicitly selected open-domain gust forcing. The current matrix is closed.
+
+Final assessment and reviewed figures:
+`_private_workspace_artifacts/fire-fluid-overnight-diagnostics-20261029/ASSESSMENT.md`,
+`comparison.png`, `native-fields.png`, `native-wind32.png`, `analysis.json`.
+Retain about 514 MiB of scientific journals/fields/pins/compact receipts and
+intentional regression fixtures for follow-up isolation. Retired 327.7 MiB of
+34 successful copied native test capsules plus the task-owned Python cache
+following terminal/consumer checks. Existing workers and earlier evidence remain.
+No agents, remote/shared-library work, commit, VERSION, release, installation or
+Desktop effect. No release version change recommended for this diagnostic-only
+slice; prior unreleased feature recommendations remain separate.
+
+Completed plan: `completed/2026-10-29_fire_fluid_overnight_diagnostics.md`.
+
+---
+
+## 2026-10-30 — Matched 64³ reference audited; fine wind pair remains active
+
+Ten overnight histories now pass full journal/native-field/source/clock/energy
+checks, including the 64³ reference at the same 0.2 s exchange as 32³. The
+object-curve relative L2 difference is 28.74258%, or 28.56273% after normalizing
+by each actual delivered heat. Delivered heat is 1.206238796 / 1.204551389 J
+(32³ / 64³); the normalized native Fire nodal footprint differs only 0.12718%.
+This leaves substantial spatial transport and object-support exposure
+sensitivity even with nearly matching source quantity and shape. It is a
+two-grid sensitivity result, not a convergence claim or isolated solver defect.
+
+At 1.6 s the same physical object-support gas mean is 5.25035 / 3.98085 mK
+above ambient. At 6.4 s, 77.31% / 86.36% of remaining gas heat is below the
+box's lower height; common-world wake velocity relative L2 is 39.9845%.
+Selected native field plots show a more concentrated low thermal layer at
+64³. These diagnostics localize the difference but do not uniquely separate
+advection, diffusion, pressure/velocity geometry and source mapping.
+
+The 64³ maximum thermal ledger defect is 2.07e-16 J and native numerical
+allocation is 195770496 bytes, within the unchanged 512 MiB cap. The 32³
+balanced-positive/reversal pair is still serially running. The 53-check
+checkpoint gate remains pending terminal producer ownership release. No
+physical solver bytes or acceptance thresholds changed. Updated visually
+reviewed comparisons and readable assessment are in the existing artifact root:
+`_private_workspace_artifacts/fire-fluid-overnight-diagnostics-20261029/ASSESSMENT_PARTIAL.md`.
+
+---
+
+## 2026-10-30 — Fixed-wind Fire partition control passes
+
+The independent17×17source-only control completes at fixed wind0and.25m/s.
+Four20-step and eight10-step packets reach byte-identical native states at
+1.6s;emitted calibrated heat telescopes exactly(1.735453199Jat0wind and
+1.151277640Jat.25m/s). This excludes a source packet-grouping discrepancy in
+these controls and supports focusing on different held-return histories in the
+coupled cadence comparison. It does not qualify arbitrary time-varying wind.
+
+Inspection confirmed that this small source worker is stateless stdin/stdout
+and accesses no Fluid worker or shared mutable files,so it ran independently
+while64³Fluid remains active. The original source/worker/adapter hashes were
+preserved. `source-partition-test.log/json` and exact bundles retain the proof.
+Final qualification is53aggregate checks:52fresh coupling checks after the
+serial producer releases Fluid,plus this1passed source check. The aggregate
+rechecks its test/worker/adapter identities;it will not rerun its existingroot.
+
+Native source lineage also verifies116unchanged heater-era native inputs and
+all11previous inert-integration source pins,with only the already qualified
+Make rule delta expected. No unexplained physical-source drift or native edit.
+The final assessment text now distinguishes sample peaks,fixed face/support,
+source-proxy units,and thermal/mechanical ledgers. Finer cases and final gate
+remain pending. Goal is active;existing90minheartbeat and08:00PDTcutoff stand.
+
+---
+
+## 2026-10-29 — Exchange cadence changes native source delivery; finer reference active
+
+The32³.2s-exchange case is complete and independently audited. Over the matched
+6.4s horizon,the object curve differs9.83348%from.4s exchange. Actual native
+Fire heat delivered is1.206238796versus1.336220301J(about9.73%less);normalizing
+each curve by its own delivered heat reduces the difference to.946344%.
+The change therefore tracks source dose strongly;normalization alone is not
+causal proof. Gas dt remains.005s and Fire dt.02s;authored calibration/h/C and
+source geometry are unchanged. Native Fire held wind starts updating at.2s
+instead of.4s;uniform-frame accounting mean delivery times are.790510782and
+.813754006s. Fire proxy outflows remain separate normalized_proxy_m²quantities,
+not added to SI gas/object energy. Original proxy balance/roundoff gates pass.
+
+The64³matched.2s reference is running and has accepted native windows within
+its512MiB numerical limit.32³balanced/reversal controls remain queued. All8
+small controls and9completed histories pass full audits so far;no solver repair
+is claimed. Combined53-check regression now includes two prepared targeted
+partition controls: identical real32³gas/object prefix with zero input split
+80versus2x40steps,and fixed-wind Fire4x20versus8x10steps. These isolate backend
+packet restart from held-return/source timing and are deferred until producer
+ownership is released. They are pending tests,not passing claims.
+
+Evidence: overnight diagnostic artifact root `analysis-partial.json`,
+`ASSESSMENT_PARTIAL.md`,source-pulse traces,case summaries and source-pin check.
+MemDB9936records this new cadence/source finding. Goal remains active;do not
+rerun the producer or weaken numerical gates. The same8small/4expensive cap,
+4GiBretention limit and08:00PDTnew-expensive-start cutoff remain binding.
+
+---
+
+## 2026-10-29 — Eight overnight functional controls audited; finer matrix running
+
+All8small16³cases complete6.4s and independently reopen. Full offline audits
+pass source/fuel/delivery,thermal/object/smoke and separate mechanical accounts,
+exact clocks/accepted-prior feedback,nonnegative scalars and32native snapshots.
+Maximum thermal defect1.33e-15J. Gust,wind-off and signed reversal match their
+controls exactly before intervention. Native reversal changes fixed-world wake
+meanUx to−.237793585m/s versus+.091924868m/s for its positive balanced control.
+The objectYoffset and smaller inlet aperture produce distinct heat/flow fields
+with the same authored calibration and object law; they are named interventions.
+
+The first.4s after channel wind removal loses.120564802Jkinetic energy:
+projection contributes−.116119552J,inlet enforcement−.003900086J,buoyancy only
++4.18e-8J. Removing buoyancy changes final wakeRMS by about.0394%at16³.
+This identifies a pressure/boundary constraint readjustment as the dominant
+wind-off impulse in this test,not a thermal-lift solver failure. Setting a
+prescribed channel inlet to zero changes its incompressible constraint; it is
+not equivalent to a remote weather gust. No unjustified solver tuning was made.
+
+Four expensive cases remain in progress:32³.2s exchange;64³same.2s exchange;
+32³balanced positive and reversing controls. Existing32³.4s6.4s prefix is reused.
+Do not claim final spatial/exchange or fine-reversal conclusions yet. Four new
+recipe tests and original47coupling gates pass; combined53-check regression is
+prepared and will run after the producer releases native worker ownership.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-overnight-diagnostics-20261029/`
+`analysis-partial.json`,`ASSESSMENT_PARTIAL.md`,`comparison-partial.png`,
+`native-fields-partial.png`(visually inspected),`process.json`,`progress.json`.
+MemDB9935records this distinct breadth checkpoint; goal remains active.
+No shared/native/Growth physical source edits,remote,commit,VERSION,release,
+install,Desktop or new-agent effect. Current sleep assertion is bounded through
+08:30PDT and will stop on completion; one quiet90minheartbeat is active.
+
+---
+
+## 2026-10-29 — Recovery audit complete; bounded overnight diagnostics active
+
+The original four12.8s recovery runs are complete and independently audited.
+Continuous16³/32³object cooling screens pass.32³gas-step halving changes the
+object-temperature curve by0.04418799%,well inside the unchanged5%development
+screen; raw16→32grid sensitivity remains24.97465%(24.81774%input-normalized).
+All132joint checkpoints and20selected native velocity/heat/smoke snapshots
+pass chain/clock/source/heat/field verification; max thermal defect8.22e-16J.
+Continuous versus wind-off native fields/physical observations match exactly
+through2.4s. With wind stopped, final gas heat1.301853406J(97.43%of delivered)
+versus0.306072517J(22.91%)under continuous wind. The wind-off object ends at
+its horizon peak,so continued warming is reported rather than labeled a failed
+continuous-cooling screen. Source delivery is isolated; Fire is not extinguished.
+
+Important boundary interpretation: current `channel_x_inlet` closes the Ywalls
+and top,with the opposing Xpressure outlet. Wind removal does not make an
+all-sided ambient-open room. Authored nonlocal h2/C10/.125m object support is
+unchanged;80s nominal object time constant exceeds12.8s horizon. Weak warm
+signals and two-grid sensitivity do not establish material calibration,
+equilibration,convergence or hot fire. Full report/visually inspected plots:
+`_private_workspace_artifacts/fire-fluid-inert-recovery-20261029/RESULT.md`.
+
+The separately user-authorized overnight goal now owns up to8small controls
+and4expensive comparisons in the same Main Edit. New `overnight_cases.py`
+recipes distinguish finite gust,wind removal,buoyancy-off,balanced-X ambient
+Y/top boundary control,matched signed reversal,object placement and inlet
+aperture.32³/64³use identical.2s exchange; old32³.4s history is reused over a
+matching6.4s horizon. Original source calibration/heat budget/h/C/support and
+solver gates remain fixed. Four recipe admission/isolation tests pass. Serial
+native campaign is running,not yet complete. No physical solver repair is
+claimed without a reproducible defect. Two repair attempts/90min per issue;
+new expensive starts stop2026-10-30T15:00Z(08:00PDT). Total retained output<=4GiB.
+
+Plan:`active/2026-10-29_fire_fluid_overnight_diagnostics.md`.
+Evidence:`_private_workspace_artifacts/fire-fluid-overnight-diagnostics-20261029/`.
+Read process/progress/results before any action; never rerun an existing root.
+One same-chat heartbeat every90minutes stays quiet unless actionable and pauses
+on completion. A task-owned idle-sleep assertion is bounded through08:30PDT and will be
+stopped at goal completion,so final review can run after the producer exits. No agent/newchat,remote,shared-library,commit,VERSION,release,
+install or Desktop effect. Existing source dirt and prior workers are protected.
+
+---
+
+## 2026-10-29 — Delivery cutoff implemented; longer recovery matrix running
+
+Update after independent native reopen: the32³continuous baseline also completed
+and passed its signed-cooling screen. Peak rise0.141814537mK at3.6s;final
+0.130471325mK at12.8s,7.998624%decline. Delivered1.336220301J;gas retains
+0.306072517J. The final object rise is19.297%below16³at almost equal input
+(about0.126%less), a material spatial sensitivity rather than convergence proof.
+The32³half-timestep case is now running; wind-off remains queued. Offline
+complete-history cross-grid audit now passes: max thermal defect6.09e-16J;
+all10selected native snapshots match journal bytes. Object-curve relativeL2
+is24.97465%,or24.81774%normalized by each actual delivered joule. The earlier16³checkpoint
+entry below remains historical evidence; finer-pair conclusions stay pending.
+
+Main Edit Framework now admits optional `source_delivery` with schema
+`fire_fluid_delivery_cutoff/v1` and `active_windows`. Native Fire frames remain
+unchanged. Sealed per-window evidence records nominal available output split
+into actual Fluid delivery and diverted-outside-Fluid output, for both heat and
+smoke. Native Fire continues evolving and consuming accepted-prior wind; the
+cutoff does not model combustion extinction. Gas balances use actual delivery.
+The new module is source-bound and receipts are recomputed on journal reopen.
+Omitting the option preserves the old physical path; a short comparison against
+the retained predecessor journal has exact source bundles and native gas state.
+
+Python compilation and47checks pass:4cutoff/restart/rollback/tamper/default
+checks,4inert checkpoint and39existing coupling checks. No native/shared/Growth
+source changed; exact previously qualified native workers are reused. Broad
+native/app/package rebuilds are skipped for this Python-only host/recipe slice.
+Existing ResourceWarnings remain in the qualification log.
+
+The bounded sequential matrix is active at
+`_private_workspace_artifacts/fire-fluid-inert-recovery-20261029/progress.json`:
+16³continuous,32³continuous,32³half-dt continuous,32³wind-off at2.4s. Delivery
+stops at1.6s;32×.4s exchange windows reach12.8s. The .4s exchange differs from
+prior.1s studies and is fixed across this matrix. Existing h2/C10/support.125m,
+authored warm-source calibration and native numerical limits are unchanged.
+Initial fuel bounds available transferable heat at15.625J. Object nominal
+C/(hA)=80s, so this tests early recovery rather than equilibration.
+
+Completed16³case: peak rise0.178613217mK at4s;final0.161668787mK at12.8s,
+9.48666%decline, with negative signed heat increments. Actual delivered heat
+1.337902953J; later nominal output diverted3.965237642J. Final gas retains
+0.111298529J. Independent full-journal/clock/source/thermal/object/fuel audit
+passes; maximum gas+object+netoutflow defect4.95e-16J. Selected native snapshots
+match journal bytes exactly. This first case does not qualify the finer-grid
+or half-dt screens; their conclusions remain pending. Never rerun active roots.
+
+Evidence:`_private_workspace_artifacts/fire-fluid-inert-recovery-20261029/CONTRACT.md`,
+`qualification.json`,`analysis-partial.json`,`PARTIAL.md`,`recovery-partial.png`.
+Offline `analyze.py` and `report.py` are prepared for the completed matrix;
+full `analysis.json`/`RESULT.md` are not yet produced. No extra AI wake/monitor.
+Next: finish the same matrix, audit each complete history and common native
+fields, check32³cooling and half-dt curveL2<=5%development screen, then inspect
+final plots and close storage/docs. Failed screens remain failures. This is
+uncommitted local headless development, not material/hot-fire/convergence proof.
+No commit/VERSION/release/install/Desktop/remote effect. Minor release
+recommended; approval required before version bump.
+
+---
+
+## 2026-10-29 — Durable live Fire–Fluid object state completed
+
+Optional native Fluid `inert_object` now binds face/support/initial temperature,
+capacity and transfer coefficient. Its checkpoint carries temperature, the
+compensated low part, cumulative signed gas→object heat and exact gas step/time.
+The original conservative exchange runs each native gas step; object/gas share
+one Fluid checkpoint and the existing joint Fire–Fluid SQLite transaction.
+Core Sim still schedules two participants. The separate gas debit is included
+in lifetime/window energy checks; it is never relabeled as source input.
+
+All13joint checkpoint digests match uninterrupted versus restarted live Fire.
+An injected prepublication exception leaves accepted head and operation table
+unchanged; retry is exact, duplicate operation returns its receipt and a stale
+new operation refuses. A fresh OS process advances a copied accepted6-window
+prefix to the identical final12-window digest. Original journals are untouched.
+This qualifies controlled process/software recovery, not power loss/concurrency.
+
+The16³gas/Fire17×17 warm native source transfers0.000417804491J into the object, giving
+4.17804491e-05K rise after1.2s. Actual gas source input is0.887872957J; gas stores0.886990486J and
+outflow is0.000464665924J. Exchange-off object remains exactly unchanged. The warm source
+retains authored SI calibration; no gain increase was used. Independent full
+journal audits verify source consumption, clocks, held-return causality and
+separate gas/object/outflow budgets. The small signal is observable numerically,
+not evidence of visible material heating or physically calibrated hot fire.
+
+Four new native checkpoint tests,39existing Python checks,320-step bitwise
+legacy native parity, Address/Undefined heating/restore/cooling probes, fresh
+native/app compile and broad app test-fast pass. Prior cold-start controlled
+heater transfer also matches exactly. New role-specific native codec and Python
+admission modules reuse existing exchange/core_sim; no shared/Growth source
+or minimum-version change. Original omission/default paths remain unchanged.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-inert-checkpoint-20261029/RESULT.md`.
+API: Main Edit `docs/fire_fluid_inert_checkpoint.md`. Source is uncommitted Main
+Edit; no commit, VERSION, release, install, Desktop or remote effect. Minor
+release recommended, requiring approval before version/release actions. Next:
+longer source-off/recovery ventilation with this durable object path, physically
+justified source/heat budget and targeted grid/time sensitivity before renders.
+
+---
+
+## 2026-10-29 — Measurable source-to-object transport completed
+
+The new standalone native diagnostic starts gas/object at300K, deposits a
+controlled100W/.4s pulse upstream, leaves an unheated.0625m gap before the
+existing fixed.125m exchange support, and evolves ordinary gas transport.
+No heat is inserted directly into support or solid. At32³/dt=.0025s, support
+peak is1.743671K above reference and object rise0.013465K, with0.134650J transferred.
+Source-off support/object stay exactly zero; exchange-off object/transfer stay
+zero while support warms. Moving flow heats the object1.116e+06 times more than the
+wind-off diffusion control at32³/dt=.005s. Maximum total-energy defect6.39e-14J.
+
+Nine scientific cases, three16³ASan/UBSan cases, and three previous inert
+controls pass. Transfer timestep-half difference0.194423%;16³→32³difference6.9966%
+is reported as sensitivity, not convergence. Fresh strict diagnostic builds
+pass. App build/smoke is not repeated for this standalone probe-only addition;
+prior full app gates remain retained. Numerical/physical diffusion means the
+first small support threshold is not a sharp physical arrival time.
+
+The controlled SI heater is not native Fire. Prescribed flow disables buoyancy;
+authored h=2W/m²K,C=10J/K and fixed support are unchanged. No solver, native Fire,
+shared, installed/default runtime or persistent participant changes. Next is
+atomic live thermal checkpoint/restart, followed by native Fire source intake.
+No commit, VERSION, release, installation, Desktop or remote effects. This
+standalone qualification tool does not recommend a release version change.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-source-object-20261029/RESULT.md`.
+Reference: `docs/fire_fluid_source_object.md` in PhysicsSim Main Edit.
+
+---
+
+## 2026-10-29 — Four-step Fire–Fluid numerical study completed and reviewed
+
+All five live histories completed and independently reopened exact accepted
+heads. All 30 selected native f64 views match journal identities and were
+rehashed at review. Four comparison figures were visually reviewed. Channel
+velocity/pressure-drop errors are 0.001743% / 0.047346%; retained finer wake
+comparison remains same-solver development evidence, not physical validation.
+
+At fixed 64³ gas, 0.10→0.04s exchange changes final gas/returned-wind/wake L2
+by 0.00735% / 0.03421% / 0.00368%. Fire heat-proxy L2 changes 4.5415% at the
+selected 0.4s checkpoint and 0.3112% at1.2s. Cadence changes source packetization
+and wind hold together; scheduling eligibility is not measured physical latency.
+Matched 0.525m³ ventilation retains 89.15% / 90.16% / 84.09% of supplied heat
+for full/elevated/obstructed openings at32³. These are short behavioral cases.
+
+All15 thermal cases and4 sanitizer cases pass. Heating/cooling transfer is
++0.739618J / −0.738920J; exchange-off transfers zero. Maximum analytic error
+1.26e−11K; total-energy defect7.28e−12J. Flowing heating/cooling timestep
+transfer differences are0.000459% /0.0000133%. Fault rollback passes. However,
+the matched0.2J source toggle changes object temperature only5.43e−11K: the
+warm-background fixture does not demonstrate source-driven object heating.
+This is an in-memory native host, not a durable live thermal participant.
+
+Fresh native/app compile, strict and supportedASan/UBSan,39Python checks,
+320-step legacy parity and broad application test-fast pass. No new scientific
+runs are needed for this review. Source remains uncommitted Main Edit; no
+commit/VERSION/release/install/Desktop/remote effects. Minor release is only
+a recommendation. Next recommended boundary: design a measurable source-to-object
+transport case, then integrate object state into atomic live journals/restart;
+qualify longer matched ventilation histories before presentation renders.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-four-step-20261029/RESULT.md`.
+
+---
+
+## 2026-10-29 — Wake spatial trend and live Fire surface comparison completed
+
+Both new live histories completed32 exchanges through3.2s and independently
+reopened exact accepted heads. The gas series now covers48³/64³/80³ at dt=.0025s
+with fixed17×17 Fire and.1s exchange. On an exactly aligned common16 partition,
+whole-gas increments shrink4.2995%→3.0605%, downstream wake6.0116%→4.4333%, and
+wind at fixed Fire points5.3201%→3.6401%, all normalized by the same80³ reference.
+Difference directions remain closely aligned (cosines.982–.994). Grid-spacing
+increments are unequal; these observations support a spatial trend but do not
+establish an asymptotic order or physical wake accuracy.
+
+At fixed64³ gas, live17→33 Fire refinement changes the Fire heat-proxy field
+4.1130%, its centroid+4.8807mm, gas velocity.3324%, common-point returned wind
+.9280%, and downstream wake velocity.1066%. The separate common-wind controls
+reproduce all32 original native Fire states exactly: source heat spatial changes
+4.1753% at dt=.02s and4.3337% at dt=.01s, versus timestep changes.1777% at17nodes
+and.1401% at33nodes. Initial integrated source quantities match; native ignition
+rasterization and automatic stability subcycling remain explicit contributions.
+
+36 Python checks, warm48 and Fire17/33 exact packet restarts, all24 selected
+f64/journal hashes, native feedback sampling, both full live restarts, independent
+48→16 whole-face mapping and Fire33→17 area conservation pass. Final3figures
+visually reviewed. Source SI, gas scalar and MAC accounts audited separately.
+All698native/build inputs,945controls and workers remain pinned; no CFD/Growth
+operator, capacity, tolerance, clock or release changes occurred.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-wake-qualification-20261029/RESULT.md`.
+The spatial trend is now observed; physical wake calibration and convergence
+order remain open. Source remains uncommitted Main Edit. Patch release
+recommended for this recipe/test slice; no VERSION or publication action.
+
+---
+
+## 2026-10-29 — Live wake timestep and voxel references completed
+
+Two fresh native Fire–Fluid histories complete all 32 exchange windows through 3.2 s
+and independently reopen their exact accepted heads. The 64³ temporal pair
+halves gas dt = 0.005 → 0.0025 s while Fire dt = 0.02 s, exchange = 0.1 s, physical gust 0.4–1.2 s,
+source footprint, injection depth and insulated box stay fixed. The following
+80³ reference retains the 0.0025 s gas timestep and resolves 20 cells across the
+same box, versus 16 at 64³. Both histories evolve native Fire under their own
+accepted prior gas wind; neither replays another case's source.
+
+Final gas-velocity sensitivity is 0.4561%for timestep
+versus 3.2449%for gas resolution. Native Fire-plane wind
+sensitivity is 0.3741%versus 3.6401%.
+An aligned common 16³ partition corroborates the conservative80→64MAC mapping.
+Gas resolution is the larger tested sensitivity; these are not additive error
+percentages or proof of spatial/hot-fire wake accuracy. Fire remains 17 × 17.
+
+An explicit wake80/v1 capacity profile and separate 1 GiB lossless f64 journal
+option support this fixture. CFD operators, native 512 MiB numerical allocation,
+256 MiB captures,120 s capture timeout and scientific tolerances stay fixed.
+Fresh strict+ASan/UBSan native checks, 32 Python tests,320-step legacy/native data
+parity, exact 80³ warm-box packet restart,7 remap checks, both complete live restarts,
+all 18 selected native f64/journal hashes and native feedback sampling pass.
+Source SI partitions, gas heat/smoke balances and signed MAC mechanical accounts
+are independently distinguished and audited. Final native/ROI figures reviewed.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-wake-time-space-20261028/RESULT.md`.
+Source API: `_worktrees/physics_sim_main_edit/docs/fire_fluid_wake_reference.md`.
+No canonical adoption, commit, VERSION, release, install, shared/Growth-source
+or remote effect. Minor release recommended; approval required before a version
+bump. Remaining boundary is stronger spatial/wake convergence and physical
+reference qualification, including the fixed Fire/exchange discretization.
+
+---
+
+## 2026-10-28 — Explicit quiescent backflow and live fine-grid coupling completed
+
+Main Edit now implements optional `momentum_backflow: quiescent_exterior/v1`,
+zeroing only incoming exterior advected momentum at pressure reservoirs while
+preserving inlet/solid/outflow/pressure/scalar operators and legacy defaults.
+A signed discrete MAC kinetic ledger separates advection, viscosity, buoyancy,
+Euler quadratic work, inlet enforcement, projection and rounding; publication
+is atomic with scalar/air acceptance. Existing SI source partitions and every
+window's transferred-source consumption are independently audited. Fire heat
+proxy is explicitly not SI stored thermal energy; no global thermodynamic-energy
+or hot-fire calibration claim follows.
+
+Four actual native Fire–Fluid gust/box-wake histories at32/64cubed completed3.2s
+with unchanged0.1s feedback hold,0.02s Fire and0.005s gas steps. All accepted
+heads independently reopen exactly. Maximum checkpoint kinetic defect
+1.21e-17J. Final32→64cubed Fire-plane wind sensitivity is
+15.447%without box and
+14.666%with box; spatial/wake convergence
+remains unqualified. The32cubed wake has10.16%reverse-flow volume in the fixed
+physical downstream ROI; complete64cubed and conservative field/probe comparison
+are in the retained result, not inferred from coarse voxel images.
+
+Fresh strict/native+ASan/UBSan pressure/inlet/box/rollback/kinetic tests,28final
+Python controls and3NumPy analysis checks, full Clang app compile and fast deterministic app tests pass.
+A320-step old/new worker comparison is bitwise exact when policy is omitted.
+A receipt-only current-worker fix initializes zero-step moving-flow K correctly;
+3dedicated tests and4source-current quiescent rechecks pass. Still-start/evolved
+C6/current data remain bitwise identical; live C6journal bindings stay unchanged.
+Lossless f64 byte-plane journals and equivalent digest batching fit fine-grid
+storage without quantization; bounded native subpackets preserve whole-window
+state, fields and budgets exactly. Source-bound predecessors retain verified
+control closures; no journal binding was rewritten. Successful copied payloads
+and disposable builds retire after verified delivery and consumer checks.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-quiescent-live-20261028/RESULT.md`.
+API: `_worktrees/physics_sim_main_edit/docs/fire_fluid_quiescent_backflow.md`.
+No canonical, commit, VERSION, release, install, Desktop, shared/Growth-source or
+remote changes. Minor release recommended when separately approved. Next is
+remaining spatial/wake-reference accuracy, not another claim of convergence.
+
+## 2026-10-28 — Gust refinement exposes pressure-backflow sensitivity
+
+Fixed-source8/16/32/64³diagnostics show late growth after gust shutoff even with
+zero heat/smoke. Original64³hits the unchanged CFL gate at2.335s; smaller gas dt
+has a much smaller effect than grid or boundary policy. A contained quiescent
+backflow-momentum candidate completes64³/3.2s, but remains unadopted and spatially
+sensitive. Existing ordinary solver/defaults are unchanged. See
+[the diagnostic and boundary findings](fire_fluid_gust_diagnostics.md).
+
+---
+
+## 2026-10-28 — Channel ventilation, reversal and scenario controls
+
+The Main Edit continuation adds fixed native channel openings, paired-boundary
+wind reversal and ten local browser-workbench presets. Thirteen coupled cases
+cover grid/box sensitivity, exchange, ventilation and recovery. Strong-gust
+response remains spatially sensitive; these are warm-flow integration results.
+See [methods, measured results and limits](fire_fluid_ventilation.md).
+
+---
+
+## 2026-10-28 — Opt-in native sustained inlet and gust controls
+
+The Main Edit source/headless path now prescribes a native X inlet using
+absolute-step hold or linear commands. Continuous ±X and abrupt/ramped gust
+comparisons retain accepted-prior Fluid-to-Fire causality, air/heat/smoke budgets,
+restart/replay and atomic publication. The bounded17×17Fire/8³gas qualification
+includes timestep and stationary-box controls; it does not establish spatial,
+hot-fire, general-room or heated-object accuracy. Existing unforced fields retain
+bitwise parity on the selected controls. No installed/Desktop UI or release
+adoption is included. See [the API and comparison runner](fire_fluid_driven_wind.md).
+
+---
+
+## 2026-10-22 — Startup arithmetic/source defects isolated; physical repair remains gated
+
+## 2026-10-22 — Explicit on/off age intervals repair bounded shutoff/restart histories
+
+New opt-in source_age_intervals module retains source on/off intervals on the
+existing scalar clock, including nonzero youngest age after shutoff and positive
+interval sums after restart. Existing FCT budgets, incoming-first staging,
+actual bounds, grid, source delivery/clocks and10% gate unchanged. Frozen pulse
+and restart requested/admitted flux pass56 comparisons. Same four evolving
+histories pass48 selected gates;173continuous-control checks and36heater-neighbor
+checks also pass. Pulse first-cell at0.00625s improves-17.659% to-0.0001824%;
+restart endpoint first-cell-0.0002236%. Tiny discrepancies are numerical
+comparisons within unchanged0.5% reference qualification, not precision claims.
+14tests strict/ASan-UBSan, full new-history sanitizer parity, delayed-state parity
+and five old-route trace comparisons pass. Source transitions/capacity/invalid
+ages reject atomically. New route2 is explicit; no default or app adoption.
+Qualified fixed-footprint stationary1-D unit on/off heating through0.025s;
+next evolving matched transport test before shear selection. No2-D/feedback.
+Existing Atlas experiment remains active; no new topology/adoption claim.
+Evidence: `_private_workspace_artifacts/fire-fluid-age-interval-repair-20261022/RESULT.md`.
+
+---
+
+
+## 2026-10-22 — Source-age closure fails shutoff; frozen transport tests pass locally
+
+Bounded same-grid/history comparison: delayed activation reproduces the
+continuous case exactly after time shift. Safe generic dispatch after shutoff
+has first-cell-17.659% at0.00625s despite passing late endpoint. Restart inherits
+that pre-restart failure; no separate new post-restart failure proven. On exact
+frozen pulse means, continuous-age closure requested flux is up to99.970% low,
+with14/14sampled diffusion faces failing10%; near-heater flux is62.513% high.
+Ages are0.003125..0.0046875s but closure infers0..0.000534905s. Thus history
+information is needed, not a grid refinement. Frozen continuous transported
+shapes at+/-0.025m/s pass local10%: diffusion max4.919%, advection face max2.582%.
+This is not an evolving-flow qualification. No general reconstruction selected.
+Five histories/eight frozen cases match strict/ASan-UBSan outputs; three affected
+fixtures pass both builds, numerical headers unchanged. Source-off metadata
+refusal is atomic; forced unsupported closure is labeled diagnostic only.
+Next finite-age interval/multi-interval reconstruction, then same pulse/restart
+histories before full transport selection. No2-D/feedback/default adoption.
+Evidence: `_private_workspace_artifacts/fire-fluid-history-transport-20261022/RESULT.md`.
+
+---
+
+
+## 2026-10-22 — Source-age reconstruction and incoming/outgoing staging pass the bounded 1-D history
+
+Opt-in source-age profile4 repairs finite-duration heater shape and processes
+incoming face transfers before outgoing ones, refreshing unchanged FCT budgets
+and actual-cell guards. Grid, clocks, source, bounds and gates unchanged.
+All202 reference-qualified measurements across the retained1-D history pass
+10%; worst error0.5134%. Band errors at0.0015625/0.0046875/0.025s are
++0.08589%/+0.11966%/+0.00822%; endpoint first-cell+0.05538%. First-interval
+requested/admitted flux, initially cold-cell heat, perturbation transport and
+invalid-input refusal pass.13 tests strict/ASan-UBSan, full history sanitizer
+parity and old profiles0..3 exact trace parity pass. Qualified only stationary
+continuously powered unit rectangular-source1-D diffusion through0.025s;
+no source-shutoff/advection/2-D/default/feedback claim. Next qualify closure
+under changed source histories and transport before prescribed-shear use.
+Existing Atlas experiment retained. Minor release recommended; no version edit.
+Evidence: `_private_workspace_artifacts/fire-fluid-source-age-staging-20261022/RESULT.md`.
+
+---
+
+
+## 2026-10-22 — Whole-interval front-flux candidate rejected; two residual mechanisms isolated
+
+Whole-interval diffusion of a fitted positive profile passes24 analytic flux
+cases (worst relative error5.15e-11), but unchanged256-cell history still fails
+10%: normal-band errors+41.0754% at0.0015625s,+14.1843% at0.0046875s,
+-12.6360% at0.025s; endpoint first-cell-15.8200%. First-interval face63/64
+requests already overestimate finite-source heat by40.94%/33.51%. Farther cold
+face60 requests within0.035%, but combined budget/application blocks nearly
+all of it; incoming heat is unavailable to outgoing whole-interval transfer.
+Face58 additionally misses representable arrival from initially zero means.
+Candidate remains private and rejected; solver source/defaults/limiter,
+physical clocks and gates unchanged. Strict/sanitizer frozen/history parity,
+bounds and six affected regression executions pass. No2-D or feedback run.
+Next finite-duration source-age reconstruction plus consistently staged
+incoming/outgoing flux, retaining budgets. Supporting existing Atlas lane.
+Evidence: `_private_workspace_artifacts/fire-fluid-spacetime-front-20261022/RESULT.md`.
+
+---
+
+
+Second-step low/correction cancellation erases positive cold heat; explicit
+net-transfer mode fixes that mechanism with unchanged FCT budgets/bound guards.
+Four-cell source redistribution discards representable fifth-cell heat; new
+opt-in complete-support helper retains it to natural underflow. Legacy paths
+remain bitwise unchanged. Both mechanisms pass targeted strict/ASan-UBSan tests.
+The physical10% gate still fails: precision-only.025 s band/cell errors
+-15.8466%/+149.464%; complete-source band-10.0169%; combination also fails.
+Internal time refinement and one-sided front extrapolation do not qualify the
+repair; rejected front code is not adopted.12 test programs strict/sanitizer,
+four full1-D profile parity checks and512 precision-mode bounded steps pass.
+No2-D prefix/full rerun while1-D prerequisites fail; no default/coupled adoption,
+shared Thermal change or feedback. Next space/time-consistent positive front
+flux candidate on frozen analytic means, then the same short1-D histories.
+Supporting existing experiment; no new Atlas lane.
+Evidence: `_private_workspace_artifacts/fire-fluid-startup-flux-repair-20261021/RESULT.md`.
+
+---
+
+## 2026-10-21 — Spatial-shear gas-only endpoint passes; startup history fails
+
+Full2112x256 scalar field, prescribedu=.05z/.0625, original grid/clocks/source,
+wall exchange off,160 native ticks/.025 s. Explicit source-aware scalar profile
+uses positive advection/same-stage diffusion and a joint-age2-D source increment.
+Endpoint errors: downstream+7.3700%, transport-0.004309%, normal band-9.7077%,
+first normal cell-5.5374%; all pass unchanged10%. Normal sub-bands also pass.
+Startup history does not: first reference-qualified normal-band failure at
+.0015625 s; downstream+22,258.6% at.01875 s then-66.7398% at.021875 s. Gas-side
+normal startup propagation is already wrong before wall/solid; endpoint closure
+and passing endpoint are insufficient. Remaining stage/limiter attribution is
+unproven. Next short1-D startup face ledger before another full shear trajectory.
+Eleven numerical test programs strict/ASan-UBSan and serial clean five-tick
+prefix pass; parallel ASan runtime-interceptor leak independently reproduced,
+not suppressed. No full-prefix, wall/solid, default/native adoption or feedback
+qualification. Existing experiment support; no new Atlas lane.
+Evidence: `_private_workspace_artifacts/fire-fluid-shear-gas-20261021/RESULT.md`.
+
+---
+
+## 2026-10-14 — Scalar transport diagnosis and bounded improvement
+
+Exact-reference thin-column tests identify excessive scalar spatial spreading
+before buoyancy or obstacle effects: temporal refinement barely changes the
+error. An explicit scalar-only MC reconstruction improves all 14 controlled
+comparisons; the 128-cell physical-diffusion case passes the unchanged 10%
+profile/history gates (8.55%/7.46%), while 32/64 remain inadequate. A fitted
+delay does not reconcile the original boxed traces (44.60% residual).
+Default minmod and momentum remain unchanged; MC requires separate coupled
+qualification. Soft-stopped probes now preserve accepted fields and numerical
+closure while retaining an explicit incomplete verdict.
+[Methods, evidence and limits](fire_fluid_local_transport.md).
+
+## 2026-10-13 — Boxed-face support contract verified; forcing remains gated
+
+Final bounded verdict: support/exchange passes; forcing is not qualified.
+64³ hit its 1,200 s cap after the 3.175 s observation, without final fields or
+closure. Matched-prefix history and heating-demand differences are 45,309.97%
+and 57,969.89%, outside 10%; these do not replace a full 3.2 s qualification.
+No larger grid or automatic rerun. See the linked detailed verdict.
+
+The uncommitted development thermal prototype now samples and transfers over
+the same fixed physical gas volume, with grid-invariant capacity/conductance.
+Six-orientation 32³/64³ analytic and sanitizer checks pass. Current boxed
+forcing is evaluated separately at the unchanged 10% gate. A cheap 32³ dense
+observation run establishes 10→5 ms held-response cadence sensitivity of
+3.263%, while 50→25 ms fails at 16.185%; the final gas field is bit-identical.
+No huge grid, desktop refresh, source adoption or release is included.
+[Qualification details and final forcing verdict](fire_fluid_surface.md).
+
+## 2026-10-13 — Directional fluid proof and bounded heated-face numerics
+
+The completed matched Z and X references pass the unchanged 10% local heat gate
+at 4.705451% and 2.679662%; matched 64³→128³ still fails at13.100227%.
+Fresh source/hash/report readback reuses those results after the UI checkpoint.
+X/Y symmetry and a bounded 90-degree native rotation test pass; full three-axis
+convergence remains unqualified. See [reference decision](fire_fluid_local_transport.md).
+
+A separate native non-burning face prototype now conserves gas/surface exchange
+and matches independent analytic/matrix solutions under prescribed and frozen
+sampled-plume conditions. Live evolving boxed-face forcing is the concrete next
+prerequisite; ordinary workers/UI/joint checkpoints remain unchanged.
+See [surface proof and limits](fire_fluid_surface.md). No release, Desktop refresh
+or review-service change is included.
+
 ## 2026-10-13 — UI source checkpoint adopted; Main Edit ready
 
 The completed active UI rollout and retained Fire–Fluid source are checkpointed
@@ -3052,3 +4508,416 @@ remain unqualified. Heat gate stays 10%, momentum CFL stays 0.4.
 No surface heating, burning faces, measured calibration, canonical adoption,
 version/package/Registry/remote/Desktop refresh or review rebind is included.
 <!-- vertical-reference-current:end -->
+
+## 2026-10-14: completed matched-flow boxed transport isolation
+
+A full same-MC 32³/64³ scalar comparison driven by one native 32³ velocity
+solution completes 3.2 s in 191.30 s, using 87.13 MB tracked numerical memory.
+Coarse replay matches native heat bitwise at every step; source restriction,
+face flux, wall impermeability, divergence and heat closure pass. The original
+local-heat metric passes at 8.2459%, but face-history error is 110,514,775% and
+forcing remains unqualified at the unchanged 10% gate. Final face mean rises
+are 2.2132e-7 / 3.0131e-13 K: an unresolved weak leading tail, not runaway
+heat creation. Fine 0.01/0.005 s response cadence also fails at 11.3836%.
+
+Error begins at the sharp source top, before wall interaction: a zero-velocity
+two-step test reproduces the early factor-two diffusive leakage difference,
+with identical minmod/MC results and zero leakage when conductivity is zero.
+Over the full history, band disagreement first exceeds 10% at z=0.21875–0.25 m
+(12.644%), then grows sharply toward the box. Matched flow does not eliminate
+scalar transport error; it does not qualify fine momentum or physical convection.
+No further numerical formula/default change was made. The next bounded test is
+a sharp-source thin-column transient reference with separate spatial and
+scalar/source-time refinement. Evidence: workspace
+`_private_workspace_artifacts/fire-fluid-matched-box-20261014/RESULT.md`.
+
+## 2026-10-14: sharp-source diffusion and scalar time integration
+
+Independent continuum heat-kernel and exact grid-time references separate source
+time error from spatial diffusion error in columns of at most4096 cells. At
+2.5 ms with two scalar steps, Euler time-only error is about50%; opt-in
+`scalar_rk2` reduces this to0.00184%/0.00736% on32/64 cells. Spatial error remains
+99.01%/98.03%: the sharp initial gradient is unresolved. At3.2 s, spatial errors
+are67.66%,40.82%,15.49%,4.20% for32/64/128/256 axial cells; only256 passes the
+unchanged10% outside-source profile gate. A bounded local0.122 mm zoom passes
+the early-time gate at5.225%, without a large cubic grid.
+
+SSPRK2 applies two native scalar/source stages with matched half-weight boundary
+receipts and doubled work accounting, reusing projection scratch. Default Euler
+is preserved; momentum and time-varying coupled forcing are not made second
+order. Native/sanitizer inflow/outflow, heat/smoke, bounds, box replay and budget
+tests pass, as do native accuracy/lateral/atmosphere regressions and independent
+reference tests. No boxed thermal-forcing qualification or ordinary app/worker
+activation is claimed. The remaining leading-tail error needs a bounded sharp-
+source advection–diffusion reference next. Evidence:
+`_private_workspace_artifacts/fire-fluid-sharp-diffusion-20261014/RESULT.md`.
+
+## 2026-10-14: sharp-source advection–diffusion leading-tail diagnosis
+
+Twenty bounded prescribed-flow trajectories use corrected scalar SSPRK2 timing
+and a translated heat-kernel reference. Bulk accuracy does not qualify the
+leading tail: at3.906 mm, MC main-profile error is0.1713% but far-history error
+is99.996%. Halved dt and a matched-spacing outer-domain check exclude those
+causes. Native exact-profile flux checks locate spatial bias before accumulated
+trajectory error: MC underestimates tail-plane flux16.73%, minmod overestimates
+14.40% at that spacing. No new flux formula or physical parameter was tuned.
+
+Targeted thin-column refinement (maximum16,384 cells, no cubic run) reduces
+far-history error to29.73% at0.977 mm and6.955% at0.488 mm. The finest early
+prefront history still fails the unchanged10% gate at10.268%; overall transport
+and boxed forcing remain unqualified. Finest-column time refinement is a next
+bounded check. Extended capacity exists only under the thin-column diagnostic
+compile flag; ordinary grid limits are unchanged. Native/sanitizer, reference,
+metadata-refusal and narrow-capacity tests pass. Evidence:
+`_private_workspace_artifacts/fire-fluid-sharp-transport-20261014/RESULT.md`.
+
+## 2026-10-16 finest-column timing closure
+
+The selected sharp-transport half-step case passes all four unchanged 10% gates.
+At fixed 0.48828125 mm spacing, reducing dt from 0.00125 to 0.000625 s changes
+main-profile error 0.002817% → 0.002764%, near-history 0.009269% → 0.009049%,
+far-history 6.955368% → 6.758111%, and early-near history 10.268064% → 9.956535%.
+The previous finest-case failure therefore had a small but decisive temporal
+component. Coarse-grid spatial bias remains established by the exact-profile
+flux tests. This is one narrow prescribed-velocity/source benchmark pass, with
+only 0.043465 percentage points of early-history margin; it does not qualify
+coarser production grids, original boxed forcing, wall laws or live coupling.
+
+The native retry completes 5120 steps / 3.2 s in 137.22 s, using 16,384 cells
+and 10,003,120 tracked bytes. Heat residual 2.467e-11 J; velocity error zero;
+no rejected or live allocations. Initial 90 s attempt timed out with buffered
+stdout; preserved failure receipt. A diagnostic-only line-buffering change and
+one 180 s capped retry produced the complete result. No solver formula or
+physical parameter changed; small full-trajectory output remains bit-exact
+against the retained probe. Runner supports `--case finest-half-step` (180 s
+native cap), preserves default matrix behavior and rejects simultaneous flux
+selection. Five runner/reference tests and three diffusion-reference tests pass.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-finest-timing-20261016/RESULT.md`.
+Next: use Thermal's qualified receiver contract for a matched inert coupled
+benchmark. Do not tune a flux formula solely to the previous marginal failure.
+
+## 2026-10-16 coupled prescribed-flow receiver qualification
+
+The repaired core_thermal0.3.2 receiver is linked into a separate PhysicsSim
+headless probe with native gas transport and reciprocal fixed-slab heat transfer.
+Both25/12.5mswindows pass six unchanged10%response gates against an independent
+central-FV/CN coupled reference. At12.5ms:near0.16936%,far6.76419%,early9.81341%,
+solid cells1.62343%/1.97491%,Qhistory1.62757%. Final reference refinement changes
+early0.05656%; source-only zero-exchange controls agree. Native gas/solid ledgers
+close,velocity remains prescribed,and staged failures do not publish.64cell small
+ASan/UBSan and12+12legacyface/support regressions pass. Native16,384cell runs take
+94.25/108.30s with16.12MBtracked memory. No hugegrid or solver-tolerance change.
+
+This is an authored nonlocal exchange slab,not an impermeable wall,boxed-flow or
+resolved-convection qualification. Smaller windows improve solid response but do
+not cure upstream tail transport; early error is still close to the gate. Optional
+source-linked diagnostic only; no app/worker adoption,pins,Desktop/shared/Thermal
+mutation or release. Evidence:
+`_private_workspace_artifacts/fire-fluid-thermal-transport-20261016/RESULT.md`.
+Next: bounded matched stationary-wall/box geometry and prescribed-flow qualification.
+
+## 2026-10-16 stationary planar-wall checkpoint
+
+A new optional qualifier reuses native scalar transport,conservative face exchange,
+Thermal receiver/core_thermal0.3.2 and exact clocks. Nativeground haszero normalflow;
+linear tangentialshear is prescribed. Gas/solidhalf-cell plus explicitcontact
+resistances replace deep-slab exchange for thiswalltest. Uniform along-wall source
+isolates NORMALdiffusion/contact response,not thermal advection around an obstacle.
+
+All128/256normal-grid,6.25/3.125msexchange cases pass six unchanged10%gates. Best
+selected256cell/3.125mscase:earlywall0.016218%,nearwall0.082443%,outerband0.027994%,
+solid0.599483%/0.601852%,Q0.599531%. Fixedscalarstep1/3200s atbothgrids separates
+scalar timing from spatial refinement. Refined normal cells require exchange-cadence
+qualification:atfixedwindow soliderror rises to1.88%,then falls to0.60%onwindowhalving.
+The earlier advective-tail9.813%result is not superseded by thisdifferentexperiment.
+
+IndependentFV/CN and insulatedcosine references,energy/atomicity checks,smallASan,
+legacy slab/face/support and8Pythonregressions pass. Maximum4096nativecells,1.05MB
+trackedmemory;three fullruns total28.52s. No shared/Thermal/ordinaryruntime edits,
+Desktop,release or broadgridrun. Evidence:
+`_private_workspace_artifacts/fire-fluid-stationary-wall-20261016/RESULT.md`.
+Next bounded boundary:an along-wall advected thermal patch with matched prescribed
+flow before corners/box/plume qualification.
+
+## 2026-10-17 — Along-wall advected patch isolates the leading-tail error
+
+Completed five bounded native pulse trajectories (maximum 32,768 gas cells).
+With wall exchange off, doubling along-wall resolution from 32 to 64 cells reduces
+early downstream-tail error from 36.516% to 7.401%. The matched coupled case has
+the same 7.401% error. The selected 64 × 4 × 128 / 3.125 ms case passes all nine
+unchanged 10% gates: early tail 7.395%, near-wall history 0.343%, Q 0.187%, solid
+0.188% / 0.131%. At fixed grid, shortening exchange from 6.25 to 3.125 ms reduces
+Q error from 0.524% to 0.187% without changing early tail. Error begins in gas
+transport; interface timing adds a smaller error. Exact-native-Q analytic solid
+replay differs by only 0.00116% / 0.04798%. No new solver formula fix justified.
+
+Independent Fourier/FV/CN reference refinement (maximum 0.02887%), pulse
+superposition, strict/sanitizer checks, bit-exact previous wall smoke and eight
+sharp-source regressions pass. The coarse failure is retained, not waived.
+This wall has one uniform face temperature and two through-thickness solid cells;
+local solid hotspots, lateral conduction, box corners and feedback remain unproven.
+No shared/Thermal/ordinary-runtime edits or release. Release heuristic: minor for
+optional diagnostic workflow; no version change. Existing Fire–Fluid parent only;
+Atlas considered, no new topology/plan. No memory write.
+Evidence: `_private_workspace_artifacts/fire-fluid-thermal-patch-20261017/RESULT.md`.
+Next: matched local wall patches/solid columns before box or buoyancy coupling.
+
+## 2026-10-17 — Local wall strips and independent solid columns
+
+Completed the bounded local-mapping step; qualification is PARTIAL, with the 10%
+gate unchanged. Each gas x-strip exchanges only with its own area-scaled native
+Thermal two-cell column. Whole-batch rollback and wrong-recipient binding checks
+pass. Existing whole-face behavior remains bit-exact in its previous patch smoke.
+No shared/Thermal numerical changes or ordinary worker/UI linkage changes.
+
+All 25 hotspot/combined-profile/selected-patch gates pass in four trajectories.
+The selected 64 × 4 × 128 / 3.125 ms case gives local-Q spatial/history error
+0.505%, solid 0.506% / 0.568%, hottest-patch history 0.378%, and early gas tail
+7.395%. The final hottest receiving-layer patch is x[0.0625,0.09375] m; the deeper
+layer remains hottest over x[0.03125,0.0625] m, both matching the reference.
+The hottest patch rise is 4.341 times the wall average; 94.86% of heat
+is in the source-footprint and first downstream patches. Uniform-wall temperature
+therefore concealed a meaningful hotspot despite correct total heat.
+
+Individual weak-patch checks prevent an aggregate-pass overclaim. An added
+128 × 4 × 64 directional check reduces early gas tail to 5.045% and upstream
+local-Q error to 2.497%, but downstream patch x[0.125,0.15625] m remains 13.554%
+(outside 10%). The very faint periodic-wrap patch also fails; two extremely faint
+patches lack a sufficiently converged individual reference and are unqualified.
+No ratio waiver or huge-grid escalation. Remaining error is already present in
+local heat delivery before solid response. Exact-packet solid replay remains
+about 0.00116% / 0.048% in combined histories; x-resolution sensitivity points
+toward weak gas/source-edge transport or local sampling, not a new solid defect.
+
+Four native runs used at most 32,768 gas cells, 260.91 s total, and
+19.27 MB tracked allocation. Strict/small ASan/UBSan,
+local mapping/rollback, 12+12 legacy face/support, slab, prior-patch parity, and
+eight sharp-source regressions pass. Reference hotspot/local-primary refinement
+max 0.235%; per-patch reference limitations are explicit in report.json.
+Evidence: `_private_workspace_artifacts/fire-fluid-thermal-columns-20261017/RESULT.md`.
+No commit, version bump, release or Desktop refresh. Release heuristic recommends
+minor for the optional diagnostic API/workflow. Existing Fire–Fluid parent only;
+Atlas considered, no new plan/topology/adoption. No memory write.
+Next bounded boundary: exact-profile weak-edge local flux/sampling controls before
+expanding geometry or introducing lateral solid conduction/feedback.
+
+## 2026-10-17 — Frozen reference-field weak-edge isolation
+
+Completed 32 one-shot probes on independently generated reference snapshots at
+1.5 and 3.2 s; no new coupled trajectories. Native scalar fluxes are measured on
+the same reference cell averages, separating spatial operator error from evolved
+state error. Flux extraction agrees with the actual native Euler energy change
+within 1.77e-11 relative. The column exchange kernel agrees with the independent
+frozen two-capacity solution within 0.0000041%. At 3.2 s, weak-downstream wall
+sampling error is 0.637% on the 128-normal-cell grid.
+
+The gas operator still fails the unchanged 10% gate on reference input. At fixed
+128 normal cells, doubling x resolution 64→128 reduces source-height downstream
+flux error at 1.5 s from 30.077% to 10.319%, near-wall periodic-wrap flux error
+from 92.104% to 19.279%, and source-height wrap flux at 3.2 s from 65.541% to
+11.006%. These references pass the separate 0.5% refinement check. Individual
+unconverged faint reference quantities retain null gates, not fabricated passes.
+Minmod does not generally fix the failures and worsens several. Advection and
+central-diffusion component errors can cancel or amplify in the small net flux.
+No physical coefficient, solver formula/default, timestep or acceptance change.
+
+Strict/sanitizer largest-state parity, prior reference-history bit parity,
+column mapping, legacy 12 face + 12 support checks and eight Python reference
+regressions pass. Maximum one-shot state 65,536 cells, 8.47 MB tracked; all 32
+native probes total 0.67 s, four reference exports total 57.33 s. No negative gas
+profile clipping was needed. Prior whole-trajectory weak-tail failures remain.
+Evidence: `_private_workspace_artifacts/fire-fluid-thermal-edge-20261017/RESULT.md`.
+Next: bounded consistent advection/diffusion flux reconstruction candidate on
+these frozen fields, requiring positivity/conservation before a trajectory test.
+Existing Fire–Fluid parent; Atlas considered, no new topology/adoption. No memory
+write, shared/Thermal edit, commit, version bump, release or Desktop refresh.
+Release-impact heuristic recommends minor for optional diagnostic workflow only.
+
+## 2026-10-20 — Selected headless wall-normal thermal solver
+
+The uniform-transverse warm-solid demonstrator has a qualified `wall-refined`
+profile with an actual conservative CN normal update, retained increments,
+512 normal cells and centered one-step exchange. Startup error is 3.67%, and
+all declared five-second warm/off/reversal checks pass. This is a selected
+source/headless solver path, not ordinary runtime or live Thermal adoption.
+Old faint-arrival qualifications remain unchanged. See [numerical details and
+limits](fire_fluid_accuracy.md).
+
+
+## 2026-10-20 — Joint headless wall-refined consumer
+
+The selected warm/cool-solid numerical step is now a reusable private module
+shared by the original demonstrator and a new local joint runtime. Complete
+accepted gas/solid states have exact-clock admission, versioned checkpoints,
+retained cell corrections and compare-and-swap publication/recovery. Frozen
+Thermal 0.3.3 receiver numerical ownership stays separate. No live channel,
+ordinary app/worker default, evolving-flow or ignition adoption is implied.
+See [runtime contract and reproducible commands](fire_fluid_joint_runtime.md).
+The original physical inputs, bounds, limiter and 10% gates remain unchanged;
+old faint arrivals and extra near-zero signed-change errors remain open.
+
+
+## 2026-10-20 — Online headless Thermal receiver process
+
+The fixed wall-refined joint host can now route each actual wall packet through
+a separate process executing Thermal's receiver/solid solve. The worker returns
+a staged candidate; PhysicsSim alone accepts and checkpoints both participants.
+Loss of a response or worker death therefore leaves no separately committed
+solid ahead of gas. Protocol replies check the actual receipt interval, payload,
+source checkpoint, allocated heat, state and request identity. Explicit fields
+cross bounded inherited pipes; no ABI structure or solver pointer crosses.
+
+Frozen Thermal/core0.3.3 remains the numerical control. Current Thermal owner
+sources with core0.3.4 quantity wrappers are additionally built read-only and
+compared against that exact baseline; no shared source/import/minimum change.
+This is a source-built benchmark process link, not an installed Thermal GUI or
+session connection. Inputs, conservative limiter, bounds and10%gates stay fixed;
+old faint-arrival and near-zero net-change limitations remain open. See the
+[joint runtime contract](fire_fluid_joint_runtime.md). Stop before new fluid
+momentum/buoyancy or combustion feedback. Next functional boundary is the existing
+spatially varying heated-wall benchmark through this same receiver seam.
+
+
+## 2026-10-20 — Spatial live receiver benchmark
+
+The selected128-strip/256-normal prescribed-shear benchmark now accepts an
+explicit separate receiver executable. Full0.5s current-Thermal execution,
+including receiver death/restart controls, reproduces retained gas, wall and
+all-column solid output exactly. Physical supports, clocks and10%gates remain.
+The adapter's five-second idle exit was repaired with a separate60swait for
+producer work; frame/reply waits remain5s. No physical/numerical coefficient
+change. Old faint-point/reference-limited results remain open. This is a
+source-built benchmark connection. Opt-in whole spatial-host range checkpoints
+now preserve accepted native/localized gas and all receivers across fresh-host
+restart; the full source-off/restriction trajectory reproduces retained history
+exactly. Repeated committed targets advance zero steps and do not regenerate
+missing exports. Buoyancy, ignition and installed-session adoption remain
+separate. See the [headless process contract](fire_fluid_joint_runtime.md).
+
+
+## 2026-10-21 — Bounded 0.1-second early-tail solver repair
+
+An opt-in diffusion path now passes the unchanged 10% gas-tail and total-wall
+point gates at 0.1 s in the existing live-receiver prescribed-shear case:
+-1.1662% tail and -2.6187% to -2.6218% wall error, versus previous +429.7067%
+and at least +491.2095%. It changes diffusion reconstruction/time integration,
+keeps source/supports/materials/clocks fixed and preserves conservative bounds
+and cold-cell transfer. Frozen core_thermal 0.3.3 remains read-only.
+
+The 0.025 s point still fails; individual subnormal solid point failures remain.
+The candidate is limited to 0.05/0.1 s, has not inherited old 0.5 s/durable
+qualification, and is not an installed/default solver adoption. No feedback,
+buoyancy or ignition. See [method, evidence and limits](fire_fluid_early_tail.md).
+
+## 2026-10-21 — Bounded 0.025-second steep-face repair
+
+The latest opt-in candidate completes the same-grid160-tick receiver case,
+but tail remains1002624x and wall Q52.606x their qualified references. Positive
+regular-face fits repair345–407% analytic gradient errors to <=0.327%; mixed
+spatial operators in time prediction remain a demonstrated gas defect. No
+10% waiver:255/256 supplied-Q solid histories pass, one below-binary64 channel
+and26 tiny points fail. One earlier tick55 refusal remains unattributed after
+an exact-prefix successful diagnostic replay. No feedback/default adoption;
+prior coupled0.1s evidence is not inherited. See[method and limits](fire_fluid_early_tail.md).
+
+## 2026-10-21 — Consistent gas diffusion time stages
+
+The explicit`--tail-time`candidate uses the same bounded reconstructed flux in
+every SSPRK(10,4)stage, fixing the measured mixed-operator temporal defect.
+Same-clock .025s1-D normal cell/band and unequal x errors remain-70.39%/-30.90%/
+-26.54%;10→40 internal stages changes signals<0.45%. Strict/sanitizer tests and
+regressions pass; gas-only .1s controls pass. Native hooks compile, but failed
+1-D physical gates stop this slice before another receiver trajectory or feedback.
+Grid, clocks, reconstruction, bounds and10%gate unchanged; no default/shared/
+release adoption. Next is same-grid startup/reconstruction/limiter localization.
+See[method and limits](fire_fluid_early_tail.md).
+
+## Latest source-interval repair: experimental 1-D only
+
+Probe method 8 integrates conduction of newly generated source heat during each
+original scalar tick, rather than endpoint half-kicks. Existing-field SSPRK(10,4),
+reconstruction, paired limiter, bounds, physical supports/clocks and 10% gate stay
+fixed. No reference-state replacement or heater-footprint expansion occurs.
+
+At 0.025 s normal wall-cell error improves -70.3916% to -7.6798%; uniform and
+unequal horizontal errors improve to -2.2105%/-2.3479%. The normal band improves
+-30.9033% to **-10.9626% and still fails**. All 0.1 s gas-only controls pass.
+The old first cold normal-cell deficit starts on source tick one (-97.8408%);
+source integration removes that initial deficit, while later normal transport
+still develops error. This does not qualify an entire early history or wall/solid
+response. Thin-front reconstruction controls were rejected.
+
+Fresh strict/ASan-UBSan source, bounds, conservation and six affected operator
+regressions pass; the three 0.025 s exports match exactly across builds. Method 8
+is 1-D only; no new native receiver run or feedback. Source edges require four
+locally uniform cells per side and a <=1e-12 omitted-tail guard. Next localize the
+remaining normal-band transport deficit on the same source-aware field.
+Evidence: `_private_workspace_artifacts/fire-fluid-startup-deficit-20261021`.
+
+## Latest normal-band flux investigation and fit quadrature repair
+
+The same source-aware 1-D grid/clocks isolate the normal-band deficit to gas
+heat distribution. Requested/admitted boundary transfer is 1.0 with no limiting;
+its heat ledger closes to 1.34e-15 relative. On analytic cell means the late band
+face gradient is accurate, but the heater-edge fit is 26–42% low during early
+startup. A smooth reconstruction across the discontinuous source remains the
+next bounded repair target; no new wall/solid error is established.
+
+A separate demonstrated arithmetic defect is fixed in `physics_sim_tail_fit.h`:
+bounded composite Gauss integration resolves steep exponential variation. The
+existing limiter, bounds, source interval, time operator, grid and 10% gate stay
+fixed. At 0.025 s the normal band moves -10.9626% to **-10.9465%, still failing**;
+normal first cell -7.6085%, uniform/unequal horizontal -2.2105%/-2.2779% pass.
+The 0.1 s gas-only controls pass. No entire early-history qualification.
+
+Fresh strict/ASan-UBSan builds, 436 independent moment/fit checks, seven affected
+source/operator tests and exact five-history parity pass. No new coupled run,
+default adoption, shared Thermal change or feedback. Evidence:
+`_private_workspace_artifacts/fire-fluid-normal-band-20261021/RESULT.md`.
+
+## Latest heater-edge repair: selected 1-D gates pass
+
+Explicit probe method 9 fits a finite-duration heated-step gradient at declared
+source jumps, including post-heating spreading within diffusion stages. It uses
+local means, source power and diffusivity, then passes the requested flux through
+the unchanged conservative limiter. Source energy, grid, clocks, actual bounds,
+previous source/time/quadrature repairs and 10% gate remain fixed.
+
+52 independent analytic cases pass; the same0.025 s history gives normal first
+cell -5.6004%, normal band -9.7642%, uniform/unequal horizontal +1.7623%/+1.6921%.
+All selected0.1 s controls pass. The normal-band margin is only0.2358 percentage
+points. A continuously heated profile that ignored stage spreading was rejected.
+
+Earliest startup improves: first cold normal-cell error after four ticks falls
++31.25% to +0.67%. Later profiles often leave the admissible model family and use
+the existing fallback; earlier faint remote tails and the whole history remain
+unqualified. No wall/solid result follows from these gas-only diffusion probes.
+
+Fresh strict/ASan-UBSan nine test programs,52 analytic and five history parity
+checks pass; all five old method8 controls remain exact. Method9 is1-D only;
+no native prescribed-flow/coupled integration or feedback. Next test its
+applicability under prescribed advection before wall/solid attribution.
+Evidence:`_private_workspace_artifacts/fire-fluid-heater-edge-20261021/RESULT.md`.
+
+## Latest prescribed-flow reduction: advection face repair passes selected gates
+
+The actual unequal2112-cell periodic source-pulse fixture, prescribed u=.025 m/s,
+fixed scalar dt1/51200 and original supports exposes a new early-tail failure:
+heater-edge method9 alone gives-99.9902% at0.025 s despite passing zero-flow
+controls. On analytic cell means, the fine-to-coarse polynomial reconstructs a
+negative temperature rise at x=3/32 (face error-406.47%).
+
+Opt-in advection method3 uses the existing positive finite-volume profile fit
+for steep/unequal faces, retaining the paired conservative limiter and actual
+bounds. Flow-probe method10 combines it with heater-edge method9. Tail errors
+become+7.7798% at0.025 s and-1.5395% at0.1 s, passing the fixed10% gate; transport
+band and heater-edge cell errors stay below0.04%. Independent reference gate0.5%
+is unchanged. No source/time/grid change or state replacement.
+
+Ten test programs pass strict/ASan-UBSan, including196 positive-tail checks;
+selected moving/zero-flow histories match across builds and legacy controls
+remain exact. This is1-D translation only. Full spatially varying shear,
+wall/solid response, earlier faint-history and feedback remain unqualified.
+Next use a bounded gas-only shear prefix before a longer trajectory.
+Evidence:`_private_workspace_artifacts/fire-fluid-prescribed-gas-20261021/RESULT.md`.

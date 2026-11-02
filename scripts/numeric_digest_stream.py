@@ -2,7 +2,7 @@
 
 It hashes identical bytes to growth_fire_v1.digest; there is no new wire format.
 """
-import hashlib,json,struct
+import hashlib,json,struct,array,sys,math
 from surface_sources.growth_fire_v1 import number,require
 
 def digest(value):
@@ -22,6 +22,24 @@ def digest(value):
                 if i:emit(b',')
                 emit(json.dumps(k,ensure_ascii=True).encode('ascii'));emit(b':');visit(v[k])
             emit(b'}')
+        elif t is list and len(v)>=256 and (
+                all(type(x) is float for x in v) or
+                all(type(x) is int and -(1<<53)<=x<=(1<<53) for x in v)):
+            # This integer range is exactly representable in binary64. Other
+            # integers keep the scalar precision/finite checks below; bools and
+            # mixed arrays also keep their original JSON types and validation.
+            require(all(math.isfinite(x) for x in v),'finite value required')
+            emit(b'[')
+            # bytes.hex groups exactly eight bytes per binary64. Bulk replacement
+            # inserts the existing tags without a Python operation per element.
+            # Bound temporaries independently of the complete native field size.
+            for start in range(0,len(v),4096):
+                binary=array.array('d',v[start:start+4096])
+                if sys.byteorder=='little':binary.byteswap()
+                encoded=binary.tobytes().hex(' ',8).encode('ascii')
+                if start:emit(b',')
+                emit(b'{"$f64be":"'+encoded.replace(b' ',b'"},{"$f64be":"')+b'"}')
+            emit(b']')
         elif t is list:
             emit(b'[')
             for i,item in enumerate(v):

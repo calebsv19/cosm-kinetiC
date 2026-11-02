@@ -12,7 +12,13 @@ bool cfd_cartesian3d_init(CfdCartesian3d *g, const int n[3], const double length
     CfdCartesian3d v = {0};
     size_t count = 1;
     for (int a = 0; a < 3; a++) {
-        if (n[a] < 4 || n[a] > 256 || !isfinite(length[a]) || length[a] < .001 || length[a] > 1000)
+        int maximum_axis=256;
+#ifdef PHYSICS_SIM_THIN_TRANSPORT_QUALIFIER
+        /* Diagnostic-only axial refinement, at most 4*4*1024 cells for
+         * newly admitted shapes. Ordinary builds retain the 256-axis cap. */
+        if(a==2 && n[0]==4 && n[1]==4)maximum_axis=1024;
+#endif
+        if (n[a] < 4 || n[a] > maximum_axis || !isfinite(length[a]) || length[a] < .001 || length[a] > 1000)
             return false;
         v.n[a] = n[a];
         v.length[a] = length[a];

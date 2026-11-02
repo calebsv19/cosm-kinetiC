@@ -1,4 +1,114 @@
+- [Live partition/window comparison](fire_fluid_live12_rig.md) — bounded 120-window source profile, native controls, storage and presentation contract; 12-second comparison completed with diagnostics and decoded video verified.
+
+- [Opt-in native field packet I/O](fire_fluid_field_packet.md) — exact binary transport, replay binding, measured storage tradeoffs and remaining128 capacity boundary.
+
+- [Opt-in scalar transport candidate](fire_fluid_scalar_candidate.md) — reference evidence, profile and restart bounds.
+
+- [Independent scalar/object accuracy and fixed-input gust references](fire_fluid_accuracy_reference.md) — smooth and compact transport, finite gas/object heating, finer-grid/timestep controls.
+
+- [Open-domain wind driving and live Fire–Fluid comparisons](fire_fluid_open_weather.md) — explicit mechanical work, open reservoirs, release/reversal and native worker qualification; eight live cases accepted, with 264 checkpoints and 94 aggregate checks.
+
+Current development reference: [retained pulse and fixed-MAC transport diagnostics](fire_fluid_transport_replay.md). All four source-development stages accepted: fixed-source/shared-MAC, controlled timing, and eight live open-domain weather cases. Accuracy/convergence and installed UI integration remain separate boundaries.
+
+- [Overnight diagnostic controls](fire_fluid_overnight_diagnostics.md) — named physical interventions, matched spatial/exchange comparisons, source-development scope.
+- [Source delivery cutoff and early recovery](fire_fluid_recovery.md) — explicit delivered/diverted heat and smoke; longer native matrix in progress.
+- [Durable live inert-object checkpoint](fire_fluid_inert_checkpoint.md) — compensated temperature, signed exchange, exact native/host restart and atomic rollback.
+- [Controlled source-to-object transport](fire_fluid_source_object.md) — cold-start heater controls and observable gas/object energy transfer.
+- [Channel, cadence, ventilation and inert-object references](fire_fluid_validation_campaign.md) — native3D channel proof; ordered live campaign and reciprocal thermal scope.
+
+- [Live wake timestep and voxel references](fire_fluid_wake_reference.md) — paired64³ temporal and 80³ spatial controls, native wake detail and accuracy limits.
+
+- [Gust/wake refinement and pressure-backflow diagnostic](fire_fluid_gust_diagnostics.md) — fixed-source higher-grid controls, preserved64³CFL refusal and isolated candidate limits.
+
+- [Wind sensitivity, channel ventilation, reversal and controls](fire_fluid_ventilation.md) — bounded native comparisons, reusable presets and remaining accuracy limits.
+
+- [Prescribed native inlet wind and gust comparisons](fire_fluid_driven_wind.md) — opt-in source/headless controls and limits.
+
 ## 2026-10-13 — UI source checkpoint adopted; Main Edit ready
+
+## 2026-10-22 — Explicit on/off age intervals repair bounded shutoff/restart histories
+
+New opt-in source_age_intervals module retains source on/off intervals on the
+existing scalar clock, including nonzero youngest age after shutoff and positive
+interval sums after restart. Existing FCT budgets, incoming-first staging,
+actual bounds, grid, source delivery/clocks and10% gate unchanged. Frozen pulse
+and restart requested/admitted flux pass56 comparisons. Same four evolving
+histories pass48 selected gates;173continuous-control checks and36heater-neighbor
+checks also pass. Pulse first-cell at0.00625s improves-17.659% to-0.0001824%;
+restart endpoint first-cell-0.0002236%. Tiny discrepancies are numerical
+comparisons within unchanged0.5% reference qualification, not precision claims.
+14tests strict/ASan-UBSan, full new-history sanitizer parity, delayed-state parity
+and five old-route trace comparisons pass. Source transitions/capacity/invalid
+ages reject atomically. New route2 is explicit; no default or app adoption.
+Qualified fixed-footprint stationary1-D unit on/off heating through0.025s;
+next evolving matched transport test before shear selection. No2-D/feedback.
+Existing Atlas experiment remains active; no new topology/adoption claim.
+Evidence: `_private_workspace_artifacts/fire-fluid-age-interval-repair-20261022/RESULT.md`.
+
+---
+
+
+## 2026-10-22 — Source-age closure fails shutoff; frozen transport tests pass locally
+
+Bounded same-grid/history comparison: delayed activation reproduces the
+continuous case exactly after time shift. Safe generic dispatch after shutoff
+has first-cell-17.659% at0.00625s despite passing late endpoint. Restart inherits
+that pre-restart failure; no separate new post-restart failure proven. On exact
+frozen pulse means, continuous-age closure requested flux is up to99.970% low,
+with14/14sampled diffusion faces failing10%; near-heater flux is62.513% high.
+Ages are0.003125..0.0046875s but closure infers0..0.000534905s. Thus history
+information is needed, not a grid refinement. Frozen continuous transported
+shapes at+/-0.025m/s pass local10%: diffusion max4.919%, advection face max2.582%.
+This is not an evolving-flow qualification. No general reconstruction selected.
+Five histories/eight frozen cases match strict/ASan-UBSan outputs; three affected
+fixtures pass both builds, numerical headers unchanged. Source-off metadata
+refusal is atomic; forced unsupported closure is labeled diagnostic only.
+Next finite-age interval/multi-interval reconstruction, then same pulse/restart
+histories before full transport selection. No2-D/feedback/default adoption.
+Evidence: `_private_workspace_artifacts/fire-fluid-history-transport-20261022/RESULT.md`.
+
+---
+
+
+## 2026-10-22 — Source-age reconstruction and incoming/outgoing staging pass the bounded 1-D history
+
+Opt-in source-age profile4 repairs finite-duration heater shape and processes
+incoming face transfers before outgoing ones, refreshing unchanged FCT budgets
+and actual-cell guards. Grid, clocks, source, bounds and gates unchanged.
+All202 reference-qualified measurements across the retained1-D history pass
+10%; worst error0.5134%. Band errors at0.0015625/0.0046875/0.025s are
++0.08589%/+0.11966%/+0.00822%; endpoint first-cell+0.05538%. First-interval
+requested/admitted flux, initially cold-cell heat, perturbation transport and
+invalid-input refusal pass.13 tests strict/ASan-UBSan, full history sanitizer
+parity and old profiles0..3 exact trace parity pass. Qualified only stationary
+continuously powered unit rectangular-source1-D diffusion through0.025s;
+no source-shutoff/advection/2-D/default/feedback claim. Next qualify closure
+under changed source histories and transport before prescribed-shear use.
+Existing Atlas experiment retained. Minor release recommended; no version edit.
+Evidence: `_private_workspace_artifacts/fire-fluid-source-age-staging-20261022/RESULT.md`.
+
+---
+
+
+## 2026-10-22 — Whole-interval front-flux candidate rejected; two residual mechanisms isolated
+
+Whole-interval diffusion of a fitted positive profile passes24 analytic flux
+cases (worst relative error5.15e-11), but unchanged256-cell history still fails
+10%: normal-band errors+41.0754% at0.0015625s,+14.1843% at0.0046875s,
+-12.6360% at0.025s; endpoint first-cell-15.8200%. First-interval face63/64
+requests already overestimate finite-source heat by40.94%/33.51%. Farther cold
+face60 requests within0.035%, but combined budget/application blocks nearly
+all of it; incoming heat is unavailable to outgoing whole-interval transfer.
+Face58 additionally misses representable arrival from initially zero means.
+Candidate remains private and rejected; solver source/defaults/limiter,
+physical clocks and gates unchanged. Strict/sanitizer frozen/history parity,
+bounds and six affected regression executions pass. No2-D or feedback run.
+Next finite-duration source-age reconstruction plus consistently staged
+incoming/outgoing flux, retaining budgets. Supporting existing Atlas lane.
+Evidence: `_private_workspace_artifacts/fire-fluid-spacetime-front-20261022/RESULT.md`.
+
+---
+
 
 The completed active UI rollout and retained Fire–Fluid source are checkpointed
 at `336a741d94458e0aebfd7fa58bbb0a5a5dcd975f` and fast-forward adopted into canonical `main`. The persistent
@@ -623,3 +733,33 @@ Retained local worker authoring/validation: [session_worker_attempts.md](session
 - [Fire–Fluid source and transport accuracy](fire_fluid_accuracy.md): separate time/grid verification, passing coarse 64³ observation gate and unqualified local heat transfer.
 - [Fire–Fluid local heat and passive surface](fire_fluid_surface.md): fixed-volume observations, failed local heat/flux gate, and independently verified prescribed-input response numerics.
 - [Fire–Fluid local transport qualification](fire_fluid_local_transport.md): heated/evolving-shear transport, directional and combined anisotropic refinement, rejected limiter evidence and remaining local heat gate.
+
+- [Bounded early heat-tail repair](fire_fluid_early_tail.md): consistent-stage gas diffusion fixes the temporal defect; 0.025s1-D physical gates still fail, so no new coupled run or feedback. Earlier coupled passes are revision-specific.
+- [Local joint thermal runtime](fire_fluid_joint_runtime.md): fixed wall-refined headless consumer, checkpoint and restart contract.
+
+Latest early-tail 1-D source-interval result: three selected 0.025 s quantities
+pass, normal band remains -10.9626% and fails the unchanged 10% gate; no coupled
+adoption. See [method and limits](fire_fluid_early_tail.md).
+
+Latest normal-band investigation repairs steep-fit quadrature but leaves
+0.025 s normal band -10.9465% outside the fixed 10% gate. Heater-edge
+reconstruction is the next bounded target; no feedback or coupled adoption.
+See [method and limits](fire_fluid_early_tail.md).
+
+Latest heater-edge method9 passes selected1-D0.025/0.1 s gates (normal band
+-9.7642%, fixed10% limit), while full early-history/fallback limitations remain.
+No coupled/default adoption. See [method and limits](fire_fluid_early_tail.md).
+
+Latest prescribed-translation1-D method10 repairs a negative interface face
+value and passes selected0.025/0.1 s gates (tail+7.7798%/-1.5395%, fixed10%).
+Full shear and wall/solid are unqualified. See [method](fire_fluid_early_tail.md).
+
+Latest full spatial-shear gas-only .025 s endpoint passes four fixed10% gates,
+but the early arrival history fails. No wall/default/native or feedback adoption.
+See [current evidence and remaining startup boundary](fire_fluid_early_tail.md).
+
+Startup cancellation and representable source-tail truncation have opt-in repairs,
+but the new physical histories fail10%; existing selections are unchanged.
+See [startup repair limits](fire_fluid_early_tail.md). No new2-D/coupled proof.
+
+- [Fire–Fluid quiescent backflow and kinetic accounting](fire_fluid_quiescent_backflow.md): explicit pressure-reservoir exterior momentum policy, discrete signed stage ledger and lossless fine-grid joint journals.

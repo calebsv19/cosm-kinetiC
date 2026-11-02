@@ -46,7 +46,7 @@ class FrameworkTests(unittest.TestCase):
         with self.assertRaises(ValueError):host.step(0,'different')
         self.assertEqual(before,host.path.read_bytes())
     def test_worker_binding_drift_and_checkpoint_tamper(self):
-        clone=self.root/'clock';shutil.copy2(self.config['clock_worker'],clone)
+        clone=self.root/'clock';shutil.copy2(self.config['clock_worker'],clone);clone.chmod(0o755)  # This test owns its writable mutation fixture.
         self.config['clock_worker']=str(clone);host=Framework(self.config,self.root/'store');host.initialize()
         clone.write_bytes(clone.read_bytes()+b'drift')
         with self.assertRaisesRegex(ValueError,'bytes changed'):host.inspect()

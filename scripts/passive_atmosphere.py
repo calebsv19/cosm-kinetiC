@@ -33,12 +33,14 @@ def worker_subprocess_descriptors():
     return execution_descriptors() or (inherited_descriptors(ROOT,Path(owner)) if owner and inherited(ROOT,Path(owner)) else ())
 
 
-def run_atmosphere_worker(worker, request_path, output_limit=67108864):
+def run_atmosphere_worker(worker, request_path, output_limit=67108864, *, io_format=None):
     """Capture native JSON with live byte/wall limits and owned-group teardown."""
+    require(io_format in (None,'field_packet/v1'),'native IO format')
     descriptors=worker_subprocess_descriptors()
-    row=capture([str(worker),str(request_path)],stdout_limit=output_limit,pass_fds=descriptors)
+    command=[str(worker),*(['--field-packet'] if io_format else []),str(request_path)]
+    row=capture(command,stdout_limit=output_limit,pass_fds=descriptors)
     from atmosphere_attempt import retain_capture
-    retain_capture(row,[str(worker),str(request_path)])
+    retain_capture(row,command)
     require(row['status']=='passed',row.get('reason') or row['stderr'].decode('utf-8',errors='replace').strip() or 'worker failed')
     return row['stdout']
 

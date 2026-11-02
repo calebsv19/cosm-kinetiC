@@ -16,7 +16,7 @@ CfdSparseMg *cfd_open_atmosphere3d_box_preconditioner(CfdOpenAtmosphere3d *s) {
             double w=1/(s->grid.h[a]*s->grid.h[a]);
             bool edge=(side<0 && coord==0) || (side>0 && coord==s->grid.n[a]-1);
             if(edge && (a==2 || s->lateral_open)){
-                if(a!=2 || side>0 || !s->ground)values[0]+=2*w;
+                if((a!=2 || side>0 || !s->ground) && !cfd_open_wind_neumann(s,a,side))values[0]+=2*w;
                 continue;
             }
             int other=a==2?q+side*s->plane:cfd_cartesian3d_neighbor(&s->grid,q,a,side);

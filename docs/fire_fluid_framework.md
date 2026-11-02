@@ -1,3 +1,101 @@
+## Optional source delivery isolation
+
+See [delivery cutoff](fire_fluid_recovery.md) for the source-bound whole-window
+gate and delivered/diverted receipts. Fire continues evolving; this does not
+model extinction. Receiver balances use actual delivery.
+
+## Optional durable inert object
+
+The native Fluid checkpoint can now carry an authored inert face with signed
+heat receipt and compensated temperature. It shares the gas clock and existing
+joint transaction. See [checkpoint contract](fire_fluid_inert_checkpoint.md) for
+source-development scope, accepted live proof and recovery limits.
+
+## 2026-10-29 — Live wake timestep and voxel references completed
+
+The live 64³ gas-timestep-half and 80³ wake reference finish3.2s with
+accepted-prior native Fire feedback and exact independent restart. At the
+endpoint, gas timestep changes the Fire-plane wind by 0.374%
+versus 3.640%for gas resolution. The source has explicit
+wake80/v1 admission and a separate 1 GiB lossless journal ceiling, with unchanged
+CFD operators and numerical acceptance. Spatial convergence remains open.
+See [the capacity, methods and measured comparison](fire_fluid_wake_reference.md).
+
+---
+
+## 2026-10-28 — Gust refinement exposes pressure-backflow sensitivity
+
+Fixed-source8/16/32/64³diagnostics show late growth after gust shutoff even with
+zero heat/smoke. Original64³hits the unchanged CFL gate at2.335s; smaller gas dt
+has a much smaller effect than grid or boundary policy. A contained quiescent
+backflow-momentum candidate completes64³/3.2s, but remains unadopted and spatially
+sensitive. Existing ordinary solver/defaults are unchanged. See
+[the diagnostic and boundary findings](fire_fluid_gust_diagnostics.md).
+
+---
+
+## 2026-10-28 — Channel ventilation, reversal and scenario controls
+
+The Main Edit continuation adds fixed native channel openings, paired-boundary
+wind reversal and ten local browser-workbench presets. Thirteen coupled cases
+cover grid/box sensitivity, exchange, ventilation and recovery. Strong-gust
+response remains spatially sensitive; these are warm-flow integration results.
+See [methods, measured results and limits](fire_fluid_ventilation.md).
+
+---
+
+## 2026-10-28 — Opt-in native sustained inlet and gust controls
+
+The Main Edit source/headless path now prescribes a native X inlet using
+absolute-step hold or linear commands. Continuous ±X and abrupt/ramped gust
+comparisons retain accepted-prior Fluid-to-Fire causality, air/heat/smoke budgets,
+restart/replay and atomic publication. The bounded17×17Fire/8³gas qualification
+includes timestep and stationary-box controls; it does not establish spatial,
+hot-fire, general-room or heated-object accuracy. Existing unforced fields retain
+bitwise parity on the selected controls. No installed/Desktop UI or release
+adoption is included. See [the API and comparison runner](fire_fluid_driven_wind.md).
+
+---
+
+## 2026-10-14 — Scalar transport diagnosis and bounded improvement
+
+Exact-reference thin-column tests identify excessive scalar spatial spreading
+before buoyancy or obstacle effects: temporal refinement barely changes the
+error. An explicit scalar-only MC reconstruction improves all 14 controlled
+comparisons; the 128-cell physical-diffusion case passes the unchanged 10%
+profile/history gates (8.55%/7.46%), while 32/64 remain inadequate. A fitted
+delay does not reconcile the original boxed traces (44.60% residual).
+Default minmod and momentum remain unchanged; MC requires separate coupled
+qualification. Soft-stopped probes now preserve accepted fields and numerical
+closure while retaining an explicit incomplete verdict.
+[Methods, evidence and limits](fire_fluid_local_transport.md).
+
+## 2026-10-13 — Fixed physical face-support qualification
+
+Final bounded verdict: support/exchange passes; forcing is not qualified.
+64³ hit its 1,200 s cap after the 3.175 s observation, without final fields or
+closure. Matched-prefix history and heating-demand differences are 45,309.97%
+and 57,969.89%, outside 10%; these do not replace a full 3.2 s qualification.
+No larger grid or automatic rerun. See the linked detailed verdict.
+
+The development thermal module now shares one explicit, aligned physical gas
+slab between face observation and reciprocal transfer. Whole-face conductance,
+gas capacity and footprint remain fixed under grid subdivision. Analytic tests
+cover all six orientations at 32³/64³. This is a synthetic volume-distributed
+Robin model; wall-convection calibration and live joint-host integration remain
+separate. Current boxed forcing is evaluated with the unchanged 10% gate using
+bounded 32³/64³ runs, not inferred from no-box directional passes.
+See [the matched-support evidence and limits](fire_fluid_surface.md).
+
+## 2026-10-13 — Separate surface prototype; joint runtime unchanged
+
+The [heated-face numerical prototype](fire_fluid_surface.md) applies reciprocal
+exchange in an independently owned native gas/face pair. It does not add a thermal
+return channel to this joint host, migrate saved joint states or change worker
+protocols. Qualified boxed-face forcing and transactional host integration remain
+prerequisites for live surface heating. [Completed directional evidence and the
+bounded Y decision](fire_fluid_local_transport.md) supersede earlier pending status.
+
 # Native Fire–Fluid execution framework
 
 The opt-in source-development host in `scripts/fire_fluid.py` runs native
@@ -345,3 +443,18 @@ adds explicit HLLC mode, isolates stationary-contact numerical mixing and checks
 acoustic/boundary response. It improves localized buoyancy but retains the failed
 slab and material mesh sensitivity. The NIST mixture reference is not yet the
 native EOS; reciprocal thermal return remains disabled.
+
+## 2026-10-20 — Prescribed-shear thermal diagnostic boundary
+
+The selected 256-normal/timing profile now runs through 0.5 s in the separate
+native gas/solid diagnostic, with reciprocal heat exchange and staged in-memory
+acceptance. Its gas, total heat/rate and three independently qualified local
+wall/solid histories pass their 10% gates; faint early points and five weak local
+references remain limited. See [accuracy and limits](fire_fluid_accuracy.md).
+
+This does not change the existing Fire→Fluid host or accepted-prior held
+Fluid→Fire wind feedback described above. It does not enable a Thermal return
+channel in that host, add durable joint Thermal checkpoint/rollback, qualify
+evolving flow/buoyancy under this heating, or adopt a new application default.
+The next proposed checkpoint is an appreciable-response non-burning thermal
+demonstrator with fixed application criteria and controls, awaiting user review.

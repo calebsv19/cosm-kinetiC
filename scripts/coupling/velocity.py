@@ -15,10 +15,10 @@ def basis_valid(u,v):
             'orthonormal Fire tangents')
 
 
-def sample_mac(velocity,grid,length,point,*,solid_floor=False,lateral_open=False):
+def sample_mac(velocity,grid,length,point,*,solid_floor=False,lateral_open=False,_validated=False):
     """Lower-face staggered convention from cfd_cartesian3d.h; periodic wrapping."""
     n=math.prod(grid);require(len(velocity)==3*n+(grid[0]*grid[1] if solid_floor else 0)+(grid[1]*grid[2]+grid[0]*grid[2] if lateral_open else 0),'native MAC velocity dimensions')
-    require(all(math.isfinite(v) for v in velocity),'finite native velocity')
+    if not _validated:require(all(math.isfinite(v) for v in velocity),'finite native velocity')
     require(len(point)==3 and all(0<=x<=extent for x,extent in zip(point,length)),
             'sample outside periodic domain')
     result=[]
@@ -67,6 +67,7 @@ def observation(cp,config,request_tick,max_age_ticks,*,height_m,basis_u=(1,0,0),
     native=fluid['state']['data']['face_velocity_m_s'] if ground else fluid['state']['data']['flow_storage'][:3*math.prod(grid)]
     require(fluid['fields']['face_velocity_m_s']==native,
             'native field/checkpoint velocity identity')
+    require(all(math.isfinite(v) for v in native),'finite native velocity')
     vectors=[];tangents=[]
     for y in range(source['height']):
         for x in range(source['width']):
@@ -74,7 +75,7 @@ def observation(cp,config,request_tick,max_age_ticks,*,height_m,basis_u=(1,0,0),
                    source['origin_m'][1]+y*source['cell_size_m'],height_m]
             from .solid_box import point_outside
             point_outside(config['fluid'],point)
-            value=sample_mac(fluid['fields']['face_velocity_m_s'],grid,length,point,solid_floor=ground,lateral_open=opened)
+            value=sample_mac(fluid['fields']['face_velocity_m_s'],grid,length,point,solid_floor=ground,lateral_open=opened,_validated=True)
             vectors.append(value)
             tangents.append([math.fsum(a*b for a,b in zip(value,basis_u)),
                              math.fsum(a*b for a,b in zip(value,basis_v))])

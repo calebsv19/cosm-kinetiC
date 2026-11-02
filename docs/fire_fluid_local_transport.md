@@ -1,3 +1,145 @@
+## 2026-10-14 — Transport spreading isolated; opt-in scalar reconstruction improved
+
+Retained boxed traces cannot be reconciled by a single delay. Log-interpolated
+threshold delays shrink from 0.924 s at 1e-12 K to 0.485 s at 1e-6 K. Even a
+best fitted 0.475 s delay leaves 44.60% face-history L1 error over 2.5–3.175 s;
+normalized final patch shape differs 13.38%. These fitted/normalized comparisons
+are diagnostic only and never replace the unchanged 10% acceptance gate.
+
+New thin-column tests exercise the actual open-atmosphere operator with constant
+0.05 m/s velocity, no buoyancy/obstacle, exact compact-pulse cell averages and
+optional physical thermal diffusivity 0.026/(1.2*1005) m²/s. The independent
+reference is exact translation or Gaussian diffusion convolution; 96/160-point
+quadrature agrees within 1e-9 relative. Largest grid is 4×4×256 (4,096 cells),
+not 256³. Velocity stays correct, energy closes and axis permutations agree.
+
+The original minmod scalar reconstruction substantially smears the packet.
+At 64 axial cells, pure-transport profile error is 62.26%; halving dt from
+1.25 to 0.625 ms changes it only to 62.38%. Numerical heat appears ahead of
+the exact zero-diffusion compact front. Thus scalar spatial transport can
+produce early thermal precursors before buoyancy feedback or a wall exists.
+This identifies a contributor, not the complete cause of the boxed discrepancy.
+
+An explicit `CfdOpenAtmosphere3d.scalar_mc` opt-in enables monotonized-central
+scalar slopes when MUSCL is enabled. Momentum reconstruction and default
+minmod selection are unchanged. All 14 matched controlled cases improve both
+profile and observed-slab history error. With physical diffusion:
+
+| Axial cells | Original profile | MC profile | Original slab history | MC slab history |
+| --- | ---: | ---: | ---: | ---: |
+| 32 | 83.21% | 68.82% | 76.18% | 64.54% |
+| 64 | 49.70% | 30.38% | 44.01% | 26.74% |
+| 128 | 22.08% | 8.55% | 17.75% | 7.46% |
+| 256 | 6.13% | 2.41% | 4.32% | 3.04% |
+
+The 128-cell physical-diffusion case passes 10%; 32/64 do not. Pure advection
+at 128 still fails its profile gate (12.40%), despite its 9.42% slab-history
+pass. Wider-pulse 64-cell MC errors are 7.87%/7.67%. No arbitrary diffusivity,
+source power, heat-transfer coefficient or acceptance threshold was tuned.
+The MC formula follows the standard centered slope limited by twice each
+one-sided slope; see [Clawpack's limiter implementation](https://www.clawpack.org/doxygen/amrclaw/2d/inlinelimiter_8f.html).
+
+Native and ASan/UBSan tests cover diagonal positive/negative flow, sharp fields,
+heat/smoke proportionality, nonnegativity, upper bounds, insulated solid cells,
+conservation and atomic source refusal. A default thin-column trace remains
+byte-identical to the frozen pre-change probe. The existing complete native
+accuracy and lateral/box pressure tests pass; 30 Python reference/retained-report
+contracts pass. Retained plume proofs continue to describe their frozen default
+operator; they do not qualify MC-enabled coupled flow.
+
+The boxed probe and `scripts/fire_fluid_box_forcing_run.py` now support a soft
+wall deadline: SIGTERM finishes the current accepted step, saves the field and
+numerical closure, and exits 7 with `complete:false`. A separate 30 s hard-stop
+fallback remains. A forced short-stop proof retains a valid field with heat
+closure 5.55e-17 J. Incomplete output still refuses full qualification; the field
+is a diagnostic snapshot, not a resumable joint-host checkpoint.
+
+The final 32³ MC boxed sensitivity replay soft-stops at 2.4825 s under its
+300 s wall budget during measured host contention (about82 s CPU in223 s wall,
+load average52). It retains a hash-bound accepted field, heat residual1.42e-14 J,
+divergence1.02e-14, pressure residual5.21e-13 and zero live/rejected allocations.
+A prior180 s attempt retained observations through2.88 s but no final field;
+their common MC observations match exactly. No further retry or64³ MC run.
+At the common2.475 s observation, original minmod32 rise is1.40436e-7 K,
+minmod64 rise5.38801e-13 K and MC32 rise8.27231e-14 K. The tiny precursor is
+extremely reconstruction-sensitive; a smaller signal is not itself evidence
+of a correct physical solution. These mixed-operator values cannot qualify
+spatial convergence. The report now explicitly refuses mixed scalar operators.
+The source and full3.2 s coupled forcing remain unqualified for MC.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-transport-diagnosis-20261014/`.
+The 10% forcing gate, synthetic surface-transfer limits and low-contrast
+Boussinesq applicability remain unchanged. No calibrated high-temperature fire,
+combustion, live joint host, installed-app or release qualification follows.
+
+## 2026-10-13 — Boxed observation and transfer support matched
+
+Final bounded verdict: support/exchange passes; forcing is not qualified.
+64³ hit its 1,200 s cap after the 3.175 s observation, without final fields or
+closure. Matched-prefix history and heating-demand differences are 45,309.97%
+and 57,969.89%, outside 10%; these do not replace a full 3.2 s qualification.
+No larger grid or automatic rerun. See the linked detailed verdict.
+
+Current boxed qualification uses one physical slab (full lower face, 1/32 m
+depth), conservatively restricted common 8×8 face tiles and identical volume
+weights in observation and thermal transfer. This removes the previous
+one-cell-depth mismatch without changing the fluid operator or the 10% gate.
+The synthetic reciprocal exchange passes six-orientation analytic, conservation
+and sanitizer checks. Boxed forcing and cadence remain distinct acceptance
+gates; no-box directional passes do not admit them. Current 32³/64³ trajectories
+use matching native source restriction and fixed flow/scalar timing, with no
+larger-grid replay. [Full qualification and remaining boundary](fire_fluid_surface.md).
+
+## 2026-10-13 — Completed directional references reconciled; bounded Y decision
+
+The completed from-zero 3.2 s references use identical 2.5 ms flow and 1.25 ms
+scalar timing (1,280 flow steps, 2,560 scalar cycles). The original compact fine
+source hash is `6db4841abd9c7418d56f100203d2727aca6ac8fdd8384feab7392dddb2172f30`.
+The fixed 10% local heat gate has not changed.
+
+| Matched comparison | Local heat L1 | Full velocity L2 | Heat gate |
+| --- | ---: | ---: | --- |
+| 64³ → 128³ | 13.100227% | 9.921982% | Fail |
+| 128³ → 128×128×256 | 4.705451% | 3.163460% | Pass, Z only |
+| 128×128×256 → 256×128×256 | 2.679662% | 2.855869% | Pass, X only |
+| 64³ → 128×128×256 | 16.646270% | 12.073073% | Fail |
+
+The X comparison also passes height-profile (0.753827%), smoke (0.749582%),
+wind-probe (0.155038%) and peak-temperature-rise (0.045085%) screens. It took
+47,598.934 s natively and peaked at 5,553,513,168 tracked bytes, within 8 GiB.
+The initial horizontal attempt failed admission before stepping; that failure
+is retained separately, not counted as a numerical result.
+
+Fresh readback verifies both terminal field hashes and re-executes the strict
+reports against current analysis source. All 31 horizontal source inputs and
+44 analysis inputs match current Main Edit exactly after the UI checkpoint.
+The vertical manifest differs only in the four later horizontal qualification
+files; retained prior-profile preprocessing parity covers the unchanged vertical
+operator, and all 42 vertical analysis inputs still match. The UI checkpoint
+at 336a741 includes retained Fire–Fluid source, not a new fluid repair.
+
+The original source has X/Y-swap relative L1 1.45e-19 and quarter-turn relative
+L1 9.57e-16; the vertical reference heat field has swap relative L1 4.32e-16.
+A fresh asymmetric 8×12×16 versus rotated 12×8×16 native test, including open
+lateral faces, buoyancy, pressure, momentum and MUSCL transport, gives heat
+relative L1 2.35e-20 and maximum velocity disagreement 3.23e-18 m/s over 80 steps.
+This is bounded implementation parity, not a full-duration Y refinement proof.
+
+**Decision:** a rotated 128×256×256 run mainly supplies axis-parity evidence for
+this symmetric setup. Y refinement at fixed already-fine X/Z (256³), or a
+separately qualified local-refinement approach, would supply independent missing
+combined-resolution evidence. Neither is the product default or an automatic
+next expensive run. Directional passes do not establish three-axis convergence,
+physical calibration, fine-grid live Fire feedback or boxed surface-flux accuracy.
+The coarse 32/64 previews remain qualitative authoring tiers.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-matched-timing-20261012/`,
+`fire-fluid-horizontal-20261012-attempt2/`, and fresh
+`fire-fluid-heated-face-20261013/reconciliation.json` plus both fresh verdicts.
+The new [non-burning surface response](fire_fluid_surface.md) separates exchange
+numerics from the unresolved boxed-face forcing prerequisite. This entry
+supersedes the historical horizontal-pending statements below.
+
 # Fire–Fluid local transport qualification
 
 <!-- reconstructed-flow-current:start -->
@@ -694,3 +836,91 @@ remain unqualified. Heat gate stays 10%, momentum CFL stays 0.4.
 No surface heating, burning faces, measured calibration, canonical adoption,
 version/package/Registry/remote/Desktop refresh or review rebind is included.
 <!-- vertical-reference-current:end -->
+
+## 2026-10-14: completed matched-flow boxed transport isolation
+
+A full same-MC 32³/64³ scalar comparison driven by one native 32³ velocity
+solution completes 3.2 s in 191.30 s, using 87.13 MB tracked numerical memory.
+Coarse replay matches native heat bitwise at every step; source restriction,
+face flux, wall impermeability, divergence and heat closure pass. The original
+local-heat metric passes at 8.2459%, but face-history error is 110,514,775% and
+forcing remains unqualified at the unchanged 10% gate. Final face mean rises
+are 2.2132e-7 / 3.0131e-13 K: an unresolved weak leading tail, not runaway
+heat creation. Fine 0.01/0.005 s response cadence also fails at 11.3836%.
+
+Error begins at the sharp source top, before wall interaction: a zero-velocity
+two-step test reproduces the early factor-two diffusive leakage difference,
+with identical minmod/MC results and zero leakage when conductivity is zero.
+Over the full history, band disagreement first exceeds 10% at z=0.21875–0.25 m
+(12.644%), then grows sharply toward the box. Matched flow does not eliminate
+scalar transport error; it does not qualify fine momentum or physical convection.
+No further numerical formula/default change was made. The next bounded test is
+a sharp-source thin-column transient reference with separate spatial and
+scalar/source-time refinement. Evidence: workspace
+`_private_workspace_artifacts/fire-fluid-matched-box-20261014/RESULT.md`.
+
+## 2026-10-14: sharp-source diffusion and scalar time integration
+
+Independent continuum heat-kernel and exact grid-time references separate source
+time error from spatial diffusion error in columns of at most4096 cells. At
+2.5 ms with two scalar steps, Euler time-only error is about50%; opt-in
+`scalar_rk2` reduces this to0.00184%/0.00736% on32/64 cells. Spatial error remains
+99.01%/98.03%: the sharp initial gradient is unresolved. At3.2 s, spatial errors
+are67.66%,40.82%,15.49%,4.20% for32/64/128/256 axial cells; only256 passes the
+unchanged10% outside-source profile gate. A bounded local0.122 mm zoom passes
+the early-time gate at5.225%, without a large cubic grid.
+
+SSPRK2 applies two native scalar/source stages with matched half-weight boundary
+receipts and doubled work accounting, reusing projection scratch. Default Euler
+is preserved; momentum and time-varying coupled forcing are not made second
+order. Native/sanitizer inflow/outflow, heat/smoke, bounds, box replay and budget
+tests pass, as do native accuracy/lateral/atmosphere regressions and independent
+reference tests. No boxed thermal-forcing qualification or ordinary app/worker
+activation is claimed. The remaining leading-tail error needs a bounded sharp-
+source advection–diffusion reference next. Evidence:
+`_private_workspace_artifacts/fire-fluid-sharp-diffusion-20261014/RESULT.md`.
+
+## 2026-10-14: sharp-source advection–diffusion leading-tail diagnosis
+
+Twenty bounded prescribed-flow trajectories use corrected scalar SSPRK2 timing
+and a translated heat-kernel reference. Bulk accuracy does not qualify the
+leading tail: at3.906 mm, MC main-profile error is0.1713% but far-history error
+is99.996%. Halved dt and a matched-spacing outer-domain check exclude those
+causes. Native exact-profile flux checks locate spatial bias before accumulated
+trajectory error: MC underestimates tail-plane flux16.73%, minmod overestimates
+14.40% at that spacing. No new flux formula or physical parameter was tuned.
+
+Targeted thin-column refinement (maximum16,384 cells, no cubic run) reduces
+far-history error to29.73% at0.977 mm and6.955% at0.488 mm. The finest early
+prefront history still fails the unchanged10% gate at10.268%; overall transport
+and boxed forcing remain unqualified. Finest-column time refinement is a next
+bounded check. Extended capacity exists only under the thin-column diagnostic
+compile flag; ordinary grid limits are unchanged. Native/sanitizer, reference,
+metadata-refusal and narrow-capacity tests pass. Evidence:
+`_private_workspace_artifacts/fire-fluid-sharp-transport-20261014/RESULT.md`.
+
+## 2026-10-16 finest-column timing closure
+
+The selected sharp-transport half-step case passes all four unchanged 10% gates.
+At fixed 0.48828125 mm spacing, reducing dt from 0.00125 to 0.000625 s changes
+main-profile error 0.002817% → 0.002764%, near-history 0.009269% → 0.009049%,
+far-history 6.955368% → 6.758111%, and early-near history 10.268064% → 9.956535%.
+The previous finest-case failure therefore had a small but decisive temporal
+component. Coarse-grid spatial bias remains established by the exact-profile
+flux tests. This is one narrow prescribed-velocity/source benchmark pass, with
+only 0.043465 percentage points of early-history margin; it does not qualify
+coarser production grids, original boxed forcing, wall laws or live coupling.
+
+The native retry completes 5120 steps / 3.2 s in 137.22 s, using 16,384 cells
+and 10,003,120 tracked bytes. Heat residual 2.467e-11 J; velocity error zero;
+no rejected or live allocations. Initial 90 s attempt timed out with buffered
+stdout; preserved failure receipt. A diagnostic-only line-buffering change and
+one 180 s capped retry produced the complete result. No solver formula or
+physical parameter changed; small full-trajectory output remains bit-exact
+against the retained probe. Runner supports `--case finest-half-step` (180 s
+native cap), preserves default matrix behavior and rejects simultaneous flux
+selection. Five runner/reference tests and three diffusion-reference tests pass.
+
+Evidence: `_private_workspace_artifacts/fire-fluid-finest-timing-20261016/RESULT.md`.
+Next: use Thermal's qualified receiver contract for a matched inert coupled
+benchmark. Do not tune a flux formula solely to the previous marginal failure.

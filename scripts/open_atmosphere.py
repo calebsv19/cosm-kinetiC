@@ -13,6 +13,7 @@ from pathlib import Path
 import tempfile
 import time
 from evolving_atmosphere import array
+from coupling import driven_wind,inert_object,scalar_profile
 from coupling.open_boundaries import lateral, layout, face, boundaries, MODELS as OPEN_MODELS
 from passive_atmosphere import ROOT
 from surface_sources.growth_fire_v1 import keys,number,integer,require,strict_load,digest,sealed
@@ -22,18 +23,46 @@ MODEL='xy_periodic_z_reservoir_projection3d_v1'
 STATE='physics_sim_native_open_atmosphere_state/v1'
 CONFIG_KEYS=('grid','length_m','properties','momentum_dt_s','initial_face_velocity_m_s','initial_energy_j','initial_smoke_kg','boundary_policy','buoyancy')
 
-def configuration(r):return {k:r[k] for k in (*CONFIG_KEYS,*(k for k in ("transport_scheme","resource_limits","solid_box") if k in r))}
+def configuration(r):return {k:r[k] for k in (*CONFIG_KEYS,*(k for k in ("transport_scheme","resource_limits","solid_box","wind_forcing","capacity_profile","inert_object","diagnostic_transport","open_domain_forcing","scalar_transport") if k in r))}
 
 def validate(r,*,movie=False,domain_qualification=False,domain_movie=False):
     require(type(movie) is bool,'explicit movie mode')
     require(type(domain_qualification) is bool and type(domain_movie) is bool and sum((movie,domain_qualification,domain_movie))<=1,'explicit separate domain/movie selection')
-    keys(r,('schema',*CONFIG_KEYS,*(k for k in ('transport_scheme','resource_limits','solid_box') if k in r),'state','steps'));
+    keys(r,('schema',*CONFIG_KEYS,*(k for k in ('transport_scheme','resource_limits','solid_box','wind_forcing','capacity_profile','inert_object','diagnostic_transport','open_domain_forcing','scalar_transport') if k in r),'state','steps'));
+    if 'diagnostic_transport' in r:
+        from coupling.frozen_transport import validate as fixed_validate
+        fixed_validate(r)
+        require(not any((movie,domain_qualification,domain_movie)), 'fixed MAC separate from sparse qualification')
+    scalar_profile.validate(r)
+    require(not ('scalar_transport' in r and any((movie,domain_qualification,domain_movie))),
+            'scalar profile separate from sparse qualification')
+    from coupling.scalar_gust128 import selected as selected128,validate as validate128
+    from coupling.scalar_wake128 import selected as selected_wake128,validate as validate_wake128
+    from coupling.scalar_wake128_work import selected as selected_work128,validate as validate_work128,WORK_LIMIT
+    work128=selected_work128(r)
+    gust128=selected128(r) or selected_wake128(r) or work128
+    if work128:validate_work128(r)
+    elif selected_wake128(r):validate_wake128(r)
+    elif gust128:validate128(r)
+    wake = 'capacity_profile' in r
+    if gust128:pass
+    elif wake and r['capacity_profile']=='scalar-wake80/v1':
+        from coupling.scalar_capacity import validate as capacity_validate
+        require(not any((movie,domain_qualification,domain_movie)), 'scalar capacity separate from sparse modes')
+        capacity_validate(r)
+    elif wake:
+        require(r['capacity_profile']=='wake80/v1' and not any((movie,domain_qualification,domain_movie)), 'explicit separate wake80 capacity profile')
+        require(r['grid']==[80]*3 and r['length_m']==[1]*3 and r['momentum_dt_s']==.0025, 'wake80 fixed grid/domain/timestep')
+        require(all(type(r.get(k)) is dict for k in ('wind_forcing','solid_box','boundary_policy')), 'wake80 typed boundary bundle')
+        require(r.get('wind_forcing',{}).get('momentum_backflow')=='quiescent_exterior/v1', 'wake80 quiescent policy')
+        require(r.get('solid_box',{}).get('lower_m')==[.375]*3 and r['solid_box'].get('upper_m')==[.625]*3, 'wake80 fixed physical obstacle')
+        require(r['boundary_policy']['horizontal']=='ambient_open_xy' and r['boundary_policy']['vertical']=='solid_bottom_open_top', 'wake80 open ground policy')
     require(r.get('transport_scheme','upwind') in ('upwind','muscl_minmod'),'transport scheme');
-    limits=r.get('resource_limits',{'max_cells':32768,'scalar_work_cells':100000000});keys(limits,('max_cells','scalar_work_cells',*(k for k in ('numerical_bytes','cache_pressure_operator','native_request_bytes','native_output_bytes') if k in limits)));integer(limits['max_cells'],32768,524288 if (domain_qualification or domain_movie) else 262144);integer(limits['scalar_work_cells'],100000000,8000000000 if domain_movie else 2000000000 if movie else 1000000000); integer(limits.get('numerical_bytes',128*1024*1024),128*1024*1024,512*1024*1024); require(type(limits.get('cache_pressure_operator',False)) is bool,'cache pressure flag');
+    limits=r.get('resource_limits',{'max_cells':32768,'scalar_work_cells':100000000});keys(limits,('max_cells','scalar_work_cells',*(k for k in ('numerical_bytes','cache_pressure_operator','native_request_bytes','native_output_bytes') if k in limits)));integer(limits['max_cells'],32768,2097152 if gust128 else 524288 if (wake or domain_qualification or domain_movie) else 262144);integer(limits['scalar_work_cells'],100000000,WORK_LIMIT if work128 else 8000000000 if domain_movie else 2000000000 if movie else 1000000000); integer(limits.get('numerical_bytes',128*1024*1024),128*1024*1024,(2*1024**3 if gust128 else 512*1024*1024)); require(type(limits.get('cache_pressure_operator',False)) is bool,'cache pressure flag');
     for name in ('native_request_bytes','native_output_bytes'):integer(limits.get(name,64*1024*1024),64*1024*1024,256*1024*1024)
     require(r['schema']==SCHEMA,'open model schema')
     for name in ('grid','length_m'):require(type(r[name]) is list and len(r[name])==3,'grid/length vector')
-    for axis,v in enumerate(r['grid']):integer(v,4,128 if (domain_qualification or domain_movie) and axis==2 else 64)
+    for axis,v in enumerate(r['grid']):integer(v,4,128 if gust128 else 80 if wake else 128 if (domain_qualification or domain_movie) and axis==2 else 64)
     for v in r['length_m']:number(v,.001,1000)
     n=math.prod(r['grid']);require(n<=limits['max_cells'],'open cell bound');plane=r['grid'][0]*r['grid'][1]
     number(r['momentum_dt_s'],1e-6,.1)
@@ -47,6 +76,12 @@ def validate(r,*,movie=False,domain_qualification=False,domain_movie=False):
         require(boundary['pressure_datum_pa'][0]==0 and boundary['inflow_temperature_k'][0]==props['reference_temperature_k'] and boundary['inflow_smoke_concentration_kg_m3'][0]==0,'ground has no reservoir parameters')
     if lateral(r):
         require(boundary['vertical']=='solid_bottom_open_top' and boundary['pressure_datum_pa']==[0,0] and boundary['inflow_temperature_k']==[props['reference_temperature_k']]*2 and boundary['inflow_smoke_concentration_kg_m3']==[0,0], 'lateral reservoirs require reference clean ambient and zero pressure')
+    from coupling import open_weather
+    open_weather.validate(r)
+    require(not ('open_domain_forcing' in r and any((movie,domain_qualification,domain_movie))),'open driver separate from sparse qualification')
+    driven_wind.validate(r)
+    inert_object.validate(r)
+    require(not ('inert_object' in r and any((movie,domain_qualification,domain_movie))),'object is separate from sparse qualification')
     buoy=r['buoyancy'];keys(buoy,('enabled','gravity_m_s2','expansion_per_k','max_temperature_contrast_fraction'))
     require(type(buoy['enabled']) is bool,'buoyancy enabled flag');number(buoy['gravity_m_s2'],0,100);number(buoy['expansion_per_k'],0,1/props['reference_temperature_k']);number(buoy['max_temperature_contrast_fraction'],1e-6,.1)
     if buoy['enabled']:
@@ -70,7 +105,7 @@ def validate(r,*,movie=False,domain_qualification=False,domain_movie=False):
 def _validate_native_data(r,data):
     n=math.prod(r['grid']);plane=r['grid'][0]*r['grid'][1]
     limits=r.get('resource_limits',{'scalar_work_cells':100000000})
-    keys(data,('face_velocity_m_s','pressure_pa','energy_j','smoke_kg','boundary_fluxes','steps','time_s','scalar_work_cells','input_energy_j','input_smoke_kg','initial_energy_j','initial_smoke_kg'))
+    keys(data,('face_velocity_m_s','pressure_pa','energy_j','smoke_kg','boundary_fluxes','steps','time_s','scalar_work_cells','input_energy_j','input_smoke_kg','initial_energy_j','initial_smoke_kg',*(driven_wind.COUNTERS if 'wind_forcing' in r else ()),*(('kinetic_ledger_j','kinetic_stored_j') if r.get('wind_forcing',{}).get('momentum_backflow') or 'open_domain_forcing' in r else ()),*(('inert_object',) if 'inert_object' in r else ()),*(('open_domain_forcing_state',) if 'open_domain_forcing' in r else ()),*(('scalar_transport',) if 'scalar_transport' in r else ())))
     array(data['face_velocity_m_s'],layout(r)[0]);array(data['pressure_pa'],n)
     for key in ('energy_j','smoke_kg'):array(data[key],n,0)
     array(data['boundary_fluxes'],4*layout(r)[1],0);integer(data['steps'],0,10000);integer(data['scalar_work_cells'],0,limits['scalar_work_cells'])
@@ -78,22 +113,39 @@ def _validate_native_data(r,data):
     from coupling.solid_box import check_state
     check_state(r,data)
     require(data['time_s']==data['steps']*r['momentum_dt_s'],'checkpoint integer-step clock')
+    scalar_profile.state(r,data)
+    driven_wind.state(r,data)
+    inert_object.validate(r,data)
+    from coupling.kinetic_energy import validate as kinetic_valid
+    kinetic_valid(r,data)
+    from coupling.open_weather import state as weather_state
+    weather_state(r,data)
     for key in ('energy_j','smoke_kg'):require(math.isclose(data['initial_'+key],math.fsum(r['initial_'+key]),rel_tol=1e-12,abs_tol=1e-12),'checkpoint initial authority')
 
 @owned_worker(ROOT)
 @retained_atmosphere(ROOT,"open")
-def run(request,worker,*,timing_hook=None):
+def run(request,worker,*,timing_hook=None,io_format=None):
     started=time.monotonic()
+    from coupling.scalar_gust128 import selected as selected128
+    from coupling.scalar_wake128 import selected as selected_wake128
+    from coupling.scalar_wake128_work import selected as selected_work128
+    require(not (selected128(request) or selected_wake128(request) or selected_work128(request)) or io_format=='field_packet/v1','128 requires explicit packet IO')
     validate(request);worker=Path(worker).resolve();worker_sha=hashlib.sha256(worker.read_bytes()).hexdigest();old=request['state']
     if old is not None:require(old['worker_sha256']==worker_sha,'checkpoint worker changed')
     native=dict(request,state=None if old is None else old['data'])
     with retained_directory() as temp:
-        path=Path(temp)/'request.json';path.write_text(json.dumps(native,allow_nan=False,separators=(',',':')));require(path.stat().st_size<=request.get('resource_limits',{}).get('native_request_bytes',64*1024*1024),'native request byte bound')
+        require(io_format in (None,'field_packet/v1'),'native IO format')
+        if io_format:
+            from field_packet import encode,decode
+            path=Path(temp)/'request.fpk';path.write_bytes(encode(native,request.get('resource_limits',{}).get('native_request_bytes',64*1024*1024)))
+        else:
+            path=Path(temp)/'request.json';path.write_text(json.dumps(native,allow_nan=False,separators=(',',':')));require(path.stat().st_size<=request.get('resource_limits',{}).get('native_request_bytes',64*1024*1024),'native request byte bound')
         native_started=time.monotonic()
         output_limit=request.get('resource_limits',{}).get('native_output_bytes',64*1024*1024)
-        output=run_atmosphere_worker(worker,path,output_limit)
+        output=run_atmosphere_worker(worker,path,output_limit,**({'io_format':io_format} if io_format else {}))
         native_elapsed=time.monotonic()-native_started
-        result_path=Path(temp)/'fields.json';result_path.write_bytes(output);fields=native_strict_load(result_path,output_limit)
+        result_path=Path(temp)/('fields.fpk' if io_format else 'fields.json');result_path.write_bytes(output)
+        fields=decode(output,output_limit) if io_format else native_strict_load(result_path,output_limit)
     require(hashlib.sha256(worker.read_bytes()).hexdigest()==worker_sha,'worker changed during execution');require(fields['schema']=='physics_sim_open_atmosphere_fields/v1','native model')
     result=accept_fields(request,fields,worker_sha)
     if timing_hook is not None:timing_hook({'native_worker_s':native_elapsed,'adapter_total_s':time.monotonic()-started})
@@ -111,6 +163,9 @@ def accept_fields(request,fields,worker_sha,*,new_step_count=None,source_totals=
         keys(source_totals,('energy_j','smoke_kg'))
         for value in source_totals.values():number(value,0)
     data=fields.pop('state')
+    if 'diagnostic_transport' in request:
+        from coupling.frozen_transport import validate as fixed_validate
+        fixed_validate(request,data)
     for key in ('steps','scalar_work_cells'):
         require(type(data[key]) in (int,float) and data[key]==int(data[key]),'counter');data[key]=int(data[key])
     if compact:
@@ -134,10 +189,10 @@ def accept_fields(request,fields,worker_sha,*,new_step_count=None,source_totals=
     for quantity,key in enumerate(('energy_j','smoke_kg')):
         initial=math.fsum(request['initial_'+key]);added=source_totals[key] if source_totals is not None else math.fsum(math.fsum(s[key]) for s in request['steps']);previous_input=0 if old is None else old['data']['input_'+key]
         require(math.isclose(data['input_'+key],previous_input+added,rel_tol=1e-12,abs_tol=1e-12),'source input identity')
-        incoming=math.fsum(flux[2*quantity*faces:(2*quantity+1)*faces]);outgoing=math.fsum(flux[(2*quantity+1)*faces:(2*quantity+2)*faces]);stored=math.fsum(fields[key]);balance=stored-initial-data['input_'+key]-incoming+outgoing
-        require(abs(balance)<=1e-10*max(initial+data['input_'+key]+incoming+outgoing,1e-12),'independent lifetime flux conservation')
-        before=initial if old is None else math.fsum(old['data'][key]);chunk_in=math.fsum(b-a for a,b in zip(old_flux[2*quantity*faces:(2*quantity+1)*faces],flux[2*quantity*faces:(2*quantity+1)*faces]));chunk_out=math.fsum(b-a for a,b in zip(old_flux[(2*quantity+1)*faces:(2*quantity+2)*faces],flux[(2*quantity+1)*faces:(2*quantity+2)*faces]));chunk_balance=stored-before-added-chunk_in+chunk_out
-        require(abs(chunk_balance)<=1e-10*max(before+added+chunk_in+chunk_out,1e-12),'independent chunk flux conservation')
+        incoming=math.fsum(flux[2*quantity*faces:(2*quantity+1)*faces]);outgoing=math.fsum(flux[(2*quantity+1)*faces:(2*quantity+2)*faces]);stored=math.fsum(fields[key]);balance=stored-initial-data['input_'+key]-incoming+outgoing+inert_object.debit(request,data,key)
+        require(abs(balance)<=1e-10*max(initial+data['input_'+key]+incoming+outgoing+abs(inert_object.debit(request,data,key)),1e-12),'independent lifetime flux conservation')
+        before=initial if old is None else math.fsum(old['data'][key]);chunk_in=math.fsum(b-a for a,b in zip(old_flux[2*quantity*faces:(2*quantity+1)*faces],flux[2*quantity*faces:(2*quantity+1)*faces]));chunk_out=math.fsum(b-a for a,b in zip(old_flux[(2*quantity+1)*faces:(2*quantity+2)*faces],flux[(2*quantity+1)*faces:(2*quantity+2)*faces]));chunk_balance=stored-before-added-chunk_in+chunk_out+inert_object.debit(request,data,key)-(0 if old is None else inert_object.debit(request,old['data'],key))
+        require(abs(chunk_balance)<=1e-10*max(before+added+chunk_in+chunk_out+abs(inert_object.debit(request,data,key)-(0 if old is None else inert_object.debit(request,old['data'],key))),1e-12),'independent chunk flux conservation')
         budgets[key]={'initial':initial,'input':data['input_'+key],'inflow':incoming,'outflow':outgoing,'stored':stored,'loss':0,'balance':balance,'chunk_balance':chunk_balance}
     for name,axis,sign,offset,size,shape in boundaries(request):
         normal=[0,0,0];normal[axis]=sign
@@ -148,6 +203,9 @@ def accept_fields(request,fields,worker_sha,*,new_step_count=None,source_totals=
                 block=(2*quantity+direction)*faces+offset;values=flux[block:block+size]
                 record[key+('_inflow' if direction==0 else '_outflow')]={'per_face':values,'total':math.fsum(values)}
         receipts.append(record)
+    scalar_profile.fields(request,fields,data)
+    inert_object.fields(request,fields,data)
+    if 'inert_object' in request:budgets['energy_j']['gas_to_object_j']=inert_object.transfer(request,data)
     array(fields['temperature_k'],n,0);array(fields['smoke_concentration_kg_m3'],n,0)
     for q in range(n):
         temperature=props['reference_temperature_k']+fields['energy_j'][q]/capacity
@@ -168,6 +226,21 @@ def accept_fields(request,fields,worker_sha,*,new_step_count=None,source_totals=
     if lateral(request):
         result['model']=OPEN_MODELS[int('solid_box' in request)]
         result['boundaries']='ambient_open_xy_solid_bottom_open_top'
+    if request.get('wind_forcing',{}).get('momentum_backflow'):
+        require(fields['kinetic_ledger_j']==data['kinetic_ledger_j'] and fields['kinetic_stored_j']==data['kinetic_stored_j'],'kinetic checkpoint/field identity')
+    from coupling.open_weather import observation as weather_observation
+    weather=weather_observation(request,fields,data,old)
+    if weather is not None:result['open_domain_forcing_observation']=weather
+    wind=driven_wind.observation(request,fields,data,old)
+    if wind is not None:
+        result['wind_observation']=wind
+        from coupling.ventilation import description
+        result['boundaries']=description(request)
+    if 'diagnostic_transport' in request:
+        result['model']='prescribed_mac_transport_diagnostic/v1'
+        result['diagnostic_transport']=request['diagnostic_transport']
+        result['momentum_evolved']=False
+        result['pressure_solved']=False
     if compact:
         result['schema']='physics_sim_domain_movie_sample_fields/v1' if domain_movie else 'physics_sim_domain_sample_fields/v1' if domain_qualification else 'physics_sim_movie_sample_fields/v1'
         result['native_data']=result.pop('state')['data'];result['native_checkpoint_restart']=False

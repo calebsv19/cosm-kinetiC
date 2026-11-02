@@ -17,13 +17,16 @@ def export(host,output):
     require(Path(combined_scene.__file__).resolve()==Path(host.config['growth_root'])/'scripts/combined_scene.py',
             'scene exporter from a different checkout')
     output=Path(output)
-    combined_scene.export(source,result,output,.0002,projection)
+    from .rig_scene_adapter import receiving_model
+    with receiving_model(combined_scene,result):
+        combined_scene.export(source,result,output,.0002,projection)
     (output/'joint_checkpoint.json').write_text(json.dumps(cp,allow_nan=False)+'\n')
     receipt=sealed({'schema':'fire_fluid_joint_scene_projection/v1','joint_checkpoint_digest':cp['digest'],
         'projection_digest':projection['digest'],'combined_scene_digest':json.loads((output/'combined_scene.json').read_text())['digest'],
         'purpose':'read_only_authoring_snapshot','physical_calibration_qualified':False})
     (output/'joint_projection.json').write_text(json.dumps(receipt,indent=2)+'\n')
-    combined_scene.validate(output)
+    with receiving_model(combined_scene,result):
+        combined_scene.validate(output)
     require(json.loads((output/'joint_checkpoint.json').read_text())==cp and digest(cp)==receipt['joint_checkpoint_digest'],
             'joint scene readback')
     return receipt

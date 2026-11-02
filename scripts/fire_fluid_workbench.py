@@ -24,6 +24,7 @@ def handler(workbench, renderer=None):
             try:
                 if self.path == '/':
                     self.send(200, (Path(__file__).parent / 'coupling/workbench.html').read_bytes(), 'text/html; charset=utf-8')
+                elif self.path == '/wind.js': self.send(200, (Path(__file__).parent / 'coupling/workbench_wind.js').read_bytes(), 'application/javascript; charset=utf-8')
                 elif self.path == '/state': self.send(200, workbench.state())
                 elif self.path.startswith('/preview/'):
                     from cfd_evidence import admitted_path
@@ -65,7 +66,7 @@ def handler(workbench, renderer=None):
                     from coupling.render_preview import render
                     with workbench.lock:
                         run_id = workbench.run_id
-                        exported = workbench.export()
+                        exported = workbench.export(revisions=[body['revision']])
                     receipt = render(exported['output'], renderer, [body['revision']])
                     image = Path(exported['output']) / receipt['frames'][0]['image']
                     image_url = '/preview/' + str(image.relative_to(workbench.root))
@@ -88,10 +89,13 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--port', type=int, default=8841)
     parser.add_argument('--renderer', type=Path, help='existing local RayTracing headless binary; no source edits')
+    from coupling.workbench_wind import defaults as wind_defaults
+    from coupling.wind_presets import PROFILES
+    parser.add_argument('--initial-profile', choices=PROFILES, help='native wind preset for a fresh local workbench')
     args = parser.parse_args()
     os.environ['PHYSICS_SIM_EXPERIMENT_ROOT'] = str(args.root.resolve() / 'native-evidence')
     workbench = Workbench(args.root, (args.growth_root, args.fire_worker, args.fluid_worker, args.clock_worker))
-    if workbench.host is None: workbench.create(DEFAULTS)
+    if workbench.host is None: workbench.create(wind_defaults(args.initial_profile) if args.initial_profile else DEFAULTS)
     server = ThreadingHTTPServer(('127.0.0.1', args.port), handler(workbench, args.renderer))
     thread = threading.Thread(target=workbench.run_loop, daemon=True); thread.start()
     print('Fire–Fluid panel: http://127.0.0.1:%d' % server.server_port, flush=True)

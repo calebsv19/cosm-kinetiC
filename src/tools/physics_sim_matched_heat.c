@@ -8,9 +8,12 @@ bool matched_heat_velocity(const CfdOpenAtmosphere3d *coarse,
                            CfdOpenAtmosphere3d *fine, double *max_divergence) {
     if(!coarse || !fine || !max_divergence || !coarse->lateral_open ||
        !fine->lateral_open || !coarse->ground || !fine->ground ||
-       coarse->solid_box || fine->solid_box)return false;
+       coarse->solid_box != fine->solid_box)return false;
     for(int a=0;a<3;a++)if(fine->grid.n[a]!=2*coarse->grid.n[a] ||
         fine->grid.length[a]!=coarse->grid.length[a])return false;
+    if(coarse->solid_box)for(int a=0;a<3;a++)
+        if(fine->solid_lo[a]!=2*coarse->solid_lo[a] ||
+           fine->solid_hi[a]!=2*coarse->solid_hi[a])return false;
     for(int a=0;a<3;a++)for(int k=0;k<fine->grid.n[2]+(a==2);k++)
         for(int j=0;j<fine->grid.n[1]+(a==1);j++)
         for(int i=0;i<fine->grid.n[0]+(a==0);i++) {
@@ -20,7 +23,7 @@ bool matched_heat_velocity(const CfdOpenAtmosphere3d *coarse,
                 p[a]++;
                 value=.5*(value+coarse->velocity[cfd_open_atmosphere3d_face(coarse,a,p[0],p[1],p[2])]);
             }
-            if(!isfinite(value))return false;
+            if(!isfinite(value) || (cfd_open_atmosphere3d_blocked(fine,a,i,j,k) && value!=0))return false;
             fine->candidate_velocity[cfd_open_atmosphere3d_face(fine,a,i,j,k)]=value;
         }
     *max_divergence=0;
@@ -32,16 +35,17 @@ bool matched_heat_velocity(const CfdOpenAtmosphere3d *coarse,
 bool matched_heat_advance(CfdOpenAtmosphere3d *s,const double *source_j,
                           unsigned cycles,double *courant_bound) {
     if(!s || !source_j || !courant_bound || !s->storage || !s->ground ||
-       !s->lateral_open || s->solid_box || !s->muscl || cycles<1 || cycles>4 ||
+       !s->lateral_open || !s->muscl || cycles<1 || cycles>4 ||
        s->steps>=10000)return false;
     int n=s->grid.count,faces=s->boundary_faces;
     double alpha=s->conductivity/(s->rho*s->cp);
     for(int q=0;q<n;q++)if(!isfinite(source_j[q]) || source_j[q]<0 ||
-        !isfinite(s->energy[q]) || s->energy[q]<0)return false;
+        !isfinite(s->energy[q]) || s->energy[q]<0 ||
+        (cfd_open_atmosphere3d_solid(s,q) && (source_j[q]!=0 || s->energy[q]!=0)))return false;
     for(int a=0;a<3;a++)for(int k=0;k<s->grid.n[2]+(a==2);k++)
         for(int j=0;j<s->grid.n[1]+(a==1);j++)for(int i=0;i<s->grid.n[0]+(a==0);i++) {
             double u=s->candidate_velocity[cfd_open_atmosphere3d_face(s,a,i,j,k)];
-            if(!isfinite(u) || (a==2 && k==0 && u!=0))return false;
+            if(!isfinite(u) || (((a==2 && k==0) || cfd_open_atmosphere3d_blocked(s,a,i,j,k)) && u!=0))return false;
         }
     /* The accepted local outflow/diffusion stability rate, for heat alone.
      * A sum of global absolute maxima wrongly double-counts through-flow and
@@ -59,7 +63,7 @@ bool matched_heat_advance(CfdOpenAtmosphere3d *s,const double *source_j,
         maximum=fmax(maximum,rate);
     }
     *courant_bound=s->dt/cycles*maximum;
-    unsigned long long work=(unsigned long long)cycles*n;
+    unsigned long long work=(unsigned long long)cycles*n*(s->scalar_rk2?2:1);
     if(!isfinite(*courant_bound) || *courant_bound>.4 ||
        s->scalar_work_cells>s->max_scalar_work_cells ||
        work>s->max_scalar_work_cells-s->scalar_work_cells)return false;

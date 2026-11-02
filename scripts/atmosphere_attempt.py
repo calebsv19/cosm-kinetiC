@@ -14,7 +14,7 @@ from cfd_evidence import admitted_path, experiment_root
 CURRENT=ContextVar('atmosphere_attempt',default=None)
 CONTROLS=('atmosphere_attempt.py','passive_atmosphere.py','evolving_atmosphere.py',
           'open_atmosphere.py','tool_probe.py','build_owner.py','numeric_digest_stream.py',
-          'surface_sources/growth_fire_v1.py')
+          'surface_sources/growth_fire_v1.py','coupling/driven_wind.py','coupling/ventilation.py','coupling/kinetic_energy.py','coupling/inert_object.py','coupling/open_weather.py','coupling/scalar_profile.py','coupling/scalar_capacity.py','coupling/scalar_gust128.py','coupling/scalar_wake128.py','coupling/scalar_wake128_work.py','coupling/scalar_work_budget.py','field_packet.py')
 
 def payload(path,limit):
     path=admitted_path(path)
@@ -82,7 +82,12 @@ def retained_atmosphere(repo,role):
             receipt(capsule,state)
             token=CURRENT.set((capsule,state));frozen={}
             try:
-                exclusive(capsule/'input.json',encoded(request))
+                io_format=kwargs.get('io_format');binary=io_format=='field_packet/v1'
+                if io_format not in (None,'field_packet/v1'):raise ValueError('native IO format')
+                if binary:
+                    from field_packet import encode
+                    state['native_io_format']=io_format
+                exclusive(capsule/('input.fpk' if binary else 'input.json'),encode(request) if binary else encoded(request))
                 worker=admitted_path(worker)
                 sources=[(worker,'worker',134217728)]+[(repo/'scripts'/name,'control/'+name,4194304) for name in CONTROLS]
                 for path,name,limit in sources:
@@ -104,7 +109,7 @@ def retained_atmosphere(repo,role):
                 command=state.get('command',{})
                 if command.get('status')!='passed' or command.get('terminal_processes_verified') is not True:
                     raise ValueError('Atmosphere command completion unverified')
-                exclusive(capsule/'accepted.json',encoded(result))
+                exclusive(capsule/('accepted.fpk' if binary else 'accepted.json'),encode(result) if binary else encoded(result))
                 state.update(status='completed',terminal_processes_verified=True)
                 return result
             except BaseException as error:

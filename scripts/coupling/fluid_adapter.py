@@ -14,9 +14,10 @@ def validate(config,state=None):
     selected.validate(dict(config,schema=selected.SCHEMA,state=state,steps=[]))
 
 
-def run(config,state,steps,worker):
+def run(config,state,steps,worker,*,io_format=None):
     selected=solver(config)
-    return selected.run(dict(config,schema=selected.SCHEMA,state=state,steps=steps),worker)
+    require(io_format is None or selected is open_domain,'field packet IO requires open native model')
+    return selected.run(dict(config,schema=selected.SCHEMA,state=state,steps=steps),worker,**({'io_format':io_format} if io_format else {}))
 
 
 def conservation(config,result):
@@ -31,6 +32,7 @@ def conservation(config,result):
             offset=0 if key=='energy_j' else 2*faces
             inflow=math.fsum(data['boundary_fluxes'][offset:offset+faces])
             outflow=math.fsum(data['boundary_fluxes'][offset+faces:offset+2*faces])
-            expected=data['initial_'+key]+data['input_'+key]+inflow-outflow
+            from .inert_object import debit
+            expected=data['initial_'+key]+data['input_'+key]+inflow-outflow-debit(config,data,key)
         else:expected=data['input_'+key]
         require(math.isclose(total,expected,rel_tol=1e-10,abs_tol=1e-20),'persisted whole-domain conservation')

@@ -7,6 +7,12 @@
 #include <sys/stat.h>
 #include <string.h>
 #include "physics_sim_plume_qualification.h"
+#include "physics_sim_open_wind_io.h"
+#include "physics_sim_open_weather_io.h"
+#include "app/cfd_open_energy.h"
+#include "physics_sim_inert_io.h"
+#include "physics_sim_scalar_profile_io.h"
+#include "physics_sim_field_packet_io.h"
 static struct json_object *get(struct json_object *o,const char *key) {struct json_object *v=NULL;if(o)json_object_object_get_ex(o,key,&v);return v;}
 static bool num(struct json_object *v,double *out) {
     if(!v || (!json_object_is_type(v,json_type_double) && !json_object_is_type(v,json_type_int)))return false;
@@ -30,25 +36,44 @@ static bool restore(CfdOpenAtmosphere3d *s,struct json_object *state) {
         !num(get(state,"time_s"),&s->time) || !num(get(state,"input_energy_j"),&s->input_j) || s->input_j<0 ||
         !num(get(state,"input_smoke_kg"),&s->input_kg) || s->input_kg<0 || !num(get(state,"initial_energy_j"),&s->initial_j) || s->initial_j<0 ||
         !num(get(state,"initial_smoke_kg"),&s->initial_kg) || s->initial_kg<0)return false;
-    s->steps=(int)steps;s->scalar_work_cells=(unsigned long long)work;return cfd_open_atmosphere3d_valid(s);
+    s->steps=(int)steps;s->scalar_work_cells=(unsigned long long)work;return physics_scalar_profile_restore(s,state) && physics_open_wind_restore(s,state) && physics_open_weather_restore(s,&s->weather,&s->weather_state,state) && cfd_open_atmosphere3d_valid(s);
 }
+#include "physics_sim_scalar_gust128_io.h"
+#include "physics_sim_scalar_wake128_io.h"
+#include "physics_sim_scalar_wake128_work_io.h"
 int main(int argc,char **argv) {
+    bool packet=argc==3 && !strcmp(argv[1],"--field-packet");
+    const char *request_path=packet?argv[2]:(argc>1?argv[1]:NULL);
     bool movie=argc==6 && !strcmp(argv[2],"--sparse-movie") && !strcmp(argv[4],"--samples-root");
     bool domain_movie=argc==6 && !strcmp(argv[2],"--sparse-domain-movie") && !strcmp(argv[4],"--samples-root");
     bool domain=domain_movie || (argc==6 && !strcmp(argv[2],"--sparse-domain-qualification") && !strcmp(argv[4],"--samples-root"));
     bool qualification=domain || movie || (argc==6 && !strcmp(argv[2],"--sparse-qualification") && !strcmp(argv[4],"--samples-root"));
-    struct stat st;if((argc!=2 && !qualification) || stat(argv[1],&st) || st.st_size<=0 || st.st_size>256*1024*1024)return 2;
-    struct json_object *r=json_object_from_file(argv[1]),*result=NULL;CfdOpenAtmosphere3d s={0};double *input=NULL;int status=1;
+    struct stat st;if((argc!=2 && !qualification && !packet) || stat(request_path,&st) || st.st_size<=0 || st.st_size>256*1024*1024)return 2;
+    struct json_object *owned_steps=NULL;
+    struct json_object *r=(packet?fp_read(request_path):json_object_from_file(request_path)),*result=NULL;CfdOpenAtmosphere3d s={0};double *input=NULL;int status=1;
     CfdMemoryBudget memory={.limit_bytes=128*1024*1024};CfdMemoryBudget *prior=cfd_memory_scope(&memory);
     double nd[3],length[3],rho,mu,cp,ref,k,d,dt,pressure[2],ambient[2],smoke[2],gravity,beta,contrast;int grid[3];
     if(!r || !field(get(r,"grid"),nd,3) || !field(get(r,"length_m"),length,3))goto done;
-    for(int a=0;a<3;a++){if(nd[a]<4 || nd[a]>(domain && a==2?128:64) || floor(nd[a])!=nd[a])goto done;grid[a]=(int)nd[a];}
+    struct json_object *diagnostic=get(r,"diagnostic_transport");
+#ifdef PHYSICS_SIM_FROZEN_TRANSPORT_DIAGNOSTIC
+    if(!diagnostic || !json_object_is_type(diagnostic,json_type_string) ||
+       strcmp(json_object_get_string(diagnostic),"fixed_mac_velocity/v1"))goto done;
+#else
+    if(diagnostic)goto done;
+#endif
+    struct json_object *profile=get(r,"capacity_profile");bool wake=profile!=NULL;
+    bool work128=physics_scalar_wake128_work(r,packet,qualification);
+    bool gust128=physics_scalar_gust128(r,packet,qualification) || physics_scalar_wake128(r,packet,qualification) || work128;
+    bool scalar_wake=gust128 || (profile && json_object_is_type(profile,json_type_string) && !strcmp(json_object_get_string(profile),"scalar-wake80/v1"));
+    if(wake && (!json_object_is_type(profile,json_type_string) || (!scalar_wake && strcmp(json_object_get_string(profile),"wake80/v1")) || qualification))goto done;
+    if(wake && (nd[0]!=(gust128?128:80) || nd[1]!=(gust128?128:80) || nd[2]!=(gust128?128:80) || length[0]!=1 || length[1]!=1 || length[2]!=1))goto done;
+    for(int a=0;a<3;a++){if(nd[a]<4 || nd[a]>(gust128?128:wake?80:domain && a==2?128:64) || floor(nd[a])!=nd[a])goto done;grid[a]=(int)nd[a];}
     double max_cells=32768,max_work=100000000;
     struct json_object *limits=get(r,"resource_limits");
     if(limits && (!num(get(limits,"max_cells"),&max_cells) || !num(get(limits,"scalar_work_cells"),&max_work) ||
-        floor(max_cells)!=max_cells || max_cells<32768 || max_cells>(domain?524288:262144) || floor(max_work)!=max_work || max_work<100000000 || max_work>(domain_movie?8000000000.:movie?2000000000.:1000000000.)))goto done;
+        floor(max_cells)!=max_cells || max_cells<32768 || max_cells>(gust128?2097152:wake || domain?524288:262144) || floor(max_work)!=max_work || max_work<100000000 || max_work>(work128?(double)PHYSICS_WAKE128_WORK_LIMIT:domain_movie?8000000000.:movie?2000000000.:1000000000.)))goto done;
     struct json_object *bytes=get(limits,"numerical_bytes");double numerical_bytes=128*1024*1024;
-    if(bytes && (!num(bytes,&numerical_bytes) || floor(numerical_bytes)!=numerical_bytes || numerical_bytes<128*1024*1024 || numerical_bytes>512*1024*1024))goto done;
+    if(bytes && (!num(bytes,&numerical_bytes) || floor(numerical_bytes)!=numerical_bytes || numerical_bytes<128*1024*1024 || numerical_bytes>(gust128?2147483648.:512*1024*1024)))goto done;
     memory.limit_bytes=(size_t)numerical_bytes;
     double request_bytes=64*1024*1024,output_bytes=64*1024*1024;
     struct json_object *request_limit=get(limits,"native_request_bytes"),*output_limit=get(limits,"native_output_bytes");
@@ -65,11 +90,21 @@ int main(int argc,char **argv) {
         !num(get(buoy,"expansion_per_k"),&beta) || !num(get(buoy,"max_temperature_contrast_fraction"),&contrast) ||
         !cfd_open_atmosphere3d_init(&s,grid,length,rho,mu,cp,ref,k,d,dt,pressure,ambient,smoke,json_object_get_boolean(enabled),gravity,beta,contrast))goto done;
     s.max_scalar_work_cells=(unsigned long long)max_work;
+    if(work128)s.max_scalar_cycles=PHYSICS_WAKE128_MAX_CYCLES;
     struct json_object *cache=get(limits,"cache_pressure_operator");
     if(cache){if(!json_object_is_type(cache,json_type_boolean))goto done;s.cache_projection=json_object_get_boolean(cache);}
     struct json_object *scheme=get(r,"transport_scheme");
     if(scheme){const char *name=json_object_get_string(scheme);if(!name)goto done;
         if(!strcmp(name,"muscl_minmod"))s.muscl=true;else if(strcmp(name,"upwind"))goto done;}
+    if(!physics_scalar_profile_load(&s,r) || ((s.scalar_mc || s.scalar_rk2) && qualification))goto done;
+    /* Capacity-only opt-in: preserve the matched scalar operator, clock and low box. */
+    if(scalar_wake){
+        double lo[3],hi[3];struct json_object *box=get(r,"solid_box");
+        if(dt!=.005 || s.muscl || !s.scalar_mc || !s.scalar_rk2 ||
+           !field(get(box,"lower_m"),lo,3) || !field(get(box,"upper_m"),hi,3) ||
+           lo[0]!=.375 || lo[1]!=.375 || lo[2]!=.0625 ||
+           hi[0]!=.625 || hi[1]!=.625 || hi[2]!=.3125)goto done;
+    }
     const char *vertical=json_object_get_string(get(b,"vertical"));
     if(!vertical)goto done;
     if(!strcmp(vertical,"solid_bottom_open_top"))s.ground=true;
@@ -89,19 +124,45 @@ int main(int argc,char **argv) {
         }
         if(!cfd_open_atmosphere3d_box(&s,lo,hi))goto done;
     }
+    if(!physics_open_wind_load(&s,r) || !physics_open_weather_load(&s,&s.weather,r) || (s.weather.enabled && qualification))goto done;
+    struct json_object *rig=get(r,"rig_geometry");
+    if(rig) {
+        const char *schema=json_object_get_string(get(rig,"schema"));
+        struct json_object *open=get(rig,"window_open");
+        if(!schema || strcmp(schema,"physics_sim_partition_window_rig/v1") ||
+           json_object_object_length(rig)!=2 || !open || !json_object_is_type(open,json_type_boolean) ||
+           !s.weather.enabled || !cfd_open_atmosphere3d_rig(&s,json_object_get_boolean(open)))goto done;
+    }
     int n=s.grid.count;input=cfd_memory_calloc((size_t)2*n,sizeof(double));if(!input)goto done;
     struct json_object *state=get(r,"state");
     if(state && !json_object_is_type(state,json_type_null)){if(!restore(&s,state))goto done;}
     else {
-        if(!field(get(r,"initial_face_velocity_m_s"),s.velocity,s.velocity_count) || !field(get(r,"initial_energy_j"),s.energy,n) || !field(get(r,"initial_smoke_kg"),s.smoke,n) || !cfd_open_atmosphere3d_valid(&s))goto done;
+        if(!field(get(r,"initial_face_velocity_m_s"),s.velocity,s.velocity_count) || !field(get(r,"initial_energy_j"),s.energy,n) || !field(get(r,"initial_smoke_kg"),s.smoke,n))goto done;
+        if(s.weather.enabled)s.kinetic_ledger[KE_INITIAL]=cfd_open_kinetic(&s,s.velocity);
+        if(!cfd_open_atmosphere3d_valid(&s))goto done;
         s.initial_j=cfd_passive3d_total(s.energy,n);s.initial_kg=cfd_passive3d_total(s.smoke,n);
     }
+#ifdef PHYSICS_SIM_FROZEN_TRANSPORT_DIAGNOSTIC
+    if(!field(get(r,"initial_face_velocity_m_s"),s.candidate_velocity,s.velocity_count) ||
+       memcmp(s.velocity,s.candidate_velocity,(size_t)s.velocity_count*sizeof(double)))goto done;
+#endif
+    PhysicsSimInertIo object;
+    if(!physics_inert_load(&object,&s,r) || (object.enabled && qualification))goto done;
     double start=s.time;struct json_object *steps=get(r,"steps");
     if(!steps || !json_object_is_type(steps,json_type_array) || json_object_array_length(steps)>256)goto done;
+    /* All setup/restore owners copied their values. Retain just the immutable
+     * source steps for this bounded128 lane, avoiding dense request overlap. */
+    if(gust128){owned_steps=json_object_get(steps);json_object_put(r);r=NULL;}
+    if(gust128 && physics_gust128_rss()>((size_t)4*1024*1024*1024))goto done;
+    double packet_courant=0;unsigned packet_cycles=0;
     for(size_t i=0;i<json_object_array_length(steps);i++) {
         struct json_object *step=json_object_array_get_idx(steps,i);
-        if(!field(get(step,"energy_j"),input,n) || !field(get(step,"smoke_kg"),input+n,n) || !cfd_open_atmosphere3d_step(&s,input,input+n))goto done;
+        if(!field(get(step,"energy_j"),input,n) || !field(get(step,"smoke_kg"),input+n,n) || !physics_inert_step(&object,&s,input,input+n))goto done;
+        packet_courant=fmax(packet_courant,s.momentum_courant);
+        if(s.scalar_cycles_requested>packet_cycles)packet_cycles=s.scalar_cycles_requested;
+        if(gust128 && physics_gust128_rss()>((size_t)4*1024*1024*1024))goto done;
     }
+    if(owned_steps){json_object_put(owned_steps);owned_steps=NULL;}
     if(qualification) {
         double peaks[4];
         if(json_object_array_length(steps)!=0 || !plume_sparse_qualification(&s,input,argv[3],argv[5],peaks,movie,domain_movie))goto done;
@@ -110,6 +171,7 @@ int main(int argc,char **argv) {
     }
     result=json_object_new_object();json_object_object_add(result,"schema",json_object_new_string("physics_sim_open_atmosphere_fields/v1"));
     value(result,"start_time_s",start);value(result,"time_s",s.time);value(result,"max_divergence_s_inv",s.divergence);value(result,"projection_relative_residual",s.residual);
+    if(work128){value(result,"packet_momentum_courant_max",packet_courant);value(result,"momentum_courant_limit",s.muscl?.4:.8);value(result,"packet_scalar_cycles_max",packet_cycles);value(result,"scalar_cycles_limit",s.max_scalar_cycles);value(result,"scalar_work_limit",(double)s.max_scalar_work_cells);}
     json_object_object_add(result,"face_velocity_m_s",values(s.velocity,s.velocity_count,1,0));json_object_object_add(result,"pressure_pa",values(s.pressure,n,1,0));
     json_object_object_add(result,"energy_j",values(s.energy,n,1,0));json_object_object_add(result,"smoke_kg",values(s.smoke,n,1,0));
     json_object_object_add(result,"temperature_k",values(s.energy,n,1/(rho*cp*s.grid.volume),ref));json_object_object_add(result,"smoke_concentration_kg_m3",values(s.smoke,n,1/s.grid.volume,0));
@@ -123,14 +185,24 @@ int main(int argc,char **argv) {
     for(int i=0;i<5;i++){const char *name=(const char*[]) {"face_velocity_m_s","pressure_pa","energy_j","smoke_kg","boundary_fluxes"}[i];json_object_object_add(state_out,name,json_object_get(get(result,name)));}
     value(state_out,"steps",s.steps);value(state_out,"time_s",s.time);value(state_out,"scalar_work_cells",(double)s.scalar_work_cells);
     value(state_out,"input_energy_j",s.input_j);value(state_out,"input_smoke_kg",s.input_kg);value(state_out,"initial_energy_j",s.initial_j);value(state_out,"initial_smoke_kg",s.initial_kg);
+    physics_open_wind_fields(&s,result,state_out);
+    physics_open_weather_fields(&s,&s.weather,&s.weather_state,result,state_out);
+    physics_inert_fields(&object,&s,result,state_out);
+    physics_scalar_profile_fields(&s,result,state_out);
     json_object_object_add(result,"state",state_out);value(result,"numerical_peak_bytes",(double)memory.peak_bytes);
+    if(gust128 && physics_gust128_rss()>((size_t)4*1024*1024*1024))goto done;
+    if(packet){if(!fp_write(result,(size_t)output_bytes)){fputs("field packet output bound or IO rejection\n",stderr);goto done;}if(gust128){size_t rss=physics_gust128_rss();fprintf(stderr,"gust128 numerical_peak=%zu rss_peak=%zu decoded_setup_released=1\n",memory.peak_bytes,rss);if(rss>((size_t)4*1024*1024*1024))goto done;}status=0;goto done;}
     const char *output=json_object_to_json_string_ext(result,JSON_C_TO_STRING_PLAIN);
     if(strlen(output)>output_bytes){fputs("native output byte bound\n",stderr);goto done;}
     puts(output);status=0;
 done:
     if(status && s.step_rejection)fprintf(stderr,"native step rejected at %.17g s: %s\n",s.time,s.step_rejection);
+    if(status && s.step_rejection)fprintf(stderr,"momentum Courant=%.17g limit=%.17g scalar cycles=%u limit=%u\n",s.momentum_courant,s.muscl?.4:.8,s.scalar_cycles_requested,s.max_scalar_cycles);
+    if(status && s.step_rejection)fprintf(stderr,"attempted projection residual=%.17g divergence=%.17g\n",s.attempted_projection_residual,s.attempted_projection_divergence);
+    if(status && s.step_rejection && !strcmp(s.step_rejection,"scalar cumulative work budget"))fprintf(stderr,"scalar work used=%llu requested=%llu limit=%llu remaining=%llu\n",s.scalar_work_cells,s.scalar_work_requested,s.max_scalar_work_cells,s.max_scalar_work_cells>=s.scalar_work_cells?s.max_scalar_work_cells-s.scalar_work_cells:0);
     if(status)fprintf(stderr,"open atmosphere policy, divergence, CFL, flux budget or contrast rejection; memory peak=%zu limit=%zu rejected=%zu failure=%d request=%zu\n",memory.peak_bytes,memory.limit_bytes,memory.rejected_allocations,memory.last_failure,memory.last_requested_bytes);
     if(result)json_object_put(result);
+    if(owned_steps)json_object_put(owned_steps);
     if(r)json_object_put(r);
     cfd_open_atmosphere3d_destroy(&s);cfd_memory_free(input);cfd_memory_scope(prior);return status;
 }

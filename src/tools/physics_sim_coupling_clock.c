@@ -3,6 +3,7 @@
 #include <json-c/json.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
 
 static struct json_object *get(struct json_object *o, const char *key) {
@@ -44,14 +45,22 @@ int main(int argc,char **argv) {
     if (!r || !progress || !next || !candidate || !p || !json_object_is_type(p,json_type_array) ||
         json_object_array_length(p)!=3 || !member(r,"domain",&domain) || !domain ||
         !member(r,"plan_id",&plan_id) || !plan_id || !member(r,"plan_ref",&plan_ref) || !plan_ref ||
-        !member(r,"windows",&windows) || !windows || windows>32 ||
+        !member(r,"windows",&windows) || !windows || windows>120 ||
         !member(r,"initial_id",&initial_id) || !initial_id || !member(r,"initial_validation",&validation) || !validation ||
         !init || !json_object_is_type(init,json_type_array) || json_object_array_length(init)!=2 ||
         !integer(json_object_array_get_idx(init,0),&refs[0]) || !refs[0] ||
         !integer(json_object_array_get_idx(init,1),&refs[1]) || !refs[1] ||
         !history || !json_object_is_type(history,json_type_array) || json_object_array_length(history)>windows) goto done;
+    struct json_object *profile=get(r,"profile");
+    if (profile) {
+        if (!json_object_is_type(profile,json_type_string) ||
+            strcmp(json_object_get_string(profile),"physics_sim_live12/v1")) goto done;
+    } else if (windows>32) goto done;
     if (get(r,"held_return") && (!member(r,"held_return",&held) || held>1)) goto done;
     for (size_t i=0;i<3;i++) if (!ratio(json_object_array_get_idx(p,i),&periods[i])) goto done;
+    if (profile && (periods[0].numerator!=1 || periods[0].denominator!=50 ||
+                    periods[1].numerator!=1 || periods[1].denominator!=200 ||
+                    periods[2].numerator!=1 || periods[2].denominator!=10)) goto done;
     if (core_sim_timebase_from_periods(domain,periods,3,1000000000,&base)!=CORE_SIM_TIME_OK) goto done;
     for (size_t i=0;i<3;i++) if (core_sim_duration_from_seconds(base,periods[i],&duration[i])!=CORE_SIM_TIME_OK) goto done;
     if (core_sim_duration_scale(duration[2],(CoreSimTimeRatio){windows,1},&total)!=CORE_SIM_TIME_OK ||

@@ -6,6 +6,8 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_passive_worker.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_atmosphere_worker.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_open_atmosphere_worker.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_frozen_transport.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_*' \
 	! -path '$(SRC_DIR)/tools/physics_sim_open_accuracy.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_coupling_clock.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_hotgas_worker.c' \
@@ -15,6 +17,14 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_buoyancy_projection_probe.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_matched_heat_probe.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_matched_original_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_matched_box_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_source_edge_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_sharp_diffusion_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_sharp_transport_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_scalar_flux_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_box_forcing_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_heated_face_probe.c' \
+	! -path '$(SRC_DIR)/tools/physics_sim_prescribed_transport_probe.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_momentum_replay.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_reconstructed_flow_probe.c' \
 	! -path '$(SRC_DIR)/tools/physics_sim_prescribed_flow_probe.c' \

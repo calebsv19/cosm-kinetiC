@@ -1,6 +1,62 @@
+## 2026-10-31 — Full128wake after passing unchanged-code timing
+
+The unchanged qualified code now passes the original20h gate at17.062h projected,
+with exact prefix/reopen identity. Next run the full fixed-input3.2s128wake and
+compare object heat/exposure/native fields against64/64half/80. Preserve bounded
+storage and all source/clock/energy/pressure/nonnegative/resource guards. Forecast
+comes from the early prefix; later gust cost remains uncertain. No128half yet.
+
+## 2026-10-31 — Stable-condition timing confirmation before full128wake
+
+Exact integer-array digest acceleration is qualified:69checks and native prefix/
+reopen pass, mask CPU78%lower, full-check CPU9.5%lower in paired measurements.
+The fresh cost gate remains21.197h/20h, with252.77/201.66s packets and variable
+load. Confirm the unchanged code with a bounded small timing gate under steadier
+compute conditions; preserve the pair-average formula and all caps. Only then
+admit the full3.2s fixed-input128wake against64/64half/80 fields and object heat/
+exposure. Lighter load is not a guarantee. No128half or solver-law change yet.
+
+## 2026-10-31 — Remaining coordinator cost before the long128 wake
+
+Lossless float-array digest acceleration is qualified with exact hashes and
+physical gates, but the fresh two-packet gate still projects28.369h versus20h.
+Next qualify further byte-equivalent savings, starting with the large integer
+solid mask, and repeat only a small timing gate with recorded machine load.
+Preserve all validation/refusal/heat/clock/capacity rules. A passing gate is needed
+before the full3.2s128 wake and retained64/64half/80 comparisons; no128half yet.
+
+## 2026-10-31 — Lossless digest efficiency before long128wake
+
+Bounded128prefix/reopen and old-state identity passed. The full wake cost gate
+refused23.675h projection against20h. Offline exact-check profiling attributes
+37.27of54.25s to four current scientific digest calls. Next qualify byte-equivalent
+lossless digest acceleration while keeping all physical gates and old identities,
+then repeat the same two-packet timing gate before another640step attempt.
+
+## 2026-10-31 — Next boundary after bounded retention qualification
+
+Bounded replay retention and field-packet visitor lifetime now pass exact128data
+replay, eight native16A/B calls and47regressions. Full-field pruning preserves
+compact accounting rather than promising re-audit of deleted fields. Current128
+admission remains100steps/0.5s. Next define an explicit longer-horizon profile,
+time the normal two-step path, and then run original gust release/wake with the
+bounded store and fixed64/64half/80comparisons. Keep all physical inputs and guards;
+no timestep-half128 expansion until the base wake reference is understood.
+
 # Physics Sim Future Intent
 
-Last updated: 2026-06-16
+## Fire–Fluid next qualification boundary — 2026-10-31
+
+Short opt-in128³gust onset, exact restart and direct source/energy/clock/native
+field audit now pass through 0.5 s. The current4GiB coordinator guard,2GiB journal
+and4GiB output budget remain fixed. A naive full3.2s extension is not admitted.
+First qualify a bounded longer-run execution/checkpoint-retention plan and reduce
+Python serialization/validation overhead without weakening physical checks.
+Then run the matched fixed-input128reference through gust release/recovery,
+compare against retained64/64half/80fields and object/exposure histories, and
+only then consider a128timestep-half control. The current tiny object-temperature
+signal cannot validate heating accuracy; live source feedback and installation
+remain separate boundaries.
 
 ## Scaffold Alignment Intent
 1. Preserve current subsystem decomposition strengths (`app`, `physics`, `render`, `tools`, etc.).

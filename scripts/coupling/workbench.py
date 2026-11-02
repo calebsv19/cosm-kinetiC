@@ -26,6 +26,9 @@ DEFAULTS = {'feedback': True, 'wind_scale': 20., 'source_scale': 1.,
 
 
 def settings_valid(settings):
+    require(type(settings) is dict, 'settings must be an object')
+    from .workbench_wind import is_wind,valid_settings
+    if is_wind(settings.get('profile')):valid_settings(settings);return
     keys(settings, (*DEFAULTS, 'profile') if 'profile' in settings else tuple(DEFAULTS))
     require(settings.get('profile', 'baseline') in ('baseline', 'warm_plume', 'box_control', 'inert_box','isolated_control','isolated_box'), 'unknown scene profile')
     if settings.get('profile') in ('box_control', 'inert_box','isolated_control','isolated_box'):
@@ -43,6 +46,8 @@ def settings_valid(settings):
 
 def make_config(workers, settings):
     settings_valid(settings)
+    from .workbench_wind import is_wind,make_config as wind_config
+    if is_wind(settings.get('profile')):return wind_config(workers,settings)
     if settings.get('profile') in ('isolated_control','isolated_box'):
         from .isolated_qualification import configuration
         return configuration(workers,box=settings['profile']=='isolated_box',duration=settings['duration_s'])
@@ -78,7 +83,7 @@ def visual_frame(host, cp):
     fields = cp['fluid']['fields']; grid = host.config['fluid']['grid']
     nx, ny, nz = grid; plane = nx * ny
     held = cp['evidence'].get('held_return')
-    return {'revision': cp['revision'], 'checkpoint_digest': cp['digest'],
+    return {'wind_control': cp['fluid'].get('wind_observation'), 'revision': cp['revision'], 'checkpoint_digest': cp['digest'],
             'time_s': fields['time_s'], 'metrics': metrics(cp),
             'surface': {'dimensions': [host.config['source']['width'], host.config['source']['height']],
                         'fields': {key: native['fields'][key] for key in ('fuel', 'burn', 'heat', 'ash')}},
@@ -136,7 +141,8 @@ class Workbench:
         with self.lock:
             require(self.host is not None, 'create a scene first')
             frames = read_frames(self.host)
-            return {'schema': 'fire_fluid_workbench_state/v1', 'run_id': self.run_id,
+            from .workbench_wind import metadata
+            return {'wind_presets':metadata(), 'schema': 'fire_fluid_workbench_state/v1', 'run_id': self.run_id,
                     'playing': self.playing, 'error': self.error, 'settings': self.settings,
                     'preview': json.loads((self.host.path.parent.parent / 'preview.json').read_text())
                                if (self.host.path.parent.parent / 'preview.json').is_file() else None,
@@ -191,12 +197,12 @@ class Workbench:
                 except Exception as error:
                     self.error = str(error); self.playing = False
 
-    def export(self):
+    def export(self, revisions=None):
         from .playback_export import export_playback
         with self.lock:
             require(not self.playing, 'pause before exporting')
             require(self.host is not None, 'create a scene first')
-            return export_playback(self.host, self.root / 'exports' / (self.run_id + '-' + str(uuid.uuid4())))
+            return export_playback(self.host, self.root / 'exports' / (self.run_id + '-' + str(uuid.uuid4())), revisions=revisions)
 
     def close(self):
         with self.lock:

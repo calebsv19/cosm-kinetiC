@@ -53,6 +53,12 @@ include make/rules-build.mk
 include make/rules-memory-check.mk
 include make/rules-runtime.mk
 include make/rules-tools.mk
+include make/rules-ventilation.mk
+include make/rules-flow-validation.mk
+include make/rules-heated-face.mk
+include make/rules-transport-replay.mk
+include make/rules-open-weather.mk
+include make/rules-accuracy-reference.mk
 include make/cfd-reference-support.mk
 include make/rules-shims.mk
 include make/rules-tests-contracts.mk

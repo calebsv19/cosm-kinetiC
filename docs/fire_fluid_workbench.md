@@ -38,7 +38,7 @@ The optional Warm plume profile uses a 1 m tall domain with eight vertical cells
 and 75% authored heat transfer. Its qualified synthetic scene uses wind multiplier
 1, source loading 3 and duration 3.2 s (32 exchanges). These are explicit authored
 inputs, not measured burner calibration; native temperature admission remains active. No internal solid bodies
-or newly qualified combustion physics are implied by this scene.
+or newly qualified combustion physics are implied by this warm-plume scene. The separate native wind/channel presets support the bounded insulated cube.
 
 - Set wind-feedback enablement, initial shear multiplier, source fuel-loading
   multiplier, return sampling height, exchange interval and duration.
@@ -59,7 +59,7 @@ or newly qualified combustion physics are implied by this scene.
   it does not silently migrate checkpoints. Use a fresh scene root for changed
   incompatible source inputs.
 
-Supported exchange intervals are 0.02, 0.04 and 0.1 s. Duration must align exactly
+Legacy supported exchange intervals are 0.02, 0.04 and 0.1 s. Native wind presets also permit 0.2 s and durations through 6.4 s within the same 3–32 exchange limit. Duration must align exactly
 and cover 3–32 exchanges. Sampling height must be inside the 0.5 m domain.
 Native admission and journal/work limits remain in force. Failed native steps
 preserve the accepted head; step retries retain the original operation identity.
@@ -69,7 +69,7 @@ preserve the accepted head; step retries retain the original operation identity.
 **Export RayTracing playback** writes same-clock scene snapshots for every
 accepted noninitial revision. **Render viewed state** exports a fresh payload
 and renders one selected accepted revision at 640 × 480 with one temporal frame
-and one worker. Each preflight/render command has a 180 s cap. The last rendered
+and one worker for the legacy small surface; fine native textures use at most four workers. Each preflight/render command has a 180 s cap. The last rendered
 preview is saved per run and remains available after page reload/server restart.
 
 Exports preserve the authoritative combined-scene sidecars. The separate
@@ -137,3 +137,7 @@ for development review. The paired fine-grid spatial accuracy gate is explicitly
 unqualified; see [qualification](fire_fluid_isolated.md) before interpreting
 local heat or smoke predictions. Finer prescribed-source renders are separate
 review artifacts and do not replace the live journal's numerical fields.
+
+## Native wind, ventilation and reversal presets
+
+Use `--initial-profile continuous` on a fresh root or choose a native wind preset in the panel. Ten presets expose speed and applicable gust/ramp times, fixed per saved run. Native wind scenes use17×17Fire/8³gas, accepted-prior return, and the existing0.02/0.005s native steps. Extended recovery/reversal defaults cover4.8s in0.2s exchanges. The panel reports last/next command, actual sampled Fire input and prescribed inlet volume. Fine surfaces render through an authenticated native texture and same-clock gas volume; cutaway walls are display geometry. See [boundary contracts and qualification](fire_fluid_ventilation.md).
