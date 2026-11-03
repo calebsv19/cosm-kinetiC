@@ -1,5 +1,6 @@
 #include "app/preset_io_internal.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include "app/physics_sim_persistence.h"
@@ -8,17 +9,40 @@ static const char *DEFAULT_SLOT_LABEL = "Custom Slot";
 static const int PRESET_FILE_VERSION = 15;
 
 bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
-    if (!path || !lib || lib->slot_count < 0 || lib->slot_capacity < lib->slot_count ||
+    if (!path || !lib || lib->slot_count < 0 || (size_t)lib->slot_count > PRESET_MAX_SLOTS || lib->slot_capacity < lib->slot_count ||
         (lib->slot_count > 0 && !lib->slots)) return false;
     for (int i = 0; i < lib->slot_count; ++i) {
         const CustomPresetSlot *slot = &lib->slots[i];
-        if (slot->preset.object_count > MAX_PRESET_OBJECTS ||
+        if (slot->preset.emitter_count > MAX_FLUID_EMITTERS ||
+            slot->preset.object_count > MAX_PRESET_OBJECTS ||
             !memchr(slot->name, 0, sizeof(slot->name)) ||
-            !memchr(slot->preset.structural_scene_path, 0, sizeof(slot->preset.structural_scene_path))) return false;
+            !memchr(slot->preset.structural_scene_path, 0, sizeof(slot->preset.structural_scene_path)) ||
+            strpbrk(slot->name, "\r\n") || strpbrk(slot->preset.structural_scene_path, "\r\n")) return false;
+        for (size_t j = 0; j < slot->preset.object_count; ++j) {
+            const PresetObject *obj = &slot->preset.objects[j];
+            if (!isfinite(obj->position_x) || !isfinite(obj->position_y) ||
+                !isfinite(obj->position_z) || !isfinite(obj->size_x) ||
+                !isfinite(obj->size_y) || !isfinite(obj->size_z) || !isfinite(obj->angle)) return false;
+        }
+        for (size_t j = 0; j < BOUNDARY_EDGE_COUNT; ++j)
+            if (!isfinite(slot->preset.boundary_flows[j].strength)) return false;
         size_t shapes = slot->preset.import_shape_count;
-        if (shapes > MAX_IMPORTED_SHAPES) shapes = MAX_IMPORTED_SHAPES;
+        if (shapes > MAX_IMPORTED_SHAPES) return false;
         for (size_t j = 0; j < shapes; ++j) {
-            if (!memchr(slot->preset.import_shapes[j].path, 0, sizeof(slot->preset.import_shapes[j].path))) return false;
+            const ImportedShape *shape = &slot->preset.import_shapes[j];
+            if (!memchr(shape->path, 0, sizeof(shape->path)) || !shape->path[0] ||
+                strpbrk(shape->path, "\r\n") || shape->collider_part_count < 0 ||
+                shape->collider_part_count > 16) return false;
+            if (shape->collider_vert_count < 0 || shape->collider_vert_count > 32) return false;
+            for (int k = 0; k < shape->collider_vert_count; ++k)
+                if (!isfinite(shape->collider_verts[k].x) || !isfinite(shape->collider_verts[k].y)) return false;
+            for (int k = 0; k < shape->collider_part_count; ++k) {
+                int offset = shape->collider_part_offsets[k], count = shape->collider_part_counts[k];
+                if (offset < 0 || offset >= 128 || count < 0 || count > 16 || count > 128 - offset) return false;
+                for (int v = offset; v < offset + count; ++v)
+                    if (!isfinite(shape->collider_parts_verts[v].x) ||
+                        !isfinite(shape->collider_parts_verts[v].y)) return false;
+            }
         }
     }
     PhysicsSimPersistence save;
@@ -32,7 +56,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         fprintf(f, "%d %d\n", slot->occupied ? 1 : 0, sanitize_domain(slot->preset.domain));
         float domain_w = sanitize_dimension_value(slot->preset.domain_width);
         float domain_h = sanitize_dimension_value(slot->preset.domain_height);
-        fprintf(f, "%.6f %.6f\n", domain_w, domain_h);
+        fprintf(f, "%.9g %.9g\n", domain_w, domain_h);
         fprintf(f, "%d\n", (int)sanitize_dimension_mode(slot->preset.dimension_mode));
         const char *name = (slot->name[0] != '\0') ? slot->name : DEFAULT_SLOT_LABEL;
         fprintf(f, "%s\n", name);
@@ -40,7 +64,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         AtmosphericPresetSettings atmosphere = slot->preset.atmosphere;
         sanitize_atmosphere(&atmosphere);
         fprintf(f,
-                "ATMOS %d %d %u %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %zu\n",
+                "ATMOS %d %d %u %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %zu\n",
                 atmosphere.enabled ? 1 : 0,
                 slot->preset.atmospheric_initial_state_enabled ? 1 : 0,
                 (unsigned int)atmosphere.seed,
@@ -60,7 +84,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         for (size_t r = 0; r < atmosphere.region_count; ++r) {
             const AtmosphericDensityRegion *region = &atmosphere.regions[r];
             fprintf(f,
-                    "AREG %d %d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f\n",
+                    "AREG %d %d %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g\n",
                     region->enabled ? 1 : 0,
                     (int)region->shape,
                     region->center_x,
@@ -76,7 +100,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         for (size_t e = 0; e < slot->preset.emitter_count; ++e) {
             FluidEmitter emitter = slot->preset.emitters[e];
             sanitize_emitter(&emitter, sanitize_dimension_mode(slot->preset.dimension_mode));
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %.6f %d %d %d %d %d %.6f\n",
+            fprintf(f, "%d %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %d %d %d %d %d %.9g\n",
                     emitter.type,
                     emitter.position_x,
                     emitter.position_y,
@@ -96,7 +120,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         fprintf(f, "FLOW %d\n", BOUNDARY_EDGE_COUNT);
         for (int edge = 0; edge < BOUNDARY_EDGE_COUNT; ++edge) {
             const BoundaryFlow *flow = &slot->preset.boundary_flows[edge];
-            fprintf(f, "%d %d %.6f\n",
+            fprintf(f, "%d %d %.9g\n",
                     edge,
                     flow->mode,
                     flow->strength);
@@ -104,7 +128,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
         fprintf(f, "OBJ %zu\n", slot->preset.object_count);
         for (size_t o = 0; o < slot->preset.object_count; ++o) {
             const PresetObject *obj = &slot->preset.objects[o];
-            fprintf(f, "%d %.6f %.6f %.6f %.6f %.6f %.6f %.6f %d %d\n",
+            fprintf(f, "%d %.9g %.9g %.9g %.9g %.9g %.9g %.9g %d %d\n",
                     obj->type,
                     obj->position_x,
                     obj->position_y,
@@ -123,7 +147,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
             ImportedShape imp = slot->preset.import_shapes[s];
             sanitize_import_shape(&imp);
             fprintf(f, "%s\n", imp.path);
-            fprintf(f, "%.6f %.6f %.6f %.6f %.6f %d %.6f %.6f %d %d %d %d\n",
+            fprintf(f, "%.9g %.9g %.9g %.9g %.9g %d %.9g %.9g %d %d %d %d\n",
                     imp.position_x,
                     imp.position_y,
                     imp.position_z,
@@ -137,7 +161,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
                     imp.collider_vert_count,
                     imp.collider_part_count);
             for (int vi = 0; vi < imp.collider_vert_count; ++vi) {
-                fprintf(f, "%.6f %.6f\n", imp.collider_verts[vi].x, imp.collider_verts[vi].y);
+                fprintf(f, "%.9g %.9g\n", imp.collider_verts[vi].x, imp.collider_verts[vi].y);
             }
             for (int pi = 0; pi < imp.collider_part_count; ++pi) {
                 fprintf(f, "%d %d\n", imp.collider_part_offsets[pi], imp.collider_part_counts[pi]);
@@ -145,7 +169,7 @@ bool preset_library_save(const char *path, const CustomPresetLibrary *lib) {
                 for (int vi = 0; vi < imp.collider_part_counts[pi]; ++vi) {
                     int idx = offset + vi;
                     if (idx < 0 || idx >= 128) break;
-                    fprintf(f, "%.6f %.6f\n",
+                    fprintf(f, "%.9g %.9g\n",
                             imp.collider_parts_verts[idx].x,
                             imp.collider_parts_verts[idx].y);
                 }

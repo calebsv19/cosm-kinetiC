@@ -111,7 +111,8 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
         .allow_missing = true,
     };
     if (!config_loader_load(&cfg, &opts)) {
-        fprintf(stderr, "Failed to load config, continuing with defaults.\n");
+        fprintf(stderr, "[config] Startup stopped to preserve %s.\n", config_load_path);
+        return EXIT_FAILURE;
     }
 
     if (!physics_sim_ensure_runtime_dirs()) {
@@ -158,7 +159,13 @@ int physics_sim_app_main_legacy(int argc, char **argv) {
 
     CustomPresetLibrary library;
     preset_library_init(&library);
-    preset_library_load(preset_load_path, &library);
+    bool presets_loaded = preset_library_load(preset_load_path, &library);
+    if (!presets_loaded && strcmp(preset_load_path, preset_save_path) == 0) {
+        fprintf(stderr, "[presets] Could not read %s. Preserving the existing library.\n", preset_load_path);
+        shape_library_free(&shape_lib);
+        ts_shutdown();
+        return EXIT_FAILURE;
+    }
     if (preset_library_count(&library) == 0) {
         const FluidScenePreset *default_custom = scene_presets_get_default();
         CustomPresetSlot *slot = preset_library_add_slot(&library, "Custom Preset 1", default_custom);

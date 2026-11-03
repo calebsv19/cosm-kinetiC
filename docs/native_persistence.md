@@ -29,8 +29,27 @@ The adapter admits predecessor files and completed stages up to 16 MiB. This is
 a publication bound, not a streaming disk quota or hard I/O deadline. A serializer
 can write a larger pending file before finish holds it. Full aggregate storage
 budgets, authenticated process identity, save-result UX, exact attempt recovery
-and retirement remain open. Main's existing preset-save callsites ignore bool
-results; a held save is data-preserving but not yet surfaced to that GUI user.
+and retirement remain open. The later [configuration lifecycle](config_save_lifecycle.md) added per-file
+shutdown reporting.
+
+## Current preset and startup contract
+
+The v15 text format carries reusable initial conditions. Its writer uses nine
+significant decimal digits for binary32 fields. Older fixed-decimal v15 files
+and supported earlier schemas remain readable. Existing mode-specific
+normalization still applies, including unit emitter directions and defaults for
+dimensions absent from old schemas. Structural scene and imported shape paths
+are references. Copy their assets when relocating a library.
+
+The reader prepares a bounded candidate library and transfers it after the
+complete file is accepted. A failed open preserves the initialized destination
+library and its selection. Text input is bounded at 16 MiB and expanded slot
+storage at 128 MiB. An unsupported version, truncated record, nonfinite current
+numeric input, or out-of-range collider layout fails admission. Startup stops
+if the selected runtime preset or configuration is unreadable. Missing optional
+settings still use the ordinary defaults. Both shutdown paths report save
+outcomes. After a completed rename, a sync or identity-check failure names the
+published destination for readback before a retry.
 
 ## Shared reuse decision
 

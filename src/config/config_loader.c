@@ -506,10 +506,10 @@ static bool config_fields_valid(json_object *root) {
 
 bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts) {
     if (!cfg) return false;
-    *cfg = app_config_default();
 
     if (!opts || !opts->path) {
         fprintf(stderr, "[config] No config path provided; using defaults.\n");
+        *cfg = app_config_default();
         return true;
     }
 
@@ -521,6 +521,7 @@ bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts) {
             fprintf(stderr,
                     "[config] Missing %s, continuing with defaults.\n",
                     opts->path);
+            *cfg = app_config_default();
             return true;
         }
         fprintf(stderr,
@@ -536,6 +537,7 @@ bool config_loader_load(AppConfig *cfg, const ConfigLoadOptions *opts) {
         fprintf(stderr, "[config] JSON structure or known field contract held for %s.\n", opts->path);
         return false;
     }
+    *cfg = app_config_default();
     apply_json_overrides(object, cfg);
     json_object_put(object);
     fprintf(stderr, "[config] Loaded %s (%zu bytes).\n", opts->path, json_size);

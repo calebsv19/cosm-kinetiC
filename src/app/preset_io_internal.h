@@ -3,6 +3,9 @@
 
 #include "app/preset_io.h"
 
+/* Bound the expanded in-memory library independently of the text size. */
+#define PRESET_MAX_SLOTS ((128u * 1024u * 1024u) / sizeof(CustomPresetSlot))
+
 FluidSceneDomainType sanitize_domain(FluidSceneDomainType domain);
 FluidSceneDimensionMode sanitize_dimension_mode(FluidSceneDimensionMode mode);
 void sanitize_emitter(FluidEmitter *em, FluidSceneDimensionMode dimension_mode);

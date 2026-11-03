@@ -105,7 +105,9 @@ int main(int argc,char **argv) {
                 self.assertEqual(len(list(base.glob('.headless-sidecar-*.pending'))),1)
     def test_postrename_sync_failure_reports_unconfirmed_complete_bytes(self):
         self.path.write_text("original")
-        self.assertEqual(self.run_probe("postrename").returncode,3)
+        result = self.run_probe("postrename")
+        self.assertEqual(result.returncode,3)
+        self.assertIn("Published "+str(self.path),result.stderr)
         self.assertEqual(self.path.read_text(),"replacement")
         self.assertEqual(list(self.base.glob(".headless-sidecar-*.pending")),[])
     def test_failure_keeps_absent_destination_absent(self):

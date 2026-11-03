@@ -155,6 +155,24 @@ static bool test_v15_additive_roundtrip(void) {
     slot->preset.import_shapes[0].is_static = true;
     slot->preset.import_shapes[0].gravity_enabled = false;
 
+    /* Adjacent binary32 inputs admitted without normalization by these fields. */
+    float adjacent = nextafterf(0.5f, 1.0f);
+    slot->preset.domain_width = nextafterf(1.0f, 2.0f);
+    slot->preset.objects[0].position_x = adjacent;
+    slot->preset.emitters[0].position_x = adjacent;
+    slot->preset.import_shapes[0].friction = adjacent;
+    slot->preset.atmosphere.base_density = adjacent;
+    slot->preset.atmosphere.region_count = 1;
+    slot->preset.atmosphere.regions[0].center_x = adjacent;
+    slot->preset.boundary_flows[0].mode = BOUNDARY_FLOW_EMIT;
+    slot->preset.boundary_flows[0].strength = 0.000000125f;
+    ImportedShape *shape = &slot->preset.import_shapes[0];
+    shape->collider_vert_count = 3;
+    shape->collider_verts[2].x = adjacent;
+    shape->collider_part_count = 1;
+    shape->collider_part_offsets[0] = 2;
+    shape->collider_part_counts[0] = 3;
+    shape->collider_parts_verts[4].y = -adjacent;
     if (!preset_library_save(path_template, &lib)) goto done;
     if (!preset_library_load(path_template, &reloaded)) goto done;
     if (preset_library_count(&reloaded) != 1) goto done;
@@ -169,6 +187,16 @@ static bool test_v15_additive_roundtrip(void) {
     const FluidEmitter *em = &loaded->preset.emitters[0];
     const PresetObject *obj = &loaded->preset.objects[0];
     const ImportedShape *imp = &loaded->preset.import_shapes[0];
+    if (loaded->preset.domain_width != slot->preset.domain_width ||
+        obj->position_x != adjacent || em->position_x != adjacent ||
+        imp->friction != adjacent || loaded->preset.atmosphere.base_density != adjacent ||
+        loaded->preset.atmosphere.regions[0].center_x != adjacent ||
+        loaded->preset.boundary_flows[0].strength != slot->preset.boundary_flows[0].strength ||
+        imp->collider_verts[2].x != adjacent || imp->collider_parts_verts[4].y != -adjacent) {
+        fprintf(stderr, "v15 preset precision: domain %.9g -> %.9g, position %.9g -> %.9g\n",
+                slot->preset.domain_width, loaded->preset.domain_width, adjacent, obj->position_x);
+        goto done;
+    }
     float dir_len = sqrtf(0.3f * 0.3f + (-0.8f) * (-0.8f) + 0.5f * 0.5f);
     if (!approx_equal(em->position_z, 0.56f, 1e-4f)) goto done;
     if (!approx_equal(em->dir_x, 0.3f / dir_len, 1e-4f)) goto done;
@@ -181,6 +209,18 @@ static bool test_v15_additive_roundtrip(void) {
     if (!approx_equal(obj->position_z, 0.4f, 1e-4f)) goto done;
     if (!approx_equal(obj->size_z, 0.3f, 1e-4f)) goto done;
     if (!approx_equal(imp->position_z, 0.41f, 1e-4f)) goto done;
+
+    slot->preset.objects[0].angle = NAN;
+    if (preset_library_save(path_template, &lib) ||
+        !preset_library_load(path_template, &reloaded)) goto done;
+    loaded = preset_library_get_slot_const(&reloaded, 0);
+    if (!loaded || !isfinite(loaded->preset.objects[0].angle)) goto done;
+    if (!write_text_file(path_template, "16 0 0\n") ||
+        preset_library_load(path_template, &reloaded) ||
+        !write_text_file(path_template, "15 0 1\n1 0\n") ||
+        preset_library_load(path_template, &reloaded) ||
+        preset_library_get_slot_const(&reloaded, 0) != loaded ||
+        loaded->preset.domain_width != slot->preset.domain_width) goto done;
 
     ok = true;
 

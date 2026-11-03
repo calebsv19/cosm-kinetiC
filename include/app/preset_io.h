@@ -23,6 +23,7 @@ typedef struct CustomPresetLibrary {
 
 void preset_library_init(CustomPresetLibrary *lib);
 void preset_library_shutdown(CustomPresetLibrary *lib);
+/* Load into an initialized library. Failure preserves its slots and selection. */
 bool preset_library_load(const char *path, CustomPresetLibrary *lib);
 bool preset_library_save(const char *path, const CustomPresetLibrary *lib);
 CustomPresetSlot *preset_library_get_slot(CustomPresetLibrary *lib, int index);

@@ -399,6 +399,7 @@ bool physics_sim_headless_sidecar_publish(PhysicsSimHeadlessSidecar *sidecar, FI
         if (fstat(sidecar->descriptor, &sidecar->predecessor) != 0) valid = false;
         sidecar->pending_descriptor = -1; sidecar->pending_name[0] = '\0';
         valid = valid && fsync(sidecar->parent_descriptor) == 0 && physics_sim_headless_sidecar_check(sidecar);
+        if (!valid) fprintf(stderr, "[persistence] Published %s; directory sync or identity readback unconfirmed. Inspect this destination before retrying.\n", sidecar->path);
     }
     if (!valid) sidecar->held = true;
     return valid;

@@ -1,6 +1,15 @@
+#define _DARWIN_C_SOURCE
+#define _DEFAULT_SOURCE
+#define _POSIX_C_SOURCE 200809L
 #include "app/preset_io.h"
 #include "app/preset_io_internal.h"
 
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -267,6 +276,7 @@ void preset_slot_reset(CustomPresetSlot *slot, int index) {
 
 bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
     if (!lib) return false;
+    if (desired < 0 || (size_t)desired > PRESET_MAX_SLOTS) return false;
     if (desired <= lib->slot_capacity) return true;
     int new_capacity = lib->slot_capacity > 0 ? lib->slot_capacity : CUSTOM_PRESET_LIBRARY_INITIAL_CAPACITY;
     while (new_capacity < desired) {
@@ -276,6 +286,7 @@ bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
             break;
         }
     }
+    if ((size_t)new_capacity > PRESET_MAX_SLOTS) new_capacity = (int)PRESET_MAX_SLOTS;
     CustomPresetSlot *new_slots = (CustomPresetSlot *)calloc((size_t)new_capacity, sizeof(CustomPresetSlot));
     if (!new_slots) return false;
     for (int i = 0; i < lib->slot_count; ++i) {
@@ -293,65 +304,63 @@ bool preset_library_reserve(CustomPresetLibrary *lib, int desired) {
 
 static bool read_line(FILE *f, char *buffer, size_t buffer_size) {
     if (!f || !buffer || buffer_size == 0) return false;
-    if (!fgets(buffer, (int)buffer_size, f)) {
-        return false;
-    }
-    size_t len = strlen(buffer);
-    if (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
-        buffer[--len] = '\0';
-        if (len > 0 && buffer[len - 1] == '\r') {
-            buffer[--len] = '\0';
+    size_t length = 0;
+    int c;
+    while ((c = fgetc(f)) != EOF && c != '\n') {
+        if (c == '\r') {
+            if (fgetc(f) != '\n') return false;
+            break;
         }
+        if (!c || length + 1 >= buffer_size) return false;
+        buffer[length++] = (char)c;
     }
+    if (ferror(f) || (c == EOF && !length)) return false;
+    buffer[length] = '\0';
     return true;
 }
 
-bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
-    if (!lib) return false;
-    preset_library_init(lib);
-    if (!path) return false;
-    FILE *f = fopen(path, "r");
-    if (!f) return false;
-
-        int header_vals[3] = {0};
-        int read_count = fscanf(f, "%d %d %d\n",
-                            &header_vals[0],
-                            &header_vals[1],
-                            &header_vals[2]);
-        if (read_count != 3 && read_count != 2) {
-            fclose(f);
-            return false;
-        }
-        int file_version = 0;
-        int active_slot = 0;
-    int stored_slots = 0;
-    if (read_count == 3) {
-        file_version = header_vals[0];
-        active_slot = header_vals[1];
-        stored_slots = header_vals[2];
-    } else {
-        file_version = 0;
-        active_slot = header_vals[0];
-        stored_slots = header_vals[1];
+static bool read_library(FILE *f, CustomPresetLibrary *lib) {
+    int file_version = 0, active_slot = 0, stored_slots = 0;
+    char header[128];
+    int values[3], fields = 0;
+    if (!read_line(f, header, sizeof(header))) return false;
+    char *next = header;
+    while (*next) {
+        while (isspace((unsigned char)*next)) ++next;
+        if (!*next) break;
+        char *end;
+        errno = 0;
+        long value = strtol(next, &end, 10);
+        if (fields == 3 || end == next || errno || value < INT_MIN || value > INT_MAX ||
+            (*end && !isspace((unsigned char)*end))) return false;
+        values[fields++] = (int)value;
+        next = end;
     }
-
-    if (stored_slots < 0) stored_slots = 0;
-    if (!preset_library_reserve(lib, stored_slots)) {
-        fclose(f);
+    if (fields < 2) return false;
+    file_version = values[0];
+    active_slot = values[1];
+    if (fields == 3) stored_slots = values[2];
+    if (fields == 2) {
+        stored_slots = active_slot;
+        active_slot = file_version;
+        file_version = 0;
+    } else if (fields != 3 || file_version < 1 || file_version > 15) {
         return false;
     }
+    if (stored_slots < 0 || (size_t)stored_slots > PRESET_MAX_SLOTS ||
+        !preset_library_reserve(lib, stored_slots)) return false;
 
     int structural_default_claimed = 0;
     for (int i = 0; i < stored_slots; ++i) {
         int occupied = 0;
         int domain_raw = SCENE_DOMAIN_BOX;
         if (file_version >= 1) {
-            if (fscanf(f, "%d %d\n", &occupied, &domain_raw) < 1) {
-                break;
+            if (fscanf(f, "%d %d\n", &occupied, &domain_raw) != 2) {
+                return false;
             }
         } else {
             if (fscanf(f, "%d\n", &occupied) != 1) {
-                break;
+                return false;
             }
         }
         FluidSceneDomainType domain = (file_version >= 1)
@@ -361,26 +370,26 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         float domain_width = 1.0f;
         float domain_height = 1.0f;
         if (file_version >= 2) {
-            if (fscanf(f, "%f %f\n", &domain_width, &domain_height) != 2) {
-                domain_width = 1.0f;
-                domain_height = 1.0f;
+            if (fscanf(f, "%f %f\n", &domain_width, &domain_height) != 2 ||
+                !isfinite(domain_width) || !isfinite(domain_height)) {
+                return false;
             }
         }
         if (file_version >= 12) {
             int dimension_mode_raw = (int)SCENE_DIMENSION_MODE_2D;
             if (fscanf(f, "%d\n", &dimension_mode_raw) != 1) {
-                dimension_mode_raw = (int)SCENE_DIMENSION_MODE_2D;
+                return false;
             }
             dimension_mode = sanitize_dimension_mode((FluidSceneDimensionMode)dimension_mode_raw);
         }
         char name_buf[CUSTOM_PRESET_NAME_MAX] = {0};
         if (!read_line(f, name_buf, sizeof(name_buf))) {
-            break;
+            return false;
         }
         char structural_path_buf[256] = {0};
         if (file_version >= 11) {
             if (!read_line(f, structural_path_buf, sizeof(structural_path_buf))) {
-                break;
+                return false;
             }
         }
         AtmosphericPresetSettings atmosphere = {0};
@@ -388,7 +397,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         if (file_version >= 13) {
             char atmos_line[512] = {0};
             if (!read_line(f, atmos_line, sizeof(atmos_line))) {
-                break;
+                return false;
             }
             char atmos_marker[8] = {0};
             int enabled = 0;
@@ -417,7 +426,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                 &atmosphere.band_edge_falloff,
                                 &region_count);
                 if (parsed != 17) {
-                    break;
+                    return false;
                 }
             } else {
                 parsed = sscanf(atmos_line,
@@ -439,31 +448,28 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                 &atmosphere.band_edge_falloff,
                                 &region_count);
                 if (parsed != 16) {
-                    break;
+                    return false;
                 }
             }
             if (strcmp(atmos_marker, "ATMOS") != 0) {
-                break;
+                return false;
             }
+            if (!isfinite(atmosphere.base_density) || !isfinite(atmosphere.density_scale) ||
+                !isfinite(atmosphere.density_threshold) || !isfinite(atmosphere.base_wind_x) ||
+                !isfinite(atmosphere.base_wind_y) || !isfinite(atmosphere.base_wind_z) ||
+                !isfinite(atmosphere.turbulence_strength) || !isfinite(atmosphere.noise_scale) ||
+                !isfinite(atmosphere.detail_scale) || !isfinite(atmosphere.band_min_y) ||
+                !isfinite(atmosphere.band_max_y) || !isfinite(atmosphere.band_edge_falloff)) return false;
             atmosphere.enabled = enabled != 0;
             atmospheric_initial_state_enabled = initial_state_enabled != 0;
             atmosphere.seed = (uint32_t)seed;
-            int stored_region_count = region_count;
-            if (stored_region_count < 0) stored_region_count = 0;
-            if (region_count < 0) region_count = 0;
-            if (region_count > (int)MAX_ATMOSPHERIC_DENSITY_REGIONS) {
-                region_count = (int)MAX_ATMOSPHERIC_DENSITY_REGIONS;
-            }
+            if (region_count < 0 || region_count > (int)MAX_ATMOSPHERIC_DENSITY_REGIONS) return false;
             atmosphere.region_count = (size_t)region_count;
-            for (int r = 0; r < stored_region_count; ++r) {
+            for (int r = 0; r < region_count; ++r) {
                 char region_marker[8] = {0};
                 int region_enabled = 0;
                 int shape = 0;
-                AtmosphericDensityRegion skipped_region = {0};
-                AtmosphericDensityRegion *region =
-                    (r < (int)MAX_ATMOSPHERIC_DENSITY_REGIONS)
-                        ? &atmosphere.regions[r]
-                        : &skipped_region;
+                AtmosphericDensityRegion *region = &atmosphere.regions[r];
                 if (fscanf(f,
                            "%7s %d %d %f %f %f %f %f %f %f %f\n",
                            region_marker,
@@ -478,19 +484,20 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            &region->density,
                            &region->falloff) != 11 ||
                     strcmp(region_marker, "AREG") != 0) {
-                    atmosphere.region_count = (size_t)((r < region_count) ? r : region_count);
-                    break;
+                    return false;
                 }
-                if (r < (int)MAX_ATMOSPHERIC_DENSITY_REGIONS) {
-                    region->enabled = region_enabled != 0;
-                    region->shape = (AtmosphericRegionShape)shape;
-                }
+                if (!isfinite(region->center_x) || !isfinite(region->center_y) ||
+                    !isfinite(region->center_z) || !isfinite(region->size_x) ||
+                    !isfinite(region->size_y) || !isfinite(region->size_z) ||
+                    !isfinite(region->density) || !isfinite(region->falloff)) return false;
+                region->enabled = region_enabled != 0;
+                region->shape = (AtmosphericRegionShape)shape;
             }
             sanitize_atmosphere(&atmosphere);
         }
         int emitter_count = 0;
         if (fscanf(f, "%d\n", &emitter_count) != 1) {
-            break;
+            return false;
         }
 
         CustomPresetSlot slot = {0};
@@ -533,8 +540,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
             }
         }
 
-        emitter_count = (emitter_count < 0) ? 0 :
-                        (emitter_count > (int)MAX_FLUID_EMITTERS ? (int)MAX_FLUID_EMITTERS : emitter_count);
+        if (emitter_count < 0 || emitter_count > (int)MAX_FLUID_EMITTERS) return false;
 
         for (int e = 0; e < emitter_count; ++e) {
             FluidEmitter emitter = {0};
@@ -561,7 +567,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            &surface_3d,
                            &obstacle_mode_3d,
                            &emitter.thermal_buoyancy_3d) != 15) {
-                    break;
+                    return false;
                 }
                 emitter.attached_object = attached_obj;
                 emitter.attached_import = attached_imp;
@@ -581,7 +587,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            &emitter.dir_z,
                            &attached_obj,
                            &attached_imp) != 11) {
-                    break;
+                    return false;
                 }
                 emitter.attached_object = attached_obj;
                 emitter.attached_import = attached_imp;
@@ -600,7 +606,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            &emitter.dir_y,
                            &attached_obj,
                            &attached_imp) != 9) {
-                    break;
+                    return false;
                 }
                 emitter.attached_object = attached_obj;
                 emitter.attached_import = attached_imp;
@@ -620,7 +626,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            &emitter.dir_x,
                            &emitter.dir_y,
                            &attached_obj) != 8) {
-                    break;
+                    return false;
                 }
                 emitter.attached_object = attached_obj;
                 emitter.attached_import = -1;
@@ -639,7 +645,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            &emitter.strength,
                            &emitter.dir_x,
                            &emitter.dir_y) != 7) {
-                    break;
+                    return false;
                 }
                 emitter.attached_object = -1;
                 emitter.attached_import = -1;
@@ -650,6 +656,11 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 emitter.obstacle_mode_3d = EMITTER_3D_OBSTACLE_MODE_AUTO;
                 emitter.thermal_buoyancy_3d = 0.0f;
             }
+            if (!isfinite(emitter.position_x) || !isfinite(emitter.position_y) ||
+                !isfinite(emitter.position_z) || !isfinite(emitter.radius) ||
+                !isfinite(emitter.strength) || !isfinite(emitter.dir_x) ||
+                !isfinite(emitter.dir_y) || !isfinite(emitter.dir_z) ||
+                !isfinite(emitter.thermal_buoyancy_3d)) return false;
             emitter.type = (FluidEmitterType)type;
             sanitize_emitter(&emitter, dimension_mode);
             slot.preset.emitters[e] = emitter;
@@ -662,16 +673,15 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         if (fscanf(f, "%5s", marker) == 1 && strcmp(marker, "FLOW") == 0) {
             int flow_count = 0;
             if (fscanf(f, "%d\n", &flow_count) != 1) {
-                flow_count = 0;
+                return false;
             }
-            flow_count = (flow_count < 0) ? 0 :
-                         (flow_count > BOUNDARY_EDGE_COUNT ? BOUNDARY_EDGE_COUNT : flow_count);
+            if (flow_count < 0 || flow_count > BOUNDARY_EDGE_COUNT) return false;
             for (int b = 0; b < flow_count; ++b) {
                 int edge = 0;
                 int mode = 0;
                 float strength = 0.0f;
-                if (fscanf(f, "%d %d %f\n", &edge, &mode, &strength) != 3) {
-                    break;
+                if (fscanf(f, "%d %d %f\n", &edge, &mode, &strength) != 3 || !isfinite(strength)) {
+                    return false;
                 }
                 if (edge < 0 || edge >= BOUNDARY_EDGE_COUNT) {
                     continue;
@@ -682,6 +692,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
             }
             after_emitters_pos = ftell(f);
         } else {
+            if (file_version == 15) return false;
             fseek(f, after_emitters_pos, SEEK_SET);
         }
 
@@ -690,10 +701,9 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
         if (fscanf(f, "%3s", obj_marker) == 1 && strcmp(obj_marker, "OBJ") == 0) {
             int object_count = 0;
             if (fscanf(f, "%d\n", &object_count) != 1) {
-                object_count = 0;
+                return false;
             }
-            if (object_count < 0) object_count = 0;
-            if (object_count > (int)MAX_PRESET_OBJECTS) object_count = (int)MAX_PRESET_OBJECTS;
+            if (object_count < 0 || object_count > (int)MAX_PRESET_OBJECTS) return false;
             for (int o = 0; o < object_count; ++o) {
                 int type = 0;
                 int is_static = 0;
@@ -711,7 +721,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                &obj.angle,
                                &is_static,
                                &gravity_flag) != 10) {
-                        break;
+                        return false;
                     }
                 } else if (file_version >= 7) {
                     if (fscanf(f, "%d %f %f %f %f %f %d %d\n",
@@ -723,7 +733,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                &obj.angle,
                                &is_static,
                                &gravity_flag) != 8) {
-                        break;
+                        return false;
                     }
                     obj.position_z = 0.0f;
                     obj.size_z = obj.size_x;
@@ -735,7 +745,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            &obj.size_y,
                            &obj.angle,
                            &is_static) != 7) {
-                    break;
+                    return false;
                 } else {
                     obj.position_z = 0.0f;
                     obj.size_z = obj.size_x;
@@ -743,10 +753,15 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 obj.type = (type == PRESET_OBJECT_BOX) ? PRESET_OBJECT_BOX : PRESET_OBJECT_CIRCLE;
                 obj.is_static = (is_static != 0);
                 obj.gravity_enabled = (gravity_flag != 0);
+                if (!isfinite(obj.position_x) || !isfinite(obj.position_y) ||
+                    !isfinite(obj.position_z) || !isfinite(obj.size_x) ||
+                    !isfinite(obj.size_y) || !isfinite(obj.size_z) ||
+                    !isfinite(obj.angle)) return false;
                 sanitize_preset_object(&obj);
                 slot.preset.objects[slot.preset.object_count++] = obj;
             }
         } else {
+            if (file_version == 15) return false;
             fseek(f, marker_pos, SEEK_SET);
         }
 
@@ -756,14 +771,13 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                 if (fscanf(f, "%5s", shape_marker) == 1 && strcmp(shape_marker, "SHAPE") == 0) {
                     int shape_count = 0;
                     if (fscanf(f, "%d\n", &shape_count) != 1) {
-                        shape_count = 0;
+                        return false;
                 }
-                if (shape_count < 0) shape_count = 0;
-                if (shape_count > (int)MAX_IMPORTED_SHAPES) shape_count = (int)MAX_IMPORTED_SHAPES;
+                if (shape_count < 0 || shape_count > (int)MAX_IMPORTED_SHAPES) return false;
                 for (int s = 0; s < shape_count; ++s) {
                     ImportedShape imp = {0};
                     if (!read_line(f, imp.path, sizeof(imp.path))) {
-                        break;
+                        return false;
                     }
                     int enabled = 1;
                     if (file_version >= 4) {
@@ -784,8 +798,8 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                        &static_int,
                                        &gravity_int,
                                        &vert_count,
-                                       &part_count) < 6) {
-                                break;
+                                       &part_count) < (file_version == 15 ? 12 : 6)) {
+                                return false;
                             }
                         } else {
                             if (fscanf(f, "%f %f %f %f %d %f %f %d %d %d %d\n",
@@ -800,46 +814,37 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                        &gravity_int,
                                        &vert_count,
                                        &part_count) < 5) {
-                                break;
+                                return false;
                             }
                             imp.position_z = 0.0f;
                         }
                         imp.is_static = static_int != 0;
                         imp.gravity_enabled = gravity_int != 0;
+                        if (vert_count < 0 || vert_count > 32 || part_count < 0 || part_count > 16) return false;
                         imp.collider_vert_count = vert_count;
-                        if (imp.collider_vert_count < 0) imp.collider_vert_count = 0;
-                        if (imp.collider_vert_count > 32) imp.collider_vert_count = 32;
                         for (int vi = 0; vi < imp.collider_vert_count; ++vi) {
-                            if (fscanf(f, "%f %f\n", &imp.collider_verts[vi].x, &imp.collider_verts[vi].y) != 2) {
-                                imp.collider_vert_count = vi;
-                                break;
+                            if (fscanf(f, "%f %f\n", &imp.collider_verts[vi].x, &imp.collider_verts[vi].y) != 2 ||
+                                !isfinite(imp.collider_verts[vi].x) || !isfinite(imp.collider_verts[vi].y)) {
+                                return false;
                             }
                         }
                         imp.collider_part_count = part_count;
-                        if (imp.collider_part_count < 0) imp.collider_part_count = 0;
-                        if (imp.collider_part_count > 16) imp.collider_part_count = 16;
                         for (int pi = 0; pi < imp.collider_part_count; ++pi) {
                             int offset = 0;
                             int pcount = 0;
                             if (fscanf(f, "%d %d\n", &offset, &pcount) != 2) {
-                                imp.collider_part_count = pi;
-                                break;
+                                return false;
                             }
+                            if (offset < 0 || offset >= 128 || pcount < 0 || pcount > 16 || pcount > 128 - offset) return false;
                             imp.collider_part_offsets[pi] = offset;
                             imp.collider_part_counts[pi] = pcount;
-                            if (imp.collider_part_counts[pi] < 0) imp.collider_part_counts[pi] = 0;
-                            if (imp.collider_part_counts[pi] > 16) imp.collider_part_counts[pi] = 16;
                             for (int vi = 0; vi < imp.collider_part_counts[pi]; ++vi) {
                                 int idx = offset + vi;
-                                if (idx < 0 || idx >= 128) {
-                                    imp.collider_part_counts[pi] = vi;
-                                    break;
-                                }
                                 if (fscanf(f, "%f %f\n",
                                            &imp.collider_parts_verts[idx].x,
-                                           &imp.collider_parts_verts[idx].y) != 2) {
-                                    imp.collider_part_counts[pi] = vi;
-                                    break;
+                                           &imp.collider_parts_verts[idx].y) != 2 ||
+                                    !isfinite(imp.collider_parts_verts[idx].x) || !isfinite(imp.collider_parts_verts[idx].y)) {
+                                    return false;
                                 }
                             }
                         }
@@ -850,7 +855,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                                    &imp.scale,
                                    &imp.rotation_deg,
                                    &enabled) != 5) {
-                            break;
+                            return false;
                         }
                         imp.position_z = 0.0f;
                         imp.density = 1.0f;
@@ -859,6 +864,10 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                         imp.gravity_enabled = false;
                         imp.collider_vert_count = 0;
                     }
+                    if (!isfinite(imp.position_x) || !isfinite(imp.position_y) ||
+                        !isfinite(imp.position_z) || !isfinite(imp.scale) ||
+                        !isfinite(imp.rotation_deg) || !isfinite(imp.density) ||
+                        !isfinite(imp.friction)) return false;
                     imp.enabled = enabled != 0;
                     imp.shape_id = -1;
                     sanitize_import_shape(&imp);
@@ -867,6 +876,7 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                     }
                 }
             } else {
+                if (file_version == 15) return false;
                 fseek(f, shape_marker_pos, SEEK_SET);
             }
         } else {
@@ -887,6 +897,35 @@ bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
                            ? active_slot
                            : 0;
 
-    fclose(f);
+    int tail;
+    do { tail = fgetc(f); } while (tail != EOF && isspace(tail));
+    return tail == EOF && !ferror(f);
+}
+
+bool preset_library_load(const char *path, CustomPresetLibrary *lib) {
+    if (!path || !lib) return false;
+    int fd = open(path, O_RDONLY | O_NONBLOCK | O_NOFOLLOW);
+    if (fd < 0) return false;
+    struct stat st;
+    if (fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_size <= 0 ||
+        st.st_size > 16 * 1024 * 1024) {
+        close(fd);
+        return false;
+    }
+    FILE *f = fdopen(fd, "r");
+    if (!f) {
+        close(fd);
+        return false;
+    }
+    CustomPresetLibrary candidate;
+    preset_library_init(&candidate);
+    bool ok = read_library(f, &candidate);
+    if (fclose(f) != 0) ok = false;
+    if (!ok) {
+        preset_library_shutdown(&candidate);
+        return false;
+    }
+    preset_library_shutdown(lib);
+    *lib = candidate;
     return true;
 }

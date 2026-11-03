@@ -45,12 +45,8 @@ static const char *k_default_runtime_scene_visual_test_path =
 #endif
 
 static bool physics_sim_file_exists(const char *path) {
-    FILE *f = NULL;
-    if (!path || !path[0]) return false;
-    f = fopen(path, "rb");
-    if (!f) return false;
-    fclose(f);
-    return true;
+    struct stat entry;
+    return path && path[0] && (lstat(path, &entry) == 0 || errno != ENOENT);
 }
 
 const char *physics_sim_default_config_path(void) {
