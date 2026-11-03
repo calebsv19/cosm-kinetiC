@@ -21,7 +21,7 @@ fails explicitly. Reopening never silently recomputes discarded fields.
 `rig_cases` creates matched calm/gust inputs on a 16³ or 32³ unit chamber. Solid
 shell walls and a 12.5 cm thick partition use native face blocking, pressure and
 scalar exclusion. The partition's 25 × 50 cm window can be open or closed; west
-and east 50 × 50 cm ports anchor each admitted pressure component. Wind acts only
+and east 50 × 50 cm ports anchor each admitted pressure component. The ordinary wind profile acts only
 at the west port/upstream strip. The static mask is independently checked against
 physical boxes, component connectivity, aperture areas and blocked normal faces.
 Sealed isolated components and moving window geometry are outside this profile.
@@ -85,3 +85,24 @@ hashes match the original exporter exactly.
 The fresh12spair saves every0.1sstate and renders120native images per side into
 a10fps12svideo with no interpolation. The same dark studio style is used. Full
 execution and delivery completed in2h12min4.7s. All121full states percase decode/reopen and match prior physical/Fire traces exactly. Both120frame native sequences are unique and locally decoded10fpsvideo passes. Dense science/images remain PC-backed with zero native staging. This is not installed/fleet adoption.
+
+## Optional broad spatial gust — source development2026-11-02
+
+An explicit `rig_geometry.flow_profile: "broad_sweeping_shear/v1"` selects
+distributed X momentum forcing over the upstream chamber(x<=0.4375m, interior
+y/z), excluding blocked faces. A smooth positive0.3..1spatial envelope shifts
+laterally/vertically with3s/4speriods, multiplying the existing signed target and
+height ramp before relaxation. Strength zero still releases exactly; target zero
+with positive strength brakes the driven region. Work remains the signed discrete
+MAC kinetic difference, accepted with ordinary projection/scalar/pressure checks.
+The option changes forcing extent and shear, not geometry; the same window still
+constricts the flow. This is distributed body forcing, not a boundary gust or
+turbulence/calibrated wind model. Missing option preserves the ordinary port
+profile; unknown option values are refused. Source/config/worker hashes bind it.
+
+Strict local and PC strict/sanitizer force/integration controls passed. New12s
+wave/reversal comparison is submitted through an isolated frozen-parent candidate;
+completion/physical accuracy is not established by these source tests. The user
+requested no extra controlpanel: one direct wave/top/reversal/bottom portrait
+comparison, native10fps/0.1ssavedstates, no image interpolation. The temporal wave
+is the existing16knot positive sine-like approximation, not an analytic sine.

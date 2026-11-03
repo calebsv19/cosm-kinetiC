@@ -4,6 +4,7 @@
 #include "app/cfd_open_energy.h"
 #include <math.h>
 #include <string.h>
+#include "cfd_open_atmosphere3d_weather_broad.inc"
 
 static bool schedule_valid(const CfdOpenAtmosphereWeather *w) {
     if(!w || !w->enabled || w->count<1 || w->count>16 || w->step[0]!=0 ||
@@ -18,7 +19,7 @@ static bool schedule_valid(const CfdOpenAtmosphereWeather *w) {
 bool cfd_open_weather_valid(const CfdOpenAtmosphere3d *s,
     const CfdOpenAtmosphereWeather *w) {
     return s && s->storage && s->ground && s->lateral_open && !s->wind.enabled &&
-        schedule_valid(w) && w->ramp_height_m>=s->grid.h[2] &&
+        schedule_valid(w) && (!w->broad_sweeping_shear || s->rig_mask) && w->ramp_height_m>=s->grid.h[2] &&
         w->ramp_height_m<=s->grid.length[2] && isfinite(s->dt) && s->dt>0;
 }
 bool cfd_open_weather_configure(const CfdOpenAtmosphere3d *s,
@@ -65,11 +66,11 @@ bool cfd_open_weather_apply(CfdOpenAtmosphere3d *s,
     for(int j=0;j<s->grid.n[1]+(s->lateral_open && a==1);j++)
     for(int i=0;i<s->grid.n[0]+(s->lateral_open && a==0);i++) {
         int q=cfd_open_atmosphere3d_face(s,a,i,j,k);double u=v[q];
-        if(a==0 && cfd_open_atmosphere3d_rig_drive(s,i,j,k)) {
+        if(a==0 && weather_drive(s,w,i,j,k)) {
             if(cfd_open_atmosphere3d_blocked(s,0,i,j,k)) {
                 if(u!=0)return false;
             } else {
-                double goal=target*fmin(1,(k+.5)*s->grid.h[2]/w->ramp_height_m);
+                double goal=weather_goal(s,w,target,j,k);
                 u+=alpha*(goal-u);
             }
         }
@@ -80,9 +81,9 @@ bool cfd_open_weather_apply(CfdOpenAtmosphere3d *s,
     if(!isfinite(after) || !isfinite(work))return false;
     for(int k=0;k<s->grid.n[2];k++)for(int j=0;j<s->grid.n[1];j++)
     for(int i=0;i<=s->grid.n[0];i++) {
-        if(cfd_open_atmosphere3d_blocked(s,0,i,j,k) || !cfd_open_atmosphere3d_rig_drive(s,i,j,k))continue;
+        if(cfd_open_atmosphere3d_blocked(s,0,i,j,k) || !weather_drive(s,w,i,j,k))continue;
         int q=cfd_open_atmosphere3d_face(s,0,i,j,k);
-        double goal=target*fmin(1,(k+.5)*s->grid.h[2]/w->ramp_height_m);
+        double goal=weather_goal(s,w,target,j,k);
         v[q]+=alpha*(goal-v[q]);
     }
     *work_j=work;return true;

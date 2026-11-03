@@ -5,7 +5,7 @@ struct CfdOpenAtmosphere3d;
 /* App-owned open-domain momentum driver. Strength zero releases the flow;
  * target zero with positive strength instead applies physical braking. */
 typedef struct {
-    bool enabled, linear;
+    bool enabled, linear, broad_sweeping_shear;
     int count, step[16];
     double target_m_s[16], strength[16], ramp_height_m, response_s;
 } CfdOpenAtmosphereWeather;

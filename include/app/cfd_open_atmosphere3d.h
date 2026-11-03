@@ -86,5 +86,17 @@ CfdSparseMg *cfd_open_atmosphere3d_box_preconditioner(CfdOpenAtmosphere3d *s);
 /* Integrated source arrays. Failure preserves accepted fields, flux receipts,
  * time, counters and diagnostics. Scratch is not checkpoint state. */
 bool cfd_open_atmosphere3d_step(CfdOpenAtmosphere3d *s,const double *source_j,const double *source_kg);
+/* Opt-in interior aerodynamic impulse. SI N*s, COMPONENT-MAJOR native face
+ * order (use cfd_open_atmosphere3d_face); not interleaved exchange order.
+ * First envelope: periodic XY, ground/open top, no obstacles/wind/weather.
+ * Nonzero boundary-layer faces refuse. Receipt changes only on full success. */
+typedef struct CfdOpenMomentumReceipt {
+    double impulse_ns[3], predictor_momentum_ns[3], forced_momentum_ns[3];
+    double projected_momentum_ns[3], work_j, quadratic_j;
+    double forced_kinetic_j, projection_work_j, forced_courant;
+} CfdOpenMomentumReceipt;
+bool cfd_open_atmosphere3d_step_momentum(CfdOpenAtmosphere3d *s,
+    const double *source_j, const double *source_kg,
+    const double *face_impulse_ns, size_t count, CfdOpenMomentumReceipt *receipt);
 void cfd_open_atmosphere3d_box_apply(const CfdOpenAtmosphere3d *s,const double *x,double *out);
 #endif

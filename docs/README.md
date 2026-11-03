@@ -1,3 +1,10 @@
+## 2026-11-02 — Native cloth momentum inlet and bounded two-way proof
+
+Opt-in interior MAC momentum impulse now enters the native candidate before
+projection, with accepted-state/receipt rollback. The CMS0.050s paired cold-gas
+trial demonstrates feedback in both directions and exact joint restart. Existing
+worker JSON, apps and other fluid proofs remain separate. [Inlet and proof](cloth_momentum_inlet.md).
+
 - [Live partition/window comparison](fire_fluid_live12_rig.md) — bounded 120-window source profile, native controls, storage and presentation contract; 12-second comparison completed with diagnostics and decoded video verified.
 
 - [Opt-in native field packet I/O](fire_fluid_field_packet.md) — exact binary transport, replay binding, measured storage tradeoffs and remaining128 capacity boundary.

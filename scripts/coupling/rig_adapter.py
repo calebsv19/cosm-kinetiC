@@ -61,7 +61,7 @@ def native(request,worker,*,io_format='field_packet/v1'):
     result['configuration']=config
     result['state']=sealed(dict(result['state'],config_digest=digest(config)))
     result.update(model=rig_geometry.MODEL,boundaries='closed_insulated_no_slip_shell_with_declared_x_ports',
-                  forcing_region='west port and upstream strip x<=0.125m; y/z in[0.25,0.75)',rig_probes=rig_geometry.probes(config,result['state']['data']))
+                  forcing_region=('broad_sweeping_shear/v1: upstream chamber x<=0.4375m; interior y/z; spatial multiplier0.3..1 with3s/4s moving shear; X body-force only' if config['rig_geometry'].get('flow_profile')=='broad_sweeping_shear/v1' else 'west port and upstream strip x<=0.125m; y/z in[0.25,0.75)'),rig_probes=rig_geometry.probes(config,result['state']['data']))
     result=sealed(result);validate(config,result['state']);conservation(config,result)
     require(hashlib.sha256(worker.read_bytes()).hexdigest()==identity,'rig worker bytes changed')
     return result

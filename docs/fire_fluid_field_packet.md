@@ -1,3 +1,65 @@
+## 2026-11-02 — Immutable Mac128 fixture qualified; step132 resumed
+
+The stopped Mac128 reference now runs from a private write-protected fixture:
+77original compile-source hashes and33scientific binding inputs match exactly,
+including the five edited files recovered from retained candidates. Frozen Python
+controls, exact worker142157c29411ee7678b6531864c6b66d1cdf434b9ee285b2fdd5b8e62a36720a,
+Fire pulse and json-c are independent of current Main Edit. An explicit verified
+physical-to-historical logical path mapping preserves the entire original
+scientific binding and checkpoint history; no edited source hash was adopted.
+Main Edit code was not changed or rolled back. Platform Python/macOS remain
+declared host dependencies. Separate PC development remains unaffected.
+
+Frozen C syntax, fixture/hash mutation refusals, cold exactstep130/.65s,
+comparison-baseline hashes and five guardian disconnect/restart/cause-report
+proofs pass. Quiet library-path probe confirms the frozen dylib without verbose
+loader output. Initial loader tracing hit the unchanged64KiBstderr guard; that
+admitted attempt is preserved and charged. Total CFDcall ceiling324 includes
+321successful trajectory calls plus3interrupted/failed attempts. No automatic
+retry. Lossless byte/mode-verified failure archives retain all reproducers,
+reducing1.43GB to438MB; archives still count toward staging/output guards.
+
+Actual continuation committedstep132/.66s, revision66, digest
+51a2585e283c0915fcca06d16d43443f534905b01b4444b9c3620916585f911f.
+The frozen worker passed in30.18s with79stderr bytes; first full two-step packet
+219.04s. Source/clock/energy/smoke/CFL/pressure checks and head payload SHA pass.
+The single live launchd guardian/supervisor/producer is in execution-immutable-r2.
+
+New remaining allocation30h was explicitly authorized and admittedNov2 10:42PST;
+deadlineTuesdayNov3 16:42:49PST (Nov4 00:42:49Z), preserved during diagnostic repair.
+Conservative21–23h planning estimate remains conditional; one faster packet does
+not establish sustained throughput. Every memory/storage/wire/physical limit is
+unchanged. Full3.2s numerical run and independent64/64half/80comparisons/figures
+remain in progress. On stop, readable cause-first report includes exact SQLite
+head, phase, limit/exception/capture/exit evidence, resources and log tails.
+Evidence: `_private_workspace_artifacts/fire-fluid-wake128-work-20261101/execution-immutable-r2/REPORT.md`.
+
+## 2026-11-02 — Mac128 reference stopped on mutable-source drift
+
+Fresh OS/launchd/terminal readback confirms the retained Mac128 campaign is
+stopped, last accepted step130/.65s (revision65). At2026-11-02T00:47:08Z
+(Sunday16:47PST) the next native call was refused because the Main Edit worker
+C source no longer matched its compile-time pin. No new native invocation was
+spent; total remains68. The recorded native call128→130 passed. This stop is
+source isolation/provenance, with no demonstrated numerical failure or resource
+guard breach. Five compile inputs now differ, including later edits; no actor
+is identified by the file/hash evidence.
+
+The exact retained worker, all scientific binding inputs and accepted head
+payload SHA256 verify unchanged. History is preserved and can be continued after
+proper qualification. No source rollback, pin rebinding or restart occurred.
+The runtime incorrectly depended on mutable Main Edit compile-source verification;
+next boundary is an immutable verified source fixture for the same worker,
+checkpoint130 qualification and a realistic new execution window. Do not alter
+current shared development or silently accept its new hashes as historical proof.
+
+Latest successful packet samples imply21–23active hours including estimated1h
+analysis; the extended Monday15:56PST deadline has only about5.6h remaining at
+review. Earlier completion forecast is invalid. Full Mac1283.2s scientific and
+independent comparison results remain incomplete. Separate PC delivery progress
+is unaffected by this status. Evidence:
+`_private_workspace_artifacts/fire-fluid-wake128-work-20261101/source-drift-review-20261102/REPORT.md`.
+
 ## 2026-11-01 — Staging separated; accepted result reused
 
 The identical118→120 native recovery succeeded in32.61s, so the previous120s

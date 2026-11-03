@@ -1351,3 +1351,9 @@ test-driven-wind: open-atmosphere-worker coupling-framework-worker test-driven-w
 	FIRE_FLUID_GROWTH_ROOT="$(FIRE_FLUID_GROWTH_ROOT)" FIRE_FLUID_FIRE_WORKER="$(FIRE_FLUID_FIRE_WORKER)" FIRE_FLUID_OPEN_WORKER="$(abspath $(OPEN_ATMOSPHERE3D_WORKER))" FIRE_FLUID_CLOCK_WORKER="$(abspath $(COUPLING_CLOCK_BIN))" python3 -B tests/test_driven_wind.py
 
 include make/rules-quiescent.mk
+
+# Explicit contained momentum-inlet qualification; default worker API unchanged.
+.PHONY: test-open-momentum-inlet
+test-open-momentum-inlet:
+	@test -n "$(OPEN_MOMENTUM_TEST_ROOT)" || { echo 'Set fresh OPEN_MOMENTUM_TEST_ROOT'; exit 2; }
+	python3 scripts/test_open_momentum_inlet.py --output "$(OPEN_MOMENTUM_TEST_ROOT)" --mode "$(or $(OPEN_MOMENTUM_TEST_MODE),strict)"

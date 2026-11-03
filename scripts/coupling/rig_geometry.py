@@ -8,7 +8,8 @@ MODEL='open_xy_partition_window_rig/v1'
 
 
 def topology(config):
-    g=config['rig_geometry'];keys(g,('schema','window_open'))
+    g=config['rig_geometry'];keys(g,('schema','window_open','flow_profile') if 'flow_profile' in g else ('schema','window_open'))
+    if 'flow_profile' in g:require(g['flow_profile']=='broad_sweeping_shear/v1','supported explicit rig flow profile')
     require(g['schema']==SCHEMA and type(g['window_open']) is bool,'fixed rig schema')
     n=config['grid'][0]
     require(config['grid']==[n]*3 and n in (16,32) and config['length_m']==[1,1,1],'unit rig grid')

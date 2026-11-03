@@ -3,6 +3,7 @@
 #include "app/cfd_open_energy.h"
 #include <math.h>
 #include <string.h>
+#include "cfd_open_atmosphere3d_momentum.inc"
 #ifdef PHYSICS_SIM_OPEN_EDGE_CANDIDATE
 #include "cfd_scalar_edge_candidate.h"
 #endif
@@ -140,7 +141,8 @@ bool cfd_open_atmosphere3d_valid(const CfdOpenAtmosphere3d *s) {
     for(int q=0;q<4*s->boundary_faces;q++)if(!isfinite(s->flux[q]) || s->flux[q]<0)return false;
     return true;
 }
-static bool momentum(CfdOpenAtmosphere3d *s,double *maxdiv,double *residual) {
+static bool momentum_forced(CfdOpenAtmosphere3d *s,double *maxdiv,double *residual,
+    const double *impulse,CfdOpenMomentumReceipt *receipt) {
     s->step_rejection="momentum predictor finite values";
 #ifdef PHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC
     cfd_open_momentum_diagnostics_begin();
@@ -233,6 +235,7 @@ static bool momentum(CfdOpenAtmosphere3d *s,double *maxdiv,double *residual) {
         if(!isfinite(s->candidate_weather_work_j))return false;
         imposed=cfd_open_kinetic(s,s->candidate_velocity);
     }
+    if(impulse && !open_momentum_apply(s,impulse,receipt))return false;
     for(int q=0;q<n;q++) {
         if(cfd_open_atmosphere3d_solid(s,q)){s->rhs[q]=0;continue;}
         int k=q/s->plane;s->rhs[q]=-s->rho/s->dt*divergence(s,s->candidate_velocity,q);
@@ -387,7 +390,11 @@ static bool scalar(CfdOpenAtmosphere3d *s,const double *old,double *out,const do
     return true;
 }
 
-bool cfd_open_atmosphere3d_step(CfdOpenAtmosphere3d *s,const double *source_j,const double *source_kg) {
+static bool momentum(CfdOpenAtmosphere3d *s,double *maxdiv,double *residual) {
+    return momentum_forced(s,maxdiv,residual,NULL,NULL);
+}
+static bool open_step(CfdOpenAtmosphere3d *s,const double *source_j,const double *source_kg,
+    const double *impulse,CfdOpenMomentumReceipt *receipt) {
     if(s){s->step_rejection="state/source admission";s->scalar_work_requested=0;s->scalar_cycles_requested=0;s->momentum_courant=0;}
     if(!cfd_open_atmosphere3d_valid(s) || !source_j || !source_kg || s->steps>=10000)return false;
     int n=s->grid.count,faces=s->boundary_faces;
@@ -399,9 +406,10 @@ bool cfd_open_atmosphere3d_step(CfdOpenAtmosphere3d *s,const double *source_j,co
 #ifdef PHYSICS_SIM_OPEN_PRESCRIBED_THERMAL_QUALIFIER
     /* Contained diagnostic wrapper supplies only momentum's thermal input.
      * Accepted scalar state and the ordinary app/worker operator are unchanged. */
+    if(impulse)return false;
     momentum_ok=physics_sim_prescribed_momentum(s,&maxdiv,&residual);
 #else
-    momentum_ok=momentum(s,&maxdiv,&residual);
+    momentum_ok=impulse?momentum_forced(s,&maxdiv,&residual,impulse,receipt):momentum(s,&maxdiv,&residual);
 #endif
     s->attempted_projection_residual=residual;s->attempted_projection_divergence=maxdiv;
     if(!momentum_ok)return false;
@@ -490,3 +498,17 @@ bool cfd_open_atmosphere3d_step(CfdOpenAtmosphere3d *s,const double *source_j,co
 /* Separate opt-in topology implementation in this existing translation unit.
  * Legacy contained tool builders compile this TU through explicit source lists. */
 #include "cfd_open_atmosphere3d_rig.inc"
+
+bool cfd_open_atmosphere3d_step(CfdOpenAtmosphere3d *s,const double *source_j,const double *source_kg) {
+    return open_step(s,source_j,source_kg,NULL,NULL);
+}
+bool cfd_open_atmosphere3d_step_momentum(CfdOpenAtmosphere3d *s,
+    const double *source_j,const double *source_kg,const double *impulse,
+    size_t count,CfdOpenMomentumReceipt *receipt) {
+    if(!receipt || !open_momentum_admit(s,impulse,count))return false;
+    CfdOpenMomentumReceipt trial={0};
+    if(!open_step(s,source_j,source_kg,impulse,&trial))return false;
+    open_momentum_vector(s,s->velocity,trial.projected_momentum_ns);
+    trial.projection_work_j=cfd_open_kinetic(s,s->velocity)-trial.forced_kinetic_j;
+    *receipt=trial;return true;
+}
