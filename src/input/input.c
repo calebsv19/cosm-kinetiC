@@ -63,25 +63,25 @@ static void input_handle_event(const SDL_Event *event,
             out->quit = true;
             break;
         case SDLK_p:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {.type = COMMAND_TOGGLE_PAUSE};
                 command_bus_push(bus, &cmd);
             }
             break;
         case SDLK_c:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {.type = COMMAND_CLEAR_SMOKE};
                 command_bus_push(bus, &cmd);
             }
             break;
         case SDLK_e:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {.type = COMMAND_EXPORT_SNAPSHOT};
                 command_bus_push(bus, &cmd);
             }
             break;
         case SDLK_v:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {
                     .type = (mod & KMOD_SHIFT)
                                 ? COMMAND_TOGGLE_KIT_VIZ_VORTICITY
@@ -90,7 +90,7 @@ static void input_handle_event(const SDL_Event *event,
             }
             break;
         case SDLK_b:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {
                     .type = (mod & KMOD_SHIFT)
                                 ? COMMAND_TOGGLE_KIT_VIZ_PRESSURE
@@ -99,7 +99,7 @@ static void input_handle_event(const SDL_Event *event,
             }
             break;
         case SDLK_s:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {
                     .type = (mod & KMOD_SHIFT)
                                 ? COMMAND_TOGGLE_VELOCITY_MODE
@@ -108,7 +108,7 @@ static void input_handle_event(const SDL_Event *event,
             }
             break;
         case SDLK_l:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {
                     .type = (mod & KMOD_SHIFT)
                                 ? COMMAND_TOGGLE_KIT_VIZ_PARTICLES
@@ -117,25 +117,25 @@ static void input_handle_event(const SDL_Event *event,
             }
             break;
         case SDLK_k:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {.type = COMMAND_TOGGLE_KIT_VIZ_DENSITY};
                 command_bus_push(bus, &cmd);
             }
             break;
         case SDLK_j:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {.type = COMMAND_TOGGLE_KIT_VIZ_VELOCITY};
                 command_bus_push(bus, &cmd);
             }
             break;
         case SDLK_g:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {.type = COMMAND_TOGGLE_OBJECT_GRAVITY};
                 command_bus_push(bus, &cmd);
             }
             break;
         case SDLK_h:
-            if (bus) {
+            if (bus && !event->key.repeat) {
                 Command cmd = {.type = COMMAND_TOGGLE_ELASTIC_COLLISIONS};
                 command_bus_push(bus, &cmd);
             }

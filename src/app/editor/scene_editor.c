@@ -1,4 +1,5 @@
 #include "app/editor/scene_editor.h"
+#include "app/editor/scene_editor_draft_commit.h"
 #include "app/editor/scene_editor_internal.h"
 #include "app/editor/scene_editor_import.h"
 #include "app/editor/scene_editor_input.h"
@@ -604,19 +605,7 @@ bool scene_editor_run(SDL_Window *window,
         scene_editor_canvas_set_viewport_state(&state.viewport);
     }
 
-    if (state.name_buffer) {
-        state.name_edit_ptr = state.name_buffer;
-        state.name_edit_capacity = state.name_capacity;
-    } else {
-        state.name_edit_ptr = state.local_name;
-        state.name_edit_capacity = sizeof(state.local_name);
-    }
-    if (preset->name) {
-        snprintf(state.name_edit_ptr, state.name_edit_capacity, "%s", preset->name);
-    } else {
-        state.name_edit_ptr[0] = '\0';
-    }
-    state.working.name = state.name_edit_ptr;
+    scene_editor_draft_begin_name(&state);
     if (bootstrap && bootstrap->has_retained_scene && bootstrap->retained_runtime_scene_path[0]) {
         char diagnostics[256];
         if (!editor_load_runtime_scene_fixture(&state,
@@ -936,10 +925,7 @@ bool scene_editor_run(SDL_Window *window,
         editor_finish_name_edit(&state, false);
     }
 
-    if (state.applied && state.target) {
-        state.working.is_custom = true;
-        *state.target = state.working;
-    }
+    scene_editor_draft_publish(&state);
 
     if (result) {
         result->applied = state.applied;

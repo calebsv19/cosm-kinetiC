@@ -44,6 +44,7 @@ int main(void) {
     physics_sim_editor_session_init(&s->session, &s->working, NULL);
     s->name_edit_ptr = s->local_name; s->name_edit_capacity = sizeof(s->local_name);
     strcpy(s->local_name, "Original");
+    char caller_name[128]="Original";s->name_buffer=caller_name;s->name_capacity=sizeof(caller_name);
     editor_begin_name_edit(s); replace(s, "Aé水Z");
     key(s, SDLK_LEFT, 0, 0); key(s, SDLK_BACKSPACE, 0, 0);
     assert(strcmp(s->name_input.buffer, "AéZ")==0 && strcmp(s->local_name, "Original")==0);
@@ -59,6 +60,7 @@ int main(void) {
     key(s, SDLK_RETURN, 0, 0); assert(!s->renaming_name && strcmp(s->local_name, "BéZ")==0);
     editor_begin_name_edit(s); replace(s, "discard"); key(s, SDLK_ESCAPE, 0, 0);
     assert(strcmp(s->local_name, "BéZ")==0);
+    assert(strcmp(caller_name,"Original")==0);
     editor_begin_dimension_edit(s, SCENE_EDITOR_DIMENSION_WIDTH); replace(s, "12.5");
     text(s, "é", true); s->dragging_object = s->dragging_import_body = true;
     scene_editor_shared_invalidate(s);

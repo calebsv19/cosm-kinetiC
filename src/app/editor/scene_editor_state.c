@@ -552,9 +552,6 @@ void editor_finish_name_edit(SceneEditorState *state, bool apply) {
             snprintf(state->name_edit_ptr, state->name_edit_capacity, "%s", value);
         }
         state->working.name = state->name_edit_ptr;
-        if (state->name_buffer && state->name_buffer != state->name_edit_ptr) {
-            snprintf(state->name_buffer, state->name_capacity, "%s", state->name_edit_ptr);
-        }
         if (physics_sim_editor_session_has_retained_scene(&state->session)) {
             editor_refresh_retained_save_diagnostics(state, NULL);
         }

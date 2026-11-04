@@ -1364,3 +1364,14 @@ test-session-shared-ui-contract: clang-build
 test-runtime-text-shortcut-contract:
 	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/runtime_text_shortcut_contract_test tests/runtime_text_shortcut_contract_test.c src/input/input.c src/input/input_context.c src/command/command_bus.c $(LIBS)
 	$(BUILD_DIR)/runtime_text_shortcut_contract_test
+
+.PHONY: test-scene-editor-command-ownership
+test-scene-editor-command-ownership: $(CLANG_TARGET)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/scene_editor_command_ownership_test tests/scene_editor_command_ownership_test.c $(MENU_OWNER_REPLAY_OBJS) $(LIBS)
+	$(BUILD_DIR)/scene_editor_command_ownership_test
+
+.PHONY: test-command-delivery
+test-command-delivery:
+	@mkdir -p $(BUILD_DIR)
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/command_delivery_test tests/command_delivery_test.c src/input/input.c src/input/input_context.c $(LIBS)
+	$(BUILD_DIR)/command_delivery_test

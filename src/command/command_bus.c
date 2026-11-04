@@ -49,7 +49,9 @@ void command_bus_shutdown(CommandBus *bus) {
 }
 
 bool command_bus_push(CommandBus *bus, const Command *cmd) {
-    if (!bus || !cmd || !bus->buffer || bus->count >= bus->capacity) {
+    if (!bus || !cmd || bus->next_id == UINT64_MAX) return false;
+    if (!bus->buffer || bus->count >= bus->capacity) {
+        if (bus->capacity > SIZE_MAX / 2 / sizeof(Command)) return false;
         size_t target = bus->capacity ? bus->capacity * 2 : 32;
         if (!command_bus_grow(bus, target)) {
             return false;
