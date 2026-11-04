@@ -99,4 +99,12 @@ bool cfd_open_atmosphere3d_step_momentum(CfdOpenAtmosphere3d *s,
     const double *source_j, const double *source_kg,
     const double *face_impulse_ns, size_t count, CfdOpenMomentumReceipt *receipt);
 void cfd_open_atmosphere3d_box_apply(const CfdOpenAtmosphere3d *s,const double *x,double *out);
+/* Separate bounded stationary-screen proof: 8^3/16^3 unit cube, periodic XY,
+ * two open Z pressure reservoirs, cold rho=1.2/mu=1.8e-5/dt=.005, <=20steps,
+ * |bottom pressure|<=.4Pa/top=0; uniform normal through-flow |q|<=2m/s.
+ * Only spanwise-uniform interior Z resistance impulses are admitted; no
+ * lateral/solid/rig/wind/weather/scalar source. Legacy inlet is unchanged. */
+bool cfd_open_atmosphere3d_step_screen_momentum(CfdOpenAtmosphere3d *s,
+    const double *source_j,const double *source_kg,
+    const double *face_impulse_ns,size_t count,CfdOpenMomentumReceipt *receipt);
 #endif

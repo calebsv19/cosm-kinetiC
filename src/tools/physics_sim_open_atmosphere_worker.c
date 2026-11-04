@@ -1,3 +1,4 @@
+#include "app/cfd_single_window_room.h"
 /* Private native bridge; closed public policies/checkpoint integrity are Python-owned. */
 #include "app/cfd_open_atmosphere3d.h"
 #include "app/cfd_passive3d.h"
@@ -131,10 +132,18 @@ int main(int argc,char **argv) {
         struct json_object *open=get(rig,"window_open"),*profile=get(rig,"flow_profile");
         bool broad=profile && json_object_is_type(profile,json_type_string) &&
             !strcmp(json_object_get_string(profile),"broad_sweeping_shear/v1");
+        if(schema && !strcmp(schema,"physics_sim_single_window_room/v1")) {
+            struct json_object *profile=get(rig,"window_profile");
+            const char *name=profile && json_object_is_type(profile,json_type_string)?json_object_get_string(profile):NULL;
+            if(json_object_object_length(rig)!=2 || !name ||
+               (strcmp(name,"small") && strcmp(name,"large")) || !s.weather.enabled ||
+               !cfd_single_window_room(&s,!strcmp(name,"large")))goto done;
+        } else {
         if(!schema || strcmp(schema,"physics_sim_partition_window_rig/v1") ||
            (json_object_object_length(rig)!=(profile?3:2)) || (profile && !broad) || !open || !json_object_is_type(open,json_type_boolean) ||
            !s.weather.enabled || !cfd_open_atmosphere3d_rig(&s,json_object_get_boolean(open)))goto done;
         s.weather.broad_sweeping_shear=broad;
+        }
     }
     int n=s.grid.count;input=cfd_memory_calloc((size_t)2*n,sizeof(double));if(!input)goto done;
     struct json_object *state=get(r,"state");

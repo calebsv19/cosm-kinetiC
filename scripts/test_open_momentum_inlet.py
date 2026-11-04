@@ -10,5 +10,5 @@ for name,source in [('inlet','cfd_open_momentum_inlet_test.c'),('ordinary','cfd_
  cmd=['/usr/bin/clang',*flags,*map(str,sources),str(r/'tests'/source),'-lm','-o',str(out/name)];commands.append(cmd)
  with (out/(name+'-build.log')).open('w') as log:subprocess.run(cmd,stdout=log,stderr=subprocess.STDOUT,check=True)
  with (out/(name+'-run.log')).open('w') as log:subprocess.run([str(out/name)],stdout=log,stderr=subprocess.STDOUT,check=True)
-inputs=sources+[r/'tests/cfd_open_momentum_inlet_test.c',r/'tests/cfd_open_atmosphere3d_test.c',Path(__file__)]+list((r/'include/app').glob('*.h'))+[r/'src/app/cfd_open_atmosphere3d_momentum.inc',r/'src/app/cfd_open_atmosphere3d_rig.inc']
+inputs=sources+[r/'tests/cfd_open_momentum_inlet_test.c',r/'tests/cfd_open_atmosphere3d_test.c',Path(__file__)]+list((r/'include/app').glob('*.h'))+list((r/'src/app').glob('cfd_open_atmosphere3d*.inc'))
 (out/'identity.json').write_text(json.dumps({'mode':a.mode,'commands':commands,'inputs':{str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in inputs}},indent=2)+'\n');print('PASS inlet and ordinary native regression',a.mode)

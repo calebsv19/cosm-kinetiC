@@ -101,8 +101,11 @@ turbulence/calibrated wind model. Missing option preserves the ordinary port
 profile; unknown option values are refused. Source/config/worker hashes bind it.
 
 Strict local and PC strict/sanitizer force/integration controls passed. New12s
-wave/reversal comparison is submitted through an isolated frozen-parent candidate;
-completion/physical accuracy is not established by these source tests. The user
+wave/reversal comparison completed through an isolated frozen-parent candidate:
+all18stages passed in2h36m13s,121full states/120native frames percase, actual
+aperture reversal at5.3s after5.0scommand. The portrait10fpsvideo is fetched,
+hash-verified and fully decoded locally. This establishes selected discrete
+control/accounting, not general physical accuracy. The user
 requested no extra controlpanel: one direct wave/top/reversal/bottom portrait
 comparison, native10fps/0.1ssavedstates, no image interpolation. The temporal wave
 is the existing16knot positive sine-like approximation, not an analytic sine.

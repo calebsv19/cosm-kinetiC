@@ -1,3 +1,27 @@
+## 2026-11-03 — Mac 128³ wake reference and saved-result comparisons complete
+
+The fixed-input 640-step / 3.2 s reference is complete, with 321 durable records
+and final checkpoint `4c5143b9f7816c32b9b7cd4c53852eac5f74079ef93b5cb62d2854e2825d8633`.
+The first offline comparison failed on a list/NumPy MAC-reader mismatch; a new
+analysis-only successor fixes conversion at the restriction boundary. Original
+failure, frozen fixture, binding, fields and all 324 charged native calls remain
+unchanged. Zero additional native calls. Saved-result audit, targeted restriction
+checks and actual inspection of all four figures pass.
+
+Common-time object-heating history differs by 0.07689% for pure 64³ timestep
+halving, 3.3563% for 64³/128³, and 1.6639% for 80³/128³. Final nested 64³/128³
+velocity/heat/smoke field differences are 11.38% / 28.86% / 33.61%; the wake
+remains spatially sensitive despite closer integrated heating. The 80³/128³
+field comparison uses common 16³ and discards fine detail. Heat conservation,
+retained scalar non-negativity, exact source/gust clocks, work and resource
+bounds pass. No convergence, calibrated hot-fire accuracy or live feedback claim.
+
+Next: localize late-wake differences from saved fields, then qualify a bounded
+128³ timestep-half control for the selected discrepancy before a solver change.
+No new simulation is running or started here; separate PC work is unaffected.
+Evidence: `_private_workspace_artifacts/fire-fluid-wake128-work-20261101/analysis-saved-r3/FINAL_REPORT.md`.
+Older dated run-state entries below are historical, superseded by this completion.
+
 ## 2026-11-02 — Immutable Mac128 fixture qualified; step132 resumed
 
 The stopped Mac128 reference now runs from a private write-protected fixture:

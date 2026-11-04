@@ -512,3 +512,6 @@ bool cfd_open_atmosphere3d_step_momentum(CfdOpenAtmosphere3d *s,
     trial.projection_work_j=cfd_open_kinetic(s,s->velocity)-trial.forced_kinetic_j;
     *receipt=trial;return true;
 }
+
+/* Independent, closed stationary-screen admission; same native operators. */
+#include "cfd_open_atmosphere3d_screen.inc"

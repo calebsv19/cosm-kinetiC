@@ -8,6 +8,9 @@ MODEL='open_xy_partition_window_rig/v1'
 
 
 def topology(config):
+    if config['rig_geometry']['schema']=='physics_sim_single_window_room/v1':
+        from .room_geometry import topology as room_topology
+        return room_topology(config)
     g=config['rig_geometry'];keys(g,('schema','window_open','flow_profile') if 'flow_profile' in g else ('schema','window_open'))
     if 'flow_profile' in g:require(g['flow_profile']=='broad_sweeping_shear/v1','supported explicit rig flow profile')
     require(g['schema']==SCHEMA and type(g['window_open']) is bool,'fixed rig schema')
@@ -50,7 +53,7 @@ def components(config,mask):
                     if not mask[other] and other not in seen:seen.add(other);queue.append(other)
         result.append(dict(cells=count,pressure_reservoir=reservoir))
     require(all(r['pressure_reservoir'] for r in result),'unanchored fluid pressure component')
-    require(len(result)==(1 if config['rig_geometry']['window_open'] else 2),'rig fluid connectivity')
+    require(len(result)==(1 if config['rig_geometry']['schema']=='physics_sim_single_window_room/v1' or config['rig_geometry']['window_open'] else 2),'rig fluid connectivity')
     return result
 
 
@@ -67,6 +70,9 @@ def check(config,data,mask=None):
 
 
 def probes(config,data):
+    if config['rig_geometry']['schema']=='physics_sim_single_window_room/v1':
+        from .room_geometry import probes as room_probes
+        return room_probes(config,data)
     n=config['grid'][0];vel=data['face_velocity_m_s'];area=1/n**2
     window=math.fsum(vel[face(config['grid'],0,n//2,j,k,True)]*area for k in range(n//4,3*n//4) for j in range(3*n//8,5*n//8))
     west=math.fsum(vel[face(config['grid'],0,0,j,k,True)]*area for k in range(n) for j in range(n))
@@ -77,6 +83,9 @@ def probes(config,data):
 
 def solid_boxes(config):
     """Physical boxes whose union is the fixed mask; floor is a boundary plane."""
+    if config['rig_geometry']['schema']=='physics_sim_single_window_room/v1':
+        from .room_geometry import solid_boxes as room_boxes
+        return room_boxes(config)
     result=[('y_min',[0,0,0],[1,.0625,1]),('y_max',[0,.9375,0],[1,1,1]),('ceiling',[0,0,.9375],[1,1,1])]
     for name,lo,hi in [('west',0,.0625),('east',.9375,1)]:
         result += [(name+'_y_lower',[lo,0,0],[hi,.25,1]),(name+'_y_upper',[lo,.75,0],[hi,1,1]),

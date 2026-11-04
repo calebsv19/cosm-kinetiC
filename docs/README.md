@@ -1,3 +1,12 @@
+CP0 development: [single-window prescribed-heater room](room_heater_cp0.md).
+
+## Bounded stationary-screen pressure/flow inlet — 2026-11-02
+
+A separate native admission API now supports the CMS stationary uniform
+resistance bench under two pressure reservoirs, with passive-source/receipt
+rollback and selected8³/16³0.100sproof. Original inlet/default paths and existing
+apps/workers stay held. [Contract and native proof](stationary_screen_inlet.md).
+
 ## 2026-11-02 — Native cloth momentum inlet and bounded two-way proof
 
 Opt-in interior MAC momentum impulse now enters the native candidate before
