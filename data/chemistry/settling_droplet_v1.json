@@ -1,0 +1,51 @@
+{
+  "schema": "rc7-settling-droplet/v1",
+  "exchange": {
+    "schema": "rc7-humid-droplet/v1",
+    "chemistry": {
+      "species": [
+        {
+          "id": "H2O_liquid"
+        },
+        {
+          "id": "H2O_vapor"
+        }
+      ]
+    },
+    "n": [
+      25,
+      1,
+      1
+    ],
+    "initial_radius_m": 1e-05,
+    "outer_radius_m": 0.002,
+    "pressure_pa": 101325.0,
+    "relative_humidity": 0.8,
+    "ambient_temperature_k": 298.15,
+    "liquid_temperature_k": 298.15,
+    "tension_n_m": 0.072,
+    "diffusivity_m2_s": 2.5e-05,
+    "conductivity_w_m_k": 0.026,
+    "dt_s": 0.0001,
+    "isothermal": false
+  },
+  "n": [
+    25,
+    1,
+    1
+  ],
+  "chemistry": {
+    "species": [
+      {
+        "id": "H2O_liquid"
+      },
+      {
+        "id": "H2O_vapor"
+      }
+    ]
+  },
+  "air_velocity_m_s": 0.0,
+  "initial_velocity_m_s": 0.0,
+  "gravity_m_s2": 9.81,
+  "viscosity_pa_s": 1.81e-05
+}

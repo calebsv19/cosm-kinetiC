@@ -1,0 +1,45 @@
+{
+  "schema": "oxygen-partition-data/v1",
+  "id": "oxygen-water-sander2023-rettich2000/v1",
+  "reference_temperature_k": 298.15,
+  "henry_basis": "aqueous mol/m3 per gas partial-pressure Pa",
+  "fit": {
+    "A": -179.13838,
+    "B_k": 8707.18054,
+    "C": 24.33474
+  },
+  "sources": [
+    {
+      "url": "https://www.henrys-law.org/henry/casrn/7782-44-7",
+      "locator": "Sander2023, oxygen entry, note8",
+      "doi": "10.5194/acp-23-10901-2023",
+      "role": "author-maintained fit to Rettich2000 measurements"
+    },
+    {
+      "doi": "10.1006/jcht.1999.0581",
+      "role": "underlying measurement reference; full transient/interface data not retrieved"
+    },
+    {
+      "url": "https://webbook.nist.gov/cgi/cbook.cgi?ID=C7782447&Mask=FFF",
+      "role": "rounded mol/kg/bar convention cross-check"
+    }
+  ],
+  "sensitivity_scenarios": {
+    "millero_rounded": {
+      "henry_mol_m3_pa": 1.2e-05,
+      "slope_k": 1600,
+      "doi": "10.1016/S0304-4203(02)00034-8"
+    },
+    "sherwood_rounded": {
+      "henry_mol_m3_pa": 1.3e-05,
+      "slope_k": 1400,
+      "doi": "10.4319/LO.1991.36.2.0235"
+    }
+  },
+  "uncertainty": {
+    "kind": "selected literature scenarios and model approximations; no confidence coverage",
+    "fit_uncertainty": null,
+    "interface_kinetics": "operator-selected, not experimentally calibrated",
+    "heat": "inferred van't Hoff/ideal-gas/zero-partial-volume model, not calorimetry"
+  }
+}

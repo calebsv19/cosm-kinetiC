@@ -1,0 +1,78 @@
+{
+  "schema": "aqueous-glucose-data/v1",
+  "id": "isbell-pigman-1933-rp534-iv4/v1",
+  "source": {
+    "title": "The oxidation of alpha and beta glucose and a study of the isomeric forms of the sugar in solution",
+    "authors": "Horace S. Isbell and Ward Pigman",
+    "year": 1933,
+    "url": "https://nvlpubs.nist.gov/nistpubs/jres/10/jresv10n3p337_A2b.pdf",
+    "locator": "Section IV.4, printed page 356; independent approximate equilibrium composition in abstract/page 337",
+    "rights": "US Bureau of Standards government work; numeric transcription, not a new measurement"
+  },
+  "recipe": {
+    "glucose_g": 1.6832,
+    "water_g": 38.53,
+    "solution_density_g_ml": 1.0176,
+    "density_temperature_c": 2.0,
+    "temperature_k": 274.65,
+    "reported_temperature_half_range_k": 0.5,
+    "ph": null,
+    "pressure_pa": null,
+    "ionic_strength_mol_l": null,
+    "water_purity": "unreported",
+    "added_catalyst": "none in reported water-only preparation"
+  },
+  "observations": {
+    "time_min": [
+      4.0,
+      6.0,
+      19.0,
+      40.5,
+      121.0,
+      240.0
+    ],
+    "rotation_deg_saccharimeter": [
+      27.1,
+      27.06,
+      26.71,
+      26.13,
+      24.4,
+      22.09
+    ],
+    "training_indices": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "held_out_indices": [
+      4,
+      5
+    ],
+    "equilibrium_rotation_deg_saccharimeter": 12.88,
+    "equilibrium_reading": "constant at a reading twenty-four hours later; treated as asymptote",
+    "rotation_rounding_half_unit": 0.005,
+    "measurement_uncertainty": null
+  },
+  "equilibrium": {
+    "specific_rotation_alpha": 113.4,
+    "specific_rotation_beta": 19.7,
+    "specific_rotation_equilibrium": 52.2,
+    "specific_rotation_rounding_half_unit": 0.05,
+    "independent_approximate_beta_fraction": 0.64,
+    "independent_method": "differential bromine oxidation; approximate and at different near-zero-C conditions, not an exact matched-condition replicate"
+  },
+  "published_rate": {
+    "common_log_total_per_min": 0.0008,
+    "common_log_alpha_to_beta_per_min": 0.00052,
+    "logarithm_base": 10,
+    "reported_uncertainty": null
+  },
+  "qualification": {
+    "held_out_max_error_deg_saccharimeter": 0.2,
+    "rate_relative_tolerance": 0.1,
+    "approximate_beta_fraction_tolerance": 0.03,
+    "tolerance_kind": "predeclared engineering comparisons, not experimental confidence intervals",
+    "protocol_status": "Split and engineering tolerances fixed for implementation testing after exploratory inspection; held-out means excluded from parameter fitting, not blinded or preregistered."
+  }
+}

@@ -1,0 +1,310 @@
+{
+  "schema": "rc7-water-surface-pressure/v1",
+  "n": [
+    9,
+    6,
+    1
+  ],
+  "chemistry": {
+    "species": [
+      {
+        "id": "H2O_liquid"
+      },
+      {
+        "id": "H2O_vapor"
+      }
+    ]
+  },
+  "columns": [
+    {
+      "schema": "rc7-water-interface/v1",
+      "n": [
+        9,
+        1,
+        1
+      ],
+      "chemistry": {
+        "species": [
+          {
+            "id": "H2O_liquid"
+          },
+          {
+            "id": "H2O_vapor"
+          }
+        ]
+      },
+      "area_m2": 0.01,
+      "height_m": 0.03,
+      "liquid_kg": 0.12,
+      "liquid_temperature_k": 298.15,
+      "bath": false,
+      "gas_temperature_k": [
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15
+      ],
+      "vapor_density_kg_m3": [
+        0.010340741737109317,
+        0.010340741737109317,
+        0.010340741737109317,
+        0.010340741737109317,
+        0.010340741737109317,
+        0.010340741737109317,
+        0.010340741737109317,
+        0.010340741737109317
+      ],
+      "carrier_heat_capacity_j_k": 0.15086933324366017,
+      "diffusivity_m2_s": 2.5e-05,
+      "conductivity_w_m_k": 0.026,
+      "mass_transfer_velocity_m_s": 0.03,
+      "dt_s": 0.0002
+    },
+    {
+      "schema": "rc7-water-interface/v1",
+      "n": [
+        9,
+        1,
+        1
+      ],
+      "chemistry": {
+        "species": [
+          {
+            "id": "H2O_liquid"
+          },
+          {
+            "id": "H2O_vapor"
+          }
+        ]
+      },
+      "area_m2": 0.01,
+      "height_m": 0.03,
+      "liquid_kg": 0.12,
+      "liquid_temperature_k": 298.15,
+      "bath": false,
+      "gas_temperature_k": [
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15
+      ],
+      "vapor_density_kg_m3": [
+        0.012928932188134524,
+        0.012928932188134524,
+        0.012928932188134524,
+        0.012928932188134524,
+        0.012928932188134524,
+        0.012928932188134524,
+        0.012928932188134524,
+        0.012928932188134524
+      ],
+      "carrier_heat_capacity_j_k": 0.15063639610306787,
+      "diffusivity_m2_s": 2.5e-05,
+      "conductivity_w_m_k": 0.026,
+      "mass_transfer_velocity_m_s": 0.03,
+      "dt_s": 0.0002
+    },
+    {
+      "schema": "rc7-water-interface/v1",
+      "n": [
+        9,
+        1,
+        1
+      ],
+      "chemistry": {
+        "species": [
+          {
+            "id": "H2O_liquid"
+          },
+          {
+            "id": "H2O_vapor"
+          }
+        ]
+      },
+      "area_m2": 0.01,
+      "height_m": 0.03,
+      "liquid_kg": 0.12,
+      "liquid_temperature_k": 298.15,
+      "bath": false,
+      "gas_temperature_k": [
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15
+      ],
+      "vapor_density_kg_m3": [
+        0.017411809548974793,
+        0.017411809548974793,
+        0.017411809548974793,
+        0.017411809548974793,
+        0.017411809548974793,
+        0.017411809548974793,
+        0.017411809548974793,
+        0.017411809548974793
+      ],
+      "carrier_heat_capacity_j_k": 0.15023293714059227,
+      "diffusivity_m2_s": 2.5e-05,
+      "conductivity_w_m_k": 0.026,
+      "mass_transfer_velocity_m_s": 0.03,
+      "dt_s": 0.0002
+    },
+    {
+      "schema": "rc7-water-interface/v1",
+      "n": [
+        9,
+        1,
+        1
+      ],
+      "chemistry": {
+        "species": [
+          {
+            "id": "H2O_liquid"
+          },
+          {
+            "id": "H2O_vapor"
+          }
+        ]
+      },
+      "area_m2": 0.01,
+      "height_m": 0.03,
+      "liquid_kg": 0.12,
+      "liquid_temperature_k": 298.15,
+      "bath": false,
+      "gas_temperature_k": [
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15
+      ],
+      "vapor_density_kg_m3": [
+        0.022588190451025208,
+        0.022588190451025208,
+        0.022588190451025208,
+        0.022588190451025208,
+        0.022588190451025208,
+        0.022588190451025208,
+        0.022588190451025208,
+        0.022588190451025208
+      ],
+      "carrier_heat_capacity_j_k": 0.14976706285940772,
+      "diffusivity_m2_s": 2.5e-05,
+      "conductivity_w_m_k": 0.026,
+      "mass_transfer_velocity_m_s": 0.03,
+      "dt_s": 0.0002
+    },
+    {
+      "schema": "rc7-water-interface/v1",
+      "n": [
+        9,
+        1,
+        1
+      ],
+      "chemistry": {
+        "species": [
+          {
+            "id": "H2O_liquid"
+          },
+          {
+            "id": "H2O_vapor"
+          }
+        ]
+      },
+      "area_m2": 0.01,
+      "height_m": 0.03,
+      "liquid_kg": 0.12,
+      "liquid_temperature_k": 298.15,
+      "bath": false,
+      "gas_temperature_k": [
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15
+      ],
+      "vapor_density_kg_m3": [
+        0.027071067811865475,
+        0.027071067811865475,
+        0.027071067811865475,
+        0.027071067811865475,
+        0.027071067811865475,
+        0.027071067811865475,
+        0.027071067811865475,
+        0.027071067811865475
+      ],
+      "carrier_heat_capacity_j_k": 0.1493636038969321,
+      "diffusivity_m2_s": 2.5e-05,
+      "conductivity_w_m_k": 0.026,
+      "mass_transfer_velocity_m_s": 0.03,
+      "dt_s": 0.0002
+    },
+    {
+      "schema": "rc7-water-interface/v1",
+      "n": [
+        9,
+        1,
+        1
+      ],
+      "chemistry": {
+        "species": [
+          {
+            "id": "H2O_liquid"
+          },
+          {
+            "id": "H2O_vapor"
+          }
+        ]
+      },
+      "area_m2": 0.01,
+      "height_m": 0.03,
+      "liquid_kg": 0.12,
+      "liquid_temperature_k": 298.15,
+      "bath": false,
+      "gas_temperature_k": [
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15
+      ],
+      "vapor_density_kg_m3": [
+        0.029659258262890682,
+        0.029659258262890682,
+        0.029659258262890682,
+        0.029659258262890682,
+        0.029659258262890682,
+        0.029659258262890682,
+        0.029659258262890682,
+        0.029659258262890682
+      ],
+      "carrier_heat_capacity_j_k": 0.14913066675633982,
+      "diffusivity_m2_s": 2.5e-05,
+      "conductivity_w_m_k": 0.026,
+      "mass_transfer_velocity_m_s": 0.03,
+      "dt_s": 0.0002
+    }
+  ],
+  "patch_length_m": 0.12,
+  "damping_per_s": 2.0
+}

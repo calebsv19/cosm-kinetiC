@@ -1,0 +1,56 @@
+{
+  "schema": "rc7-capillary-interface/v1",
+  "chemistry": {
+    "species": [
+      {
+        "id": "H2O_liquid"
+      },
+      {
+        "id": "dry_air"
+      }
+    ]
+  },
+  "n": [
+    64,
+    32,
+    1
+  ],
+  "length_m": 0.04,
+  "width_m": 0.01,
+  "depth_m": [
+    0.018,
+    0.003
+  ],
+  "density_kg_m3": [
+    997.0,
+    1.2
+  ],
+  "gravity_m_s2": 9.81,
+  "tension_n_m": 0.072,
+  "layers": 32,
+  "dt_s": 0.0002,
+  "modes": [
+    {
+      "harmonic": 1,
+      "elevation_m": [
+        8e-05,
+        0.0
+      ],
+      "speed_m_s": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "harmonic": 2,
+      "elevation_m": [
+        0.0,
+        1.5e-05
+      ],
+      "speed_m_s": [
+        0.001,
+        0.0
+      ]
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+{
+  "schema": "rc7-water-momentum/v1",
+  "n": [
+    9,
+    2,
+    1
+  ],
+  "chemistry": {
+    "species": [
+      {
+        "id": "H2O_liquid"
+      },
+      {
+        "id": "H2O_vapor"
+      }
+    ]
+  },
+  "columns": [
+    {
+      "schema": "rc7-water-interface/v1",
+      "n": [
+        9,
+        1,
+        1
+      ],
+      "chemistry": {
+        "species": [
+          {
+            "id": "H2O_liquid"
+          },
+          {
+            "id": "H2O_vapor"
+          }
+        ]
+      },
+      "area_m2": 0.01,
+      "height_m": 0.03,
+      "liquid_kg": 0.126,
+      "liquid_temperature_k": 298.15,
+      "bath": false,
+      "gas_temperature_k": [
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15
+      ],
+      "vapor_density_kg_m3": [
+        0.008,
+        0.008,
+        0.008,
+        0.008,
+        0.008,
+        0.008,
+        0.008,
+        0.008
+      ],
+      "carrier_heat_capacity_j_k": 0.36,
+      "diffusivity_m2_s": 2.5e-05,
+      "conductivity_w_m_k": 0.026,
+      "mass_transfer_velocity_m_s": 0.03,
+      "dt_s": 0.001
+    },
+    {
+      "schema": "rc7-water-interface/v1",
+      "n": [
+        9,
+        1,
+        1
+      ],
+      "chemistry": {
+        "species": [
+          {
+            "id": "H2O_liquid"
+          },
+          {
+            "id": "H2O_vapor"
+          }
+        ]
+      },
+      "area_m2": 0.01,
+      "height_m": 0.03,
+      "liquid_kg": 0.114,
+      "liquid_temperature_k": 298.15,
+      "bath": false,
+      "gas_temperature_k": [
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15,
+        298.15
+      ],
+      "vapor_density_kg_m3": [
+        0.032,
+        0.032,
+        0.032,
+        0.032,
+        0.032,
+        0.032,
+        0.032,
+        0.032
+      ],
+      "carrier_heat_capacity_j_k": 0.36,
+      "diffusivity_m2_s": 2.5e-05,
+      "conductivity_w_m_k": 0.026,
+      "mass_transfer_velocity_m_s": 0.03,
+      "dt_s": 0.001
+    }
+  ],
+  "inertial_length_m": 0.12,
+  "damping_per_s": 1.5,
+  "initial_flow_kg_s": 0.0
+}

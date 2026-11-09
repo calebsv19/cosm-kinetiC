@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 
 #include "app/app_config.h"
+#include "app/chemistry/workspace.h"
 #include "app/data_paths.h"
 #include "app/scene_controller.h"
 #include "app/session_workspace.h"
@@ -88,6 +89,8 @@ static bool physics_sim_apply_startup_root_fallbacks(AppConfig *cfg,
 }
 
 int physics_sim_app_main_legacy(int argc, char **argv) {
+    if (argc >= 2 && strcmp(argv[1], "--chemistry-workspace") == 0)
+        return physics_sim_chemistry_workspace_run(argc > 2 ? argv[2] : NULL);
     if (argc >= 2 && strcmp(argv[1], "--agent-workspace") == 0) {
         int result = physics_sim_session_workspace_run(argc > 2 ? argv[2] : NULL);
         if (result != 2) return result;
