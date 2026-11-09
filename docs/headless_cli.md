@@ -705,8 +705,13 @@ Cancel behavior:
 - `physics_sim_job_runner cancel` is cooperative first. It writes
   `cancel_requested.flag` into the job root and marks the live status as
   `cancel_requested` while the solver is still unwinding.
+- The command reply reports `status: "cancel_requested"`, not terminal cancellation.
+  If the job is already terminal, it returns `status: "already_terminal"` and
+  preserves the existing outcome. Use `status` with the same job ID to read it.
 - `physics_sim_headless` polls that flag during the headless loop and exits with
   summary/progress `status: "canceled"` at the next safe boundary.
+- Terminal progress retains completed frames and accepted substeps within the
+  current frame. A partially advanced frame is not counted as completed.
 - This avoids relying on OS signal delivery for detached solver jobs. If the run
   already finished before the flag is observed, the status naturally reconciles
   to `completed`.

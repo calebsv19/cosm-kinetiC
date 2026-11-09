@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <limits.h>
+#include <fcntl.h>
+#include <time.h>
 #include <poll.h>
 #include <string.h>
 #include <unistd.h>
@@ -35,9 +37,27 @@ static inline void psrw_packet(PhysicsSimReceiverWire *w,ThermalReceiverExchange
     p->quantity=psrw_unsigned(w,p->quantity);p->unit=psrw_unsigned(w,p->unit);p->sign=psrw_unsigned(w,p->sign);
     psrw_time(w,&p->interval.begin);psrw_time(w,&p->interval.end);p->q_j=psrw_d(w,p->q_j);
 }
+static inline long long psrw_now_ms(void){
+    struct timespec t;if(clock_gettime(CLOCK_MONOTONIC,&t))return -1;
+    return (long long)t.tv_sec*1000+t.tv_nsec/1000000;
+}
 static inline bool psrw_io_timeout(int fd,void *bytes,size_t n,bool sending,int timeout_ms){
-    unsigned char *p=bytes;while(n){struct pollfd event={fd,sending?POLLOUT:POLLIN,0};int rc;do{rc=poll(&event,1,timeout_ms);}while(rc<0&&errno==EINTR);if(rc<=0)return false;
-        ssize_t got=sending?write(fd,p,n):read(fd,p,n);if(got<0&&errno==EINTR)continue;if(got<=0)return false;p+=got;n-=(size_t)got;}return true;
+    long long start=psrw_now_ms();int flags=fcntl(fd,F_GETFL);
+    if(start<0||timeout_ms<=0||flags<0||fcntl(fd,F_SETFL,flags|O_NONBLOCK)<0)return false;
+    unsigned char *p=bytes;bool ok=true;
+    while(n){
+        long long now=psrw_now_ms();
+        if(now<0||now-start>=timeout_ms){ok=false;break;}
+        struct pollfd event={fd,sending?POLLOUT:POLLIN,0};
+        int rc=poll(&event,1,timeout_ms-(int)(now-start));
+        if(rc<0&&errno==EINTR)continue;
+        if(rc<=0){ok=false;break;}
+        ssize_t got=sending?write(fd,p,n):read(fd,p,n);
+        if(got<0&&(errno==EINTR||errno==EAGAIN||errno==EWOULDBLOCK))continue;
+        if(got<=0){ok=false;break;}p+=got;n-=(size_t)got;
+    }
+    if(fcntl(fd,F_SETFL,flags)<0)ok=false;
+    return ok;
 }
 static inline bool psrw_io(int fd,void *bytes,size_t n,bool sending){return psrw_io_timeout(fd,bytes,n,sending,5000);}
 static inline bool psrw_send(int fd,PhysicsSimReceiverWire *w){

@@ -71,6 +71,7 @@ typedef struct PhysicsSimHeadlessCliOptions {
 typedef struct PhysicsSimHeadlessProgressSink {
     const char *progress_path;
     const PhysicsSimHeadlessCliOptions *opts;
+    HeadlessProgressInfo accepted;
 } PhysicsSimHeadlessProgressSink;
 
 typedef struct PhysicsSimHeadlessWindAnalysisSink {
@@ -771,6 +772,8 @@ static void progress_callback(void *user_data, const HeadlessProgressInfo *progr
     PhysicsSimHeadlessProgressSink *sink = (PhysicsSimHeadlessProgressSink *)user_data;
     const char *status = NULL;
     if (!sink || !sink->progress_path || !sink->opts || !progress) return;
+    sink->accepted = *progress;
+    sink->accepted.stage = NULL; /* Keep values, never borrow callback text. */
     if (progress->final_update && progress->stage &&
         strcmp(progress->stage, "canceled") == 0) {
         status = "canceled";
@@ -974,6 +977,7 @@ static void write_atmosphere_diagnostics_json(FILE *f,
 }
 
 static bool write_run_summary(const char *summary_path,
+                              uint64_t frames_completed,
                               const PhysicsSimHeadlessCliOptions *opts,
                               const SimRuntimeBackendReport *backend_report,
                               int result_code) {
@@ -1027,7 +1031,7 @@ static bool write_run_summary(const char *summary_path,
             "  \"result_code\": %d,\n"
             "  \"status\": \"%s\"",
             opts->frames,
-            result_code == 0 ? opts->frames : 0,
+            (int)frames_completed,
             opts->sim_steps_per_frame,
             opts->save_volume_frames ? "true" : "false",
             opts->volume_export_start_frame,
@@ -1332,22 +1336,17 @@ int main(int argc, char **argv) {
             result = 1;
         }
     }
-    if (!write_run_summary(summary_path, &opts, &final_backend_report, result)) {
+    if (!write_run_summary(summary_path, progress_sink.accepted.frames_completed, &opts, &final_backend_report, result)) {
         fprintf(stderr, "[physics_sim_headless] ERROR: failed to write summary: %s\n", summary_path);
         result = result == 0 ? 1 : result;
     }
+    HeadlessProgressInfo terminal_progress = progress_sink.accepted;
+    terminal_progress.frames_requested = (uint64_t)opts.frames;
+    terminal_progress.stage = result == 0 ? "completed" : (result == 2 ? "canceled" : "failed");
+    terminal_progress.final_update = true;
     if (!write_progress_json(progress_path,
                              &opts,
-                             &(HeadlessProgressInfo){
-                                 .frames_completed = result == 0 ? (uint64_t)opts.frames : 0u,
-                                 .frames_requested = (uint64_t)opts.frames,
-                                 .frame_index = result == 0 && opts.frames > 0
-                                                    ? (uint64_t)(opts.frames - 1)
-                                                    : 0u,
-                                 .stage = result == 0 ? "completed" :
-                                          (result == 2 ? "canceled" : "failed"),
-                                 .final_update = true
-                             },
+                             &terminal_progress,
                              result == 0 ? "passed" : (result == 2 ? "canceled" : "failed"))) {
         fprintf(stderr, "[physics_sim_headless] ERROR: failed to write final progress: %s\n", progress_path);
         result = result == 0 ? 1 : result;

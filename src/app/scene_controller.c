@@ -436,6 +436,7 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
         HeadlessProgressInfo step_progress = {0};
         if (headless_mode && headless) {
             sim_steps_per_frame = headless->sim_steps_per_frame > 0 ? headless->sim_steps_per_frame : 1;
+            frame.sim_steps_requested = (uint32_t)sim_steps_per_frame;
             if (cfg->physics_fixed_dt > 0.0) {
                 sim_dt = cfg->physics_fixed_dt;
             }
@@ -470,6 +471,7 @@ static SceneControllerUpdateFrame scene_controller_update_phase(
                     break;
                 }
                 if (headless_mode && headless && headless->progress_callback) {
+                    frame.sim_steps_completed = (uint32_t)(step_index + 1);
                     step_progress.sim_steps_completed_in_frame = (uint32_t)(step_index + 1);
                     headless->progress_callback(headless->progress_user_data, &step_progress);
                 }
@@ -895,6 +897,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
     bool running = true;
     bool aborted = false;
     bool solver_failed = false;
+    uint32_t partial_steps = 0, partial_total = 0;
     int snapshot_index = 0;
     uint64_t frame_index = 0;
     (void)snapshot_dir;
@@ -977,9 +980,15 @@ int scene_controller_run(const AppConfig *initial_cfg,
                                           mode_hooks,
                                           snapshot_dir,
                                           &snapshot_index);
+        partial_steps = update_frame.sim_steps_completed;
+        partial_total = update_frame.sim_steps_requested;
         if (update_frame.solver_failed) {
             solver_failed = true;
             break;
+        }
+        if (update_frame.aborted) {
+            aborted = true;
+            break; /* A partially advanced frame is not a completed frame. */
         }
         ir1_diag_totals.frame_count += 1u;
         ir1_diag_totals.routed_global_total += input_frame.route.routed_global_count;
@@ -1072,6 +1081,7 @@ int scene_controller_run(const AppConfig *initial_cfg,
         }
 
         frame_index++;
+        partial_steps = partial_total = 0;
         if (headless_mode && headless && headless->progress_callback) {
             bool final_progress =
                 headless_frame_limit > 0u && frame_index >= headless_frame_limit;
@@ -1116,8 +1126,8 @@ int scene_controller_run(const AppConfig *initial_cfg,
             .frames_completed = frame_index,
             .frames_requested = headless_frame_limit,
             .frame_index = frame_index,
-            .sim_steps_completed_in_frame = 0u,
-            .sim_steps_total_in_frame = 0u,
+            .sim_steps_completed_in_frame = partial_steps,
+            .sim_steps_total_in_frame = partial_total,
             .stage = solver_failed ? "failed" : "canceled",
             .final_update = true
         };

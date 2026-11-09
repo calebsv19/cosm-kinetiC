@@ -4,22 +4,55 @@
 #include "physics_sim_receiver_wire.h"
 #include "physics_sim_shear_receiver_fixture.h"
 #include <math.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <sys/wait.h>
+#include <time.h>
+
+/* The unreaped direct child reserves the group identity until every signal has
+ * been sent. In particular, EOF or an exited leader does not release helpers. */
+static void stop_receiver(pid_t pid, bool group) {
+    if (pid <= 0) return;
+    siginfo_t info = {0};
+    int observed;
+    do { observed = waitid(P_PID, (id_t)pid, &info, WEXITED | WNOHANG | WNOWAIT); }
+    while (observed < 0 && errno == EINTR);
+    if (observed < 0) return;
+    kill(group ? -pid : pid, SIGTERM);
+    for (unsigned attempt = 0; attempt < 10 && !info.si_pid; ++attempt) {
+        struct timespec pause = {0, 10000000}; nanosleep(&pause, NULL);
+        do { observed = waitid(P_PID, (id_t)pid, &info, WEXITED | WNOHANG | WNOWAIT); }
+        while (observed < 0 && errno == EINTR);
+        if (observed < 0) return;
+    }
+    kill(group ? -pid : pid, SIGKILL);
+    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {}
+}
+static bool receiver_pipe(int descriptors[2]) {
+    int raw[2]; if (pipe(raw)) return false;
+    descriptors[0] = fcntl(raw[0], F_DUPFD_CLOEXEC, 3);
+    descriptors[1] = fcntl(raw[1], F_DUPFD_CLOEXEC, 3);
+    close(raw[0]); close(raw[1]);
+    if (descriptors[0] >= 0 && descriptors[1] >= 0) return true;
+    if (descriptors[0] >= 0) close(descriptors[0]);
+    if (descriptors[1] >= 0) close(descriptors[1]);
+    return false;
+}
 static struct sigaction previous_pipe;
 static bool active_client;
 bool physics_sim_receiver_client_open_profile(PhysicsSimReceiverClient *out,const char *path,const char *profile){
     if(!out||!path||!profile||active_client)return false;
     bool warm=strlen(profile)==1&&profile[0]>='0'&&profile[0]<='2';
     if(!warm&&!physics_sim_shear_receiver_steps(profile))return false;
-    int request[2],response[2];if(pipe(request))return false;if(pipe(response)){close(request[0]);close(request[1]);return false;}
+    int request[2],response[2];if(!receiver_pipe(request))return false;if(!receiver_pipe(response)){close(request[0]);close(request[1]);return false;}
     struct sigaction ignore={0};ignore.sa_handler=SIG_IGN;sigemptyset(&ignore.sa_mask);
     if(sigaction(SIGPIPE,&ignore,&previous_pipe)){for(int i=0;i<2;i++){close(request[i]);close(response[i]);}return false;}
     pid_t pid=fork();
-    if(!pid){if(dup2(request[0],STDIN_FILENO)<0||dup2(response[1],STDOUT_FILENO)<0)_exit(126);
+    if(!pid){if(setpgid(0,0)<0||dup2(request[0],STDIN_FILENO)<0||dup2(response[1],STDOUT_FILENO)<0)_exit(126);
         for(int i=0;i<2;i++){close(request[i]);close(response[i]);}execl(path,path,profile,(char *)NULL);_exit(127);}
     close(request[0]);close(response[1]);if(pid<0){close(request[1]);close(response[0]);sigaction(SIGPIPE,&previous_pipe,NULL);return false;}
+    if(setpgid(pid,pid)<0 && getpgid(pid)!=pid){close(request[1]);close(response[0]);stop_receiver(pid, false);sigaction(SIGPIPE,&previous_pipe,NULL);return false;}
     *out=(PhysicsSimReceiverClient){.input=request[1],.output=response[0],.pid=pid,.open=true,.healthy=true,.columns=warm?4u:128u};active_client=true;return true;
 }
 bool physics_sim_receiver_client_open(PhysicsSimReceiverClient *out,const char *path,int mode){
@@ -27,12 +60,13 @@ bool physics_sim_receiver_client_open(PhysicsSimReceiverClient *out,const char *
     return physics_sim_receiver_client_open_profile(out,path,text);
 }
 void physics_sim_receiver_client_close(PhysicsSimReceiverClient *c){
-    if(!c||!c->open)return;close(c->input);close(c->output);kill(c->pid,SIGTERM);
-    while(waitpid(c->pid,NULL,0)<0&&errno==EINTR){}sigaction(SIGPIPE,&previous_pipe,NULL);active_client=false;c->open=c->healthy=false;
+    if(!c||!c->open)return;close(c->input);close(c->output);stop_receiver(c->pid, true);
+    sigaction(SIGPIPE,&previous_pipe,NULL);active_client=false;c->open=c->healthy=false;
+    c->input=c->output=-1;c->pid=0;
 }
 bool physics_sim_receiver_client_stage(void *context,int column,const ThermalReceiver *accepted,
     const ThermalReceiverExchange *packet,CoreSimTimePoint available,ThermalReceiver *out,ThermalReceiverReceipt *receipt){
-    PhysicsSimReceiverClient *c=context;if(!c||!c->open||!c->healthy||!accepted||!packet||!out||!receipt||out==accepted||column<0||(unsigned)column>=c->columns)return false;
+    PhysicsSimReceiverClient *c=context;if(!c||!c->open||!c->healthy||c->transactions==UINT64_MAX||!accepted||!packet||!out||!receipt||out==accepted||column<0||(unsigned)column>=c->columns)return false;
     ThermalReceiver base=*accepted;ThermalReceiverExchange input=*packet;PhysicsSimReceiverWire w=psrw_new();
     uint64_t transaction=++c->transactions;psrw_u(&w,1);psrw_u(&w,transaction);psrw_u(&w,(uint64_t)column);psrw_state(&w,&base);psrw_packet(&w,&input);psrw_time(&w,&available);
     uint64_t hash=psrw_hash(w.bytes,w.at);if(!psrw_send(c->input,&w)||!psrw_receive(c->output,&w)){c->healthy=false;return false;}

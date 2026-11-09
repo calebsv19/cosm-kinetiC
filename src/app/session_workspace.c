@@ -1,5 +1,6 @@
 #define _DARWIN_C_SOURCE 1
 #include "app/session_workspace.h"
+#include "app/session_client_lifetime.h"
 #include "app/menu/shared_theme_font_adapter.h"
 #include "app/session_workspace_text.h"
 #include "app/session_workspace_ui.h"
@@ -8,6 +9,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <json-c/json.h>
 #include <math.h>
 #include <pthread.h>
@@ -97,7 +99,15 @@ static bool dispatch(Workspace *w, ClientOperation op, const char *tool, struct 
         "--output",   w->response,
         (char *)tool, (char *)json_object_to_json_string_ext(args, JSON_C_TO_STRING_PLAIN),
         NULL};
-    unlink(w->response);
+    /* Keep this workspace's name reserved while an older client can finish.
+     * Reusing a process-wide reply pathname would let a retired client write
+     * into a reopened workspace's pending operation. */
+    int response = open(w->response, O_WRONLY | O_TRUNC | O_NOFOLLOW);
+    if (response < 0) {
+        snprintf(w->message, sizeof(w->message), "Session reply slot unavailable");
+        return false;
+    }
+    close(response);
     int result = posix_spawnp(&w->child, "python3", NULL, NULL, argv, environ);
     if (result) {
         w->child = 0;
@@ -408,13 +418,6 @@ static void history_plot(SDL_Renderer *renderer, struct json_object *history, SD
     }
 }
 
-static void *reap_client(void *value) {
-    pid_t pid = (pid_t)(intptr_t)value;
-    while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {
-    }
-    return NULL;
-}
-
 typedef struct WorkspaceUiOwner {
     Workspace *workspace;
     bool *dragging,*fitted,*running,*return_to_setup;
@@ -461,12 +464,19 @@ int physics_sim_session_workspace_run(const char *root) {
     snprintf(w.root, sizeof(w.root), "%s",
              configured ? configured : PHYSICS_SIM_REPO_ROOT "/data/runtime/agent_sessions");
     mkdirs(w.root);
-    snprintf(w.response, sizeof(w.response), "%s/desktop-%ld.json", w.root, (long)getpid());
+    if (snprintf(w.response, sizeof(w.response), "%s/desktop-%ld-XXXXXX", w.root,
+                 (long)getpid()) >= (int)sizeof(w.response)) return 1;
+    int response = mkstemp(w.response);
+    if (response < 0) return 1;
+    close(response);
     bool own_sdl = !(SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO), own_ttf = !TTF_WasInit();
-    if (own_sdl && SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0)
-        return 1;
-    if (own_ttf && TTF_Init() != 0)
-        return 1;
+    if (own_sdl && SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+        unlink(w.response); return 1;
+    }
+    if (own_ttf && TTF_Init() != 0) {
+        if (own_sdl) SDL_Quit();
+        unlink(w.response); return 1;
+    }
     SDL_Window *window = SDL_CreateWindow("kinetiC | Live fluid inspection",
                                           SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 860,
                                           SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
@@ -487,6 +497,9 @@ int physics_sim_session_workspace_run(const char *root) {
             SDL_DestroyRenderer(renderer);
         if (window)
             SDL_DestroyWindow(window);
+        if (own_ttf) TTF_Quit();
+        if (own_sdl) SDL_Quit();
+        unlink(w.response);
         return 1;
     }
     PhysicsSimMenuThemePalette theme = {0};
@@ -868,10 +881,9 @@ int physics_sim_session_workspace_run(const char *root) {
     }
     if (w.child) {
         // A bounded command client can finish after the workspace closes. Reap off the UI thread.
-        pthread_t reaper;
-        if (pthread_create(&reaper, NULL, reap_client, (void *)(intptr_t)w.child) == 0)
-            pthread_detach(reaper);
-    }
+        if (!physics_sim_session_client_release(w.child))
+            fprintf(stderr, "Session client cleanup could not acquire direct-child ownership\n");
+    } else unlink(w.response);
     json_object_put(w.snapshot);
     json_object_put(w.inspection);
     json_object_put(w.sample_args);

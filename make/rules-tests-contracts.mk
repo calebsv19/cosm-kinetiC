@@ -1375,3 +1375,9 @@ test-command-delivery:
 	@mkdir -p $(BUILD_DIR)
 	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/command_delivery_test tests/command_delivery_test.c src/input/input.c src/input/input_context.c $(LIBS)
 	$(BUILD_DIR)/command_delivery_test
+
+# L3 actual desktop lifetime; caller supplies a fresh fixture root and delayed client.
+.PHONY: test-session-native-lifetime
+test-session-native-lifetime: clang-build
+	python3 -B scripts/atomic_output.py -- $(CC) $(CFLAGS) -o $(BUILD_DIR)/session_native_lifetime_test tests/session_native_lifetime_test.c $(filter-out $(BUILD_DIR)/app/session_workspace.o,$(MENU_OWNER_REPLAY_OBJS)) $(LIBS)
+	$(BUILD_DIR)/session_native_lifetime_test "$(L3_NATIVE_ROOT)"

@@ -139,7 +139,8 @@ int main(int argc, char **argv) {
                                "check job status and cancel_requested.flag write access");
             return 1;
         }
-        printf("{\"job_id\":\"%s\",\"status\":\"cancelled\"}\n", job_id);
+        printf("{\"job_id\":\"%s\",\"status\":\"%s\"}\n", job_id,
+               strcmp(diagnostics, "job already terminal") == 0 ? "already_terminal" : "cancel_requested");
         return 0;
     }
 
