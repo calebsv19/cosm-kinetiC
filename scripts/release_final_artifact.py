@@ -111,7 +111,7 @@ def assemble(repo, receipt, selected, tools, assignments):
     command([tools['spctl'],'--assess','--type','execute','--verbose=2',str(app)],'gatekeeper')
     rows=inventory(app)
     targets=[name for name,row in sorted(rows.items()) if row['kind']=='file' and
-             (name in ('Contents/MacOS/physics-sim-bin','Contents/MacOS/physics_sim_session_worker','Contents/MacOS/physics-sim-launcher')
+             (name in ('Contents/MacOS/physics-sim-bin','Contents/MacOS/physics_sim_session_worker')
               or name.startswith('Contents/Frameworks/') and name.endswith('.dylib'))]
     for index,name in enumerate(targets):
         tag='architecture_'+str(index);command([tools['lipo'],'-archs',str(app/name)],tag)

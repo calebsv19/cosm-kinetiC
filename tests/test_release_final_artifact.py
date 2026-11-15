@@ -18,11 +18,14 @@ class FinalArtifact(unittest.TestCase):
     def setUp(self):
         fixture.AppStage.setUp(self)
         renamed=self.app.with_name('kinetiC.app');self.app.rename(renamed);self.app=renamed
+        (self.app/'Contents/MacOS/physics-sim-launcher').write_text('#!/bin/sh\nexec physics-sim-bin "$@"\n')
         plist=self.app/'Contents/Info.plist'
         with plist.open('wb') as stream:
             plistlib.dump({'CFBundleIdentifier':'fixture.app','CFBundleName':'Fixture','CFBundleShortVersionString':'fixture-version'},stream)
         # Add architecture reporting before any signing tool identity is frozen.
-        with self.tool.open('a') as stream:stream.write('if "-archs" in sys.argv:print("arm64")\n')
+        with self.tool.open('a') as stream:
+            stream.write('if "-archs" in sys.argv and Path(sys.argv[-1]).read_bytes().startswith(b"#!"):raise SystemExit(9)\n')
+            stream.write('if "-archs" in sys.argv:print("arm64")\n')
         signed=stage(self.repo,self.app,self.root,'fixture.app','sign',str(self.tool),'Developer ID: Fixture')
         self.sign_receipt=Path(signed['receipt']);self.signed_app=self.root/self.app.name
         self.notary_receipt=fixture.AppStage.acceptance(self)
@@ -50,6 +53,10 @@ class FinalArtifact(unittest.TestCase):
         self.assertEqual(inventory(self.stapled_app),before)
         proof=json.loads((self.export_root/'command-reports/verification.json').read_text())
         self.assertTrue(proof['gatekeeper_command_succeeded']);self.assertEqual(proof['architecture'],'arm64')
+        architecture_inputs = [Path(row[-1]).name for row in fixture.AppStage.commands(self) if '-archs' in row]
+        self.assertIn('physics-sim-bin', architecture_inputs)
+        self.assertIn('physics_sim_session_worker', architecture_inputs)
+        self.assertNotIn('physics-sim-launcher', architecture_inputs)
 
     def test_gatekeeper_failure_preserves_stapled_app_and_publishes_nothing(self):
         tool=self.repo/'reject-gatekeeper';tool.write_text('#!/bin/sh\necho "internal error in Code Signing subsystem" >&2\nexit 7\n');tool.chmod(0o755)
