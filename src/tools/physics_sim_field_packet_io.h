@@ -47,7 +47,8 @@ static struct json_object *fp_read(const char *path){
     if(fread(h,1,24,f)!=24 || memcmp(h,"PSFPK01\n",8))goto done;
     uint64_t ml=fp_u64(h+8),pl=fp_u64(h+16);if(!ml || ml>FP_META || pl>FP_LIMIT || ml+pl+24>FP_LIMIT)goto done;
     meta=malloc((size_t)ml+1);bytes=malloc(pl? (size_t)pl:1);p=calloc(1,sizeof(*p));if(!meta || !bytes || !p)goto done;
-    if(fread(meta,1,(size_t)ml,f)!=ml || fread(bytes,1,(size_t)pl,f)!=pl || fgetc(f)!=EOF)goto done;meta[ml]=0;
+    if(fread(meta,1,(size_t)ml,f)!=ml || fread(bytes,1,(size_t)pl,f)!=pl || fgetc(f)!=EOF)goto done;
+    meta[ml]=0;
     struct json_tokener *tok=json_tokener_new();m=json_tokener_parse_ex(tok,meta,(int)ml);bool parsed=json_tokener_get_error(tok)==json_tokener_success && json_tokener_get_parse_end(tok)==ml;json_tokener_free(tok);
     if(!parsed || !m || !json_object_is_type(m,json_type_object) || json_object_object_length(m)!=3)goto done;
     struct json_object *schema=fp_get(m,"schema"),*arrays=fp_get(m,"arrays");
@@ -61,10 +62,12 @@ static struct json_object *fp_read(const char *path){
         const char *t=json_object_get_string(dtype);if(strcmp(t,"f64") && strcmp(t,"i64"))goto done;
         p->arrays[i]=(FieldArray){.bytes=bytes+end,.count=(size_t)count,.integer=!strcmp(t,"i64")};if(fp_crc(bytes+end,(size_t)count*8)!=crc)goto done;end+=(size_t)count*8;
     }
-    if(end!=pl)goto done;out=fp_restore(fp_get(m,"value"),p,0);for(size_t i=0;i<n;i++)if(!p->arrays[i].source)p->ok=false;
+    if(end!=pl)goto done;
+    out=fp_restore(fp_get(m,"value"),p,0);for(size_t i=0;i<n;i++)if(!p->arrays[i].source)p->ok=false;
     if(!p->ok){if(out)json_object_put(out);out=NULL;}
  done:
-    if(m)json_object_put(m);free(p);free(meta);free(bytes);fclose(f);return out;
+    if(m)json_object_put(m);
+    free(p);free(meta);free(bytes);fclose(f);return out;
 }
 static struct json_object *fp_reduce(struct json_object *v,FieldPacket *p,unsigned depth){
     if(depth>32){p->ok=false;return NULL;}if(!v)return NULL;

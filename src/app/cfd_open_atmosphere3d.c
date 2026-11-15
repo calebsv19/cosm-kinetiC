@@ -283,7 +283,8 @@ static bool momentum_forced(CfdOpenAtmosphere3d *s,double *maxdiv,double *residu
 #endif
     if(!solver)return false;
     if(s->wind.confined || s->wind.balanced)memset(s->candidate_pressure,0,(size_t)n*sizeof(double));
-    else memcpy(s->candidate_pressure,s->pressure,(size_t)n*sizeof(double));int iterations;
+    else memcpy(s->candidate_pressure,s->pressure,(size_t)n*sizeof(double));
+    int iterations;
 #ifdef PHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC
     iterations=-1;
     cfd_open_momentum_diagnostics.check="pressure_solve";
@@ -334,7 +335,8 @@ static bool momentum_forced(CfdOpenAtmosphere3d *s,double *maxdiv,double *residu
         cfd_open_momentum_diagnostics.check="projection_nonfinite_divergence";
         if(!isfinite(d) || fabs(d)>*maxdiv)cfd_open_momentum_diagnostics.divergence_cell=q;
 #endif
-        if(!isfinite(d))return false;*maxdiv=fmax(*maxdiv,fabs(d)); }
+        if(!isfinite(d))return false;
+        *maxdiv=fmax(*maxdiv,fabs(d)); }
 #ifdef PHYSICS_SIM_OPEN_MOMENTUM_DIAGNOSTIC
     cfd_open_momentum_diagnostics.check=*maxdiv<1e-8?"accepted_momentum":"projection_divergence";
     cfd_open_momentum_diagnostics.maximum_divergence=*maxdiv;
