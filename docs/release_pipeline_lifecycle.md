@@ -99,3 +99,5 @@ Native archive manifests carry both the release `version` and the app's
 `build_version` from `CFBundleVersion`. Registry checks both against the archived
 Info.plist, along with the bundle identity and native architecture, before
 credentials are resolved. A build number need not equal the release version.
+
+Native continuation targets run in the top-level Make process when the Registry owns a frozen output layout. Their existing package transactions own output writes. This preserves the shared owner’s `-o` exclusions for completed signing/stapling; GNU Make does not forward those exclusions to a recursive ownership Make. Ordinary build targets retain build ownership.
