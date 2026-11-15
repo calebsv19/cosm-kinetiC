@@ -45,7 +45,7 @@ class ProbeLifecycle(unittest.TestCase):
         (self.repo / 'tools').mkdir(parents=True)
         (self.repo / 'scripts/agent_session').mkdir(parents=True)
         (self.repo / 'build/bin').mkdir(parents=True)
-        for name in ('build_owner.py','clean_outputs.py','build_outputs.py','check_clean_root.py',
+        for name in ('output_layout.py','build_owner.py','clean_outputs.py','build_outputs.py','check_clean_root.py',
                      'cfd_evidence.py','wind_probe_lifecycle.py','agent_session/sample_retention.py',
                      'agent_session/owned_command.py'):
             shutil.copy2(ROOT/'scripts'/name, self.repo/'scripts'/name)

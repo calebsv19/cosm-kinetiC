@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "import/runtime_mesh_preview_bridge.h"
 #include "import/runtime_mesh_preview_path_resolver.h"
 
@@ -76,8 +77,10 @@ static char *read_text_file_alloc(const char *path) {
 static bool setup_runtime_scene_fixture(const char *root_dir,
                                         const char *asset_path,
                                         const char *scene_path) {
-    const char *assets_dir = "/private/tmp/physics_sim_mesh_preview_bridge/assets";
-    const char *mesh_dir = "/private/tmp/physics_sim_mesh_preview_bridge/assets/mesh_assets";
+    char assets_dir[1024];
+    physics_sim_test_temp_path(assets_dir, sizeof(assets_dir), "physics_sim_mesh_preview_bridge/assets");
+    char mesh_dir[1024];
+    physics_sim_test_temp_path(mesh_dir, sizeof(mesh_dir), "physics_sim_mesh_preview_bridge/assets/mesh_assets");
     const char *source_asset_path =
         "tests/fixtures/mesh_asset_runtime_sphere_8x4.json";
     const char *scene_json =
@@ -125,16 +128,18 @@ static void cleanup_runtime_scene_fixture(const char *asset_path,
     if (preview_path && preview_path[0]) remove(preview_path);
     remove(asset_path);
     remove(scene_path);
-    rmdir("/private/tmp/physics_sim_mesh_preview_bridge/assets/mesh_assets");
-    rmdir("/private/tmp/physics_sim_mesh_preview_bridge/assets");
-    rmdir("/private/tmp/physics_sim_mesh_preview_bridge");
+    { char cleanup_path[1024]; physics_sim_test_temp_path(cleanup_path, sizeof(cleanup_path), "physics_sim_mesh_preview_bridge/assets/mesh_assets"); rmdir(cleanup_path); }
+    { char cleanup_path[1024]; physics_sim_test_temp_path(cleanup_path, sizeof(cleanup_path), "physics_sim_mesh_preview_bridge/assets"); rmdir(cleanup_path); }
+    { char cleanup_path[1024]; physics_sim_test_temp_path(cleanup_path, sizeof(cleanup_path), "physics_sim_mesh_preview_bridge"); rmdir(cleanup_path); }
 }
 
 static void test_scan_scene_attaches_preview_metadata(void) {
-    const char *root_dir = "/private/tmp/physics_sim_mesh_preview_bridge";
-    const char *scene_path = "/private/tmp/physics_sim_mesh_preview_bridge/scene_runtime.json";
-    const char *asset_path =
-        "/private/tmp/physics_sim_mesh_preview_bridge/assets/mesh_assets/asset_sphere_8x4.runtime.json";
+    char root_dir[1024];
+    physics_sim_test_temp_path(root_dir, sizeof(root_dir), "physics_sim_mesh_preview_bridge");
+    char scene_path[1024];
+    physics_sim_test_temp_path(scene_path, sizeof(scene_path), "physics_sim_mesh_preview_bridge/scene_runtime.json");
+    char asset_path[1024];
+    physics_sim_test_temp_path(asset_path, sizeof(asset_path), "physics_sim_mesh_preview_bridge/assets/mesh_assets/asset_sphere_8x4.runtime.json");
     PhysicsSimRuntimeMeshPreviewSet set;
     CoreResult preview_result = core_result_ok();
     char diagnostics[256] = {0};
@@ -233,13 +238,18 @@ static void test_scan_scene_keeps_missing_preview_advisory(void) {
 }
 
 static void test_scan_scene_recovers_migrated_desktop_stls_path(void) {
-    const char *root_dir = "/private/tmp/physics_sim_mesh_preview_migrated";
-    const char *home_dir = "/private/tmp/physics_sim_mesh_preview_migrated/home";
-    const char *desktop_dir = "/private/tmp/physics_sim_mesh_preview_migrated/home/Desktop";
-    const char *stls_dir = "/private/tmp/physics_sim_mesh_preview_migrated/home/Desktop/stls";
-    const char *library_dir = "/private/tmp/physics_sim_mesh_preview_migrated/home/Desktop/stls/migrated_meshes";
-    const char *asset_path =
-        "/private/tmp/physics_sim_mesh_preview_migrated/home/Desktop/stls/migrated_meshes/asset_sphere_8x4.runtime.json";
+    char root_dir[1024];
+    physics_sim_test_temp_path(root_dir, sizeof(root_dir), "physics_sim_mesh_preview_migrated");
+    char home_dir[1024];
+    physics_sim_test_temp_path(home_dir, sizeof(home_dir), "physics_sim_mesh_preview_migrated/home");
+    char desktop_dir[1024];
+    physics_sim_test_temp_path(desktop_dir, sizeof(desktop_dir), "physics_sim_mesh_preview_migrated/home/Desktop");
+    char stls_dir[1024];
+    physics_sim_test_temp_path(stls_dir, sizeof(stls_dir), "physics_sim_mesh_preview_migrated/home/Desktop/stls");
+    char library_dir[1024];
+    physics_sim_test_temp_path(library_dir, sizeof(library_dir), "physics_sim_mesh_preview_migrated/home/Desktop/stls/migrated_meshes");
+    char asset_path[1024];
+    physics_sim_test_temp_path(asset_path, sizeof(asset_path), "physics_sim_mesh_preview_migrated/home/Desktop/stls/migrated_meshes/asset_sphere_8x4.runtime.json");
     const char *legacy_path =
         "/legacy-home/Desktop/migrated_meshes/asset_sphere_8x4.runtime.json";
     const char *source_asset_path =
@@ -333,13 +343,20 @@ static void test_scan_scene_recovers_migrated_desktop_stls_path(void) {
 }
 
 static void test_migrated_path_prefers_xdg_data_home(void) {
-    const char *root_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data";
-    const char *home_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/home";
-    const char *data_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/data";
-    const char *physics_sim_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/data/PhysicsSim";
-    const char *stls_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls";
-    const char *library_dir = "/private/tmp/physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls/library";
-    const char *asset_path = "/private/tmp/physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls/library/mesh.runtime.json";
+    char root_dir[1024];
+    physics_sim_test_temp_path(root_dir, sizeof(root_dir), "physics_sim_mesh_preview_xdg_data");
+    char home_dir[1024];
+    physics_sim_test_temp_path(home_dir, sizeof(home_dir), "physics_sim_mesh_preview_xdg_data/home");
+    char data_dir[1024];
+    physics_sim_test_temp_path(data_dir, sizeof(data_dir), "physics_sim_mesh_preview_xdg_data/data");
+    char physics_sim_dir[1024];
+    physics_sim_test_temp_path(physics_sim_dir, sizeof(physics_sim_dir), "physics_sim_mesh_preview_xdg_data/data/PhysicsSim");
+    char stls_dir[1024];
+    physics_sim_test_temp_path(stls_dir, sizeof(stls_dir), "physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls");
+    char library_dir[1024];
+    physics_sim_test_temp_path(library_dir, sizeof(library_dir), "physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls/library");
+    char asset_path[1024];
+    physics_sim_test_temp_path(asset_path, sizeof(asset_path), "physics_sim_mesh_preview_xdg_data/data/PhysicsSim/stls/library/mesh.runtime.json");
     const char *old_home = getenv("HOME");
     const char *old_xdg_data_home = getenv("XDG_DATA_HOME");
     char old_home_copy[PHYSICS_SIM_RUNTIME_MESH_PREVIEW_PATH_MAX] = {0};
@@ -363,14 +380,22 @@ static void test_migrated_path_prefers_xdg_data_home(void) {
 }
 
 static void test_migrated_path_uses_xdg_desktop_dir(void) {
-    const char *root_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop";
-    const char *home_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home";
-    const char *config_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/config";
-    const char *desktop_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home/Workspace";
-    const char *stls_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls";
-    const char *library_dir = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls/library";
-    const char *asset_path = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls/library/mesh.runtime.json";
-    const char *config_path = "/private/tmp/physics_sim_mesh_preview_xdg_desktop/config/user-dirs.dirs";
+    char root_dir[1024];
+    physics_sim_test_temp_path(root_dir, sizeof(root_dir), "physics_sim_mesh_preview_xdg_desktop");
+    char home_dir[1024];
+    physics_sim_test_temp_path(home_dir, sizeof(home_dir), "physics_sim_mesh_preview_xdg_desktop/home");
+    char config_dir[1024];
+    physics_sim_test_temp_path(config_dir, sizeof(config_dir), "physics_sim_mesh_preview_xdg_desktop/config");
+    char desktop_dir[1024];
+    physics_sim_test_temp_path(desktop_dir, sizeof(desktop_dir), "physics_sim_mesh_preview_xdg_desktop/home/Workspace");
+    char stls_dir[1024];
+    physics_sim_test_temp_path(stls_dir, sizeof(stls_dir), "physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls");
+    char library_dir[1024];
+    physics_sim_test_temp_path(library_dir, sizeof(library_dir), "physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls/library");
+    char asset_path[1024];
+    physics_sim_test_temp_path(asset_path, sizeof(asset_path), "physics_sim_mesh_preview_xdg_desktop/home/Workspace/stls/library/mesh.runtime.json");
+    char config_path[1024];
+    physics_sim_test_temp_path(config_path, sizeof(config_path), "physics_sim_mesh_preview_xdg_desktop/config/user-dirs.dirs");
     const char *old_home = getenv("HOME");
     const char *old_xdg_data_home = getenv("XDG_DATA_HOME");
     const char *old_xdg_config_home = getenv("XDG_CONFIG_HOME");

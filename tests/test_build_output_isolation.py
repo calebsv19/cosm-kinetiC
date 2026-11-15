@@ -14,7 +14,7 @@ class Isolation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             repo=Path(temporary)
             for name in ('scripts','make','src'): (repo/name).mkdir()
-            for name in ('tool_probe.py','atomic_output.py', 'build_owner.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
+            for name in ('output_layout.py','tool_probe.py','atomic_output.py', 'build_owner.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
                 shutil.copy2(ROOT/'scripts'/name,repo/'scripts'/name)
             for name in ('config.mk','sources-tools.mk','build-identity.mk'):
                 shutil.copy2(ROOT/'make'/name,repo/'make'/name)

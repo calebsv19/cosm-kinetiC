@@ -21,7 +21,7 @@ class FixtureSession(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.repo=Path(self.temp.name).resolve()
         for folder in ('scripts','tests/integration'):(self.repo/folder).mkdir(parents=True)
-        for name in ('fixture_session.py','fixture_root.py','clean_outputs.py','build_outputs.py','check_clean_root.py','build_owner.py','cfd_evidence.py'):
+        for name in ('output_layout.py','fixture_session.py','fixture_root.py','clean_outputs.py','build_outputs.py','check_clean_root.py','build_owner.py','cfd_evidence.py'):
             shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         shutil.copy2(ROOT/'tests/integration/fixture_support.sh',self.repo/'tests/integration/fixture_support.sh')
         self.script=self.repo/'tests/integration/run_controlled.sh'

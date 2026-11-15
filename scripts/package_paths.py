@@ -9,6 +9,8 @@ from pathlib import Path
 import re
 
 from clean_outputs import no_symlinks as checkout_no_symlinks
+from output_layout import attempt, package_root, no_symlinks as output_no_symlinks
+import os
 
 DATA_ROOT = Path.home() / 'CodeWorkData'
 CONTRACTS = 'production_registry/control/release_authorization_precommit_preparations/contracts/sha256'
@@ -21,7 +23,11 @@ def digest(value):
 
 def bound_root(path, repo):
     """Return the exact package-target root, refusing every broader namespace."""
-    data = DATA_ROOT
+    isolated = attempt(repo)
+    local_package = package_root(path, repo)
+    if local_package is not None:
+        return local_package
+    data = Path(os.environ.get('CODEWORKCTL_WORKSPACE_ROOT', str(DATA_ROOT))) if isolated else DATA_ROOT
     if not data.is_absolute() or data.is_symlink() or not path.is_relative_to(data):
         raise ValueError('Package path is outside the bound data root')
     parts = path.relative_to(data).parts
@@ -48,12 +54,17 @@ def bound_root(path, repo):
             binding = value['output_root_binding']
             if (value['schema_version'] != 'production-registry/release-authorization-precommit-preparation-contract/v1'
                     or value['program'] != 'physics_sim'
-                    or roots['source_workspace_root'] != str(repo.parent)
+                    or (not isolated and roots['source_workspace_root'] != str(repo.parent))
                     or roots['data_workspace_root'] != str(data)
                     or owner['repository_path'] != repo.name or repo.name != 'physics_sim'
                     or binding['selected_root'] != selected
                     or binding['candidate_scope_id'] != parts[3]):
                 continue
+            if isolated:
+                marker = json.loads((isolated/'.task-output-owner.json').read_text())
+                descriptor = json.loads(Path(marker['owner']).read_text())
+                if owner.get('producer_layout', {}).get('inputs_sha256') != descriptor['inputs_sha256']:
+                    continue
             targets = {'rapt_' + digest({'package_target': target})
                        for target in owner['package_targets']}
             if parts[5] in targets:
@@ -68,6 +79,10 @@ def no_symlinks(path, repo):
         raise ValueError('Package path contains traversal')
     if path.is_relative_to(repo):
         return checkout_no_symlinks(path, repo)
+    isolated = attempt(repo)
+    if isolated and any(path == isolated/name or path.is_relative_to(isolated/name)
+                        for name in ('build', 'runtime', 'tests', 'package')):
+        return output_no_symlinks(path, repo)
     bound_root(path, repo)
     current = path
     while True:
@@ -86,7 +101,8 @@ def reservation_output(repo, receipt, row):
         return local_reservation_output(repo, receipt, row)
     invalid = 'Invalid bound package output reservation'
     root = receipt.parent.parent
-    if bound_root(root, repo) != root or receipt.parent.name != '.package-reservations':
+    selected = bound_root(root, repo)
+    if (selected != root and not (package_root(root, repo) == selected and root.is_relative_to(selected))) or receipt.parent.name != '.package-reservations':
         raise ValueError(invalid + ' namespace')
     expected = {'schema', 'artifact_class', 'attempt_id', 'output', 'state',
                 'root', 'release_authority_granted'}

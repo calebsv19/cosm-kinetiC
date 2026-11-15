@@ -14,7 +14,8 @@ import stat
 import subprocess
 import tempfile
 
-from clean_outputs import ROOT_EXECUTABLES, no_symlinks
+from build_outputs import ROOT_EXECUTABLES
+from output_layout import no_symlinks, build_root
 from build_owner import inherited, inherited_descriptors
 from build_outputs import record, verified, dependency_input_snapshot, linker_dependency_records, link_input_snapshot
 from check_clean_root import build_witness
@@ -202,7 +203,7 @@ def run(command, repo, link_provenance=False):
     if output.is_relative_to(original) and original.resolve() == repo:
         output = repo/output.relative_to(original)
     no_symlinks(output, repo)
-    if not output.is_relative_to(repo/'build') and not (output.parent == repo and output.name in ROOT_EXECUTABLES):
+    if not output.is_relative_to(build_root(repo)) and not (output.parent == repo and output.name in ROOT_EXECUTABLES):
         raise ValueError('Undeclared compiler output: '+str(output))
     if output.exists() and not stat.S_ISREG(output.stat().st_mode):
         raise ValueError('Compiler output must be a regular file')
@@ -217,7 +218,7 @@ def run(command, repo, link_provenance=False):
         secondary_outputs=('-dependency_info','-map','-object_path_lto','-save-temps','--save-temps','-serialize-diagnostics','-ftime-trace','-fsave-optimization-record')
         if any(option in value for value in command for option in secondary_outputs):
             raise ValueError('Caller-selected secondary link outputs are unsupported')
-        if not output.is_relative_to(repo/'build'):
+        if not output.is_relative_to(build_root(repo)):
             raise ValueError('Link provenance sidecars require an isolated build output')
     link_manifest = output.with_name(output.name+'.link-inputs.json')
     destinations = ([output.with_suffix('.d')] if dependency else []) + ([link_manifest] if link_provenance else []) + [output]

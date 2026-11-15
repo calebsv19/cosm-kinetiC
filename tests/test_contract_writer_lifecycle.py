@@ -50,7 +50,7 @@ class ContractWriters(unittest.TestCase):
     def test_actual_recipe_bodies_register_outputs_and_hold_unknown_or_failed_rebuild(self):
         with tempfile.TemporaryDirectory() as temporary:
             repo=Path(temporary).resolve();(repo/'scripts').mkdir()
-            for name in ('atomic_output.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
+            for name in ('output_layout.py','atomic_output.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
                 shutil.copy2(ROOT/'scripts'/name,repo/'scripts'/name)
             bodies=[];active=False
             for line in (ROOT/'make/rules-tools.mk').read_text().splitlines():

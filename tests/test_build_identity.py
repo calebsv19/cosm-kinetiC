@@ -16,7 +16,7 @@ class BuildIdentity(unittest.TestCase):
             repo = Path(temporary)
             (repo/'src').mkdir(); (repo/'scripts').mkdir(); (repo/'make').mkdir()
             (repo/'src/probe.c').write_text('int value(void){return VALUE;}\n')
-            for name in ('tool_probe.py','build_identity.py', 'build_outputs.py', 'clean_outputs.py', 'check_clean_root.py', 'atomic_output.py', 'build_owner.py'):
+            for name in ('output_layout.py','tool_probe.py','build_identity.py', 'build_outputs.py', 'clean_outputs.py', 'check_clean_root.py', 'atomic_output.py', 'build_owner.py'):
                 shutil.copy2(ROOT/'scripts'/name, repo/'scripts'/name)
             shutil.copy2(ROOT/'make/build-identity.mk', repo/'make/build-identity.mk')
             lines=(ROOT/'make/rules-build.mk').read_text().splitlines()

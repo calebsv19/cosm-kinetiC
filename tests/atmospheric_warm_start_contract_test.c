@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "app/atmospheric/atmospheric_warm_start.h"
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
@@ -187,7 +188,8 @@ static bool test_exported_vf3d_and_pack_load_as_3d_warm_starts(void) {
     AtmosphericWarmStartVolume3D raw = {0};
     AtmosphericWarmStartVolume3D pack = {0};
     AtmosphericWarmStartStats3D raw_stats = {0};
-    char temp_dir[] = "/tmp/physics_sim_atmo_warm_start_XXXXXX";
+    char temp_dir[1024];
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), "physics_sim_atmo_warm_start_XXXXXX");
     char output_root[PATH_MAX];
     char raw_path[PATH_MAX];
     char pack_path[PATH_MAX];

@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
 #include "core_io.h"
@@ -164,7 +165,8 @@ static bool test_tiny_vf3d_fixture_parity_matches_backend_truth(void) {
     SimRuntimeBackend *backend = NULL;
     SimRuntimeBackend3DScaffoldTestView impl = {0};
     char original_cwd[PATH_MAX];
-    char temp_dir[] = "/tmp/physics_sim_vf3d_tiny_parity_XXXXXX";
+    char temp_dir[1024];
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), "physics_sim_vf3d_tiny_parity_XXXXXX");
     char raw_path[PATH_MAX];
     char pack_path[PATH_MAX];
     char manifest_path[PATH_MAX];

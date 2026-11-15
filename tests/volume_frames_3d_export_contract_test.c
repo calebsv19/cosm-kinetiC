@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
 #include "core_io.h"
@@ -64,7 +65,8 @@ static bool test_volume_frames_write_routes_authoritative_3d_runs_to_vf3d(void) 
     SimRuntimeBackend *backend = NULL;
     SimRuntimeBackend3DScaffoldTestView impl = {0};
     char original_cwd[PATH_MAX];
-    char temp_dir[] = "/tmp/physics_sim_vf3d_export_contract_XXXXXX";
+    char temp_dir[1024];
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), "physics_sim_vf3d_export_contract_XXXXXX");
     char output_root[PATH_MAX];
     char raw_path[PATH_MAX];
     char pack_path[PATH_MAX];

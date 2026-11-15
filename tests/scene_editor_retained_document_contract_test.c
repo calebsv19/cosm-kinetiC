@@ -64,7 +64,9 @@ static bool test_save_path_reuses_existing_runtime_scene_id_file(void) {
     char existing_path[320];
     char resolved_path[320];
     int pid = (int)getpid();
-    snprintf(temp_dir, sizeof(temp_dir), "/tmp/physics_sim_retained_doc_%d", pid);
+    char leaf[128];
+    snprintf(leaf, sizeof(leaf), "physics_sim_retained_doc_%d", pid);
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), leaf);
     (void)physics_sim_test_make_dir(temp_dir, 0755);
     snprintf(existing_path, sizeof(existing_path), "%s/%s", temp_dir, "older_scene_name.json");
     if (!physics_sim_test_write_text_file(existing_path, "{\n  \"scene_id\": \"scene_ps4d_visual_test\"\n}\n")) {
@@ -97,7 +99,9 @@ static bool test_duplicate_scene_file_creates_scene_directory_copy_with_new_scen
     char duplicate_authoring_text[512];
     char diagnostics[256];
     int pid = (int)getpid();
-    snprintf(temp_dir, sizeof(temp_dir), "/tmp/physics_sim_retained_doc_dup_%d", pid);
+    char leaf[128];
+    snprintf(leaf, sizeof(leaf), "physics_sim_retained_doc_dup_%d", pid);
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), leaf);
     (void)physics_sim_test_make_dir(temp_dir, 0755);
     snprintf(source_dir, sizeof(source_dir), "%s/%s", temp_dir, "scene_ps4d_visual_test");
     snprintf(source_runtime_path, sizeof(source_runtime_path), "%s/%s", source_dir, "scene_runtime.json");

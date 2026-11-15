@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "app/app_config.h"
 #include "config/config_loader.h"
 
@@ -8,7 +9,8 @@
 #include <string.h>
 
 static bool test_grid_depth_roundtrip_and_fallback(void) {
-    char path[] = "/private/tmp/physics-config-contract-XXXXXX";
+    char path[1024];
+    physics_sim_test_temp_path(path, sizeof(path), "physics-config-contract-XXXXXX");
     int descriptor = mkstemp(path);
     if (descriptor < 0) return false;
     if (close(descriptor) != 0) return false;

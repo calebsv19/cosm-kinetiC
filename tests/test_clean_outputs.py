@@ -191,7 +191,7 @@ class CleanOutputs(unittest.TestCase):
         for sub in ('make', 'scripts'): (self.repo/sub).mkdir()
         for name in ('config.mk', 'rules-runtime.mk', 'sources-tools.mk'):
             shutil.copy2(ROOT/'make'/name, self.repo/'make'/name)
-        for name in ('check_clean_root.py', 'clean_outputs.py', 'build_outputs.py'):
+        for name in ('output_layout.py','check_clean_root.py', 'clean_outputs.py', 'build_outputs.py'):
             shutil.copy2(ROOT/'scripts'/name, self.repo/'scripts'/name)
         for name in ('VERSION', 'WORKER_VERSION'): (self.repo/name).write_text('test\n')
         shutil.copy2(ROOT/'makefile', self.repo/'makefile')
@@ -204,7 +204,7 @@ class CleanOutputs(unittest.TestCase):
     def test_actual_make_override_refuses_and_plan_is_nonmutating(self):
         for sub in ('make', 'scripts'): (self.repo/sub).mkdir()
         for name in ('config.mk', 'rules-runtime.mk'): shutil.copy2(ROOT/'make'/name, self.repo/'make'/name)
-        for name in ('check_clean_root.py', 'clean_outputs.py', 'build_outputs.py'): shutil.copy2(ROOT/'scripts'/name, self.repo/'scripts'/name)
+        for name in ('output_layout.py','check_clean_root.py', 'clean_outputs.py', 'build_outputs.py'): shutil.copy2(ROOT/'scripts'/name, self.repo/'scripts'/name)
         for name in ('VERSION', 'WORKER_VERSION'): (self.repo/name).write_text('test\n')
         (self.repo/'Makefile').write_text('include make/config.mk\ninclude make/rules-runtime.mk\n')
         for arguments in (['clean-plan'], ['TARGET=data/experiments', 'clean']):

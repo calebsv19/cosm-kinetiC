@@ -169,7 +169,7 @@ class Proof(unittest.TestCase):
 
     def test_actual_macos_self_test_recipe_retains_support_on_two_runs(self):
         scripts=self.repo/'scripts';scripts.mkdir()
-        for name in ('package_proof.py','package_transaction.py','package_outputs.py','package_paths.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','desktop_replace.py','contract_proof.py','cfd_evidence.py'):
+        for name in ('output_layout.py','package_proof.py','package_transaction.py','package_outputs.py','package_paths.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','desktop_replace.py','contract_proof.py','cfd_evidence.py'):
             shutil.copy2(ROOT/'scripts'/name,scripts/name)
         (scripts/'agent_session').mkdir()
         shutil.copy2(ROOT/'scripts/agent_session/owned_command.py',scripts/'agent_session/owned_command.py')

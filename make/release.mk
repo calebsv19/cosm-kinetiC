@@ -25,10 +25,10 @@ release-build: all
 	@echo "Release build complete: $(TARGET)"
 
 RELEASE_PLIST_BUDDY ?= /usr/libexec/PlistBuddy
-RELEASE_OTOOL ?= otool
+RELEASE_OTOOL ?= /usr/bin/otool
 .PHONY: release-bundle-audit _release-bundle-audit
 release-bundle-audit: package-desktop-self-test
-	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name release-bundle-audit --input "$(PACKAGE_APP_DIR)" --input "$(RELEASE_PLIST_BUDDY)" --input "$$(command -v "$(RELEASE_OTOOL)")" --identity "bundle-id=$(RELEASE_BUNDLE_ID)" --map "RELEASE_AUDIT_DIR=." -- $(MAKE) -f makefile _release-bundle-audit
+	+@python3 -B scripts/package_proof.py --root "$(RELEASE_DIR)" --name release-bundle-audit --input "$(PACKAGE_APP_DIR)" --input "$(RELEASE_PLIST_BUDDY)" --input "$$(command -v "$(RELEASE_OTOOL)")" --identity "bundle-id=$(RELEASE_BUNDLE_ID)" --map "RELEASE_AUDIT_DIR=." -- $(MAKE) -f makefile PHYSICS_SIM_DIST_ROOT="$(DIST_DIR)" _release-bundle-audit
 
 _release-bundle-audit:
 	@python3 -B scripts/package_outputs.py --root "$(RELEASE_AUDIT_DIR)" --directory "$(RELEASE_AUDIT_DIR)/framework-reports" --file "$(RELEASE_AUDIT_DIR)/bundle_id.txt" --file "$(RELEASE_AUDIT_DIR)/print_config.txt" --file "$(RELEASE_AUDIT_DIR)/otool_physics_sim_bin.txt" --declare
@@ -57,7 +57,7 @@ release-local-artifact: release-bundle-audit
 		--file "RELEASE_APP_ZIP=$(RELEASE_APP_ZIP)" --file "RELEASE_APP_SHA256=$(RELEASE_APP_SHA256)" --file "RELEASE_MANIFEST=$(RELEASE_MANIFEST)" \
 		--input "$(PACKAGE_APP_DIR)" --input makefile --input make --input scripts \
 		--identity "product=$(RELEASE_PRODUCT_NAME)" --identity "program=$(RELEASE_PROGRAM_KEY)" --identity "version=$(RELEASE_VERSION)" --identity "platform=$(RELEASE_PLATFORM)" --identity "arch=$(RELEASE_ARCH)" --identity "channel=$(RELEASE_CHANNEL)" --identity unsigned-local-artifact \
-		--tool "$(RELEASE_DITTO)" --tool "$(RELEASE_SHASUM)" --tool "$(SHELL)" -- $(MAKE) -f makefile _release-local-artifact
+		--tool "$(RELEASE_DITTO)" --tool "$(RELEASE_SHASUM)" --tool "$(SHELL)" -- $(MAKE) -f makefile PHYSICS_SIM_DIST_ROOT="$(DIST_DIR)" _release-local-artifact
 
 _release-local-artifact:
 	@python3 -B scripts/package_outputs.py --root "$(RELEASE_DIR)" --file "$(RELEASE_APP_ZIP)" --file "$(RELEASE_APP_SHA256)" --file "$(RELEASE_MANIFEST)" --declare

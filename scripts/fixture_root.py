@@ -8,7 +8,7 @@ import re
 import tempfile
 import uuid
 
-from clean_outputs import no_symlinks
+from output_layout import no_symlinks, test_root
 from fixture_session import context, save
 from cfd_evidence import sha
 
@@ -16,7 +16,7 @@ from cfd_evidence import sha
 def allocate(repo, parent, name, retained=False):
     repo=repo.resolve();parent=Path(os.path.abspath(parent))
     no_symlinks(parent,repo)
-    allowed=(repo/'visual_artifacts',repo/'data/experiments') if retained else (repo/'tmp',)
+    allowed=(repo/'visual_artifacts',repo/'data/experiments') if retained else (test_root(repo),)
     if not any(parent==root or parent.is_relative_to(root) for root in allowed):
         raise ValueError('Fixture parent must be in '+', '.join(str(p) for p in allowed))
     if not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,63}',name):

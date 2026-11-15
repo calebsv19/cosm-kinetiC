@@ -102,7 +102,7 @@ class Replacement(unittest.TestCase):
 
     def test_actual_refresh_recipe_uses_preservation_helper(self):
         scripts=self.repo/'scripts';scripts.mkdir()
-        for name in ('desktop_replace.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
+        for name in ('output_layout.py','desktop_replace.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
             shutil.copy2(ROOT/'scripts'/name,scripts/name)
         source=(ROOT/'make/package-macos.mk').read_text()
         target='package-desktop-refresh'

@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import tempfile
 
-from clean_outputs import no_symlinks
+from output_layout import no_symlinks, build_root, runtime_root, test_root, make_target
 from build_outputs import record, verified, fingerprint, checked_path, receipt_path, dependency_syntax, dependency_input_snapshot, link_input_snapshot, LinkInputsChanged, validate_link_selection
 from check_clean_root import read_json, build_witness
 from tool_probe import probe
@@ -163,7 +163,7 @@ def admit_dependencies(repo,root,paths):
                     or not isinstance(saved.get('sha256'),str) or not re.fullmatch('[0-9a-f]{64}',saved['sha256'])):
                 raise ValueError('Invalid generated dependency input snapshot')
             if saved!=current or object_owner.get('dependency_sha256')!=before['sha256']:
-                name=str(object_path.relative_to(repo))
+                name=make_target(object_path, repo)
                 if re.search(r'[\s$;|%=:*?\\#]',name):raise ValueError('Unsupported dependency rebuild target')
                 rebuild.append(name)
         if verified(repo,path)!=before:raise ValueError('Generated dependency changed during admission')
@@ -229,7 +229,7 @@ def admit_links(repo, root, outputs):
         if build_witness(path.lstat())!=before: raise ValueError('Link ownership receipt changed during admission')
     names=[]
     for output in rebuilt:
-        name=str(output.relative_to(repo))
+        name=make_target(output, repo)
         if re.search(r'[\s$;|%=:*?\\#]',name): raise ValueError('Unsupported linker rebuild target')
         names.append(name)
     return sorted(set(names))
@@ -253,7 +253,7 @@ def main():
         repo = Path.cwd().resolve()
         root = Path(os.path.abspath(args.selection_root))
         no_symlinks(root, repo)
-        if not root.is_relative_to(repo/'build'):
+        if not root.is_relative_to(build_root(repo)):
             raise ValueError('Compilation output must be inside checkout/build')
         for key in ('TARGET', 'CLANG_TARGET', 'FISICS_TARGET', 'SESSION_WORKER_BIN',
                     'PHYSICS_SIM_HEADLESS_TOOL_BIN', 'PHYSICS_SIM_JOB_RUNNER_TOOL_BIN',
@@ -281,7 +281,7 @@ def main():
               'tools': tools, 'makefiles': {str(p): digest(p) for p in args.makefile},
               'control_tools': {str(p): digest(p) for p in (
                   Path('scripts/build_identity.py'), Path('scripts/build_owner.py'), Path('scripts/atomic_output.py'), Path('scripts/tool_probe.py'),
-                  Path('scripts/clean_outputs.py'), Path('scripts/check_clean_root.py'), Path('scripts/build_outputs.py')) if p.is_file()}}
+                  Path('scripts/clean_outputs.py'), Path('scripts/check_clean_root.py'), Path('scripts/build_outputs.py'), Path('scripts/output_layout.py')) if p.is_file()}}
     if os.uname().sysname == 'Darwin':
         selected = shutil.which('xcrun')
         if selected is None:

@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "app/preset_io.h"
 #include "app/atmospheric/atmospheric_field.h"
 #include "app/scene_presets.h"
@@ -41,7 +42,8 @@ static bool test_legacy_omitted_z_fallback(void) {
         "legacy/import.asset.json\n"
         "0.300000 0.400000 1.200000 15.000000 1 1.000000 0.200000 1 0 0 0\n";
 
-    char path_template[] = "/tmp/physics_sim_preset_v11_XXXXXX";
+    char path_template[1024];
+    physics_sim_test_temp_path(path_template, sizeof(path_template), "physics_sim_preset_v11_XXXXXX");
     int fd = mkstemp(path_template);
     if (fd < 0) {
         fprintf(stderr, "mkstemp failed for legacy test\n");
@@ -87,7 +89,8 @@ done:
 }
 
 static bool test_v15_additive_roundtrip(void) {
-    char path_template[] = "/tmp/physics_sim_preset_v15_XXXXXX";
+    char path_template[1024];
+    physics_sim_test_temp_path(path_template, sizeof(path_template), "physics_sim_preset_v15_XXXXXX");
     int fd = mkstemp(path_template);
     if (fd < 0) {
         fprintf(stderr, "mkstemp failed for roundtrip test\n");
@@ -267,7 +270,8 @@ done:
 }
 
 static bool test_v13_atmospheric_roundtrip(void) {
-    char path_template[] = "/tmp/physics_sim_preset_v13_atmos_XXXXXX";
+    char path_template[1024];
+    physics_sim_test_temp_path(path_template, sizeof(path_template), "physics_sim_preset_v13_atmos_XXXXXX");
     int fd = mkstemp(path_template);
     if (fd < 0) {
         fprintf(stderr, "mkstemp failed for atmospheric roundtrip test\n");
@@ -349,7 +353,8 @@ static bool test_v13_optional_layer_defaults_off(void) {
         "ATMOS 1 7777 0.100000 6.000000 0.500000 2.000000 0.000000 1.000000 1.500000 3.000000 9.000000 0.200000 0.800000 0.100000 0\n"
         "0\n";
 
-    char path_template[] = "/tmp/physics_sim_preset_v13_atmos_layer_XXXXXX";
+    char path_template[1024];
+    physics_sim_test_temp_path(path_template, sizeof(path_template), "physics_sim_preset_v13_atmos_layer_XXXXXX");
     int fd = mkstemp(path_template);
     if (fd < 0) {
         fprintf(stderr, "mkstemp failed for v13 optional layer fallback test\n");
@@ -384,7 +389,8 @@ done:
 }
 
 static bool test_v14_optional_layer_roundtrip(void) {
-    char path_template[] = "/tmp/physics_sim_preset_v14_atmos_layer_XXXXXX";
+    char path_template[1024];
+    physics_sim_test_temp_path(path_template, sizeof(path_template), "physics_sim_preset_v14_atmos_layer_XXXXXX");
     int fd = mkstemp(path_template);
     if (fd < 0) {
         fprintf(stderr, "mkstemp failed for v14 optional layer roundtrip test\n");
@@ -446,7 +452,8 @@ done:
 }
 
 static bool test_invalid_save_preserves_predecessor(void) {
-    char path[] = "/tmp/physics-preset-admission-XXXXXX";
+    char path[1024];
+    physics_sim_test_temp_path(path, sizeof(path), "physics-preset-admission-XXXXXX");
     int fd = mkstemp(path);
     if (fd < 0) return false;
     if (write(fd, "original", 8) != 8 || close(fd) != 0) return false;

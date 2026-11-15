@@ -58,7 +58,7 @@ class Audit(unittest.TestCase):
 
     def test_actual_refresh_recipe_never_reaches_replacement_with_running_receipt(self):
         scripts=self.repo/'scripts';scripts.mkdir()
-        for name in ('check_desktop_process_audit.py','check_clean_root.py','build_outputs.py','clean_outputs.py'):
+        for name in ('output_layout.py','check_desktop_process_audit.py','check_clean_root.py','build_outputs.py','clean_outputs.py'):
             shutil.copy2(ROOT/'scripts'/name,scripts/name)
         marker=self.repo/'replacement-reached'
         (scripts/'desktop_replace.py').write_text("from pathlib import Path\nPath("+repr(str(marker))+").touch()\n")

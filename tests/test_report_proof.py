@@ -14,7 +14,7 @@ class ReportProof(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.repo=Path(self.tmp.name).resolve()
         for name in ('scripts','tests','build/profile/open-atmosphere'):(self.repo/name).mkdir(parents=True)
-        for name in ('report_proof.py','build_owner.py','cfd_evidence.py','tool_probe.py','clean_outputs.py','check_clean_root.py','build_outputs.py'):
+        for name in ('output_layout.py','report_proof.py','build_owner.py','cfd_evidence.py','tool_probe.py','clean_outputs.py','check_clean_root.py','build_outputs.py'):
             shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         self.worker=self.repo/'build/profile/open-atmosphere/worker';self.worker.write_bytes(b'worker')
         self.script=self.repo/'tests/report.py';self.script.write_text('import json,sys\nfrom pathlib import Path\nPath(sys.argv[-1]).write_text(json.dumps({"schema":"physics_sim_open_convergence/v1","tests_passed":3,"metrics":{"finite":1}}))\nprint("done")\n')

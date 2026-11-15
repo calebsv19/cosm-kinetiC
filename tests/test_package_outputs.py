@@ -65,7 +65,7 @@ class PackageOutputs(unittest.TestCase):
 
     def test_unique_comparison_directories_do_not_touch_candidate(self):
         (self.repo/'scripts').mkdir()
-        for name in ('package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
+        for name in ('output_layout.py','package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         self.root.mkdir(parents=True);candidate=self.root/'accepted.tar.gz';candidate.write_bytes(b'accepted')
         allocated=[]
         for _ in range(2):
@@ -76,7 +76,7 @@ class PackageOutputs(unittest.TestCase):
 
     def test_actual_linux_clean_recipes_preserve_package_and_archive(self):
         (self.repo/'scripts').mkdir();(self.repo/'make').mkdir()
-        for name in ('package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
+        for name in ('output_layout.py','package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         for name in ('package-linux-worker.mk','package-linux-desktop.mk'):shutil.copy2(ROOT/'make'/name,self.repo/'make'/name)
         (self.repo/'Makefile').write_text('RELEASE_DIR=build/release\nRELEASE_PROGRAM_KEY=physics_sim\nRELEASE_PRODUCT_NAME=kinetiC\nRELEASE_VERSION=test\nWORKER_VERSION=test\nRELEASE_CHANNEL=stable\ninclude make/package-linux-worker.mk\ninclude make/package-linux-desktop.mk\n')
         stage=self.repo/'build/release';stage.mkdir(parents=True)
@@ -87,7 +87,7 @@ class PackageOutputs(unittest.TestCase):
 
     def test_actual_release_clean_recipe_preserves_predecessor_and_bad_override(self):
         (self.repo/'scripts').mkdir();(self.repo/'make').mkdir()
-        for name in ('package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
+        for name in ('output_layout.py','package_outputs.py','package_paths.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         shutil.copy2(ROOT/'make/release.mk',self.repo/'make/release.mk')
         (self.repo/'Makefile').write_text('RELEASE_DIR=build/release\ninclude make/release.mk\n')
         stage=self.repo/'build/release';stage.mkdir(parents=True);p=stage/'accepted.zip';p.write_bytes(b'preserved')

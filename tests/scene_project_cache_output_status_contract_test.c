@@ -105,7 +105,8 @@ static bool create_active_cache_artifact_dirs(const char *root) {
 }
 
 static bool test_project_without_cache_reports_command(void) {
-    const char *root = "tmp/scene_project_cache_status_no_cache";
+    char root[512];
+    physics_sim_test_temp_path(root, sizeof(root), "scene_project_cache_status_no_cache");
     SceneProjectCacheOutputStatus status = {0};
     char error[160];
     char command[SCENE_PROJECT_CACHE_OUTPUT_COMMAND_MAX];
@@ -134,14 +135,17 @@ static bool test_project_without_cache_reports_command(void) {
     if (strcmp(status.summary, "Active Run: none yet") != 0) return false;
     if (strcmp(status.cache_target_summary, "Cache Target: no active cache yet") != 0) return false;
     if (status.active_cache_ready) return false;
-    return strstr(command, "--scene-project \"tmp/scene_project_cache_status_no_cache\"") != NULL &&
+    char expected[600];
+    snprintf(expected, sizeof(expected), "--scene-project \"%s\"", root);
+    return strstr(command, expected) != NULL &&
            strstr(command, "--frames 12") != NULL &&
            strstr(command, "--grid 32x16x8") != NULL &&
            strstr(command, "--save-volume-frames --overwrite") != NULL;
 }
 
 static bool test_project_active_cache_manifest_reports_run(void) {
-    const char *root = "tmp/scene_project_cache_status_active";
+    char root[512];
+    physics_sim_test_temp_path(root, sizeof(root), "scene_project_cache_status_active");
     SceneProjectCacheOutputStatus status = {0};
     char error[160];
     char runtime_path[512];
@@ -203,7 +207,9 @@ static bool test_project_active_cache_manifest_reports_run(void) {
 }
 
 int main(void) {
-    if (!ensure_dir_existing_ok("tmp")) {
+    char scratch[512];
+    physics_sim_test_temp_path(scratch, sizeof(scratch), ".");
+    if (!ensure_dir_existing_ok(scratch)) {
         fprintf(stderr, "scene_project_cache_output_status_contract_test: tmp setup failed\n");
         return 1;
     }

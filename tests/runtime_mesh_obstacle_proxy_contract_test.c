@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "app/sim_runtime_mesh_obstacle_proxy.h"
 
 #include "app/scene_state.h"
@@ -299,10 +300,9 @@ static bool test_closed_runtime_mesh_voxelizes_from_actual_asset(void) {
     PhysicsSimRuntimeMeshPreviewInstance instance;
     PhysicsSimRuntimeMeshObstacleReport report;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_mesh_obstacle_proxy_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_mesh_obstacle_proxy_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     CHECK_TRUE(mkdir(temp_dir, 0700) == 0);
     snprintf(mesh_path, sizeof(mesh_path), "%s/cube.runtime.json", temp_dir);
     CHECK_TRUE(write_cube_runtime_mesh(mesh_path));
@@ -351,10 +351,9 @@ static bool test_preview_bounds_do_not_drive_solver_truth(void) {
     PhysicsSimRuntimeMeshObstacleReport report;
     bool ok = false;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_mesh_obstacle_preview_truth_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_mesh_obstacle_preview_truth_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     CHECK_TRUE(mkdir(temp_dir, 0700) == 0);
     snprintf(mesh_path, sizeof(mesh_path), "%s/cube.runtime.json", temp_dir);
     CHECK_TRUE(write_cube_runtime_mesh(mesh_path));
@@ -406,10 +405,9 @@ static bool test_out_of_domain_runtime_mesh_does_not_clamp_to_boundary(void) {
     bool any_marked = false;
     bool ok = false;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_mesh_obstacle_outside_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_mesh_obstacle_outside_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     CHECK_TRUE(mkdir(temp_dir, 0700) == 0);
     snprintf(mesh_path, sizeof(mesh_path), "%s/cube.runtime.json", temp_dir);
     CHECK_TRUE(write_cube_runtime_mesh(mesh_path));
@@ -464,10 +462,9 @@ static bool test_high_triangle_runtime_mesh_uses_acceleration_and_solver_truth(v
     PhysicsSimRuntimeMeshObstacleReport report;
     bool ok = false;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_mesh_obstacle_high_quality_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_mesh_obstacle_high_quality_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     CHECK_TRUE(mkdir(temp_dir, 0700) == 0);
     snprintf(mesh_path, sizeof(mesh_path), "%s/sphere.runtime.json", temp_dir);
     CHECK_TRUE(write_sphere_runtime_mesh(mesh_path, 18u, 32u));
@@ -545,10 +542,9 @@ static bool test_runtime_mesh_prepared_cache_reuses_loaded_mesh(void) {
     bool second_ok = false;
     bool third_ok = false;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_mesh_obstacle_cache_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_mesh_obstacle_cache_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     CHECK_TRUE(mkdir(temp_dir, 0700) == 0);
     snprintf(mesh_path, sizeof(mesh_path), "%s/cube.runtime.json", temp_dir);
     CHECK_TRUE(write_cube_runtime_mesh(mesh_path));
@@ -678,10 +674,9 @@ static bool test_runtime_mesh_budget_fallback_reports_reason(void) {
     PhysicsSimRuntimeMeshObstacleReport report;
     bool ok = false;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_mesh_obstacle_budget_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_mesh_obstacle_budget_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     CHECK_TRUE(mkdir(temp_dir, 0700) == 0);
     snprintf(mesh_path, sizeof(mesh_path), "%s/cube.runtime.json", temp_dir);
     CHECK_TRUE(write_cube_runtime_mesh(mesh_path));
@@ -728,10 +723,9 @@ static bool test_backend_adapter_marks_scene_mesh_instance_obstacles(void) {
     uint8_t obstacle_mask[512] = {0};
     PhysicsSimRuntimeMeshPreviewInstance *instance = NULL;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_mesh_obstacle_adapter_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_mesh_obstacle_adapter_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     CHECK_TRUE(mkdir(temp_dir, 0700) == 0);
     snprintf(mesh_path, sizeof(mesh_path), "%s/cube.runtime.json", temp_dir);
     CHECK_TRUE(write_cube_runtime_mesh(mesh_path));
@@ -772,10 +766,9 @@ static bool test_backend_adapter_skips_mesh_instances_attached_as_emitters(void)
     uint8_t obstacle_mask[512] = {0};
     PhysicsSimRuntimeMeshPreviewInstance *instance = NULL;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_mesh_emitter_skip_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_mesh_emitter_skip_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     CHECK_TRUE(mkdir(temp_dir, 0700) == 0);
     snprintf(mesh_path, sizeof(mesh_path), "%s/cube.runtime.json", temp_dir);
     CHECK_TRUE(write_cube_runtime_mesh(mesh_path));

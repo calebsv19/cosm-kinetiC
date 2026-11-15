@@ -16,20 +16,20 @@ import subprocess
 import re
 import json
 
-from clean_outputs import no_symlinks
+from output_layout import no_symlinks, build_root, runtime_root, test_root, make_target
 
 
 def lock_path(repo, root):
-    return repo/'tmp/locks'/('build-'+hashlib.sha256(str(root).encode()).hexdigest()+'.lock')
+    return runtime_root(repo)/'locks'/('build-'+hashlib.sha256(str(root).encode()).hexdigest()+'.lock')
 
 
 def ownership_paths(repo, root):
     """Ancestors are shared intentions; the selected subtree is exclusive."""
-    base = repo/'build'
+    base = build_root(repo)
     if not root.is_relative_to(base):
         raise ValueError('Build ownership requires checkout/build')
     ancestors = list(reversed(root.relative_to(base).parents))
-    return [repo/'tmp/locks/clean.lock'] + [lock_path(repo, base/path) for path in ancestors] + [lock_path(repo, root)]
+    return [runtime_root(repo)/'locks/clean.lock'] + [lock_path(repo, base/path) for path in ancestors] + [lock_path(repo, root)]
 
 
 def inherited_descriptors(repo, root):
@@ -75,9 +75,9 @@ def acquire(repo, root):
     """Acquire the same cooperative hierarchy for build and execution owners."""
     repo=repo.resolve();root=Path(os.path.abspath(root))
     no_symlinks(root,repo)
-    if not root.is_relative_to(repo/'build'):
+    if not root.is_relative_to(build_root(repo)):
         raise ValueError('Build ownership requires checkout/build')
-    locks=repo/'tmp/locks';no_symlinks(locks,repo);locks.mkdir(parents=True,exist_ok=True)
+    locks=runtime_root(repo)/'locks';no_symlinks(locks,repo);locks.mkdir(parents=True,exist_ok=True)
     descriptors=[]
     try:
         paths=ownership_paths(repo,root)
@@ -111,7 +111,7 @@ def worker_execution(repo, worker):
             try:yield worker
             finally:_EXECUTION_FDS.reset(token)
         return
-    if not worker.is_relative_to(repo/'build'):
+    if not worker.is_relative_to(build_root(repo)):
         raise ValueError('Worker execution requires checkout/build; external workers need their owning lifecycle')
     root=worker.parent
     owner=os.environ.get('PHYSICS_SIM_BUILD_OWNER_ROOT')

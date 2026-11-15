@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "app/scene_state.h"
 #include "app/sim_runtime_backend.h"
 #include "app/sim_runtime_mesh_diagnostics.h"
@@ -116,10 +117,9 @@ static bool test_runtime_mesh_boundary_flow_emitter_uses_runtime_mesh_footprint(
     };
     bool ok = false;
 
-    snprintf(temp_dir,
-             sizeof(temp_dir),
-             "/private/tmp/physics_sim_runtime_mesh_emitter_%ld",
-             (long)getpid());
+    char temp_leaf[128];
+    snprintf(temp_leaf, sizeof(temp_leaf), "physics_sim_runtime_mesh_emitter_%ld", (long)getpid());
+    physics_sim_test_temp_path(temp_dir, sizeof(temp_dir), temp_leaf);
     if (mkdir(temp_dir, 0700) != 0) return false;
     snprintf(mesh_path, sizeof(mesh_path), "%s/cube.runtime.json", temp_dir);
     if (!write_cube_runtime_mesh(mesh_path)) {

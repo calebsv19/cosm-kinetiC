@@ -16,6 +16,7 @@ import uuid
 from cfd_evidence import admitted_path, sha
 from check_clean_root import read_json
 from build_owner import inherited_descriptors
+from output_layout import runtime_root, test_root, build_root
 
 
 def save(path,row):
@@ -26,7 +27,7 @@ def save(path,row):
 def context(repo,script=None):
     try:
         directory=admitted_path(Path(os.environ['PHYSICS_SIM_FIXTURE_SESSION_DIR']))
-        if directory.parent!=repo/'tmp/fixture-sessions' or len(directory.name)!=32:return None
+        if directory.parent!=runtime_root(repo)/'fixture-sessions' or len(directory.name)!=32:return None
         fd=int(os.environ['PHYSICS_SIM_FIXTURE_SESSION_FD'])
         identity=os.fstat(fd);lock=directory/'owner.lock';selected=lock.stat()
         if (identity.st_dev,identity.st_ino)!=(selected.st_dev,selected.st_ino):return None
@@ -96,7 +97,7 @@ def supervise(repo,script,arguments,wall_cap=3600):
         raise ValueError('Fixture supervisor requires a repository integration script')
     if not 1<=wall_cap<=86400:raise ValueError('Invalid fixture wall cap')
     script_sha=sha(script)
-    root=admitted_path(repo/'tmp/fixture-sessions');root.mkdir(parents=True,exist_ok=True)
+    root=admitted_path(runtime_root(repo)/'fixture-sessions');root.mkdir(parents=True,exist_ok=True)
     directory=root/uuid.uuid4().hex;directory.mkdir()
     fd=os.open(directory/'owner.lock',os.O_CREAT|os.O_EXCL|os.O_RDWR|os.O_NOFOLLOW,0o600)
     # Keep the inherited lifetime descriptor away from shell substitution pipes.
@@ -108,7 +109,7 @@ def supervise(repo,script,arguments,wall_cap=3600):
         'created_at':datetime.datetime.now(datetime.timezone.utc).isoformat()}
     save(directory/'request.json',row)
     env=dict(os.environ,PHYSICS_SIM_FIXTURE_SESSION_DIR=str(directory),PHYSICS_SIM_FIXTURE_SESSION_FD=str(fd))
-    build=Path(os.environ.get('PHYSICS_SIM_BUILD_OWNER_ROOT',repo/'build'))
+    build=Path(os.environ.get('PHYSICS_SIM_BUILD_OWNER_ROOT',build_root(repo)))
     descriptors=[fd,*inherited_descriptors(repo,build)]
     jobserver=re.search(r'--jobserver-(?:auth|fds)=(\d+),(\d+)',env.get('MAKEFLAGS',''))
     if jobserver:
@@ -192,7 +193,7 @@ def supervise(repo,script,arguments,wall_cap=3600):
         save(directory/'receipt.json',terminal)
         for registration in directory.glob('capsule-*.json'):
             selected=read_json(registration,16384);capsule=admitted_path(Path(selected['capsule']))
-            allowed=(repo/'tmp',repo/'visual_artifacts',repo/'data/experiments')
+            allowed=(test_root(repo),repo/'visual_artifacts',repo/'data/experiments')
             if not any(capsule!=root and capsule.is_relative_to(root) for root in allowed):
                 raise ValueError('Fixture terminal capsule outside allowed namespaces')
             owner=read_json(capsule/'fixture_owner.json',16384)

@@ -13,6 +13,7 @@ import time
 import check_clean_root as cleanup_policy
 
 from check_clean_root import read_json
+from output_layout import no_symlinks, build_root, runtime_root, output_key
 
 ROOT_EXECUTABLES = frozenset((
     'physics_sim', 'physics_sim_headless', 'physics_sim_job_runner',
@@ -28,13 +29,9 @@ def checked_path(path, repo):
     repo = repo.resolve()
     if path.is_relative_to(original_repo):
         path = repo/path.relative_to(original_repo)
-    if not path.is_relative_to(repo) or path == repo:
-        raise ValueError('Build receipt path must be inside checkout')
-    current = path
-    while current != repo:
-        if current.is_symlink():
-            raise ValueError('Build receipt refuses symlink component: '+str(current))
-        current = current.parent
+    no_symlinks(path, repo)
+    if path == repo:
+        raise ValueError('Build receipt path cannot be checkout root')
     return path
 
 
@@ -161,20 +158,20 @@ def dependency_input_snapshot(repo,path,text, input_budget=None, input_witnesses
 def receipt_path(repo, output):
     output = checked_path(output, repo)
     repo = repo.resolve()
-    key = hashlib.sha256(str(output.relative_to(repo)).encode()).hexdigest()
-    return checked_path(repo/'tmp/build-output-ownership'/key[:2]/(key+'.json'), repo)
+    key = hashlib.sha256(output_key(output, repo).encode()).hexdigest()
+    return checked_path(runtime_root(repo)/'build-output-ownership'/key[:2]/(key+'.json'), repo)
 
 
 def record(repo, output, producer, *, input_snapshot=None, dependency_sha256=None, link_inputs_sha256=None):
     output = checked_path(output, repo)
     repo = repo.resolve()
-    if (not output.is_relative_to(repo/'build')
+    if (not output.is_relative_to(build_root(repo))
             and not (producer == 'compiler' and output.parent == repo and output.name in ROOT_EXECUTABLES)):
         raise ValueError('Undeclared disposable output namespace: '+str(output))
     if producer not in ('compiler', 'dependency', 'configuration', 'linker-inputs'):
         raise ValueError('Unknown disposable-output producer')
     row = {'schema': 'physics_sim_disposable_output_v1',
-           'path': str(output.relative_to(repo)), 'producer': producer,
+           'path': output_key(output, repo), 'producer': producer,
            **fingerprint(output, require_single_link=True)}
     if input_snapshot is not None:row['input_snapshot']=input_snapshot
     if dependency_sha256 is not None:row['dependency_sha256']=dependency_sha256
@@ -202,7 +199,7 @@ def verified(repo, output):
     except FileNotFoundError:
         raise ValueError('Unknown disposable output; cleanup held: '+str(output))
     if (not isinstance(row, dict) or row.get('schema') != 'physics_sim_disposable_output_v1'
-            or row.get('path') != str(output.relative_to(repo))
+            or row.get('path') != output_key(output, repo)
             or row.get('producer') not in ('compiler', 'dependency', 'configuration', 'linker-inputs')):
         raise ValueError('Invalid disposable-output receipt: '+str(output))
     actual = fingerprint(output, require_single_link=True)

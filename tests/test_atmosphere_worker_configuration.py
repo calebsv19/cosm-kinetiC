@@ -13,7 +13,7 @@ class WorkerConfiguration(unittest.TestCase):
     def test_actual_recipes_configuration_noop_rebuild_and_admission(self):
         with tempfile.TemporaryDirectory() as temporary:
             repo=Path(temporary).resolve();(repo/'scripts').mkdir();(repo/'make').mkdir()
-            for name in ('tool_probe.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py'):
+            for name in ('output_layout.py','tool_probe.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py'):
                 shutil.copy2(ROOT/'scripts'/name,repo/'scripts'/name)
             shutil.copy2(ROOT/'make/build-identity.mk',repo/'make/build-identity.mk')
             rules=[];active=False

@@ -24,7 +24,7 @@ class Semantic(unittest.TestCase):
         self.repo = Path(self.temp.name).resolve()
         (self.repo/'scripts').mkdir(); (self.repo/'src').mkdir()
         (self.repo/'src/probe.c').write_text('int value(void){return 7;}\n')
-        for name in ('semantic_proof.py','clean_outputs.py','build_outputs.py','build_owner.py','check_clean_root.py','cfd_evidence.py'):
+        for name in ('output_layout.py','semantic_proof.py','clean_outputs.py','build_outputs.py','build_owner.py','check_clean_root.py','cfd_evidence.py'):
             shutil.copy2(ROOT/'scripts'/name, self.repo/'scripts'/name)
         self.build = self.repo/'build/proof'; self.build.mkdir(parents=True)
         self.obj = self.build/'probe.o'; self.obj.write_bytes(b'prior object')

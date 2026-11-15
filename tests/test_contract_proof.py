@@ -209,7 +209,7 @@ class ContractProof(unittest.TestCase):
 
     def test_actual_six_make_recipe_bodies_use_unique_proofs(self):
         (self.repo/'scripts').mkdir()
-        for name in ('contract_proof.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','cfd_evidence.py'):
+        for name in ('output_layout.py','contract_proof.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','cfd_evidence.py'):
             shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         (self.repo/'scripts/agent_session').mkdir()
         shutil.copy2(ROOT/'scripts/agent_session/owned_command.py',self.repo/'scripts/agent_session/owned_command.py')

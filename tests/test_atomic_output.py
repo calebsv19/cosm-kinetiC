@@ -21,7 +21,7 @@ class AtomicOutput(unittest.TestCase):
         self.repo = Path(self.temporary.name)
         (self.repo/'scripts').mkdir()
         (self.repo/'build').mkdir()
-        for name in ('atomic_output.py', 'build_owner.py', 'build_outputs.py', 'clean_outputs.py', 'check_clean_root.py'):
+        for name in ('output_layout.py','atomic_output.py', 'build_owner.py', 'build_outputs.py', 'clean_outputs.py', 'check_clean_root.py'):
             shutil.copy2(ROOT/'scripts'/name, self.repo/'scripts'/name)
 
     def command(self, *argv):

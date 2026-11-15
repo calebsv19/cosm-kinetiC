@@ -168,7 +168,7 @@ class Doctor(unittest.TestCase):
         for folder in ('make',): (self.repo/folder).mkdir(exist_ok=True)
         for name in ('config.mk','sources-tools.mk','rules-runtime.mk','desktop_release_target_contract.sh'):
             shutil.copy2(ROOT/'make'/name,self.repo/'make'/name)
-        for name in ('tool_probe.py','physics_doctor.py','physics_status.py','clean_outputs.py','build_outputs.py',
+        for name in ('output_layout.py','tool_probe.py','physics_doctor.py','physics_status.py','clean_outputs.py','build_outputs.py',
                      'check_clean_root.py','build_owner.py','cfd_evidence.py'):
             shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         shutil.copy2(ROOT/'makefile',self.repo/'makefile')

@@ -107,7 +107,7 @@ class ToolProbe(unittest.TestCase):
     def test_actual_configuration_cli_holds_noisy_compiler_without_allocating_root(self):
         with tempfile.TemporaryDirectory() as temporary:
             repo=Path(temporary).resolve();(repo/'scripts').mkdir()
-            for name in ('tool_probe.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py'):
+            for name in ('output_layout.py','tool_probe.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py'):
                 shutil.copy2(ROOT/'scripts'/name,repo/'scripts'/name)
             selected=repo/'compiler';selected.write_text('#!'+sys.executable+'\nprint("x"*100000)\n');selected.chmod(0o755)
             env={k:v for k,v in os.environ.items() if not k.startswith('PHYSICS_BUILD_')};env['PHYSICS_BUILD_CC']=str(selected)

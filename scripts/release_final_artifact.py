@@ -2,6 +2,7 @@
 
 Owning release authority remains external; no Registry/public promotion occurs.
 """
+from output_layout import runtime_root
 import argparse
 import fcntl
 import json
@@ -188,7 +189,7 @@ def refresh(repo, receipt, destination):
     if receipt.parent.parent!=root/'.package-transactions':raise ValueError('Refresh artifact receipt root mismatch')
     descriptors=[]
     try:
-        for path in (repo/'tmp/locks/clean.lock',root/'.package-transactions/owner.lock'):
+        for path in (runtime_root(repo)/'locks/clean.lock',root/'.package-transactions/owner.lock'):
             no_symlinks(path,repo);fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW);descriptors.append(fd)
             try:fcntl.flock(fd,fcntl.LOCK_SH|fcntl.LOCK_NB)
             except BlockingIOError:raise ValueError('Final refresh held by active cleanup or artifact owner')

@@ -11,7 +11,7 @@ class CliObjects(unittest.TestCase):
     def fixture(self,family):
         tool,sources,namespace=family;repo=self.base/namespace
         for d in ('scripts','make','src','vendor'):(repo/d).mkdir(parents=True)
-        for name in ('build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py','tool_probe.py'):shutil.copy2(ROOT/'scripts'/name,repo/'scripts'/name)
+        for name in ('output_layout.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py','tool_probe.py'):shutil.copy2(ROOT/'scripts'/name,repo/'scripts'/name)
         origin=Path(BEFORE) if BEFORE else ROOT/'make'
         for name in ('objects.mk','build-identity.mk'):shutil.copy2(origin/name,repo/'make'/name)
         text=(origin/'rules-tools.mk').read_text();lines=text.splitlines();targets=['$('+tool+'_BIN)','$(BUILD_DIR)/tools/'+namespace+'/%.o'];rules=[]

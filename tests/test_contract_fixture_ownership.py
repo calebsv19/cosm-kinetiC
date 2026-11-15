@@ -31,7 +31,7 @@ class FixtureOwnership(unittest.TestCase):
     def setUp(self):
         self.t=tempfile.TemporaryDirectory();self.addCleanup(self.t.cleanup)
         self.repo=Path(self.t.name).resolve();(self.repo/'scripts').mkdir()
-        for name in ('atomic_output.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
+        for name in ('output_layout.py','atomic_output.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):
             shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         self.rows=recipe_bodies();self.assertTrue(self.rows)
         self.target='test-scene-project-cache-output-status-contract'

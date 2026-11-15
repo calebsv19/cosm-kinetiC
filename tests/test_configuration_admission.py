@@ -18,7 +18,7 @@ class ConfigurationAdmission(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.repo=Path(self.temp.name).resolve();(self.repo/'scripts').mkdir()
-        for name in ('tool_probe.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py'):
+        for name in ('output_layout.py','tool_probe.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py'):
             shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         self.root=self.repo/'build/profile';self.active=self.root/'.configuration/active.json'
         self.env={key:value for key,value in os.environ.items() if not key.startswith('PHYSICS_BUILD_')}

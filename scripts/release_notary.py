@@ -2,6 +2,7 @@
 
 Execution requires the owning release-control authority; this helper grants none.
 """
+from output_layout import runtime_root
 import argparse
 import fcntl
 import json
@@ -117,7 +118,7 @@ def run(repo, archive, root, archive_receipt, profile, tool, *, reconcile=False,
     receipt = root / 'receipt.json'; no_symlinks(receipt, repo)
     if root.exists() and not receipt.exists() and any(root.iterdir()):
         raise ValueError('Unknown notary journal predecessor retained')
-    locks = repo / 'tmp/locks'; no_symlinks(locks, repo); locks.mkdir(parents=True, exist_ok=True)
+    locks = runtime_root(repo) / 'locks'; no_symlinks(locks, repo); locks.mkdir(parents=True, exist_ok=True)
     descriptors = []; state = None
     try:
         for path, mode in ((locks / 'clean.lock', fcntl.LOCK_SH), (root / 'owner.lock', fcntl.LOCK_EX)):

@@ -1,3 +1,4 @@
+#include "physics_sim_test_support.h"
 #include "runtime_scene_bridge_contract_session_suite.h"
 #include "import/runtime_scene_bridge.h"
 #include "app/scene_objects.h"
@@ -673,7 +674,8 @@ bool test_runtime_scene_bridge_apply_merged_emitter_overlay_affects_solver_emitt
 }
 
 bool test_scene_editor_session_roundtrip_reopen_hydrates_saved_overlay(void) {
-    const char *saved_path = "/tmp/physics_sim_save5_roundtrip_scene.json";
+    char saved_path[1024];
+    physics_sim_test_temp_path(saved_path, sizeof(saved_path), "physics_sim_save5_roundtrip_scene.json");
     RuntimeSceneBridgePreflight summary = {0};
     PhysicsSimRetainedRuntimeScene retained = {0};
     SceneEditorBootstrap bootstrap = {0};

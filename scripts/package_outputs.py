@@ -11,6 +11,7 @@ from pathlib import Path
 import uuid
 
 from package_paths import no_symlinks, bound_root
+from output_layout import build_root
 
 
 def plan(repo, root, directories, files):
@@ -19,9 +20,9 @@ def plan(repo, root, directories, files):
         raise ValueError("Package path contains traversal")
     root=Path(os.path.abspath(root))
     no_symlinks(root,repo)
-    if not (root.is_relative_to(repo/'build') and root!=repo/'build' or root==repo/'dist' or root.is_relative_to(repo/'dist') or not root.is_relative_to(repo) and root.is_relative_to(bound_root(root,repo))):
+    if not (root.is_relative_to(build_root(repo)) and root!=build_root(repo) or root==repo/'dist' or root.is_relative_to(repo/'dist') or not root.is_relative_to(repo) and root.is_relative_to(bound_root(root,repo))):
         raise ValueError('Package outputs require a strict build descendant or dist namespace')
-    if root.is_relative_to(repo/'build') and any(part in ('bin','clang','fisics','cfd-reference-support') for part in root.relative_to(repo/'build').parts):
+    if root.is_relative_to(build_root(repo)) and any(part in ('bin','clang','fisics','cfd-reference-support') for part in root.relative_to(build_root(repo)).parts):
         raise ValueError('Package namespace overlaps compiler outputs')
     if root.exists() and not root.is_dir():raise ValueError('Package root is not a directory')
     paths=[]

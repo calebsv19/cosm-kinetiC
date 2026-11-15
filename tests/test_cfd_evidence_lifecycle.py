@@ -28,7 +28,7 @@ class Lifecycle(unittest.TestCase):
                 shutil.copy2(ROOT/name, fixture/name)
             for name in ('config.mk', 'rules-runtime.mk'):
                 shutil.copy2(ROOT/'make'/name, fixture/'make'/name)
-            for name in ('check_clean_root.py', 'clean_outputs.py', 'build_outputs.py', 'atomic_output.py', 'build_owner.py'):
+            for name in ('output_layout.py','check_clean_root.py', 'clean_outputs.py', 'build_outputs.py', 'atomic_output.py', 'build_owner.py'):
                 shutil.copy2(ROOT/'scripts'/name, fixture/'scripts'/name)
             sources = ['tests/cfd_obstacle3d_box_contract_test.c', 'src/app/cfd_obstacle3d.c',
                        'src/app/cfd_obstacle3d_box.c', 'src/app/cfd_obstacle3d_pressure_trace.c',

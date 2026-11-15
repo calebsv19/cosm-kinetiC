@@ -19,7 +19,7 @@ class Ownership(unittest.TestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.repo=Path(self.temp.name).resolve()
         for folder in ('scripts','make','build/a','data/experiments'): (self.repo/folder).mkdir(parents=True)
-        for name in ('build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py'):
+        for name in ('output_layout.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py'):
             shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         (self.repo/'build/a/object.o').write_bytes(b'preserved')
         subprocess.run([sys.executable,'-B','-c',"import sys;sys.path.insert(0,'scripts');from pathlib import Path;from build_outputs import record;record(Path.cwd(),Path('build/a/object.o').absolute(),'compiler')"],cwd=self.repo,check=True)

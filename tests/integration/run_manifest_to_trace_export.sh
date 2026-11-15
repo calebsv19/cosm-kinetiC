@@ -82,7 +82,8 @@ if [[ ! -f "$TRACE_PATH" ]]; then
 fi
 
 if [[ -z "${PHYSICS_SIM_PACK_CLI_BIN:-}" ]]; then
-    make -C "$ROOT_DIR/third_party/codework_shared/core/core_pack" tools >/dev/null
+    PACK_CLI="$TMP_DIR/pack_cli"
+    physics_fixture_pack_cli "$ROOT_DIR" "$PACK_CLI"
 fi
 "$PACK_CLI" inspect "$TRACE_PATH" > "$INSPECT_LOG"
 

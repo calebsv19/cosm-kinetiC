@@ -107,7 +107,7 @@ package-desktop-smoke: package-desktop
 	@echo "package-desktop-smoke passed."
 
 package-desktop-self-test: package-desktop-smoke
-	+@python3 -B scripts/package_proof.py --root "$(DIST_DIR)" --name macos-self-test --input "$(PACKAGE_APP_DIR)" --identity "profile=$(PACKAGE_PROFILE)" -- $(MAKE) -f makefile _package-desktop-proof
+	+@python3 -B scripts/package_proof.py --root "$(DIST_DIR)" --name macos-self-test --input "$(PACKAGE_APP_DIR)" --identity "profile=$(PACKAGE_PROFILE)" -- $(MAKE) -f makefile PHYSICS_SIM_DIST_ROOT="$(DIST_DIR)" _package-desktop-proof
 
 .PHONY: _package-desktop-proof
 _package-desktop-proof:

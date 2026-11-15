@@ -52,7 +52,7 @@ class LocalArtifact(unittest.TestCase):
             'source=Path(sys.argv[-2]);assert source.is_dir(),str(source)\n'
             'assert (source/"Contents/MacOS/physics-sim-bin").read_bytes()==b"fixture only"\n'
             'Path(sys.argv[-1]).write_bytes(b"fixture archive bytes")\n')
-        result=self.make('release-local-artifact')
+        result=self.make('release-local-artifact', 'PHYSICS_SIM_DIST_ROOT='+str(self.repo/'build/outer-package'))
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         archive=source_root/'artifact name.zip'
         self.assertEqual(archive.read_bytes(),b'fixture archive bytes')

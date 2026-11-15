@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -12,6 +13,16 @@
 #else
 #define PHYSICS_SIM_TEST_SUPPORT_UNUSED
 #endif
+
+static PHYSICS_SIM_TEST_SUPPORT_UNUSED void physics_sim_test_temp_path(char *out,
+                                                                       size_t capacity,
+                                                                       const char *leaf) {
+    const char *root = getenv("TMPDIR");
+    if (!root || !root[0]) root = "/tmp";
+    if (!out || !capacity) return;
+    int length = snprintf(out, capacity, "%s/%s", root, leaf);
+    if (root[0] != '/' || length < 0 || (size_t)length >= capacity) out[0] = '\0';
+}
 
 static PHYSICS_SIM_TEST_SUPPORT_UNUSED bool physics_sim_test_write_text_file(const char *path,
                                                                              const char *text) {

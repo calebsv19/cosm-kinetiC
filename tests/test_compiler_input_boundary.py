@@ -6,7 +6,7 @@ from build_outputs import receipt_path
 class CompilerBoundary(unittest.TestCase):
     def setUp(self):
         self.t=tempfile.TemporaryDirectory();self.addCleanup(self.t.cleanup);self.repo=Path(self.t.name).resolve();(self.repo/'scripts').mkdir();(self.repo/'build').mkdir()
-        for name in ('atomic_output.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
+        for name in ('output_layout.py','atomic_output.py','build_owner.py','build_outputs.py','clean_outputs.py','check_clean_root.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         (self.repo/'probe.c').write_text('#include "value.h"\nint value(void){return VALUE;}\n');self.header=self.repo/'value.h';self.header.write_text('#define VALUE 1\n')
         self.obj=self.repo/'build/probe.o';self.dep=self.obj.with_suffix('.d')
     def compile(self,compiler='clang',*prefix):

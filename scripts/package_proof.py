@@ -1,4 +1,5 @@
 """Run a local package proof in a fresh retained capsule; never prune results."""
+from output_layout import runtime_root
 import argparse
 import fcntl
 import json
@@ -33,7 +34,7 @@ def run(repo, root, name, inputs, values, mappings, command, *, wall_cap=900, lo
     if executable is None:raise ValueError('Proof command is unavailable')
     inputs.append(Path(executable).resolve())
     identity,source=input_identity(inputs,values)
-    locks=repo/'tmp/locks';no_symlinks(locks,repo);locks.mkdir(parents=True,exist_ok=True)
+    locks=runtime_root(repo)/'locks';no_symlinks(locks,repo);locks.mkdir(parents=True,exist_ok=True)
     fd=os.open(locks/'clean.lock',os.O_CREAT|os.O_RDWR|os.O_NOFOLLOW,0o600)
     capsule=None;record=None;package_fd=None
     try:

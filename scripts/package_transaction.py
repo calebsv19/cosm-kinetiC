@@ -1,4 +1,5 @@
 """Retained local package assembly and verified reuse, without release authority."""
+from output_layout import runtime_root
 import argparse
 import fcntl
 import hashlib
@@ -138,7 +139,7 @@ def recover(repo, attempt, apply=False):
     repo=repo.resolve();attempt=Path(planned['attempt']);root=Path(planned['output_root'])
     descriptors=[];journal=None;record=None
     try:
-        for path,mode in ((repo/'tmp/locks/clean.lock',fcntl.LOCK_SH),(root/'.package-transactions/owner.lock',fcntl.LOCK_EX)):
+        for path,mode in ((runtime_root(repo)/'locks/clean.lock',fcntl.LOCK_SH),(root/'.package-transactions/owner.lock',fcntl.LOCK_EX)):
             no_symlinks(path,repo);fd=os.open(path,os.O_RDWR|os.O_NOFOLLOW);descriptors.append(fd)
             try:fcntl.flock(fd,mode|fcntl.LOCK_NB)
             except BlockingIOError:raise ValueError('Package recovery held by active cleanup or package owner')
@@ -213,7 +214,7 @@ def run(repo, root, directories, files, mappings, inputs, values, command, tools
     contract={'outputs':outputs,'mappings':{k:str(v.relative_to(root)) for k,v in mapped.items()},'command':command}
     selection=hashlib.sha256(json.dumps(contract,sort_keys=True).encode()).hexdigest()
     control=root/'.package-transactions';no_symlinks(control,repo)
-    locks=repo/'tmp/locks';no_symlinks(locks,repo);locks.mkdir(parents=True,exist_ok=True)
+    locks=runtime_root(repo)/'locks';no_symlinks(locks,repo);locks.mkdir(parents=True,exist_ok=True)
     descriptors=[];attempt=None;record=None
     try:
         # Standalone use participates in cleanup exclusion too; an outer Make

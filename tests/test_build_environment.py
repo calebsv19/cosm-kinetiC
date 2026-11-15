@@ -8,7 +8,7 @@ class BuildEnvironment(unittest.TestCase):
     def setUp(self):
         self.t=tempfile.TemporaryDirectory();self.addCleanup(self.t.cleanup);self.repo=Path(self.t.name).resolve()
         for directory in ('scripts','make','src','one','two'):(self.repo/directory).mkdir()
-        for name in ('tool_probe.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
+        for name in ('output_layout.py','tool_probe.py','build_identity.py','build_outputs.py','clean_outputs.py','check_clean_root.py','atomic_output.py','build_owner.py'):shutil.copy2(ROOT/'scripts'/name,self.repo/'scripts'/name)
         shutil.copy2(ROOT/'make/build-identity.mk',self.repo/'make/build-identity.mk')
         lines=(ROOT/'make/rules-build.mk').read_text().splitlines();i=lines.index('$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c');rule='\n'.join(lines[i:i+3])+'\n'
         (self.repo/'Makefile').write_text('BUILD_DIR=build\nSRC_DIR=src\nCC=clang\nCLANG=clang\nCFLAGS=-O0\nOBJS=build/probe.o\nall: $(OBJS)\n'+rule+'include make/build-identity.mk\n')

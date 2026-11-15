@@ -12,6 +12,7 @@ import uuid
 from agent_session.owned_command import execute, IncompleteTeardown
 from agent_session.sample_retention import regular, retain
 from build_owner import inherited_descriptors
+from output_layout import attempt as layout_attempt, runtime_root
 from cfd_evidence import admitted_path, experiment_root
 from check_clean_root import read_json
 from package_paths import no_symlinks, reservation_output
@@ -57,7 +58,8 @@ def run(repo, app_bin, frameworks, *, wall_cap=900, log_cap=67108864):
         raise ValueError('Invalid bundler time/log bounds')
     repo = admitted_path(repo)
     app_bin, frameworks, reservation, before = admission(repo, app_bin, frameworks)
-    parent = admitted_path(experiment_root(repo, repo / 'data/experiments') / 'package-bundler-attempts')
+    parent = admitted_path((runtime_root(repo) if layout_attempt(repo) else
+                            experiment_root(repo, repo / 'data/experiments')) / 'package-bundler-attempts')
     for ancestor in (parent, *parent.parents):
         if ancestor == repo:
             break
@@ -72,7 +74,7 @@ def run(repo, app_bin, frameworks, *, wall_cap=900, log_cap=67108864):
     attempt = None
     state = None
     try:
-        for path, mode in ((repo / 'tmp/locks/clean.lock', fcntl.LOCK_SH),
+        for path, mode in ((runtime_root(repo) / 'locks/clean.lock', fcntl.LOCK_SH),
                 (reservation.parent.parent / '.bundler-locks' / (reservation.stem + '.lock'), fcntl.LOCK_EX)):
             admitted_path(path)
             path.parent.mkdir(parents=True, exist_ok=True)
