@@ -77,3 +77,20 @@ with unavailable compiler/pkg-config, and seven final-artifact regression checks
 passed after platform/sidecar alignment (13 checks total). `release-contract`
 readback reports distinct unsigned and authenticated paths using native `macOS`.
 Evidence: `data/experiments/lifecycle-validation/20261007-release-make-cutover`.
+
+## Registry native authentication
+
+Registry snapshot preparation uses `make/release-native.mk`: the signed phase
+reuses the guarded copy-on-transform signing transaction, while the shared
+Registry owner retains the submission ID, recovery journal and native ticket
+attachment. The producer's upload and final archive use package transactions
+and verify their ZIP contents against the app. The final phase requires Accepted
+notarization, strict signature verification, a valid stapled ticket and Gatekeeper
+assessment. Worker archives remain separate checksum-authenticated surfaces.
+
+The standalone `release_pipeline.py` workflow and its retained receipts are
+unchanged. In an owned Registry layout, `release-artifact` selects the native
+final phase; outside that layout it continues to use the standalone pipeline.
+Invoke authentication through Release Control so the configured notary profile
+and explicit Keychain selector reach the existing credential owner. These phases
+provide no publication, deployment or desktop-refresh authority.

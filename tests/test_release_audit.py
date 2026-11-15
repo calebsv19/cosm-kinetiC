@@ -22,6 +22,7 @@ class Audit(unittest.TestCase):
         shutil.copy2(ROOT/'scripts/agent_session/owned_command.py',self.repo/'scripts/agent_session/owned_command.py')
         (self.repo/'tools/packaging').mkdir(parents=True)
         shutil.copy2(ROOT/'make/release.mk',self.repo/'make/release.mk')
+        shutil.copy2(ROOT/'make/release-native.mk',self.repo/'make/release-native.mk')
         self.app=self.repo/'dist/Fake App.app';macos=self.app/'Contents/MacOS';macos.mkdir(parents=True)
         launcher=macos/'physics-sim-launcher';launcher.write_text('#!/bin/sh\nprintf "PHYSICS_SIM_RUNTIME_DIR=/tmp/fake-runtime\\nVK_ICD_FILENAMES=fake\\nVK_DRIVER_FILES=fake\\n"\n');launcher.chmod(0o755)
         (macos/'physics-sim-bin').write_bytes(b'fixture only')

@@ -64,9 +64,9 @@ _release-local-artifact:
 	@mkdir -p "$$(dirname "$(RELEASE_APP_ZIP)")" "$$(dirname "$(RELEASE_APP_SHA256)")" "$$(dirname "$(RELEASE_MANIFEST)")"
 	@"$(RELEASE_DITTO)" -c -k --sequesterRsrc --keepParent "$(PACKAGE_APP_DIR)" "$(RELEASE_APP_ZIP)"
 	@archive_dir="$$(dirname "$(RELEASE_APP_ZIP)")"; archive_name="$$(basename "$(RELEASE_APP_ZIP)")"; (cd "$$archive_dir" && "$(RELEASE_SHASUM)" -a 256 "$$archive_name") > "$(RELEASE_APP_SHA256)"
-	@printf 'product=%s\nprogram=%s\nversion=%s\nplatform=%s\narch=%s\nformat=zip\nchannel=%s\nartifact=%s\nsha256=%s\nsigned=false\nnotarized=false\n' \
+	@printf 'product=%s\nprogram=%s\nversion=%s\nplatform=%s\narch=%s\nformat=zip\nchannel=%s\nbundle_id=%s\nartifact=%s\nsha256=%s\nsigned=false\nnotarized=false\n' \
 		"$(RELEASE_PRODUCT_NAME)" "$(RELEASE_PROGRAM_KEY)" "$(RELEASE_VERSION)" \
-		"$(RELEASE_PLATFORM)" "$(RELEASE_ARCH)" "$(RELEASE_CHANNEL)" \
+		"$(RELEASE_PLATFORM)" "$(RELEASE_ARCH)" "$(RELEASE_CHANNEL)" "$(RELEASE_BUNDLE_ID)" \
 		"$$(basename "$(RELEASE_APP_ZIP)")" \
 		"$$(cut -d' ' -f1 "$(RELEASE_APP_SHA256)")" > "$(RELEASE_MANIFEST)"
 	@python3 -B scripts/verify_release_local_artifact.py --archive "$(RELEASE_APP_ZIP)" --checksum "$(RELEASE_APP_SHA256)" --manifest "$(RELEASE_MANIFEST)"
@@ -105,8 +105,10 @@ release-staple: release-bundle-audit
 release-verify-notarized: release-staple
 	@echo "Stapled app verified by retained stapling transaction"
 
+ifeq ($(strip $(PHYSICS_SIM_LAYOUT_BUILD)),)
 release-artifact: release-bundle-audit
 	@python3 -B scripts/release_pipeline.py artifact $(RELEASE_PIPELINE_ARGS)
+endif
 
 release-distribute: release-artifact
 	@echo "Local authenticated artifact complete; publication remains Release Control owned"
@@ -116,3 +118,6 @@ release-distribute: release-artifact
 release-desktop-refresh: package-desktop-refresh-authority
 	@test -n "$(RELEASE_FINAL_RECEIPT)" || (echo "RELEASE_FINAL_RECEIPT is required"; exit 1)
 	@python3 -B scripts/release_final_artifact.py refresh --final-receipt "$(RELEASE_FINAL_RECEIPT)" --destination "$(DESKTOP_APP_DIR)"
+
+# Registry-owned phases retain their own shared journal and native continuation.
+include make/release-native.mk
