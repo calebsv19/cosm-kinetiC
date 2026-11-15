@@ -16,7 +16,8 @@ class ScalarProfileTests(unittest.TestCase):
             with self.assertRaises(ValueError):validate({FIELD:value,'transport_scheme':'muscl_minmod'})
         for scheme in ('upwind','muscl_minmod',None):
             validate({FIELD:PROFILE,'transport_scheme':scheme})
-        with self.assertRaises(ValueError):validate({FIELD:PROFILE,'transport_scheme':'muscl_minmod','diagnostic_transport':'fixed_mac_velocity/v1'})
+        validate({FIELD:PROFILE,'transport_scheme':'upwind','diagnostic_transport':'fixed_mac_velocity/v1'})
+        with self.assertRaises(ValueError):validate({FIELD:PROFILE,'diagnostic_transport':'unknown'})
     def test_native_profile_and_field_state_identity(self):
         c={FIELD:PROFILE,'transport_scheme':'muscl_minmod'};state(c,{FIELD:PROFILE});fields(c,{FIELD:PROFILE},{FIELD:PROFILE})
         for data in ({},{FIELD:'wrong'}):

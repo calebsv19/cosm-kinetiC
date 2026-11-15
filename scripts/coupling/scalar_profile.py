@@ -9,8 +9,9 @@ def validate(config):
         return
     require(type(config[FIELD]) is str and config[FIELD] == PROFILE,
             'supported opt-in scalar profile')
-    require('diagnostic_transport' not in config,
-            'candidate scalar profile separate from frozen momentum diagnostic')
+    if 'diagnostic_transport' in config:
+        require(config['diagnostic_transport'] == 'fixed_mac_velocity/v1',
+                'scalar profile requires the explicit fixed MAC diagnostic')
 
 
 def state(config, data):

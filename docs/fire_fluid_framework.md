@@ -458,3 +458,21 @@ channel in that host, add durable joint Thermal checkpoint/rollback, qualify
 evolving flow/buoyancy under this heating, or adopt a new application default.
 The next proposed checkpoint is an appreciable-response non-burning thermal
 demonstrator with fixed application criteria and controls, awaiting user review.
+
+## Joint receiver geometry admission · 2026-11-04
+
+Before any worker invocation or journal creation, the joint host binds receiver
+origin, per-axis dimensions and spacing to the native zero-origin gas grid.
+The existing overlap mapper validates layer, source coverage and physical
+injection depth. Every cell touched by source deposition must be native fluid,
+including cells above the base layer. Receiver masks outside that footprint
+may retain their existing values. Refusals identify the axis/value conflict or
+the native solid cell. Standalone receiver allocation retains its independent
+coordinate contract.
+
+The guard source participates in the joint input binding. Existing journals
+continue through their original pinned adapters. New guard bindings require
+fresh journals. Nine framework checks cover pre-worker refusal, exact offset
+source deposition, native solid overlap, publication rollback, duplicate/stale
+requests and three-window exact restart. Three retained inert/rig configs
+also pass admission.

@@ -22,13 +22,19 @@ def baseline(config,state=None,steps=()):
     return dict(c,schema=legacy.SCHEMA,state=wrapped,steps=list(steps))
 
 
+def policy(config,state=None,steps=()):
+    from . import exterior_work30
+    if exterior_work30.selected(config):
+        exterior_work30.validate(config,state,steps);return exterior_work30.policy()
+    return legacy
+
 def validate(config,state=None):
     mask=rig_geometry.topology(config)
-    require(config['grid'] in ([16]*3,[32]*3) and config['momentum_dt_s']==.005,'rig numerical profile')
+    require((config['rig_geometry']['schema']=='physics_sim_exterior_room/v1' or config['grid'] in ([16]*3,[32]*3)) and config['momentum_dt_s']==.005,'rig numerical profile')
     if state is not None:
         require(state['digest']==digest(state) and state['config_digest']==digest(config),'rig native state/config identity')
         rig_geometry.check(config,state['data'],mask)
-    legacy.validate(baseline(config,state))
+    policy(config,state).validate(baseline(config,state))
     rig_geometry.check(config,dict(energy_j=config['initial_energy_j'],smoke_kg=config['initial_smoke_kg'],pressure_pa=[0.]*len(mask),face_velocity_m_s=config['initial_face_velocity_m_s']),mask)
     return mask
 
@@ -53,15 +59,23 @@ def native(request,worker,*,io_format='field_packet/v1'):
     limits=config['resource_limits'];limit=limits['native_output_bytes']
     with retained_directory() as directory:
         p=Path(directory)/'request.fpk';p.write_bytes(encode(request_native,limits['native_request_bytes']))
-        raw=run_atmosphere_worker(worker,p,limit,io_format='field_packet/v1')
+        from . import exterior_work30
+        if exterior_work30.selected(config):
+            exterior_work30.validate(config,state,steps)
+            from .exterior_activity_capture import run_worker
+            from passive_atmosphere import worker_subprocess_descriptors
+            raw=run_worker(worker,p,limit,worker_subprocess_descriptors())
+        else:raw=run_atmosphere_worker(worker,p,limit,io_format='field_packet/v1')
         (Path(directory)/'fields.fpk').write_bytes(raw);fields=decode(raw,limit)
     require(fields.get('solid_mask')==mask,'native/independent rig geometry identity')
     rig_geometry.check(config,fields['state'],mask)
-    result=legacy.accept_fields(baseline(config,state,steps),fields,identity)
+    result=policy(config,state,steps).accept_fields(baseline(config,state,steps),fields,identity)
     result['configuration']=config
     result['state']=sealed(dict(result['state'],config_digest=digest(config)))
     result.update(model=rig_geometry.MODEL,boundaries='closed_insulated_no_slip_shell_with_declared_x_ports',
                   forcing_region=('broad_sweeping_shear/v1: upstream chamber x<=0.4375m; interior y/z; spatial multiplier0.3..1 with3s/4s moving shear; X body-force only' if config['rig_geometry'].get('flow_profile')=='broad_sweeping_shear/v1' else 'west port and upstream strip x<=0.125m; y/z in[0.25,0.75)'),rig_probes=rig_geometry.probes(config,result['state']['data']))
+    if config['rig_geometry']['schema']=='physics_sim_exterior_room/v1':
+        result.update(boundaries='single_window_internal_to_room_plus_exterior; distant_clean_ambient; solid_ground',forcing_region='none; explicit zero-strength weather driver')
     result=sealed(result);validate(config,result['state']);conservation(config,result)
     require(hashlib.sha256(worker.read_bytes()).hexdigest()==identity,'rig worker bytes changed')
     return result

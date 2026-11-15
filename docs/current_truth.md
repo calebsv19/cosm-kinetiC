@@ -1,3 +1,11 @@
+## 2026-11-04 — CP1 exterior-room development
+
+Typed room+exterior geometry and independent inventories are implemented in
+Main Edit. Local strict geometry/old-room/weather checks and8Python geometry/
+source cases pass. Isolated PC strict/sanitized8run gates pass; controls/simulation pipeline is
+running.30s results and late-frame visual acceptance remain pending.
+[Contract](room_exterior_cp1.md). Original CP0 outputs preserved.
+
 ## 2026-11-03 — Mac 128³ wake reference and saved-result comparisons complete
 
 The fixed-input 640-step / 3.2 s reference is complete, with 321 durable records

@@ -15,7 +15,7 @@ static bool physics_sim_prescribed_momentum(CfdOpenAtmosphere3d *s,double *div,d
      * silently from this diagnostic's deliberately narrow admission. */
     (void)momentum;
     if(!s->ground || !s->lateral_open || !s->solid_box || s->buoyancy ||
-       !s->wind.quiescent_backflow || s->weather.enabled)return false;
+       (s->wind.enabled && !s->wind.quiescent_backflow) || s->weather.enabled)return false;
     double maximum=0;
     for(int q=0;q<s->grid.count;q++)if(!cfd_open_atmosphere3d_solid(s,q))
         maximum=fmax(maximum,fabs(divergence(s,s->velocity,q)));

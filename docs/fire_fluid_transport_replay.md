@@ -69,3 +69,23 @@ or a convergence/material qualification. The selected-case CLI includes
 feature with distinct mechanical-work and observed air receipts. Its eight-case live
 coupled campaign passes 264 checkpoints, 48 native snapshots and 94 aggregate
 checks; installed/default behavior is unchanged.
+
+## Saved-carrier MC crossover · 2026-11-04
+
+The explicit fixed_mac_velocity/v1 diagnostic now accepts mc_ssprk2/v1.
+A frozen-worker build can also hold a saved ambient-reservoir MAC field without
+an inlet schedule. All normal faces stay fixed, the native divergence guard
+remains 1e−8 s−1, and host validation requires exact velocity identity on every
+result and restore. A supplied inlet schedule retains its existing constant
+boundary checks. This is a source-only numerical diagnostic selected by a
+separate worker build and request identity.
+
+The gap crossover starts two fresh 64³ passive-smoke fixtures from the same
+saved smoke field. The two final-time carrier fields are the original 64³
+field and an area-restricted 128³ field. Each advances 20 native 5 ms steps,
+with zero sources, disabled buoyancy, no object exchange and no momentum
+advance. Full versus fresh-process 10+10-step continuation must match exactly.
+Optimized/sanitizer two-step prefixes must also match all native state data.
+Global source/boundary smoke ledgers and fixed velocity identity are checked
+independently. Regional inventory differences measure net retention, with all
+region faces contributing. Separate gross gap-entry flux is not retained.

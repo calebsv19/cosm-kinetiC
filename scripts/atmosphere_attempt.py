@@ -14,7 +14,7 @@ from cfd_evidence import admitted_path, experiment_root
 CURRENT=ContextVar('atmosphere_attempt',default=None)
 CONTROLS=('atmosphere_attempt.py','passive_atmosphere.py','evolving_atmosphere.py',
           'open_atmosphere.py','tool_probe.py','build_owner.py','numeric_digest_stream.py',
-          'surface_sources/growth_fire_v1.py','coupling/driven_wind.py','coupling/ventilation.py','coupling/kinetic_energy.py','coupling/inert_object.py','coupling/open_weather.py','coupling/scalar_profile.py','coupling/scalar_capacity.py','coupling/scalar_gust128.py','coupling/scalar_wake128.py','coupling/scalar_wake128_work.py','coupling/scalar_work_budget.py','field_packet.py')
+          'surface_sources/growth_fire_v1.py','coupling/driven_wind.py','coupling/ventilation.py','coupling/kinetic_energy.py','coupling/inert_object.py','coupling/open_weather.py','coupling/scalar_profile.py','coupling/viscous_wall.py','coupling/scalar_capacity.py','coupling/scalar_gust128.py','coupling/scalar_wake128.py','coupling/scalar_wake128_work.py','coupling/scalar_work_budget.py','field_packet.py')
 
 def payload(path,limit):
     path=admitted_path(path)

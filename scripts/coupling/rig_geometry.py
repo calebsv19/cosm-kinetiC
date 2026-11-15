@@ -8,6 +8,9 @@ MODEL='open_xy_partition_window_rig/v1'
 
 
 def topology(config):
+    if config['rig_geometry']['schema']=='physics_sim_exterior_room/v1':
+        from .exterior_room_geometry import topology as exterior
+        return exterior(config)
     if config['rig_geometry']['schema']=='physics_sim_single_window_room/v1':
         from .room_geometry import topology as room_topology
         return room_topology(config)
@@ -53,7 +56,7 @@ def components(config,mask):
                     if not mask[other] and other not in seen:seen.add(other);queue.append(other)
         result.append(dict(cells=count,pressure_reservoir=reservoir))
     require(all(r['pressure_reservoir'] for r in result),'unanchored fluid pressure component')
-    require(len(result)==(1 if config['rig_geometry']['schema']=='physics_sim_single_window_room/v1' or config['rig_geometry']['window_open'] else 2),'rig fluid connectivity')
+    require(len(result)==(1 if config['rig_geometry']['schema'] in ('physics_sim_single_window_room/v1','physics_sim_exterior_room/v1') or config['rig_geometry']['window_open'] else 2),'rig fluid connectivity')
     return result
 
 
@@ -70,6 +73,9 @@ def check(config,data,mask=None):
 
 
 def probes(config,data):
+    if config['rig_geometry']['schema']=='physics_sim_exterior_room/v1':
+        from .exterior_room_geometry import probes as exterior
+        return exterior(config,data)
     if config['rig_geometry']['schema']=='physics_sim_single_window_room/v1':
         from .room_geometry import probes as room_probes
         return room_probes(config,data)
@@ -82,6 +88,9 @@ def probes(config,data):
 
 
 def solid_boxes(config):
+    if config['rig_geometry']['schema']=='physics_sim_exterior_room/v1':
+        from .exterior_room_geometry import solid_boxes as exterior
+        return exterior(config)
     """Physical boxes whose union is the fixed mask; floor is a boundary plane."""
     if config['rig_geometry']['schema']=='physics_sim_single_window_room/v1':
         from .room_geometry import solid_boxes as room_boxes

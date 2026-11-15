@@ -13,7 +13,7 @@ from pathlib import Path
 import tempfile
 import time
 from evolving_atmosphere import array
-from coupling import driven_wind,inert_object,scalar_profile
+from coupling import driven_wind,inert_object,scalar_profile,viscous_wall
 from coupling.open_boundaries import lateral, layout, face, boundaries, MODELS as OPEN_MODELS
 from passive_atmosphere import ROOT
 from surface_sources.growth_fire_v1 import keys,number,integer,require,strict_load,digest,sealed
@@ -23,16 +23,18 @@ MODEL='xy_periodic_z_reservoir_projection3d_v1'
 STATE='physics_sim_native_open_atmosphere_state/v1'
 CONFIG_KEYS=('grid','length_m','properties','momentum_dt_s','initial_face_velocity_m_s','initial_energy_j','initial_smoke_kg','boundary_policy','buoyancy')
 
-def configuration(r):return {k:r[k] for k in (*CONFIG_KEYS,*(k for k in ("transport_scheme","resource_limits","solid_box","wind_forcing","capacity_profile","inert_object","diagnostic_transport","open_domain_forcing","scalar_transport") if k in r))}
+def configuration(r):return {k:r[k] for k in (*CONFIG_KEYS,*(k for k in ("transport_scheme","resource_limits","solid_box","wind_forcing","capacity_profile","inert_object","diagnostic_transport","open_domain_forcing","scalar_transport","viscous_wall_closure") if k in r))}
 
 def validate(r,*,movie=False,domain_qualification=False,domain_movie=False):
     require(type(movie) is bool,'explicit movie mode')
     require(type(domain_qualification) is bool and type(domain_movie) is bool and sum((movie,domain_qualification,domain_movie))<=1,'explicit separate domain/movie selection')
-    keys(r,('schema',*CONFIG_KEYS,*(k for k in ('transport_scheme','resource_limits','solid_box','wind_forcing','capacity_profile','inert_object','diagnostic_transport','open_domain_forcing','scalar_transport') if k in r),'state','steps'));
+    keys(r,('schema',*CONFIG_KEYS,*(k for k in ('transport_scheme','resource_limits','solid_box','wind_forcing','capacity_profile','inert_object','diagnostic_transport','open_domain_forcing','scalar_transport','viscous_wall_closure') if k in r),'state','steps'));
     if 'diagnostic_transport' in r:
         from coupling.frozen_transport import validate as fixed_validate
         fixed_validate(r)
         require(not any((movie,domain_qualification,domain_movie)), 'fixed MAC separate from sparse qualification')
+    viscous_wall.validate(r)
+    require(not ('viscous_wall_closure' in r and any((movie,domain_qualification,domain_movie))), 'wall closure separate from sparse qualification')
     scalar_profile.validate(r)
     require(not ('scalar_transport' in r and any((movie,domain_qualification,domain_movie))),
             'scalar profile separate from sparse qualification')
@@ -105,7 +107,7 @@ def validate(r,*,movie=False,domain_qualification=False,domain_movie=False):
 def _validate_native_data(r,data):
     n=math.prod(r['grid']);plane=r['grid'][0]*r['grid'][1]
     limits=r.get('resource_limits',{'scalar_work_cells':100000000})
-    keys(data,('face_velocity_m_s','pressure_pa','energy_j','smoke_kg','boundary_fluxes','steps','time_s','scalar_work_cells','input_energy_j','input_smoke_kg','initial_energy_j','initial_smoke_kg',*(driven_wind.COUNTERS if 'wind_forcing' in r else ()),*(('kinetic_ledger_j','kinetic_stored_j') if r.get('wind_forcing',{}).get('momentum_backflow') or 'open_domain_forcing' in r else ()),*(('inert_object',) if 'inert_object' in r else ()),*(('open_domain_forcing_state',) if 'open_domain_forcing' in r else ()),*(('scalar_transport',) if 'scalar_transport' in r else ())))
+    keys(data,('face_velocity_m_s','pressure_pa','energy_j','smoke_kg','boundary_fluxes','steps','time_s','scalar_work_cells','input_energy_j','input_smoke_kg','initial_energy_j','initial_smoke_kg',*(driven_wind.COUNTERS if 'wind_forcing' in r else ()),*(('kinetic_ledger_j','kinetic_stored_j') if r.get('wind_forcing',{}).get('momentum_backflow') or 'open_domain_forcing' in r else ()),*(('inert_object',) if 'inert_object' in r else ()),*(('open_domain_forcing_state',) if 'open_domain_forcing' in r else ()),*(('scalar_transport',) if 'scalar_transport' in r else ()),*(('viscous_wall_closure',) if 'viscous_wall_closure' in r else ())))
     array(data['face_velocity_m_s'],layout(r)[0]);array(data['pressure_pa'],n)
     for key in ('energy_j','smoke_kg'):array(data[key],n,0)
     array(data['boundary_fluxes'],4*layout(r)[1],0);integer(data['steps'],0,10000);integer(data['scalar_work_cells'],0,limits['scalar_work_cells'])
@@ -114,6 +116,10 @@ def _validate_native_data(r,data):
     check_state(r,data)
     require(data['time_s']==data['steps']*r['momentum_dt_s'],'checkpoint integer-step clock')
     scalar_profile.state(r,data)
+    viscous_wall.state(r,data)
+    if 'diagnostic_transport' in r:
+        from coupling.frozen_transport import validate as fixed_validate
+        fixed_validate(r,data)
     driven_wind.state(r,data)
     inert_object.validate(r,data)
     from coupling.kinetic_energy import validate as kinetic_valid
@@ -204,6 +210,7 @@ def accept_fields(request,fields,worker_sha,*,new_step_count=None,source_totals=
                 record[key+('_inflow' if direction==0 else '_outflow')]={'per_face':values,'total':math.fsum(values)}
         receipts.append(record)
     scalar_profile.fields(request,fields,data)
+    viscous_wall.fields(request,fields,data)
     inert_object.fields(request,fields,data)
     if 'inert_object' in request:budgets['energy_j']['gas_to_object_j']=inert_object.transfer(request,data)
     array(fields['temperature_k'],n,0);array(fields['smoke_concentration_kg_m3'],n,0)

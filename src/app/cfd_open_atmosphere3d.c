@@ -36,9 +36,16 @@ static double sample(const CfdOpenAtmosphere3d *s,const double *v,int a,int i,in
         j=j<0?0:j>n[1]-(a!=1)?n[1]-(a!=1):j;
     } else {i=wrap(i,n[0]);j=wrap(j,n[1]);}
     if(a==2) { if(k<0){if(s->ground)return -sample(s,v,a,i,j,-k);k=-k;}if(k>n[2])k=2*n[2]-k; }
-    else { if(k<0){if(s->ground)return -sample(s,v,a,i,j,-k-1);k=0;}if(k>=n[2])k=n[2]-1; }
+    else { if(k<0){if(s->ground)return -sample(s,v,a,i,j,-k-1);k=0;}
+#ifdef PHYSICS_SIM_OPEN_NO_SLIP_CEILING_REFERENCE
+        if(k>=n[2])return 2*physics_sim_gap_ceiling_velocity(a)-sample(s,v,a,i,j,2*n[2]-k-1);
+#else
+        if(k>=n[2])k=n[2]-1;
+#endif
+    }
     return v[cfd_open_atmosphere3d_face(s,a,i,j,k)];
 }
+#include "cfd_open_viscous_wall.inc"
 static double minmod(double a,double b) {
     return a*b>0?copysign(fmin(fabs(a),fabs(b)),a):0;
 }
@@ -174,6 +181,11 @@ static bool momentum_forced(CfdOpenAtmosphere3d *s,double *maxdiv,double *residu
             double dl=left,dr=right;
             if(a!=b && cfd_open_atmosphere3d_blocked(s,a,lo[0],lo[1],lo[2]))dl=-old;
             if(a!=b && cfd_open_atmosphere3d_blocked(s,a,hi[0],hi[1],hi[2]))dr=-old;
+            bool lower_curved=false,upper_curved=false;
+            if(!viscous_wall_sample(s,a,b,p,-1,&dl,&lower_curved) ||
+               !viscous_wall_sample(s,a,b,p,1,&dr,&upper_curved)) {
+                s->step_rejection="curvature wall stencil";return false;
+            }
             change+=nu*(dl-2*old+dr)/(h*h)-(upper_flux-lower_flux)/h;
             if(account) {
                 double factor=cfd_open_face_mass(s,a,i,j,k)*old*s->dt;
@@ -183,7 +195,8 @@ static bool momentum_forced(CfdOpenAtmosphere3d *s,double *maxdiv,double *residu
                 ledger[KE_ADV_INTERIOR]+=factor*(-(upper_flux-lower_flux)/h-boundary);
                 ledger[KE_VISCOSITY]+=factor*nu*(dl-2*old+dr)/(h*h);
             }
-            rate+=(fmax(upper_speed,0)+fmax(-lower_speed,0))/h+2*nu/(h*h);
+            rate+=(fmax(upper_speed,0)+fmax(-lower_speed,0))/h+
+                  (lower_curved || upper_curved?3:2)*nu/(h*h);
         }
         if(s->buoyancy && a==2) {
             int kl=k==0?0:k-1,kh=k==g->n[2]?k-1:k;
@@ -404,6 +417,7 @@ static bool open_step(CfdOpenAtmosphere3d *s,const double *source_j,const double
     double maxdiv=NAN,residual=NAN;bool momentum_ok;
     s->attempted_projection_residual=NAN;s->attempted_projection_divergence=NAN;
 #ifdef PHYSICS_SIM_OPEN_PRESCRIBED_THERMAL_QUALIFIER
+    (void)receipt;
     /* Contained diagnostic wrapper supplies only momentum's thermal input.
      * Accepted scalar state and the ordinary app/worker operator are unchanged. */
     if(impulse)return false;

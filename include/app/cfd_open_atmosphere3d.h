@@ -17,6 +17,9 @@ typedef struct CfdOpenAtmosphere3d {
     double rho, mu, cp, reference_k, conductivity, diffusivity, dt;
     double pressure_boundary[2], ambient_k[2], ambient_smoke[2];
     bool buoyancy, ground, muscl, cache_projection;
+    /* Native diagnostic opt-in. Quadratic face-average viscous wall closure;
+     * worker admission is the bounded low_box_quadratic/v1 profile. */
+    bool viscous_wall_curvature;
     /* Experimental scalar-only monotonized-central reconstruction. Independent
      * of momentum MUSCL selection; zero/default preserves the existing scalar operator. Momentum
      * reconstruction is unchanged. Qualify each coupled use independently. */

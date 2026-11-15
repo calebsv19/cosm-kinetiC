@@ -104,3 +104,79 @@ The subsequent [controlled source-to-object diagnostic](fire_fluid_source_object
 resolves the weak source-toggle fixture with cold initial gas/object and an
 upstream separated heater. It remains independent of native Fire and durable
 thermal participant integration.
+
+## Two-wall no-slip gap reference · 2026-11-04
+
+The source-only gap-reference-probes target builds optimized and sanitized
+fully developed slit probes with a 62.5 mm gap, periodic XY and air viscosity.
+A reference-only ceiling mirrors the native floor's odd tangential ghost.
+Uniform pressure-gradient-equivalent forcing evolves the native flow from rest;
+wall-normal velocity remains exactly zero. This compile path is confined to
+the reference probe.
+
+Four/eight gap layers give throughput errors of +12.500%/+3.125% against the
+independent parabolic solution. Upwind and limited MUSCL profiles are identical
+because the fully developed case has no streamwise advection gradient.
+Optimized/sanitized outputs match exactly. Eight-layer timestep halving changes
+throughput by about 1.6e−8 relative. Both analytical face-average and point-profile
+errors are retained in the private numerical report. The result motivates a
+bounded wall-closure candidate, with separate entrance/obstacle qualification
+before any broader accuracy claim.
+
+## Opt-in curvature-aware viscous wall diagnostic · 2026-11-04
+
+The native C flag viscous_wall_curvature selects a quadratic face-average
+viscous wall stencil. Its ghost is 3*wall - 2.5*nearest + 0.5*next. Ground and
+aligned solid faces require an available inward fluid neighbor; unsupported
+stencils refuse without accepted-state advancement. The viscous CFL rate is
+raised at the reconstructed wall. The candidate is available in native
+reference fixtures; public worker JSON/checkpoint selection is a later slice.
+
+The expanded gap probe accepts optional profile (couette/slit), drive (-1/0/1)
+and curvature (0/1) arguments after layers, momentum flag and dt. Four/eight
+layers, upwind/MUSCL, zero and reversed driving pass. Slit throughput errors
+fall from 12.500%/3.125% to about 0.0000017%/0.0000016% at dt=0.1 s.
+Couette errors stay at the steady stopping tolerance. All 24 candidate result
+objects match optimized versus sanitizer runs exactly. Four timestep controls,
+prior slit bitwise parity, native stencil-refusal/rollback and ordinary
+half-channel controls pass. Corner/entrance and persistent coupling remain
+separate qualification boundaries.
+
+## Local low-box entrance/corner controls · 2026-11-04
+
+The low-box-wall-probes target builds strict optimized and sanitized native
+controls for the curvature-aware option. A 0.5 m local open domain preserves
+the original box dimensions and 64³ wake lateral cell spacing. Four/eight
+vertical gap layers pass a 0.1 s seeded warm-flow matrix with forward/reverse
+forcing, cold rest, MC/SSPRK2 scalars and buoyancy. The primary comparison uses
+upwind momentum; additional candidate controls use limited MUSCL.
+
+Sixteen optimized cases, ten exact optimized/sanitizer candidate pairs, two
+clean-continuation controls and two timestep controls pass. All selected wall
+stencils are available. Accepted physical arrays, clocks and ledgers are
+unchanged across nonfinite-source, exhausted-work and excessive-CFL refusals.
+The result supports bounded opt-in coupled-worker admission implementation.
+Versioned configuration/state receipts and exact joint restart remain that
+implementation's verification boundary. The current worker protocol still
+has no candidate closure field.
+
+
+## Bounded worker wall-closure admission
+
+The source open-atmosphere worker accepts the optional configuration field
+`viscous_wall_closure: "low_box_quadratic/v1"`. It selects the qualified
+quadratic face-average viscous ghost without changing momentum advection.
+The versioned profile is bound into configuration and checkpoint identity,
+with matching native state and field receipts. Removing, changing or silently
+ignoring it is refused. Without the option, native defaults and receipt shape
+remain unchanged; an independent retained-worker comparison is exactly equal.
+
+Initial admission covers the 0.5 m cube with grid [32,32,32] or [32,32,64],
+solid floor, ambient open XY/top, and a stationary insulated no-slip box from
+[0.125,0.125,0.0625] to [0.375,0.375,0.3125] m. This gives four/eight gap layers.
+Both momentum schemes pass exact optimized/sanitizer worker controls. The
+live four-layer Fire–Fluid proof passes exact fresh-process continuation and
+atomic joint rollback through 0.2 s. Existing conservation and stability gates
+continue to apply. This does not admit other geometry, lumped inert-object,
+inlet-wind, capacity, rig, frozen or sparse-qualification combinations. It does
+not establish longer-run plume accuracy or change the default wall rule.

@@ -9,12 +9,85 @@ import sqlite3
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
 from coupling.framework import Framework
 from coupling.scenario import baseline
 from surface_sources.growth_fire_v1 import canonical,digest
 
 class FrameworkTests(unittest.TestCase):
+    def test_receiver_geometry_refuses_before_any_worker_or_store(self):
+        mutations = [
+            ('origin_m', [0.125, 0, 0], 'X origin_m'),
+            ('spacing_m', [0.25, 0.125, 0.125], 'X spacing_m'),
+            ('dimensions', [16, 4, 4], 'X dimensions'),
+            ('layer', 1, 'source must lie'),
+            ('fluid_mask', [0] + [1] * 63, 'declared solid'),
+            ('injection_fluid_mask', [0] + [1] * 63, 'base mask'),
+        ]
+        for field, value, message in mutations:
+            with self.subTest(field=field):
+                config = copy.deepcopy(self.config)
+                config['receiver'][field] = value
+                if field == 'fluid_mask':
+                    config['receiver']['injection_fluid_mask'] = value[:]
+                store = self.root / ('bad-' + field)
+                with patch('subprocess.run', side_effect=AssertionError('worker invoked')):
+                    with self.assertRaisesRegex(ValueError, message):
+                        Framework(config, store)
+                self.assertFalse(store.exists())
+
+    def test_native_solid_overlap_refused_with_permissive_receiver_mask(self):
+        from coupling.inert_cases import recipe
+        from coupling.receiver_geometry import validate
+        workers = tuple(self.config[k] for k in
+                        ('growth_root', 'fire_worker', 'fluid_worker', 'clock_worker'))
+        config = recipe(workers, live=True)
+        # Legacy receiver masks may include unrelated solids. Only the cells
+        # actually addressed by source overlap weights must be native fluid.
+        validate(config)
+        config['source']['origin_m'] = [0.375, 0.375, 0]
+        with self.assertRaisesRegex(ValueError, 'overlaps native gas solid'):
+            validate(config)
+
+    def test_offset_source_deposition_is_exact_and_centred(self):
+        import math
+        from coupling.allocation import allocate_window
+        from coupling.receiver_geometry import validate
+        from surface_sources.growth_fire_v1 import areas
+        self.config['source']['origin_m'] = [0.125, 0.125, 0]
+        source = self.config['source']
+        weights = areas(source)
+        frame = dict(config=source, surface=dict(area_m2=weights),
+                     cells=dict(energy_transferred_j=weights, smoke_transferred_kg=weights),
+                     totals=dict(energy_transferred_j=math.fsum(weights),
+                                 smoke_transferred_kg=math.fsum(weights)))
+        policy = dict(schema='physics_sim_surface_source_policy/v1', consumer_id='test',
+                      model_id='test', source_config=source, stream_start_tick=0,
+                      producer=dict(worker_sha256='0'*64, adapter_sha256='0'*64),
+                      receiver=self.config['receiver'])
+        window = dict(steps=[dict(left_n=0, left_d=1, right_n=1, right_d=1)])
+        before = allocate_window(frame, policy, window)
+        validate(self.config)
+        self.assertEqual(allocate_window(frame, policy, window), before)
+        energy = before[0]['energy_j']
+        total = math.fsum(energy)
+        self.assertEqual(total, frame['totals']['energy_transferred_j'])
+        self.assertEqual(before[0]['smoke_kg'], energy)
+        self.assertEqual(math.fsum(((i % 8) + 0.5) / 8 * v
+                                  for i, v in enumerate(energy)) / total, 0.5)
+        Framework(self.config, self.root / 'valid-offset')
+
+    def test_short_joint_reopen_matches_continuous(self):
+        continuous = Framework(self.config, self.root / 'continuous')
+        segmented = Framework(self.config, self.root / 'segmented')
+        self.assertEqual(continuous.initialize(), segmented.initialize())
+        for revision in range(3):
+            expected = continuous.step(revision, 'step-' + str(revision))
+            segmented = Framework(self.config, self.root / 'segmented')
+            self.assertEqual(segmented.step(revision, 'step-' + str(revision)), expected)
+            self.assertEqual(segmented.inspect(), continuous.inspect())
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='fire-fluid-contract-');self.root=Path(self.temp.name)
         growth=Path(os.environ['FIRE_FLUID_GROWTH_ROOT'])

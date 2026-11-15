@@ -18,7 +18,7 @@ import sys
 import tempfile
 
 from evolving_atmosphere import ROOT
-from . import fluid_adapter,feedback,source_delivery
+from . import fluid_adapter,feedback,source_delivery,receiver_geometry
 from atmosphere_attempt import CONTROLS
 from surface_sources.growth_fire_v1 import canonical,digest,sealed,require,keys,integer
 from cfd_evidence import admitted_path
@@ -66,6 +66,7 @@ class Framework:
         self.fire.config_valid(config['source'])
         feedback.validate(config)
         self.FLUID_ADAPTER.validate(config['fluid'])
+        receiver_geometry.validate(config)
         self.binding={'configuration':self.config,'inputs':self.input_hashes()}
         self.binding_digest=digest(self.binding)
         self.base_plan={'periods':config['periods'],'windows':config['windows'],
@@ -77,6 +78,7 @@ class Framework:
 
     def input_hashes(self):
         files={k:v for k,v in self.workers.items()}
+        files['physics/coupling/receiver_geometry.py']=ROOT/'scripts/coupling/receiver_geometry.py'
         for name in (*CONTROLS,'coupling/framework.py','coupling/journal.py','coupling/journal_f64.py','coupling/allocation.py','coupling/fluid_adapter.py','coupling/fluid_packets.py','coupling/feedback.py','coupling/velocity.py','coupling/solid_box.py','coupling/open_boundaries.py','surface_sources/receiver.py'):
             files['physics/'+name]=ROOT/'scripts'/name
         if 'source_delivery' in self.config:

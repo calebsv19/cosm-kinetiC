@@ -1,4 +1,20 @@
 # Local numerical references; no app refresh, release or retained-root cleanup.
+.PHONY: low-box-wall-probes
+LOW_BOX_WALL_SRCS := src/tools/physics_sim_low_box_wall_probe.c $(filter-out src/app/cfd_open_atmosphere3d.c,$(OPEN_ATMOSPHERE3D_SRCS))
+low-box-wall-probes:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $(LOW_BOX_WALL_SRCS) -lm -o $(BUILD_DIR)/flow-validation/low-box-wall
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude $(LOW_BOX_WALL_SRCS) -lm -o $(BUILD_DIR)/flow-validation/low-box-wall-sanitize
+.PHONY: gap-reference-probes
+.PHONY: viscous-wall-controls
+GAP_REFERENCE_SRCS := src/tools/physics_sim_gap_reference.c $(filter-out src/app/cfd_open_atmosphere3d.c,$(OPEN_ATMOSPHERE3D_SRCS))
+gap-reference-probes:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude $(GAP_REFERENCE_SRCS) -lm -o $(BUILD_DIR)/flow-validation/gap-reference
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude $(GAP_REFERENCE_SRCS) -lm -o $(BUILD_DIR)/flow-validation/gap-reference-sanitize
+viscous-wall-controls:
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude tests/cfd_viscous_wall_test.c $(filter-out src/app/cfd_open_atmosphere3d.c,$(OPEN_ATMOSPHERE3D_SRCS)) -lm -o $(BUILD_DIR)/flow-validation/viscous-wall-test
+	$(BUILD_DIR)/flow-validation/viscous-wall-test
+	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -fsanitize=address,undefined -fno-omit-frame-pointer -Iinclude tests/cfd_viscous_wall_test.c $(filter-out src/app/cfd_open_atmosphere3d.c,$(OPEN_ATMOSPHERE3D_SRCS)) -lm -o $(BUILD_DIR)/flow-validation/viscous-wall-sanitize
+	ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 $(BUILD_DIR)/flow-validation/viscous-wall-sanitize
 .PHONY: channel-reference-probe
 channel-reference-probe:
 	python3 -B scripts/atomic_output.py -- $(CC) -std=c11 -O2 -Wall -Wextra -Werror -ffp-contract=off -Iinclude src/tools/physics_sim_channel_reference.c $(OPEN_ATMOSPHERE3D_SRCS) -lm -o $(BUILD_DIR)/flow-validation/channel-reference

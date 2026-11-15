@@ -13,6 +13,17 @@ from coupling.frozen_transport import validate, MODE
 
 
 class FrozenTransportTests(unittest.TestCase):
+    def test_saved_carrier_without_prescribed_inlet(self):
+        self.f.pop('wind_forcing')
+        self.f['diagnostic_transport'] = MODE
+        self.f['scalar_transport'] = 'mc_ssprk2/v1'
+        native.validate(self.request())
+        data = {'face_velocity_m_s': copy.deepcopy(self.f['initial_face_velocity_m_s'])}
+        validate(self.f, data)
+        data['face_velocity_m_s'][0] += .1
+        with self.assertRaisesRegex(ValueError, 'field changed'):
+            validate(self.f, data)
+
     def setUp(self):
         self.f = json.loads((Path(os.environ['REPLAY_DONOR']) / 'config.json').read_text())['fluid']
         self.f['buoyancy']['enabled'] = False
