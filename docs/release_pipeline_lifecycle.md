@@ -94,3 +94,8 @@ final phase; outside that layout it continues to use the standalone pipeline.
 Invoke authentication through Release Control so the configured notary profile
 and explicit Keychain selector reach the existing credential owner. These phases
 provide no publication, deployment or desktop-refresh authority.
+
+Native archive manifests carry both the release `version` and the app's
+`build_version` from `CFBundleVersion`. Registry checks both against the archived
+Info.plist, along with the bundle identity and native architecture, before
+credentials are resolved. A build number need not equal the release version.

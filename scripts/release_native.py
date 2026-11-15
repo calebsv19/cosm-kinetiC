@@ -7,6 +7,7 @@ the upload and packages an already accepted, validated app transactionally.
 import argparse
 import json
 import os
+import plistlib
 from pathlib import Path
 import sys
 import uuid
@@ -69,6 +70,7 @@ def assemble(repo, root, selected, phase, mappings):
         with mappings['CHECKSUM'].open('x') as stream:
             stream.write(proof['archive_sha256']+'  '+archive.name+'\n')
         fields = dict(selected, format='zip', artifact=archive.name,
+                      build_version=plistlib.loads((app/'Contents/Info.plist').read_bytes())['CFBundleVersion'],
                       sha256=proof['archive_sha256'], signed='1', notarized='1',
                       sha256_file=mappings['CHECKSUM'].name, notary_json='notary_submit.json')
         with mappings['MANIFEST'].open('x') as stream:

@@ -32,7 +32,7 @@ def verify(archive, checksum, manifest):
         if not separator or key in values or not value:raise ValueError('Invalid or duplicate artifact manifest field')
         values[key]=value
     required={'product','program','version','platform','arch','format','channel','artifact','sha256','signed','notarized','bundle_id'}
-    if set(values)!=required:raise ValueError('Artifact manifest fields mismatch')
+    if set(values) not in (required, required|{'build_version'}):raise ValueError('Artifact manifest fields mismatch')
     for key,value in {'format':'zip','artifact':archive.name,'sha256':digest,'signed':'false','notarized':'false'}.items():
         if values[key]!=value:raise ValueError('Artifact manifest '+key+' mismatch')
     if any(inventory(path)['.']!=row for path,row in rows.items()):raise ValueError('Artifact outputs changed during verification')
